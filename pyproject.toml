@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "brain79"
+version = "0.1.0"
+description = "Per-project AI memory system based on Karpathy's LLM-Wiki method"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "fastmcp>=2.0.0",
+]
+
+[project.scripts]
+brain79 = "brain79.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/brain79"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"src/brain79/templates" = "brain79/templates"

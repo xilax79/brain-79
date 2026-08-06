@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "brain79": {
+      "command": "uvx",
+      "args": ["--from", "/absolute/path/to/brain-79", "brain79", "--project-root", "."]
+    }
+  }
+}
