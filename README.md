@@ -4,17 +4,16 @@ Per-project AI memory system based on Karpathy's LLM-Wiki method.
 
 ## What it does
 
-brain-79 gives any AI agent persistent, curated knowledge about your project. Instead of re-explaining context every session, the agent reads a structured wiki that lives inside your repo.
+brain-79 gives your AI coding assistants persistent, curated memory about your codebase across sessions:
 
-At the end of a session, you ask the agent to update the wiki. In future sessions, the agent reads the wiki first and is immediately up to speed.
+- **Long-Term Memory (Wiki):** Curated documentation about architecture, domain rules, and features stored in `.brain-79/`.
+- **Short-Term Memory (Handoffs):** Tactical transition notes stored in `.brain-79/handoffs/` to pass work smoothly between sessions.
 
-## How it works
+Instead of re-explaining project context every time you chat with an AI agent, brain-79 allows the agent to orient itself immediately.
 
-1. **Compile, don't retrieve.** Session knowledge is synthesized into structured markdown articles — not stored as raw logs.
-2. **Per-project.** The wiki lives in `.brain-79/` inside your repo, versioned with git.
-3. **Agent-navigated.** The agent reads `INDEX.md` first, then fetches only the articles it needs. No full-wiki loads.
+---
 
-## Installation
+## Quick Start
 
 ### Step 1 — Install brain79 as a global tool
 
@@ -22,87 +21,97 @@ At the end of a session, you ask the agent to update the wiki. In future session
 uv tool install --editable /path/to/brain-79
 ```
 
-This installs `brain79` to `~/.local/bin/brain79`. Run once; updates to the source repo are reflected immediately (editable install).
-
-> Once published to PyPI, this will simplify to `uvx brain79` with no install step.
+This installs `brain79` to `~/.local/bin/brain79`. Updates to the source repo are reflected immediately.
 
 ### Step 2 — Register the MCP server globally (agy)
 
-Create `~/.gemini/config/mcp_config.json` (or add to it if it exists):
+Add `brain79` to `~/.gemini/config/mcp_config.json`:
 
 ```json
 {
   "mcpServers": {
     "brain79": {
-      "command": "/absolute/path/to/.local/bin/brain79",
+      "command": "/path/to/.local/bin/brain79",
       "args": ["--project-root", "."]
     }
   }
 }
 ```
 
-Use an **absolute path** for `command` — `agy` spawns the process with a restricted PATH.
-The `"."` resolves to the cwd where you opened the CLI session (i.e., the project root).
+Restart your CLI agent after updating the configuration.
 
-Restart `agy` after creating the file.
-
-### Step 3 — Initialize a project
+### Step 3 — Initialize your project
 
 ```bash
 cd /path/to/your-project
 brain79 init
 ```
 
-This creates:
-- `.brain-79/` with `SCHEMA.md` and `INDEX.md`
-- `.agents/mcp_config.json` for per-project agy MCP registration (auto-generated)
-
-Done. No manual editing required.
+This creates the `.brain-79/` directory structure in your repo.
 
 ---
 
+## How to Use brain-79
 
-## Usage
+### 🧠 Using the Wiki (Long-Term Memory)
 
-### End-of-session wiki update
+The Wiki stores curated, enduring knowledge about your project.
 
-At the end of a development session, tell your agent:
+- **Starting a task:** Tell your agent:
+  > "Review the wiki to orient yourself before starting."
+  *(The agent calls `brain79_index()` and reads only the necessary wiki articles).*
 
-> "Update the wiki. Focus only on the architecture changes — ignore the debugging discussion."
+- **Updating project documentation:** Tell your agent:
+  > "Update the wiki with our new architectural decision."
+  *(The agent saves raw session notes via `brain79_ingest` and updates relevant wiki articles).*
 
-The agent will:
-1. Save the raw session summary
-2. Read `SCHEMA.md` and `INDEX.md`
-3. Update the relevant wiki articles
-4. Update `INDEX.md` to reflect the new state
+### 🤝 Using Handoffs (Short-Term Memory)
 
-### Start-of-session onboarding
+Handoffs bridge consecutive work sessions for specific tasks.
 
-The agent should call `brain79_index()` first, then fetch only the articles relevant to the upcoming task.
+- **Ending a session:** Tell your agent:
+  > "Write a handoff for the next session."
+  *(The agent creates an immutable handoff note with completed work, pending tasks, and instructions for the next agent).*
 
-## MCP tools
+- **Resuming work:** Tell your agent:
+  > "Read the latest handoff and resume work."
+  *(The agent calls `brain79_handoff_read("latest")` and picks up right where you left off).*
+
+---
+
+## MCP Tools Reference
 
 | Tool | Description |
 |------|-------------|
-| `brain79_index()` | Returns `INDEX.md` — always read first |
-| `brain79_read(path)` | Reads a wiki article |
-| `brain79_write(path, content)` | Writes or updates an article |
-| `brain79_list(section?)` | Lists articles, optionally filtered |
-| `brain79_search(query)` | Keyword search across the wiki |
-| `brain79_ingest(summary, instructions?)` | Saves session to `_raw/` and returns curation workflow |
+| `brain79_index()` | Returns `INDEX.md` — project entry point (read first) |
+| `brain79_read(path)` | Reads a wiki article by relative path |
+| `brain79_write(path, content)` | Writes or updates a wiki article |
+| `brain79_list(section?)` | Lists wiki articles, optionally filtered by section |
+| `brain79_search(query)` | Keyword search across all wiki articles |
+| `brain79_ingest(summary, instructions?)` | Ingests session summary into raw sources and returns curation guide |
+| `brain79_handoff_write(...)` | Writes a structured, immutable session handoff |
+| `brain79_handoff_read(ref?)` | Reads a handoff (`"latest"`, `"none"`, timestamp prefix, or filename) |
 
-## Wiki structure
+---
+
+## Wiki Structure
 
 ```
 .brain-79/
-├── SCHEMA.md        ← curation rules for the LLM (edit this)
-├── INDEX.md         ← project entry point (always read first)
-├── product/         ← vision, domain, user personas
-├── architecture/    ← stack, patterns, ADRs
-├── features/        ← one article per feature
-├── changelog/       ← chronological evolution
-├── decisions/       ← why things were done (decision log)
+├── SCHEMA.md        ← Curation rules for the LLM (edit to customize)
+├── INDEX.md         ← Project entry point (always read first)
+├── handoffs/        ← Tactical session handoffs (handoff-<timestamp>.md)
+├── product/         ← Vision, domain rules, user requirements
+├── architecture/    ← Stack, design patterns, ADRs
+├── features/        ← Feature documentation
+├── decisions/       ← Decision logs
 └── _raw/
-    ├── sessions/    ← raw session summaries (immutable)
-    └── commits/     ← commit-linked metadata (optional)
+    ├── sessions/    ← Raw session summaries (immutable)
+    └── commits/     ← Commit metadata
 ```
+
+---
+
+## Technical Architecture
+
+For detailed technical specifications, validation contracts, and memory hierarchy rules, see [ARCHITECTURE.md](file:///Users/xilax/Documents/GitHub/brain-79/ARCHITECTURE.md).

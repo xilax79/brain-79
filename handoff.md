@@ -8,7 +8,11 @@
 
 **Fase 1 — MVP: COMPLETA y funcionando.**
 
-El sistema está operativo end-to-end: instalación, MCP server, cold start, ingest manual, mid-session reads. Se completó y blindó el diseño del esquema universal de handoff en `handoff_proposal.md`.
+El sistema está operativo end-to-end: instalación, MCP server, cold start, ingest manual, mid-session reads. 
+
+**Fase 1.5 — Handoff: COMPLETA y funcionando.**
+
+La especificación del esquema universal de handoff ha sido diseñada de forma blindada, implementada con sus dos herramientas simétricas (`brain79_handoff_write` y `brain79_handoff_read`), e integrada al FastMCP con coberturas estrictas contra alucinaciones (con validaciones en tiempo de ejecución, tests unitarios en `pytest` configurado con `mypy` y `ruff`).
 
 ---
 
@@ -22,7 +26,8 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 | `server.py` | FastMCP server con 6 herramientas registradas |
 | `config.py` | Resolución de `project_root` (arg > env > cwd) |
 | `core/wiki.py` | Operaciones sobre `.brain-79/`: read, write, list, search, save_raw |
-| `core/init_project.py` | Bootstrapea `.brain-79/` + `.agents/mcp_config.json` |
+| `core/handoff.py` | Lógica de validación, escritura y lectura del historial de handoffs |
+| `core/init_project.py` | Bootstrapea `.brain-79/` (ahora incluye `handoffs/`) + config |
 | `templates/SCHEMA.md` | Template de reglas de curación (el artefacto más crítico) |
 | `templates/INDEX.md` | Template del entry point de la wiki |
 
@@ -34,6 +39,8 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 - `brain79_list(section?)` — lista artículos
 - `brain79_search(query)` — búsqueda por keyword
 - `brain79_ingest(summary, instructions?)` — guarda sesión en `_raw/` y devuelve workflow de curación
+- `brain79_handoff_write(...)` — escribe un documento inmutable de traspaso de sesión
+- `brain79_handoff_read(ref)` — lee un documento de traspaso y alerta sobre la promoción de conocimiento
 
 ### Configuración aplicada en la máquina del usuario
 
@@ -65,13 +72,9 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 
 ### Alta prioridad
 
-1. **Implementar `brain79_handoff_write` y `brain79_handoff_read`** *(diseño completado y blindado)*
-   - Seguir la especificación definida en `handoff_proposal.md`
-   - Guardar los archivos inmutables en `.brain-79/handoffs/handoff-<timestamp>.md`
-   - Crear las herramientas MCP simétricas para escritura y lectura estructurada
-   - Actualizar `init_project.py` para crear el directorio `.brain-79/handoffs/`
+### Alta prioridad
 
-2. **Integración con `pi`**
+1. **Integración con `pi`**
    - El usuario usa `pi` (CLI de Orca con modelos Minimax) como segundo CLI principal
    - No se investigó cómo `pi` carga MCP servers ni si tiene un equivalente a `GEMINI.md`
    - Sin esto, el cold start solo funciona en `agy`
@@ -102,7 +105,7 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 
 ### Baja prioridad / backlog
 
-8. Tests unitarios (actualmente cero)
+8. Tests unitarios generales (las funciones nuevas de handoff ya están 100% testeadas, pero `wiki.py` carece de tests)
 9. `brain79 update` — reinstala si el repo cambió (alternativa a `--editable`)
 10. `brain79_search` con ripgrep en lugar de Python puro (más rápido en repos grandes)
 11. `uv.lock` — decidir si trackearlo o no (actualmente en `.gitignore`)
@@ -116,6 +119,8 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 |------|-------------|
 | `src/brain79/server.py` | FastMCP server — agregar herramientas acá |
 | `src/brain79/core/wiki.py` | Lógica de operaciones sobre `.brain-79/` |
+| `src/brain79/core/handoff.py` | Lógica y validación estricta de la memoria a corto plazo |
+| `tests/test_handoff.py` | Pruebas exhaustivas con cobertura para la funcionalidad de handoff |
 | `src/brain79/core/init_project.py` | Lo que `brain79 init` crea |
 | `src/brain79/templates/SCHEMA.md` | Template de reglas — el artefacto más crítico |
 | `src/brain79/__main__.py` | Entry point y supresión de banner fastmcp |
@@ -127,4 +132,4 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 
 ## Próxima sesión sugerida
 
-Implementación del módulo de handoff en `src/brain79/` según la especificación blindada en `handoff_proposal.md` (creación del directorio `.brain-79/handoffs/`, registro de las herramientas `brain79_handoff_write` y `brain79_handoff_read`).
+Investigar y definir la integración con el CLI `pi` (Orca/Minimax) y crear el protocolo emergente o manifiesto universal para estandarizar el cold start en múltiples CLIs (`AGENTS.md` o similar), dado que la funcionalidad local ya está madura.

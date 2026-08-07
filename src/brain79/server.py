@@ -2,6 +2,7 @@ import logging
 
 from fastmcp import FastMCP
 
+from brain79.core import handoff as handoff_ops
 from brain79.core import wiki as wiki_ops
 
 # Suppress fastmcp startup banner and INFO logs — MCP hosts interpret
@@ -118,3 +119,61 @@ def brain79_ingest(session_summary: str, instructions: str | None = None) -> str
         "5. brain79_write('INDEX.md', ...) if project state changed\n\n"
         "Remember: integrate knowledge, don't append. Curate, don't log."
     )
+
+
+@mcp.tool()
+def brain79_handoff_write(
+    session_type: str,
+    previous_handoff_ref: str,
+    summary: str,
+    completed_work: list[str],
+    pending_work: list[str],
+    knowledge_pending_promotion: list[str],
+    resources: list[str],
+    gotchas: list[str],
+    boot_instruction: str,
+    wiki_deviation_justification: str = "",
+) -> str:
+    """
+    Write an immutable handoff document for the next session.
+
+    SYSTEM INSTRUCTION:
+    1. The wiki ALWAYS wins. If you contradict the wiki, you MUST use wiki_deviation_justification.
+    2. Valid types: "feature", "bugfix", "research", "brainstorming".
+    3. If there are no pending tasks (pending_work is empty), boot_instruction MUST explicitly indicate "no hay tareas pendientes" (hallucinating next steps is strictly forbidden).
+    """
+    try:
+        return handoff_ops.write_handoff(
+            session_type,
+            previous_handoff_ref,
+            summary,
+            completed_work,
+            pending_work,
+            knowledge_pending_promotion,
+            resources,
+            gotchas,
+            boot_instruction,
+            wiki_deviation_justification,
+        )
+    except (ValueError, FileNotFoundError, OSError) as exc:
+        return f"Validation Error: {exc}"
+
+
+@mcp.tool()
+def brain79_handoff_read(handoff_ref: str = "latest") -> str:
+    """
+    Read a handoff document.
+
+    Args:
+        handoff_ref: "latest" (default), "none", or "" to get the latest handoff,
+                     or a specific timestamp with or without milliseconds or file extension
+                     (e.g., "2024-01-01-120000", "2024-01-01-120000-123", or "handoff-2024-01-01-120000.md").
+                     Timestamp prefixes are supported (e.g., "2024" or "2024-08" returns the latest handoff matching that prefix).
+
+    If the handoff contains "knowledge_pending_promotion", the response will
+    include a warning instructing you to call brain79_ingest immediately.
+    """
+    try:
+        return handoff_ops.read_handoff(handoff_ref)
+    except (ValueError, FileNotFoundError, OSError) as exc:
+        return f"Error reading handoff: {exc}"

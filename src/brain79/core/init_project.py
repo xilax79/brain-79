@@ -1,9 +1,10 @@
-import importlib.resources as resources
+from importlib import resources
 from pathlib import Path
 
 WIKI_DIRS = [
     "_raw/sessions",
     "_raw/commits",
+    "handoffs",
     "product",
     "architecture",
     "features",
@@ -52,6 +53,7 @@ def init_project(project_root: Path) -> None:
     mcp_config_path = agents_dir / "mcp_config.json"
     if not mcp_config_path.exists():
         import shutil
+
         binary_path = shutil.which("brain79") or "/Users/xilax/.local/bin/brain79"
         mcp_config_path.write_text(
             '{\n  "mcpServers": {\n    "brain79": {\n      "command": "'
@@ -61,7 +63,7 @@ def init_project(project_root: Path) -> None:
         )
 
     print(f"Initialized .brain-79/ at {wiki_root}")
-    print(f"Created .agents/mcp_config.json")
+    print("Created .agents/mcp_config.json")
     print()
     print("Next steps:")
     print("  1. Edit .brain-79/SCHEMA.md  — customize curation rules for this project")

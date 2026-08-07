@@ -21,3 +21,19 @@ packages = ["src/brain79"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "src/brain79/templates" = "brain79/templates"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_return_any = true
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0",
+    "pytest>=9.1.1",
+]
+

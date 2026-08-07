@@ -1,3 +1,4 @@
+from datetime import UTC
 from pathlib import Path
 
 from brain79.config import get_wiki_root
@@ -13,6 +14,11 @@ def _safe_resolve(path: str) -> Path:
     if not str(target).startswith(str(wiki_root.resolve())):
         raise ValueError(f"Path '{path}' resolves outside the wiki directory.")
     return target
+
+
+def resolve_wiki_path(path: str) -> Path:
+    """Public alias to resolve a relative wiki path safely."""
+    return _safe_resolve(path)
 
 
 def read_article(path: str) -> str:
@@ -81,7 +87,11 @@ def search_articles(query: str) -> list[dict[str, str]]:
 
         # First matching line as excerpt
         excerpt = next(
-            (line.strip() for line in content.splitlines() if query_lower in line.lower()),
+            (
+                line.strip()
+                for line in content.splitlines()
+                if query_lower in line.lower()
+            ),
             "",
         )
         results.append({"path": str(rel), "excerpt": excerpt[:200]})
@@ -93,7 +103,7 @@ def save_raw_session(session_summary: str, instructions: str | None = None) -> s
     """Save a raw session summary to _raw/sessions/ and return the saved path."""
     from datetime import datetime
 
-    timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S")
     rel_path = f"_raw/sessions/session-{timestamp}.md"
 
     lines = [f"# Session — {timestamp}\n"]
