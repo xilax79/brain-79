@@ -13,6 +13,16 @@ WIKI_DIRS = [
 
 TEMPLATE_FILES = ["SCHEMA.md", "INDEX.md"]
 
+MCP_CONFIG = """{{
+  "mcpServers": {{
+    "brain79": {{
+      "command": "/Users/xilax/.local/bin/brain79",
+      "args": ["--project-root", "."]
+    }}
+  }}
+}}
+"""
+
 
 def init_project(project_root: Path) -> None:
     """Bootstrap .brain-79/ in a project directory."""
@@ -36,9 +46,25 @@ def init_project(project_root: Path) -> None:
         content = (pkg_templates / name).read_text(encoding="utf-8")
         (wiki_root / name).write_text(content, encoding="utf-8")
 
+    # Create .agents/mcp_config.json for agy per-project MCP registration
+    agents_dir = project_root / ".agents"
+    agents_dir.mkdir(exist_ok=True)
+    mcp_config_path = agents_dir / "mcp_config.json"
+    if not mcp_config_path.exists():
+        import shutil
+        binary_path = shutil.which("brain79") or "/Users/xilax/.local/bin/brain79"
+        mcp_config_path.write_text(
+            '{\n  "mcpServers": {\n    "brain79": {\n      "command": "'
+            + binary_path
+            + '",\n      "args": ["--project-root", "."]\n    }\n  }\n}\n',
+            encoding="utf-8",
+        )
+
     print(f"Initialized .brain-79/ at {wiki_root}")
+    print(f"Created .agents/mcp_config.json")
     print()
     print("Next steps:")
     print("  1. Edit .brain-79/SCHEMA.md  — customize curation rules for this project")
     print("  2. Edit .brain-79/INDEX.md   — fill in project name, purpose, and status")
-    print("  3. Add brain79 to your MCP config (see mcp.example.json in the brain79 repo)")
+    print("  3. For global agy access, add brain79 to ~/.gemini/config/mcp_config.json")
+    print("     (see README for the exact JSON snippet)")
