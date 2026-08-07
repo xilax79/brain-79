@@ -16,55 +16,45 @@ At the end of a session, you ask the agent to update the wiki. In future session
 
 ## Installation
 
-```bash
-# For development (within this repo)
-uv sync
+### Step 1 — Install brain79 as a global tool
 
-# As a global tool (once published)
-uvx brain79
+```bash
+uv tool install --editable /path/to/brain-79
 ```
+
+This installs `brain79` to `~/.local/bin/brain79`. Run once; updates to the source repo are reflected immediately (editable install).
+
+> Once published to PyPI, this will simplify to `uvx brain79` with no install step.
+
+### Step 2 — Register the MCP server
+
+Add to `~/.gemini/settings.json` (global, works in any project):
+
+```json
+"mcpServers": {
+  "brain79": {
+    "command": "brain79",
+    "args": ["--project-root", "."]
+  }
+}
+```
+
+The `"."` resolves to the directory where you open your CLI session — i.e., the project root.
+
+Restart `agy` (or your CLI) after editing `settings.json`.
+
+### Step 3 — Initialize a project
+
+```bash
+cd /path/to/your-project
+brain79 init
+```
+
+This creates `.brain-79/` with the default `SCHEMA.md` and `INDEX.md`. Done.
+
+---
 
 ## Usage
-
-### Initialize a project
-
-```bash
-# In any project repo:
-brain79 init
-
-# Or with explicit path:
-brain79 init --project-root /path/to/project
-```
-
-This creates `.brain-79/` with the default `SCHEMA.md` and `INDEX.md`.
-
-### MCP server (for CLI agents)
-
-Add to your project's `mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "brain79": {
-      "command": "uvx",
-      "args": ["--from", "/path/to/brain79", "brain79", "--project-root", "."]
-    }
-  }
-}
-```
-
-During development, use `uv run` instead:
-
-```json
-{
-  "mcpServers": {
-    "brain79": {
-      "command": "uv",
-      "args": ["run", "--project", "/path/to/brain-79", "brain79", "--project-root", "."]
-    }
-  }
-}
-```
 
 ### End-of-session wiki update
 
