@@ -115,3 +115,9 @@ Handoffs bridge consecutive work sessions for specific tasks.
 ## Technical Architecture
 
 For detailed technical specifications, validation contracts, and memory hierarchy rules, see [ARCHITECTURE.md](file:///Users/xilax/Documents/GitHub/brain-79/ARCHITECTURE.md).
+
+---
+
+## License
+
+This project is licensed under the MIT License.
