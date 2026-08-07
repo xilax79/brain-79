@@ -1,6 +1,13 @@
+import logging
+
 from fastmcp import FastMCP
 
 from brain79.core import wiki as wiki_ops
+
+# Suppress fastmcp startup banner and INFO logs — MCP hosts interpret
+# stderr output as a failure signal during the handshake phase.
+logging.getLogger("fastmcp").setLevel(logging.WARNING)
+logging.getLogger("mcp").setLevel(logging.WARNING)
 
 mcp = FastMCP(
     "brain79",

@@ -1,6 +1,12 @@
 import argparse
+import os
 import sys
 from pathlib import Path
+
+# Must be set before fastmcp is imported so the banner is suppressed.
+# MCP hosts (agy, opencode, etc.) treat any stderr output during the
+# handshake phase as a server failure signal.
+os.environ.setdefault("FASTMCP_SHOW_SERVER_BANNER", "false")
 
 
 def _cmd_init(project_root: str) -> None:
