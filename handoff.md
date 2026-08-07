@@ -1,6 +1,6 @@
 # Brain-79 — Handoff
 
-> Estado al cierre de la sesión de fundación (2026-08-07).
+> Estado al cierre de la sesión de diseño de handoff (2026-08-07).
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Fase 1 — MVP: COMPLETA y funcionando.**
 
-El sistema está operativo end-to-end: instalación, MCP server, cold start, ingest manual, mid-session reads. Validado con un proyecto real (Neon Arkanoid en `/Users/xilax/orca/projects/test-project`).
+El sistema está operativo end-to-end: instalación, MCP server, cold start, ingest manual, mid-session reads. Se completó y blindó el diseño del esquema universal de handoff en `handoff_proposal.md`.
 
 ---
 
@@ -65,13 +65,11 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 
 ### Alta prioridad
 
-1. **`brain79_handoff` tool** *(feature solicitada por el usuario)*
-   - Crear un archivo `handoff.md` en la raíz del proyecto al cerrar sesión
-   - "Memoria de corto plazo" vs la wiki como "memoria de largo plazo"
-   - El handoff captura: qué estaba en curso, decisiones aún no en wiki, archivos tocados, gotchas de la sesión
-   - A demanda del usuario, no automático
-   - Definir adversarialmente: qué va en handoff vs qué va en wiki
-   - El `brain79_ingest()` llama al LLM para curar wiki; `brain79_handoff()` produce un doc de estado condensado para el próximo agente
+1. **Implementar `brain79_handoff_write` y `brain79_handoff_read`** *(diseño completado y blindado)*
+   - Seguir la especificación definida en `handoff_proposal.md`
+   - Guardar los archivos inmutables en `.brain-79/handoffs/handoff-<timestamp>.md`
+   - Crear las herramientas MCP simétricas para escritura y lectura estructurada
+   - Actualizar `init_project.py` para crear el directorio `.brain-79/handoffs/`
 
 2. **Integración con `pi`**
    - El usuario usa `pi` (CLI de Orca con modelos Minimax) como segundo CLI principal
@@ -121,6 +119,7 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 | `src/brain79/core/init_project.py` | Lo que `brain79 init` crea |
 | `src/brain79/templates/SCHEMA.md` | Template de reglas — el artefacto más crítico |
 | `src/brain79/__main__.py` | Entry point y supresión de banner fastmcp |
+| `handoff_proposal.md` | Especificación y diseño blindado de la funcionalidad de handoff |
 | `~/.gemini/GEMINI.md` | Protocolo global para agy (cold start + mid-session) |
 | `~/.gemini/config/mcp_config.json` | Registro global del MCP en agy |
 
@@ -128,4 +127,4 @@ El sistema está operativo end-to-end: instalación, MCP server, cold start, ing
 
 ## Próxima sesión sugerida
 
-Diseño adversarial de `brain79_handoff`: definir exactamente qué información pertenece al handoff vs a la wiki, cuántos handoffs coexisten (¿uno por sesión? ¿siempre el mismo archivo?), y cómo el agente entrante prioriza entre handoff y wiki cuando hay información en ambos.
+Implementación del módulo de handoff en `src/brain79/` según la especificación blindada en `handoff_proposal.md` (creación del directorio `.brain-79/handoffs/`, registro de las herramientas `brain79_handoff_write` y `brain79_handoff_read`).

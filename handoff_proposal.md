@@ -1,39 +1,43 @@
 # Propuesta de implementación y esquema universal para handoff
 
-Este documento detalla la implementación de la funcionalidad de handoff para brain-79, asegurando que sea útil tanto para desarrollo de software como para tareas abstractas (investigación, brainstorming o análisis complejo).
+Este documento detalla la implementación de la funcionalidad de handoff para brain-79, asegurando un diseño a prueba de fallos mediante activación bajo demanda y preservación histórica.
 
 ## **Diseño adversarial:** delimitando responsabilidades entre memorias
 
-- **Wiki (memoria a largo plazo):** actúa como la fuente de la verdad inmutable del proyecto. Aquí residen la arquitectura, las decisiones consolidadas, conclusiones finales de investigaciones y el contexto global.
-- **Handoff (memoria a corto plazo):** es un documento táctico, efímero y de alta volatilidad. Su objetivo exclusivo es capturar el estado en transición de una tarea específica, sin importar si es una sesión de código o un debate abierto.
-- **Resolución de conflictos:** si hay discrepancias entre la wiki y el handoff, la información del handoff tiene prioridad estricta para la tarea inmediata, asumiendo que representa la línea de pensamiento más reciente.
+- **Wiki (memoria a largo plazo):** actúa como la fuente de la verdad inmutable del proyecto. Aquí residen la arquitectura, las decisiones consolidadas y el contexto global.
+- **Handoff (memoria a corto plazo):** es un documento táctico y efímero que captura el estado en transición de una tarea específica (sea código o investigación).
+- **Resolución de conflictos:** la wiki gana siempre. Si el agente detecta una discrepancia, debe apegarse a la wiki, salvo que el handoff declare explícitamente y con justificación por qué se está desviando de manera temporal.
 
-## **Ciclo de vida:** persistencia y gestión del archivo
+## **Ciclo de vida:** persistencia y gestión de archivos
 
-- **Ubicación en el repositorio:** el documento debe generarse como `handoff.md` en la raíz del proyecto.
-- **Modelo de reemplazo único:** no deben existir múltiples archivos de handoff. Cada vez que se genera uno nuevo, sobrescribe al anterior, funcionando como un testigo que se pasa al siguiente eslabón.
-- **Consumo durante el cold start:** el agente entrante debe estar fuertemente instruido desde las reglas globales para buscar y leer este archivo de inmediato al iniciar la sesión.
-- **Limpieza y finalización:** una vez que el agente completa el objetivo heredado, el contenido de `handoff.md` pierde validez táctica y debe ser reemplazado al final de esa sesión si aún queda trabajo pendiente.
+- **Ubicación en el repositorio:** los handoffs deben crearse dentro de `.brain-79/handoffs/` siguiendo el patrón `handoff-<timestamp>.md`. Esto evita refactorizar el enrutamiento de la herramienta y previene colisiones en la raíz del proyecto.
+- **Preservación histórica:** cada llamada a la herramienta genera un archivo nuevo. Al no existir sobrescritura silenciosa, se garantiza un audit trail inmutable y se elimina el riesgo de corrupción por escrituras incompletas.
+- **Activación por demanda (simétrica):** tanto la creación como la lectura del handoff son manuales (iniciadas por un prompt explícito del usuario). No se deben alterar reglas globales (como `GEMINI.md`) para forzar lecturas automáticas.
+- **Sinergia con init:** el comando `brain79 init` debe actualizarse para instanciar el directorio `.brain-79/handoffs/` por defecto.
 
-## **Esquema universal:** propuesta para handoff.md
+## **Esquema universal:** campos aislados y sin solapamiento
 
-Para que el handoff funcione a la perfección en cualquier contexto (desarrollo, investigación o ideación), el archivo generado debe tener una estructura agnóstica pero accionable.
+Para garantizar que el LLM no divague, el esquema aísla conceptos mutuamente excluyentes:
 
-- **Tipo de sesión:** clasificación del trabajo en curso (ej: desarrollo de software, investigación profunda, brainstorming, refactorización).
-- **Contexto inmediato:** resumen directo sobre el objetivo general y lo que se estaba intentando lograr antes de la desconexión.
-- **Estado actual:** delimitación clara de qué partes de la tarea se lograron completar y cuáles quedaron pendientes, a medias o en debate.
-- **Conocimiento destilado (hard-won data):** descubrimientos empíricos, resultados de experimentos, acuerdos mutuos con el usuario o hallazgos de research que costó tiempo obtener. Esta sección condensada es vital para no perder el esfuerzo invertido y evitar repetir validaciones o debates en la siguiente sesión.
-- **Recursos y focos (archivos/links):** lista de rutas exactas (`view_file`), URLs o documentos clave que el siguiente agente necesita inspeccionar de inmediato. En código serían archivos fuente; en research, documentos o papers.
-- **Callejones sin salida (gotchas):** registro vital sobre intentos fallidos, bugs recientes o ideas descartadas. Esto evita que el nuevo agente repita errores o proponga soluciones que ya se rechazaron en la sesión previa.
-- **Instrucción de arranque:** el comando exacto, script, pregunta abierta o paso puntual por donde el siguiente agente debe comenzar a trabajar. Si no quedó nada pendiente ni existe un plan real por completar, no se deben inventar pasos; el campo debe reflejar explícitamente que no hay tareas pendientes.
+- **Tipo de sesión (`session_type`):** clasificación estricta basada en un enum (ej: "feature", "bugfix", "research", "brainstorming").
+- **Referencia anterior (`previous_handoff_ref`):** timestamp o nombre del handoff anterior del cual deriva el actual, permitiendo encadenar sesiones y construir linaje.
+- **Contexto inmediato (`summary`):** resumen directo sobre el objetivo general que se intentaba lograr.
+- **Trabajo completado (`completed_work`):** detalle exacto de qué partes de la tarea ya están resueltas.
+- **Trabajo pendiente (`pending_work`):** detalle de lo que quedó a medias o falta hacer, claramente separado de lo completado.
+- **Conocimiento pendiente de promoción (`knowledge_pending_promotion`):** descubrimientos empíricos o acuerdos que tomaron esfuerzo. Se etiqueta así para recordar al siguiente agente que su responsabilidad inmediata es consolidar esta información en la wiki (vía `brain79_ingest`).
+- **Recursos (`resources`):** lista de rutas, URLs o documentos clave relevantes para la tarea.
+- **Callejones sin salida (`gotchas`):** registro de intentos fallidos o errores recientes para evitar repeticiones.
+- **Instrucción de arranque (`boot_instruction`):** el comando exacto o paso puntual por donde el siguiente agente debe comenzar. Si no quedó trabajo a medias ni hay un plan acordado, el campo debe reflejar explícitamente que no hay tareas pendientes (prohibido alucinar próximos pasos).
 
-## **Diseño de la herramienta MCP:** lógica y arquitectura
+## **Diseño de herramientas MCP:** lógica de lectura y escritura
 
-- **Firma propuesta:** la herramienta `brain79_handoff(session_type: str, summary: str, in_progress: list[str], distilled_knowledge: list[str], resources: list[str], gotchas: list[str], next_steps: list[str])` forza al LLM a categorizar y estructurar la salida según el esquema universal.
-- **Generación determinista:** la herramienta solo toma los argumentos estructurados y vuelca su contenido en un archivo markdown formateado, sin requerir inferencia extra.
+Para cumplir con la activación simétrica, se proponen dos herramientas vinculadas:
 
-## **Prompt base:** instrucciones para generar un handoff perfecto
+- **Herramienta de escritura:** la función `brain79_handoff_write(session_type: str, previous_handoff_ref: str, summary: str, completed_work: list[str], pending_work: list[str], knowledge_pending_promotion: list[str], resources: list[str], gotchas: list[str], boot_instruction: str)` forza al modelo a categorizar su tren de pensamiento y vuelca el contenido de forma determinista en el markdown.
+- **Herramienta de lectura:** la función `brain79_handoff_read(handoff_ref: str = "latest")` permite al agente entrante consumir el archivo de forma estructurada, resolviendo automáticamente el archivo más reciente (o uno específico si se provee el timestamp), sin necesidad de explorar directorios manualmente.
 
-El éxito del handoff depende de que el LLM extraiga la información correcta sin generar ruido. El siguiente es el prompt ideal que debe inyectarse o usarse al llamar a la herramienta `brain79_handoff`.
+## **Prompt base:** instrucciones para la escritura perfecta
 
-- **Instrucción del sistema:** estás a punto de cerrar tu sesión actual. Tu objetivo es generar un documento de handoff perfecto para el agente que continuará tu trabajo. Debes ser extremadamente conciso pero exhaustivo con los datos críticos. Presta especial atención a destilar el conocimiento: incluye todo acuerdo que hayas alcanzado con el usuario, configuraciones experimentales exitosas o hallazgos de investigación que hayan tomado iteraciones descubrir. No obligues al próximo agente a redescubrir lo que tú ya sabes. Omite formalidades y ve directamente al grano. Respecto al próximo paso a seguir: si no quedaron tareas a mitad de camino ni hay un plan acordado pendiente, no alucines ni inventes próximos pasos bajo ninguna circunstancia; indícalo explícitamente.
+El éxito de la herramienta de escritura depende de una directiva clara inyectada en su definición:
+
+- **Instrucción del sistema:** estás a punto de cerrar tu sesión actual y debes generar un handoff. Sé extremadamente conciso. Si descubriste conocimiento valioso (hard-won data), colócalo en `knowledge_pending_promotion` para que el próximo agente lo ingiera en la wiki. Mantén `completed_work` y `pending_work` estrictamente separados. Respecto a la `boot_instruction`: si no quedaron tareas a mitad de camino ni existe un plan acordado, no inventes próximos pasos bajo ninguna circunstancia; indícalo explícitamente.
