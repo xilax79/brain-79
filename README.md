@@ -26,22 +26,25 @@ This installs `brain79` to `~/.local/bin/brain79`. Run once; updates to the sour
 
 > Once published to PyPI, this will simplify to `uvx brain79` with no install step.
 
-### Step 2 — Register the MCP server
+### Step 2 — Register the MCP server globally (agy)
 
-Add to `~/.gemini/settings.json` (global, works in any project):
+Create `~/.gemini/config/mcp_config.json` (or add to it if it exists):
 
 ```json
-"mcpServers": {
-  "brain79": {
-    "command": "brain79",
-    "args": ["--project-root", "."]
+{
+  "mcpServers": {
+    "brain79": {
+      "command": "/absolute/path/to/.local/bin/brain79",
+      "args": ["--project-root", "."]
+    }
   }
 }
 ```
 
-The `"."` resolves to the directory where you open your CLI session — i.e., the project root.
+Use an **absolute path** for `command` — `agy` spawns the process with a restricted PATH.
+The `"."` resolves to the cwd where you opened the CLI session (i.e., the project root).
 
-Restart `agy` (or your CLI) after editing `settings.json`.
+Restart `agy` after creating the file.
 
 ### Step 3 — Initialize a project
 
@@ -50,9 +53,14 @@ cd /path/to/your-project
 brain79 init
 ```
 
-This creates `.brain-79/` with the default `SCHEMA.md` and `INDEX.md`. Done.
+This creates:
+- `.brain-79/` with `SCHEMA.md` and `INDEX.md`
+- `.agents/mcp_config.json` for per-project agy MCP registration (auto-generated)
+
+Done. No manual editing required.
 
 ---
+
 
 ## Usage
 
