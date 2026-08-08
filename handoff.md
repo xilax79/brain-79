@@ -72,14 +72,12 @@ La especificación del esquema universal de handoff ha sido diseñada de forma b
 
 ### Alta prioridad
 
-### Alta prioridad
-
 1. **Integración con `pi`**
    - El usuario usa `pi` (CLI de Orca con modelos Minimax) como segundo CLI principal
    - No se investigó cómo `pi` carga MCP servers ni si tiene un equivalente a `GEMINI.md`
    - Sin esto, el cold start solo funciona en `agy`
 
-3. **Protocolo para otros CLIs (`opencode`, etc.)**
+2. **Protocolo para otros CLIs (`opencode`, etc.)**
    - `GEMINI.md` solo aplica a `agy`
    - `opencode` usa `CLAUDE.md` — crear ese archivo como parte de `brain79 init`
    - Investigar si hay un archivo universal emergente (`AGENTS.md`)
@@ -124,7 +122,6 @@ La especificación del esquema universal de handoff ha sido diseñada de forma b
 | `src/brain79/core/init_project.py` | Lo que `brain79 init` crea |
 | `src/brain79/templates/SCHEMA.md` | Template de reglas — el artefacto más crítico |
 | `src/brain79/__main__.py` | Entry point y supresión de banner fastmcp |
-| `handoff_proposal.md` | Especificación y diseño blindado de la funcionalidad de handoff |
 | `~/.gemini/GEMINI.md` | Protocolo global para agy (cold start + mid-session) |
 | `~/.gemini/config/mcp_config.json` | Registro global del MCP en agy |
 
