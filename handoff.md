@@ -18,6 +18,10 @@ La especificación del esquema universal de handoff ha sido diseñada de forma b
 
 Despliegue automático e idempotente del manifiesto universal `AGENTS.md` en la raíz del proyecto para estandarizar el protocolo cold start entre múltiples CLIs (`pi`, `agy`, `opencode`), e inyección segura e idempotente del registro de servidor MCP en `.mcp.json`. Pruebas unitarias completas agregadas en `tests/test_init_project.py`.
 
+**Fase 3 — Recuperación de Contexto Inteligente (`brain79_context`): COMPLETA y funcionando.**
+
+Motor TF-IDF de fiabilidad industrial implementado (`src/brain79/core/context.py`) y registrado como herramienta MCP (`brain79_context`). Incluye sanitización NFKC, purgado de contracciones, heurística de límites de palabra (exact match <= 4 caracteres alnum, substring libre para el resto), evacuación ARG_MAX con protección contra FD leaks via POSIX file descriptors, concurrencia paralela con `ThreadPoolExecutor`, fallback a regex puro en Python ante ausencia de `ripgrep`, y cortocircuito en Fallback Mode para queries sin keywords válidas. Cobertura de tests unitarios de 14 pruebas definitivas en `tests/test_context.py`.
+
 ---
 
 ## Lo que se construyó
@@ -27,11 +31,13 @@ Despliegue automático e idempotente del manifiesto universal `AGENTS.md` en la 
 | Archivo | Rol |
 |---------|-----|
 | `__main__.py` | Entry point: `brain79 init` o MCP server mode |
-| `server.py` | FastMCP server con 6 herramientas registradas |
+| `server.py` | FastMCP server con herramientas registradas |
 | `config.py` | Resolución de `project_root` (arg > env > cwd) |
 | `core/wiki.py` | Operaciones sobre `.brain-79/`: read, write, list, search, save_raw |
 | `core/handoff.py` | Lógica de validación, escritura y lectura del historial de handoffs |
 | `core/init_project.py` | Bootstrapea `.brain-79/`, `.agents/mcp_config.json`, `.mcp.json` y `AGENTS.md` |
+| `core/lint.py` | Motor de análisis estático (links rotos, huérfanos, estructuras) |
+| `core/context.py` | Motor TF-IDF y recuperador inteligente de contexto |
 | `templates/SCHEMA.md` | Template de reglas de curación (el artefacto más crítico) |
 | `templates/INDEX.md` | Template del entry point de la wiki |
 | `templates/AGENTS.md` | Template de protocolo autocontenido universal para `AGENTS.md` |
@@ -46,30 +52,8 @@ Despliegue automático e idempotente del manifiesto universal `AGENTS.md` en la 
 - `brain79_ingest(summary, instructions?)` — guarda sesión en `_raw/` y devuelve workflow de curación
 - `brain79_handoff_write(...)` — escribe un documento inmutable de traspaso de sesión
 - `brain79_handoff_read(ref)` — lee un documento de traspaso y alerta sobre la promoción de conocimiento
-
-### Configuración aplicada en la máquina del usuario
-
-- **Instalación global**: `uv tool install --editable /Users/xilax/Documents/GitHub/brain-79`
-  - Binario en: `/Users/xilax/.local/bin/brain79`
-- **MCP global para agy**: `/Users/xilax/.gemini/config/mcp_config.json`
-- **MCP local para pi y otros CLIs**: Configurado idempotentemente vía `.mcp.json`
-- **Manifiesto Universal**: Desplegado en `AGENTS.md` para cold start cross-CLI
-
----
-
-## Aprendizajes críticos (no obvios)
-
-1. **El config correcto de agy es `~/.gemini/config/mcp_config.json`**, no `settings.json`. Las dos rutas son distintas. `settings.json` lo usa Gemini CLI (no agy).
-
-2. **El comando debe ser ruta absoluta**: `agy` spawea procesos con PATH restringido. `"brain79"` falla; `/Users/xilax/.local/bin/brain79"` funciona.
-
-3. **fastmcp imprime un banner a stderr** al arrancar. Se suprime con `os.environ.setdefault("FASTMCP_SHOW_SERVER_BANNER", "false")` en `__main__.py` — debe setearse ANTES de importar fastmcp.
-
-4. **El protocolo en `GEMINI.md` o `AGENTS.md` es lo que hace funcionar el cold start**, no el campo `instructions` del MCP server. Los modelos tratan `instructions` como sugerencia. El manifiesto de reglas (`AGENTS.md`/`GEMINI.md`) es obligatorio.
-
-5. **`brain79 init` inyecta configuraciones idempotentes**: genera `.agents/mcp_config.json` para `agy`, `.mcp.json` para `pi` (precedencia de adaptadores), y `AGENTS.md` como estándar emergente multi-CLI.
-
-6. **El ingest manual funciona sin MCP**: el agente puede leer/escribir `.brain-79/` directamente si tiene acceso al filesystem. El MCP suma pero no es bloqueante.
+- `brain79_lint()` — escanea la wiki y devuelve reporte estricto de links rotos, namespace violations, errores y huérfanos
+- `brain79_context(task, top_n?)` — recupera los artículos de la wiki más relevantes para una tarea mediante ranking ponderado TF-IDF
 
 ---
 
@@ -77,28 +61,20 @@ Despliegue automático e idempotente del manifiesto universal `AGENTS.md` en la 
 
 ### Alta prioridad
 
-1. **`brain79_lint` tool** (Fase 2)
-   - Detectar contradicciones, artículos huérfanos, links rotos, contenido stale
-   - Implementar como operación bajo demanda
-
-2. **`brain79_context(task)` tool** (Fase 3)
-   - Dado un task/pregunta, devuelve los artículos más relevantes
-   - Útil para que el agente sepa qué leer antes de implementar algo
+1. **Script de instalación (`install.sh`)**
+   - Un script que ejecute `uv tool install --editable .` y genere el JSON para `mcp_config.json`
 
 ### Media prioridad
 
-3. **Script de instalación (`install.sh`)**
-   - Un script que ejecute `uv tool install --editable .` y genere el JSON para `mcp_config.json`
-
-4. **Publicación en PyPI**
+2. **Publicación en PyPI**
    - Permite `uvx brain79` sin path local
    - Simplifica la instalación a un solo comando
    - Prerequisito: bumper de versión y CI mínimo
 
 ### Baja prioridad / backlog
 
-5. `brain79 update` — reinstala si el repo cambió (alternativa a `--editable`)
-6. `uv.lock` — decidir si trackearlo o no (actualmente en `.gitignore`)
+3. `brain79 update` — reinstala si el repo cambió (alternativa a `--editable`)
+4. `uv.lock` — decidir si trackearlo o no (actualmente en `.gitignore`)
 
 ---
 
@@ -109,10 +85,13 @@ Despliegue automático e idempotente del manifiesto universal `AGENTS.md` en la 
 | `src/brain79/server.py` | FastMCP server — agregar herramientas acá |
 | `src/brain79/core/wiki.py` | Lógica de operaciones sobre `.brain-79/` |
 | `src/brain79/core/handoff.py` | Lógica y validación estricta de la memoria a corto plazo |
+| `src/brain79/core/context.py` | Motor de recuperación inteligente de contexto (TF-IDF) |
 | `src/brain79/core/init_project.py` | Lo que `brain79 init` crea (wiki, config, AGENTS.md, .mcp.json) |
 | `src/brain79/templates/AGENTS.md` | Template de protocolo universal para el manifesto AGENTS.md |
 | `tests/test_init_project.py` | Pruebas unitarias de inicialización e inyección idempotente |
 | `tests/test_handoff.py` | Pruebas exhaustivas con cobertura para la funcionalidad de handoff |
+| `tests/test_lint.py` | Pruebas unitarias adversariales de parseo, OOM, timeouts y grafos |
+| `tests/test_context.py` | Pruebas unitarias completas de recuperación de contexto y TF-IDF |
 | `src/brain79/templates/SCHEMA.md` | Template de reglas — el artefacto más crítico |
 | `src/brain79/__main__.py` | Entry point y supresión de banner fastmcp |
 
@@ -120,5 +99,4 @@ Despliegue automático e idempotente del manifiesto universal `AGENTS.md` en la 
 
 ## Próxima sesión sugerida
 
-Diseñar e implementar la herramienta `brain79_lint` (Fase 2) para análisis y diagnóstico automático del estado de salud de la wiki (links rotos, artículos obsoletos, o huérfanos).
-
+Codificar el script de instalación global `install.sh` o preparar el empaquetado para publicación en PyPI.

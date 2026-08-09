@@ -109,6 +109,7 @@ Handoffs bridge consecutive work sessions for specific tasks.
 | `brain79_handoff_write(...)` | Writes a structured, immutable session handoff |
 | `brain79_handoff_read(ref?)` | Reads a handoff (`"latest"`, `"none"`, timestamp prefix, or filename) |
 | `brain79_lint()` | Deterministic health check scan diagnosing broken links, namespace violations, structural errors, and orphans |
+| `brain79_context(task, top_n?)` | Retrieves top relevant wiki articles for a task using TF-IDF ranking |
 
 
 ---

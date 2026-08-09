@@ -50,6 +50,13 @@ This document outlines the internal architecture, design principles, and runtime
 3. **Multi-Root BFS Reachability:** Executes graph BFS from all `INDEX.md` entry points (`follow_symlinks=False`) to report orphan articles.
 4. **Non-Blocking Lock & Resource Guards:** Checks file lock state via non-blocking `filelock` (skipping locked files as warnings), enforces a 1 MB file size limit, and limits execution to 15 seconds.
 
+### Context Retrieval Invariants (`brain79_context`)
+1. **NFKC & Stop-Word Sanitization:** Normalizes input via NFKC, strips apostrophes, tokenizes alnum sequences (`\w+`), deduplicates, and filters out stop-words (EN/ES/LLM domains) and tokens < 3 characters.
+2. **Boundary Heuristic:** Enforces exact word boundary (`\b{kw}\b`) for alnum tokens <= 4 characters, and free substring matching for tokens > 4 characters.
+3. **TF-IDF & Fallback Short-Circuit:** Ranks articles using TF-IDF (`TF * (log(N/df) + 1.0)`). If no valid keywords remain, short-circuits execution without launching `ThreadPoolExecutor` and enters Fallback Mode (returning `INDEX.md` and recent articles by `st_mtime_ns`).
+4. **ARG_MAX & FD Safety:** Manages temporary file lists via `mkstemp` and POSIX file descriptor lifecycle management, executing parallel keyword search with fallback from `ripgrep` to pure Python regex.
+
+
 
 ---
 

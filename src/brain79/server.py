@@ -2,6 +2,7 @@ import logging
 
 from fastmcp import FastMCP
 
+from brain79.core import context as context_ops
 from brain79.core import handoff as handoff_ops
 from brain79.core import wiki as wiki_ops
 
@@ -188,3 +189,16 @@ def brain79_lint() -> str:
     and orphan articles.
     """
     return wiki_ops.lint_wiki()
+
+
+@mcp.tool()
+def brain79_context(task: str, top_n: int = 3) -> str:
+    """
+    Retrieve top relevant wiki articles for a task using TF-IDF ranking.
+
+    Args:
+        task: Description of task or search query
+        top_n: Maximum number of articles to return (default 3)
+    """
+    return context_ops.get_context(task, top_n)
+
