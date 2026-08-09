@@ -18,14 +18,24 @@ Instead of re-explaining project context every time you chat with an AI agent, b
 ### Step 1 — Install brain79 as a global tool
 
 ```bash
-uv tool install --editable /path/to/brain-79
+uv tool install --editable /path/to/brain-79 --force
 ```
 
-This installs `brain79` to `~/.local/bin/brain79`. Updates to the source repo are reflected immediately.
+This installs `brain79` to `~/.local/bin/brain79` and syncs all dependencies. Source code edits are reflected immediately, and using `--force` ensures newly added package dependencies are installed into the tool environment.
 
-### Step 2 — Register the MCP server globally (agy)
+### Step 2 — Initialize your project
 
-Add `brain79` to `~/.gemini/config/mcp_config.json`:
+```bash
+cd /path/to/your-project
+brain79 init
+```
+
+This creates the `.brain-79/` directory structure, deploys `AGENTS.md` (universal cold-start protocol), and configures `.mcp.json` / `.agents/mcp_config.json` automatically.
+
+### Step 3 — Multi-CLI Configuration
+
+#### Using with `agy`
+For global access across all projects, add `brain79` to `~/.gemini/config/mcp_config.json`:
 
 ```json
 {
@@ -38,16 +48,23 @@ Add `brain79` to `~/.gemini/config/mcp_config.json`:
 }
 ```
 
-Restart your CLI agent after updating the configuration.
-
-### Step 3 — Initialize your project
-
-```bash
-cd /path/to/your-project
-brain79 init
-```
-
-This creates the `.brain-79/` directory structure in your repo.
+#### Using with `pi` (Minimax / Orca CLI)
+1. Install the MCP adapter for `pi` (one-time setup):
+   ```bash
+   pi install npm:pi-mcp-adapter
+   ```
+2. Running `brain79 init` automatically creates or merges `.mcp.json` in your project root with the server definition:
+   ```json
+   {
+     "mcpServers": {
+       "brain79": {
+         "command": "brain79",
+         "args": ["--project-root", "."]
+       }
+     }
+   }
+   ```
+   *Note on `pi` precedence:* `pi` resolves MCP definitions in order: `~/.config/mcp/mcp.json` → `~/.agents/mcp.json` → `~/.agents/mcp/mcp.json` → `~/.pi/agent/mcp.json` → `.mcp.json` → `.pi/mcp.json`.
 
 ---
 
