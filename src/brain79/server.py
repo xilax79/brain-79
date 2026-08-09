@@ -54,7 +54,7 @@ def brain79_write(path: str, content: str) -> str:
     """
     try:
         return wiki_ops.write_article(path, content)
-    except ValueError as exc:
+    except (ValueError, OSError) as exc:
         return f"Error: {exc}"
 
 

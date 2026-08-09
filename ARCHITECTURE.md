@@ -46,7 +46,16 @@ This document outlines the internal architecture, design principles, and runtime
 
 ---
 
-## 3. Directory Layout
+## 3. Wiki Core IO Invariants (`wiki.py`)
+
+1. **Path Traversal Security:** `_safe_resolve` strictly enforces absolute directory containment using `is_relative_to`, preventing sibling-prefix attacks and sandbox escapes.
+2. **Atomic Writes & Concurrency Control:** All file modifications are protected by inter-process `filelock` and executed via atomic POSIX `rename` (writing to a `.md.tmp` file and replacing the target). This prevents race conditions between concurrent agents and protects against file corruption upon process crashes (e.g. SIGKILL).
+3. **Isolated Search (Ripgrep):** `brain79_search` uses `ripgrep` (`rg`) for instantaneous, massive-scale exact string matching (with `-F` and null delimiters) for top performance, automatically and safely falling back to pure Python if `rg` is unavailable.
+4. **Namespace Integrity:** The `_raw/` directory is strictly excluded from all public listings (`list_articles`, `search_articles`) to prevent bleeding unstructured text into the curated Wiki domain.
+
+---
+
+## 4. Directory Layout
 
 ```
 .brain-79/
