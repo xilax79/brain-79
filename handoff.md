@@ -103,11 +103,11 @@ La especificación del esquema universal de handoff ha sido diseñada de forma b
 
 ### Baja prioridad / backlog
 
-8. Tests unitarios generales (las funciones nuevas de handoff ya están 100% testeadas, pero `wiki.py` carece de tests)
+8. Tests unitarios generales (las funciones nuevas de handoff ya están 100% testeadas, pero `wiki.py` carece de tests) - **[Plan de Pruebas](file:///Users/xilax/.gemini/antigravity-cli/brain/72a347a8-720c-445d-ac45-057f155afaaa/plan_test_wiki.md)**
 9. `brain79 update` — reinstala si el repo cambió (alternativa a `--editable`)
-10. `brain79_search` con ripgrep en lugar de Python puro (más rápido en repos grandes)
+10. `brain79_search` con ripgrep en lugar de Python puro (más rápido en repos grandes) - **[Plan Ripgrep](file:///Users/xilax/.gemini/antigravity-cli/brain/72a347a8-720c-445d-ac45-057f155afaaa/plan_ripgrep.md)**
 11. `uv.lock` — decidir si trackearlo o no (actualmente en `.gitignore`)
-12. Compatibilidad con múltiples proyectos abiertos simultáneamente (concurrencia)
+12. Compatibilidad con múltiples proyectos abiertos simultáneamente (concurrencia) - **[Plan Concurrencia](file:///Users/xilax/.gemini/antigravity-cli/brain/72a347a8-720c-445d-ac45-057f155afaaa/plan_concurrency.md)**
 
 ---
 
@@ -129,4 +129,7 @@ La especificación del esquema universal de handoff ha sido diseñada de forma b
 
 ## Próxima sesión sugerida
 
-Investigar y definir la integración con el CLI `pi` (Orca/Minimax) y crear el protocolo emergente o manifiesto universal para estandarizar el cold start en múltiples CLIs (`AGENTS.md` o similar), dado que la funcionalidad local ya está madura.
+Implementar las mejoras arquitectónicas del backend en este estricto orden:
+1. Suite de pruebas exhaustiva para `wiki.py`.
+2. Refactor del motor de búsqueda para usar `ripgrep` puro.
+3. Control de concurrencias para edición segura multi-proyecto.
