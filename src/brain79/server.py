@@ -177,3 +177,14 @@ def brain79_handoff_read(handoff_ref: str = "latest") -> str:
         return handoff_ops.read_handoff(handoff_ref)
     except (ValueError, FileNotFoundError, OSError) as exc:
         return f"Error reading handoff: {exc}"
+
+
+@mcp.tool()
+def brain79_lint() -> str:
+    """
+    Run a deterministic health check scan on the project wiki (.brain-79/).
+
+    Diagnoses broken local links, namespace violations, structural errors/warnings,
+    and orphan articles.
+    """
+    return wiki_ops.lint_wiki()

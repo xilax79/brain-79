@@ -44,6 +44,13 @@ This document outlines the internal architecture, design principles, and runtime
 1. **Flexible Reference Resolution:** `handoff_ref` handles `"latest"`, `"none"`, `""`, exact filenames, full timestamps, or prefix patterns (e.g., `"2024"` or `"2024-08"`).
 2. **Promotion Trigger:** Inject dynamic warning banner if `## Conocimiento pendiente de promoción` is present in content.
 
+### Wiki Linter Invariants (`brain79_lint`)
+1. **Deterministic Sanitization:** Cleans frontmatter, fenced code blocks, images, and inline code spans (including multi-backtick spans) before link extraction.
+2. **Local Link & Namespace Resolution:** Decodes percent-encoded URLs (`unquote`) and strips anchor fragments (`#...`). Validates target existence and flags links into `_raw/` as critical Namespace Violations.
+3. **Multi-Root BFS Reachability:** Executes graph BFS from all `INDEX.md` entry points (`follow_symlinks=False`) to report orphan articles.
+4. **Non-Blocking Lock & Resource Guards:** Checks file lock state via non-blocking `filelock` (skipping locked files as warnings), enforces a 1 MB file size limit, and limits execution to 15 seconds.
+
+
 ---
 
 ## 3. Wiki Core IO Invariants (`wiki.py`)
