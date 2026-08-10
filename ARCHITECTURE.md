@@ -94,3 +94,17 @@ Local installation and lifecycle management of the `brain79` binary is delegated
 - **Cross-Platform Tool Management:** Abstracts `uv tool install --editable --reinstall .`, `uv tool uninstall brain79`, and `uv tool list`.
 - **Fail-Fast Environment Guards:** Pre-flight validation checks `uv` binary presence (`shutil.which`) and repository root integrity (`pyproject.toml`).
 - **Clean Execution & Diagnostics:** Prevents raw traceback leakage by suppressing unhandled exceptions and providing clean error output to `stderr` with appropriate exit codes.
+
+---
+
+## 6. Update Subcommand Architecture (`brain79 update`)
+
+The `brain79 update` command enables in-place updating of editable installations directly from the upstream repository.
+
+- **CLI Dispatch Mechanism (`__main__.py`):** Positionally dispatches `update` subcommands via `sys.argv[1:]` before initializing FastMCP, ensuring zero side-effects or stderr outputs during normal server operations.
+- **Isolated Module Resolution (`importlib.util`):** Locates the installed package path dynamically using `importlib.util.find_spec("brain79")` without executing module import side-effects. Traverses directory parents to identify the `.git` repository root.
+- **Fail-Fast Safety Checks:** Enforces strict invariants prior to mutating state:
+  1. Validates presence of `git` and `uv` binaries.
+  2. Ensures working tree is clean (`git status --porcelain`).
+  3. Verifies git HEAD is not detached and resides on the remote default branch (`origin/HEAD` or `--branch` override).
+- **Atomic Pull & Rebuild Protocol:** Executes `git fetch origin`, verifies hash diffs, performs fast-forward pull (`git pull --ff-only`), and rebuilds the tool environment (`uv tool install --force .`). Gracefully handles cancellation via `KeyboardInterrupt` (exit code `130`).

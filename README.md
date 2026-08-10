@@ -58,7 +58,21 @@ brain79 init
 
 This creates the `.brain-79/` directory structure, deploys `AGENTS.md` (universal cold-start protocol), and configures `.mcp.json` / `.agents/mcp_config.json` automatically.
 
-### Step 3 — Multi-CLI Configuration
+### Step 3 — Updating brain79
+
+To update your editable installation of `brain79` to the latest commit from the upstream repository:
+
+```bash
+brain79 update [--branch BRANCH]
+```
+
+**Preconditions & Guarantees:**
+- Must be an editable git installation (`.git` directory present in repo hierarchy).
+- Working tree must be clean (no uncommitted modifications).
+- Current branch must match the remote default branch (auto-detected, e.g. `main`), or be overridden using `--branch`.
+- Automatically fetches origin, verifies fast-forward compatibility (`--ff-only`), pulls changes, and rebuilds the environment via `uv tool install --force .`.
+
+### Step 4 — Multi-CLI Configuration
 
 #### Using with `agy`
 For global access across all projects, add `brain79` to `~/.gemini/config/mcp_config.json`:

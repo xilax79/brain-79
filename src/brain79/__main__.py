@@ -38,6 +38,17 @@ def main() -> None:
         )
         parsed = parser.parse_args(args[1:])
         _cmd_init(parsed.project_root)
+    elif args and args[0] == "update":
+        parser = argparse.ArgumentParser(prog="brain79 update")
+        parser.add_argument(
+            "--branch",
+            default=None,
+            help="Default branch (auto-detected or manually overridden)",
+        )
+        parsed = parser.parse_args(args[1:])
+        from brain79.core.update import update_project
+
+        sys.exit(update_project(branch_override=parsed.branch))
     else:
         # Default: MCP server mode (used by MCP clients via uvx / uv run)
         parser = argparse.ArgumentParser(

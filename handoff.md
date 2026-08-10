@@ -26,6 +26,10 @@ Motor TF-IDF de fiabilidad industrial implementado (`src/brain79/core/context.py
 
 Script de instalación puro minimalista que abstrae `uv tool install --editable .` sin acoplamiento global, incorporando mitigaciones de robustness fail-fast (detección de `uv`, path constraints) y pruebas unitarias sólidas (`tests/test_install.py`).
 
+**Fase 5 — Comando de Actualización (`brain79 update`): COMPLETA y funcionando.**
+
+Comando de CLI `brain79 update` que permite actualizar instalaciones editables directamente desde `origin` con validación estricta de estado git (dirty check, detached HEAD check, default branch check, `--ff-only` pull y rebuild automático con `uv tool install --force .`). Incluye suite de pruebas unitarias (`tests/test_update.py`).
+
 ---
 
 ## Lo que se construyó
@@ -34,7 +38,7 @@ Script de instalación puro minimalista que abstrae `uv tool install --editable 
 
 | Archivo | Rol |
 |---------|-----|
-| `__main__.py` | Entry point: `brain79 init` o MCP server mode |
+| `__main__.py` | Entry point: `brain79 init`, `brain79 update` o MCP server mode |
 | `server.py` | FastMCP server con herramientas registradas |
 | `config.py` | Resolución de `project_root` (arg > env > cwd) |
 | `core/wiki.py` | Operaciones sobre `.brain-79/`: read, write, list, search, save_raw |
@@ -42,6 +46,7 @@ Script de instalación puro minimalista que abstrae `uv tool install --editable 
 | `core/init_project.py` | Bootstrapea `.brain-79/`, `.agents/mcp_config.json`, `.mcp.json` y `AGENTS.md` |
 | `core/lint.py` | Motor de análisis estático (links rotos, huérfanos, estructuras) |
 | `core/context.py` | Motor TF-IDF y recuperador inteligente de contexto |
+| `core/update.py` | Lógica de actualización e integración con git y uv |
 | `templates/SCHEMA.md` | Template de reglas de curación (el artefacto más crítico) |
 | `templates/INDEX.md` | Template del entry point de la wiki |
 | `templates/AGENTS.md` | Template de protocolo autocontenido universal para `AGENTS.md` |
@@ -76,7 +81,6 @@ Script de instalación puro minimalista que abstrae `uv tool install --editable 
 
 ### Baja prioridad / backlog
 
-3. `brain79 update` — reinstala si el repo cambió (alternativa a `--editable`)
 4. `uv.lock` — decidir si trackearlo o no (actualmente en `.gitignore`)
 
 ---
@@ -89,12 +93,14 @@ Script de instalación puro minimalista que abstrae `uv tool install --editable 
 | `src/brain79/core/wiki.py` | Lógica de operaciones sobre `.brain-79/` |
 | `src/brain79/core/handoff.py` | Lógica y validación estricta de la memoria a corto plazo |
 | `src/brain79/core/context.py` | Motor de recuperación inteligente de contexto (TF-IDF) |
+| `src/brain79/core/update.py` | Lógica de actualización e integración con git y uv |
 | `src/brain79/core/init_project.py` | Lo que `brain79 init` crea (wiki, config, AGENTS.md, .mcp.json) |
 | `src/brain79/templates/AGENTS.md` | Template de protocolo universal para el manifesto AGENTS.md |
 | `tests/test_init_project.py` | Pruebas unitarias de inicialización e inyección idempotente |
 | `tests/test_handoff.py` | Pruebas exhaustivas con cobertura para la funcionalidad de handoff |
 | `tests/test_lint.py` | Pruebas unitarias adversariales de parseo, OOM, timeouts y grafos |
 | `tests/test_context.py` | Pruebas unitarias completas de recuperación de contexto y TF-IDF |
+| `tests/test_update.py` | Pruebas unitarias completas del comando de actualización |
 | `src/brain79/templates/SCHEMA.md` | Template de reglas — el artefacto más crítico |
 | `src/brain79/__main__.py` | Entry point y supresión de banner fastmcp |
 
