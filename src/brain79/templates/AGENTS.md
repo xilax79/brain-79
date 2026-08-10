@@ -10,7 +10,8 @@
 
 ## Cold Start (Start of task)
 1. ALWAYS use the `brain79_index` tool to orient yourself before touching code.
-2. The `.brain-79/` directory contains the ultimate source of truth.
+2. If working on a project with an empty wiki, call `brain79_bootstrap` to generate a scan manifest and seed the wiki via `brain79_write`.
+3. The `.brain-79/` directory contains the ultimate source of truth.
 
 ## Mid-Session and Handoffs (End of task)
 - Before concluding a session, use `brain79_handoff_write` to store progress.
@@ -23,3 +24,5 @@
 - `brain79_list(section?)` — browse the wiki
 - `brain79_ingest(summary, instructions?)` — promote learnings
 - `brain79_handoff_write(...)` / `brain79_handoff_read(ref?)` — session continuity
+- `brain79_bootstrap(scope?, force?)` — scan legacy project to seed empty wiki
+

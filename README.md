@@ -122,6 +122,15 @@ The Wiki stores curated, enduring knowledge about your project.
   > "Update the wiki with our new architectural decision."
   *(The agent saves raw session notes via `brain79_ingest` and updates relevant wiki articles).*
 
+- **Bootstrapping a legacy project:** Tell your agent:
+  > "Run brain79_bootstrap and follow the instructions in the manifest."
+  *(The agent calls `brain79_bootstrap()` to scan the project, then uses
+  `brain79_write` to create seed articles tagged with `bootstrap: true`.)*
+
+  To focus on specific subsystems:
+  > "Bootstrap the wiki focusing on src/auth and src/payments."
+  *(Translates to `brain79_bootstrap(scope="src/auth,src/payments")`.)*
+
 ### 🤝 Using Handoffs (Short-Term Memory)
 
 Handoffs bridge consecutive work sessions for specific tasks.
@@ -150,6 +159,7 @@ Handoffs bridge consecutive work sessions for specific tasks.
 | `brain79_handoff_read(ref?)` | Reads a handoff (`"latest"`, `"none"`, timestamp prefix, or filename) |
 | `brain79_lint()` | Deterministic health check scan diagnosing broken links, namespace violations, structural errors, and orphans |
 | `brain79_context(task, top_n?)` | Retrieves top relevant wiki articles for a task using TF-IDF ranking |
+| `brain79_bootstrap(scope?, force?)` | Scans project structure and returns a manifest to seed the wiki from a legacy codebase |
 
 
 ---

@@ -108,3 +108,55 @@ The `brain79 update` command enables in-place updating of editable installations
   2. Ensures working tree is clean (`git status --porcelain`).
   3. Verifies git HEAD is not detached and resides on the remote default branch (`origin/HEAD` or `--branch` override).
 - **Atomic Pull & Rebuild Protocol:** Executes `git fetch origin`, verifies hash diffs, performs fast-forward pull (`git pull --ff-only`), and rebuilds the tool environment (`uv tool install --force .`). Gracefully handles cancellation via `KeyboardInterrupt` (exit code `130`).
+
+---
+
+## 7. Bootstrap Tool Architecture (`bootstrap.py`)
+
+`brain79_bootstrap` enables wiki seeding for existing projects without prior wiki history.
+
+### Design Principles
+- **LLM is the intelligence; scanner is the eyes.** The tool performs only deterministic
+  file system operations. The LLM interprets the manifest and writes wiki articles using
+  `brain79_write`.
+- **Strict budget enforcement.** Total content returned is capped at 80 KB.
+  Individual root files: 8 KB. Scope files: 4 KB. Files are read incrementally
+  (never load full file into memory for truncation).
+- **No hallucination surface from the tool.** Bootstrap Instructions explicitly prohibit
+  the LLM from writing content not evidenced in the manifest.
+
+### Idempotency & Concurrency Contract
+1. `.brain-79/.bootstrap_state.json` is written atomically via `tmp+rename`.
+2. A `filelock` protects the read-check and state-write phases only.
+   The file scan itself runs outside the lock to avoid holding it during slow I/O.
+3. Subsequent calls without `force=True` return a warning with the previous timestamp.
+4. Corrupt or missing state is treated as "never run" — bootstrap proceeds.
+
+### Security Invariants
+1. **Excluded dirs:** `.git`, `node_modules`, `.venv`, `.brain-79`, and all
+   cache dirs are never walked.
+2. **Binary extension skip:** No content is read from known binary file types.
+3. **Scope path validation:** Paths in `scope` that resolve outside `project_root`
+   are silently dropped (no warning, no information leakage).
+4. **In-bounds but missing paths:** Scope paths inside `project_root` that do not
+   exist produce a warning in the manifest (usability).
+5. **No writes to wiki:** The tool writes only `.bootstrap_state.json`. All wiki
+   article creation is delegated to the LLM via `brain79_write`.
+
+### Frontmatter Traceability
+All bootstrap-generated articles carry YAML frontmatter (`bootstrap: true`,
+`generated_by`, `generated_at`, `project_type`). This enables future tooling
+to distinguish bootstrap content from organically curated knowledge.
+
+### Scan Budget Algorithm
+1. Root-level structural pass always runs first (tree + priority key files by category).
+2. Remaining budget allocated to scope files if `scope` was provided.
+3. Files read in priority order; scanning halts when `_TOTAL_CONTENT_BUDGET_BYTES` exhausted.
+4. Per-file truncation uses incremental read — `stat().st_size` checked before allocation.
+
+### Project Type Detection
+Heuristic, priority-ordered. First matching signal wins. Returns one of:
+`python-package`, `python-script`, `node-package`, `rust-crate`, `go-module`,
+`java-maven`, `java-gradle`, `ruby-gem`, `docker-service`, `research-paper`,
+`documentation`, `unknown`.
+

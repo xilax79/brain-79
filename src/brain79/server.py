@@ -201,3 +201,41 @@ def brain79_context(task: str, top_n: int = 3) -> str:
         top_n: Maximum number of articles to return (default 3)
     """
     return context_ops.get_context(task, top_n)
+
+
+@mcp.tool()
+def brain79_bootstrap(
+    scope: str | None = None,
+    force: bool = False,
+) -> str:
+    """
+    Scan the project and return a structured manifest for wiki bootstrapping.
+
+    Use this tool when starting work on a legacy or existing project with an
+    empty wiki. It scans the project deterministically and returns a manifest
+    that you must use to write initial wiki articles via brain79_write.
+
+    IMPORTANT: After receiving this manifest, follow the Bootstrap Instructions
+    section at the end of the manifest exactly. Do not skip articles.
+    Do not write content not evidenced in the manifest.
+
+    Example flow:
+        1. result = brain79_bootstrap()             # get the manifest
+        2. # Read the "Bootstrap Instructions" section in result
+        3. brain79_write("architecture/overview.md", <content with frontmatter>)
+        4. brain79_write("INDEX.md", <updated content>)
+        5. brain79_lint()                           # verify integrity
+
+    Args:
+        scope: Optional comma-separated list of relative paths to focus on
+               (e.g., "src/auth,src/payments"). If omitted or ".", performs a
+               shallow structural scan of the entire project.
+        force: If True, re-runs even if bootstrap was already executed.
+               Default False — returns a warning with previous run timestamp instead.
+    """
+    try:
+        from brain79.core.bootstrap import run_bootstrap
+
+        return run_bootstrap(scope=scope, force=force)
+    except (OSError, ValueError) as exc:
+        return f"Bootstrap Error: {exc}"
