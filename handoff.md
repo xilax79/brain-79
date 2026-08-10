@@ -22,6 +22,10 @@ Despliegue automático e idempotente del manifiesto universal `AGENTS.md` en la 
 
 Motor TF-IDF de fiabilidad industrial implementado (`src/brain79/core/context.py`) y registrado como herramienta MCP (`brain79_context`). Incluye sanitización NFKC, purgado de contracciones, heurística de límites de palabra (exact match <= 4 caracteres alnum, substring libre para el resto), evacuación ARG_MAX con protección contra FD leaks via POSIX file descriptors, concurrencia paralela con `ThreadPoolExecutor`, fallback a regex puro en Python ante ausencia de `ripgrep`, y cortocircuito en Fallback Mode para queries sin keywords válidas. Cobertura de tests unitarios de 14 pruebas definitivas en `tests/test_context.py`.
 
+**Fase 4 — Instalador Local Cross-Platform (`scripts/install.py`): COMPLETA y funcionando.**
+
+Script de instalación puro minimalista que abstrae `uv tool install --editable .` sin acoplamiento global, incorporando mitigaciones de robustness fail-fast (detección de `uv`, path constraints) y pruebas unitarias sólidas (`tests/test_install.py`).
+
 ---
 
 ## Lo que se construyó
@@ -61,8 +65,7 @@ Motor TF-IDF de fiabilidad industrial implementado (`src/brain79/core/context.py
 
 ### Alta prioridad
 
-1. **Script de instalación (`install.sh`)**
-   - Un script que ejecute `uv tool install --editable .` y genere el JSON para `mcp_config.json`
+*(Vacío — Tareas principales de instalación local completadas)*
 
 ### Media prioridad
 
@@ -99,4 +102,4 @@ Motor TF-IDF de fiabilidad industrial implementado (`src/brain79/core/context.py
 
 ## Próxima sesión sugerida
 
-Codificar el script de instalación global `install.sh` o preparar el empaquetado para publicación en PyPI.
+Preparar el empaquetado y CI/CD para publicación en PyPI (Modo Distribuido).

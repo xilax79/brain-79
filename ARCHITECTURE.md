@@ -84,3 +84,13 @@ This document outlines the internal architecture, design principles, and runtime
     ├── sessions/    ← Raw text session logs
     └── commits/     ← Commit metadata
 ```
+
+---
+
+## 5. Tool Provisioning & Installation Architecture (`scripts/install.py`)
+
+Local installation and lifecycle management of the `brain79` binary is delegated exclusively to `scripts/install.py`.
+
+- **Cross-Platform Tool Management:** Abstracts `uv tool install --editable --reinstall .`, `uv tool uninstall brain79`, and `uv tool list`.
+- **Fail-Fast Environment Guards:** Pre-flight validation checks `uv` binary presence (`shutil.which`) and repository root integrity (`pyproject.toml`).
+- **Clean Execution & Diagnostics:** Prevents raw traceback leakage by suppressing unhandled exceptions and providing clean error output to `stderr` with appropriate exit codes.

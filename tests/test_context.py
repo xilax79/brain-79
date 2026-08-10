@@ -116,15 +116,13 @@ def test_2_boundary_heuristics() -> None:
         "read_text",
         return_value="architectures architectures2 architect",
     ):
-        matches_long = context_ops._search_keyword_python(
-            "architecture", snapshot
-        )
+        matches_long = context_ops._search_keyword_python("architecture", snapshot)
         assert matches_long.get(snapshot[0]) == 2
 
 
 def test_3_nfkc_normalization_and_deduplication() -> None:
     """Test 3: Normalización NFKC y deduplicación."""
-    kws = context_ops.extract_keywords("AUTH auth \uFB01x")
+    kws = context_ops.extract_keywords("AUTH auth \ufb01x")
     assert kws == ["auth"]
 
 
@@ -134,9 +132,7 @@ def test_4_empty_extraction_fallback(temp_project: Path) -> None:
     (wiki_root / "INDEX.md").write_text("# Index", encoding="utf-8")
     (wiki_root / "doc1.md").write_text("# Doc 1", encoding="utf-8")
 
-    with patch(
-        "brain79.core.context.ThreadPoolExecutor"
-    ) as mock_executor:
+    with patch("brain79.core.context.ThreadPoolExecutor") as mock_executor:
         report = context_ops.get_context("the in it")
         assert "⚠️ FALLBACK MODE" in report
         assert "Keywords detectados: (ninguno)" in report
@@ -192,7 +188,10 @@ def test_8_score_truncation_and_top_n_defaults(
     lines = [
         line
         for line in report.splitlines()
-        if line.startswith("1. ") or line.startswith("2. ") or line.startswith("3. ") or line.startswith("4. ")
+        if line.startswith("1. ")
+        or line.startswith("2. ")
+        or line.startswith("3. ")
+        or line.startswith("4. ")
     ]
     assert len(lines) == 3
 
@@ -228,14 +227,16 @@ def test_10_mcp_handler_response_type(temp_project: Path) -> None:
 
 def test_11_json_parse_resilience() -> None:
     """Test 11: Resiliencia ante Excepciones de Parseo JSON."""
-    fake_stdout = "\n".join([
-        "invalid json line",
-        '{"type": "begin"}',
-        '{"type": "match", "data": {}}',
-        "{corrupted: json",
-        '{"type": "end", "data": {"path": {"text": "/path/valid.md"}, "stats": {"matches": 5}}}',
-        "",
-    ])
+    fake_stdout = "\n".join(
+        [
+            "invalid json line",
+            '{"type": "begin"}',
+            '{"type": "match", "data": {}}',
+            "{corrupted: json",
+            '{"type": "end", "data": {"path": {"text": "/path/valid.md"}, "stats": {"matches": 5}}}',
+            "",
+        ]
+    )
 
     mock_proc = MagicMock()
     mock_proc.stdout = fake_stdout
@@ -245,9 +246,7 @@ def test_11_json_parse_resilience() -> None:
 
     try:
         with patch("subprocess.run", return_value=mock_proc):
-            matches = context_ops._search_keyword_rg(
-                "rg", "auth", tmp_file
-            )
+            matches = context_ops._search_keyword_rg("rg", "auth", tmp_file)
             assert len(matches) == 1
             assert matches[Path("/path/valid.md")] == 5
     finally:

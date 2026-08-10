@@ -201,4 +201,3 @@ def brain79_context(task: str, top_n: int = 3) -> str:
         top_n: Maximum number of articles to return (default 3)
     """
     return context_ops.get_context(task, top_n)
-

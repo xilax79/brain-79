@@ -138,9 +138,7 @@ def get_wiki_snapshot() -> list[Path]:
     return snapshot
 
 
-def _search_keyword_rg(
-    rg_path: str, kw: str, tmp_path: Path
-) -> dict[Path, int]:
+def _search_keyword_rg(rg_path: str, kw: str, tmp_path: Path) -> dict[Path, int]:
     """
     Search keyword using ripgrep --json reading candidate files from tmp_path.
 
@@ -321,9 +319,7 @@ def get_context(task: str, top_n: int = 3) -> str:
         max_workers = min(8, len(keywords))
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(
-                    _search_keyword, kw, tmp_path, snapshot
-                ): kw
+                executor.submit(_search_keyword, kw, tmp_path, snapshot): kw
                 for kw in keywords
             }
             for future in as_completed(futures):
@@ -387,7 +383,9 @@ def get_context(task: str, top_n: int = 3) -> str:
     ]
 
     if not top_articles:
-        lines.append("No se encontraron artículos con relevancia suficiente (Score >= 1.0).")
+        lines.append(
+            "No se encontraron artículos con relevancia suficiente (Score >= 1.0)."
+        )
     else:
         for idx, (score, p, hits) in enumerate(top_articles, 1):
             rel = p.relative_to(wiki_root)

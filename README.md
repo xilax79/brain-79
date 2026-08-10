@@ -12,16 +12,42 @@ brain-79 gives your AI coding assistants persistent, curated memory about your c
 Instead of re-explaining project context every time you chat with an AI agent, brain-79 allows the agent to orient itself immediately.
 
 ---
-
 ## Quick Start
+
+### Prerequisites
+
+The `uv` package manager is required (`>= 0.4.0`). This script cannot install `brain79` without `uv` already present on your system.
+
+**Why `uv`?** It's the modern standard for Python editable installs (2024+) and the only supported bootstrap path for this project. Once installed, all subsequent commands use `uv` transparently.
+
+```bash
+curl -sSf https://astral.sh/uv/install.sh | sh
+```
+
+On Windows, see [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/).
 
 ### Step 1 — Install brain79 as a global tool
 
+**Cross-platform (recommended):**
+
 ```bash
-uv tool install --editable /path/to/brain-79 --force
+uv run scripts/install.py
 ```
 
-This installs `brain79` to `~/.local/bin/brain79` and syncs all dependencies. Source code edits are reflected immediately, and using `--force` ensures newly added package dependencies are installed into the tool environment.
+**Unix and macOS (alternative, after `chmod +x`):**
+
+```bash
+./scripts/install.py
+```
+
+Both methods require `uv` to be installed (see Prerequisites). The script cannot function without `uv` because it delegates `uv tool install/uninstall/list` internally.
+
+You can also manage or verify your installation using:
+
+```bash
+uv run scripts/install.py status
+uv run scripts/install.py uninstall
+```
 
 ### Step 2 — Initialize your project
 
