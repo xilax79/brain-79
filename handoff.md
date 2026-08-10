@@ -79,10 +79,6 @@ Comando de CLI `brain79 update` que permite actualizar instalaciones editables d
    - Simplifica la instalación a un solo comando
    - Prerequisito: bumper de versión y CI mínimo
 
-### Baja prioridad / backlog
-
-4. `uv.lock` — decidir si trackearlo o no (actualmente en `.gitignore`)
-
 ---
 
 ## Archivos clave
