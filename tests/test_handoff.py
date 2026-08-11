@@ -51,8 +51,8 @@ def test_session_type_whitespace_and_case_tolerance() -> None:
         gotchas=[],
         boot_instruction="Execute next step",
     )
-    assert "Handoff successfully saved" in msg1
-    assert "**Tipo de sesión:** feature" in read_handoff("latest")
+    assert msg1.startswith("handoffs/handoff-")
+    assert "**Tipo de sesión:** feature" in read_handoff("latest")[0]
 
     msg2 = write_handoff(
         session_type="BugFix",
@@ -65,8 +65,8 @@ def test_session_type_whitespace_and_case_tolerance() -> None:
         gotchas=[],
         boot_instruction="Execute next step",
     )
-    assert "Handoff successfully saved" in msg2
-    assert "**Tipo de sesión:** bugfix" in read_handoff("latest")
+    assert msg2.startswith("handoffs/handoff-")
+    assert "**Tipo de sesión:** bugfix" in read_handoff("latest")[0]
 
 
 def test_empty_summary_raises_error() -> None:
@@ -138,13 +138,16 @@ def test_empty_boot_instruction_hallucination() -> None:
         gotchas=[],
         boot_instruction="No hay tareas pendientes por hacer.",
     )
-    assert "Handoff successfully saved" in msg
+    assert msg.startswith("handoffs/handoff-")
 
 
 def test_handoff_absent() -> None:
-    assert read_handoff("latest") == "No handoffs saved yet."
-    assert read_handoff("none") == "No handoffs saved yet."
-    assert read_handoff("") == "No handoffs saved yet."
+    with pytest.raises(FileNotFoundError):
+        read_handoff("latest")
+    with pytest.raises(FileNotFoundError):
+        read_handoff("none")
+    with pytest.raises(FileNotFoundError):
+        read_handoff("")
 
 
 def test_read_handoff_none_aliases_to_latest() -> None:
@@ -159,13 +162,14 @@ def test_read_handoff_none_aliases_to_latest() -> None:
         gotchas=[],
         boot_instruction="Execute next step",
     )
-    latest_content = read_handoff("latest")
-    none_content = read_handoff("none")
-    empty_content = read_handoff("")
+    latest_content, latest_promo = read_handoff("latest")
+    none_content, none_promo = read_handoff("none")
+    empty_content, empty_promo = read_handoff("")
 
     assert "First session" in latest_content
     assert latest_content == none_content
     assert latest_content == empty_content
+    assert latest_promo is False
 
 
 def test_read_handoff_with_full_and_partial_timestamp() -> None:
@@ -180,18 +184,18 @@ def test_read_handoff_with_full_and_partial_timestamp() -> None:
         gotchas=[],
         boot_instruction="Execute step",
     )
-    # Extract relative path from return message (e.g. "handoffs/handoff-2024-01-01-120000-123.md")
+    # save_msg is relative path e.g. "handoffs/handoff-2024-01-01-120000-123.md"
     rel_path = save_msg.split("handoffs/")[1]  # "handoff-2024-01-01-120000-123.md"
     full_stem = rel_path[:-3]  # "handoff-2024-01-01-120000-123"
 
     # Test reading with exact stem
-    content_full = read_handoff(full_stem)
+    content_full, _ = read_handoff(full_stem)
     assert "Partial timestamp test" in content_full
 
     # Test reading with partial timestamp stem (omitting ms e.g. "2024-01-01-120000" part)
     # Stem is "handoff-YYYY-MM-DD-HHMMSS-mmm" -> prefix up to HHMMSS is 26 chars long
     partial_ts = full_stem[8:25]  # "YYYY-MM-DD-HHMMSS"
-    content_partial = read_handoff(partial_ts)
+    content_partial, _ = read_handoff(partial_ts)
     assert "Partial timestamp test" in content_partial
 
 
@@ -207,9 +211,10 @@ def test_round_trip() -> None:
         gotchas=["Avoid W"],
         boot_instruction="Continue with feature Y",
     )
-    assert "Handoff successfully saved" in write_msg
+    assert write_msg.startswith("handoffs/handoff-")
 
-    content = read_handoff("latest")
+
+    content, has_promo = read_handoff("latest")
     assert "=== Handoff: handoffs/handoff-" in content
     assert "**Tipo de sesión:** feature" in content
     assert "Initial session summary" in content
@@ -219,9 +224,12 @@ def test_round_trip() -> None:
     assert "https://example.com" in content
     assert "Avoid W" in content
     assert "Continue with feature Y" in content
+    assert has_promo is True
 
 
 def test_knowledge_promotion_trigger() -> None:
+    from brain79.server import brain79_handoff_read
+
     write_handoff(
         session_type="research",
         previous_handoff_ref="",
@@ -233,9 +241,14 @@ def test_knowledge_promotion_trigger() -> None:
         gotchas=[],
         boot_instruction="Implement insight",
     )
-    content = read_handoff("latest")
-    assert "ATENCIÓN:" in content
-    assert "brain79_ingest" in content
+    content, has_promo = read_handoff("latest")
+    assert has_promo is True
+    assert "ATENCIÓN:" not in content
+
+    # Check MCP tool injects the warning
+    mcp_output = brain79_handoff_read("latest")
+    assert "ATENCIÓN:" in mcp_output
+    assert "brain79_ingest" in mcp_output
 
 
 def test_wiki_deviation_section_renders() -> None:
@@ -251,7 +264,7 @@ def test_wiki_deviation_section_renders() -> None:
         boot_instruction="Investigate root cause",
         wiki_deviation_justification="Deviating from schema due to hotfix requirements.",
     )
-    content = read_handoff("latest")
+    content, _ = read_handoff("latest")
     assert "## ⚠️ Desviación de la wiki (Temporal)" in content
     assert "Deviating from schema due to hotfix requirements." in content
 
@@ -269,5 +282,6 @@ def test_wiki_deviation_section_skipped() -> None:
         boot_instruction="Add tests",
         wiki_deviation_justification="",
     )
-    content = read_handoff("latest")
+    content, _ = read_handoff("latest")
     assert "Desviación de la wiki" not in content
+

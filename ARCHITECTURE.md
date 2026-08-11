@@ -160,3 +160,36 @@ Heuristic, priority-ordered. First matching signal wins. Returns one of:
 `java-maven`, `java-gradle`, `ruby-gem`, `docker-service`, `research-paper`,
 `documentation`, `unknown`.
 
+---
+
+## 8. Hybrid CLI Subcommand & Dispatch Architecture
+
+`brain79` features a closed-whitelist CLI dispatcher operating alongside the FastMCP server entrypoint.
+
+### Core Purity & Banner Decoupling
+1. **Core Invariant:** `core/` functions raise native Python exceptions (`ValueError`, `FileNotFoundError`, `OSError`, `PermissionError`, etc.) and return pure data. They do not print LLM-targeted warning banners to `stdout` or `stderr`.
+2. **Interface Banner Decoupling:** `core.handoff.read_handoff(ref)` returns `tuple[str, bool]` (`(content, has_promotion_pending)`). `server.py` uses `has_promotion_pending` to append the LLM warning banner for MCP clients (`brain79_handoff_read`). The CLI `handoff-read` output remains neutral.
+
+### Dispatcher Invariants & Global Flag Pre-Processing
+1. **Strict Closed Whitelist:** Closed subcommand set `{"init", "update", "index", "read", "write", "list", "search", "ingest", "handoff-write", "handoff-read", "lint", "context", "bootstrap"}`.
+2. **Dual-Position Pre-Processing:** Global flags `--project-root` and `--debug` are extracted from `sys.argv[1:]` prior to `argparse` dispatch, guaranteeing that `config.set_project_root()` is applied regardless of flag ordering (`brain79 --project-root /foo read` vs `brain79 read --project-root /foo`).
+3. **Strict Import Order:** `FASTMCP_SHOW_SERVER_BANNER=false` is set in `__main__.py` before any module imports. FastMCP server initialization (`server.py`) is lazy-loaded only when no CLI subcommand matches.
+
+### Input Ergonomics & Resilience
+1. **Quoting Security:** Large text fields (`summary`, `boot_instruction`, `wiki_deviation_justification`, `instructions`, `content`) omit inline string flags. Inputs are accepted strictly via mutually exclusive `--<field>-file` or `--<field>-stdin` options.
+2. **Fail-Fast Size & Encoding Guards:** File and stdin inputs enforce a 1 MB limit via `Path.stat()` / `os.fstat()` / stream byte checks before processing. Text decoding strictly enforces UTF-8 (`errors="strict"`).
+
+### Standardized Unix Exit Code Taxonomy
+| Exit Code | Exception / Trigger | Category |
+|-----------|---------------------|----------|
+| `0` | Clean execution | Success |
+| `1` | `ValueError`, `json.JSONDecodeError`, input limit / encoding error | Validation & Domain Error |
+| `2` | `FileNotFoundError`, `HandoffNotFoundError`, `argparse.ArgumentError` | Syntax / Entity Not Found |
+| `3` | `OSError`, `PermissionError`, `filelock.Timeout` | I/O & Concurrency Contention |
+| `4` | Missing binary dependency (`git`, `uv`) | Binary Dependency Error |
+| `130` | `KeyboardInterrupt` | Interrupted |
+
+### 1:1 Static Symmetry Guarantee
+A static CI test (`tests/test_symmetry.py`) validates that `mcp_tools ⊆ cli_subs` and `cli_subs - mcp_tools == {"init", "update"}`.
+
+

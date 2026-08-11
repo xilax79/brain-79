@@ -145,6 +145,57 @@ Handoffs bridge consecutive work sessions for specific tasks.
 
 ---
 
+## Hybrid CLI & MCP Architecture
+
+`brain79` operates as a dual-mode hybrid tool:
+1. **MCP Server (Default):** Runs as an MCP server when invoked without subcommands (e.g. `brain79 --project-root .`), allowing AI assistants (`agy`, `pi`, `opencode`) to access memory tools.
+2. **Standalone CLI:** Provides 13 deterministic CLI subcommands for shell scripting, automation pipelines, and direct terminal interaction. Cross-platform (follows POSIX exit code conventions on all OSes, including Windows).
+
+### Global CLI Options
+
+- `--project-root PATH`: Target project root directory (supports dual positioning: `brain79 --project-root /foo read` and `brain79 read --project-root /foo`).
+- `--debug`: Enable verbose traceback logging on error for CLI subcommand execution.
+
+
+### CLI Subcommands Reference
+
+| Subcommand | Description | Input Mode | Output Policy |
+|------------|-------------|------------|---------------|
+| `init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root` | Verbose status messages |
+| `update` | Update editable installation from upstream git repo | `--branch` | Verbose status messages |
+| `index` | Print `INDEX.md` entry point | Positional | Pure content |
+| `read` | Read a wiki article by path | Path arg | Pure content |
+| `write` | Write or update a wiki article | `--content-file` / `--content-stdin` | Silent mutation (prints written path) |
+| `list` | List wiki articles | `--section` (optional) | Pure list (newline separated) |
+| `search` | Search wiki articles by keyword | Query arg | Pure search results |
+| `ingest` | Save raw session summary to `_raw/sessions/` | `--summary-file` / `--summary-stdin`, `--instructions-file` / `--instructions-stdin` | Silent mutation (prints saved relative path) |
+| `handoff-write` | Write structured, immutable session handoff | `--session-type`, `--summary-file`/`stdin`, `--boot-instruction-file`/`stdin`, list args | Silent mutation (prints saved relative path) |
+| `handoff-read` | Read handoff document | Handoff ref arg (default `"latest"`) | Pure content (neutral stdout) |
+| `lint` | Run health check scan on project wiki | None | Pure diagnostic report |
+| `context` | Retrieve top relevant wiki articles via TF-IDF | Task arg, `--top-n` | Pure context summary |
+| `bootstrap` | Generate project scanning manifest for seeding empty wiki | `--scope`, `--force` | Pure manifest |
+
+### Resilient I/O & Quoting Security
+
+To prevent shell quoting bugs on multi-line text fields (`summary`, `boot_instruction`, `wiki_deviation_justification`, `instructions`, `content`), inline string flags are omitted. Inputs must be supplied via mutually exclusive `--<field>-file` or `--<field>-stdin` flags.
+
+All inputs are validated fail-fast against a strict 1MB size limit and decoded as strict UTF-8.
+
+### Exit Codes (POSIX-style, cross-platform)
+
+The CLI follows POSIX conventions (`sysexits.h`) for exit codes. All codes are valid integers on every supported platform (Linux, macOS, Windows). On Windows, exit codes are passed through to the shell as 32-bit integers (the low 8 bits are visible to `cmd.exe` / PowerShell, but all defined codes fit within that range).
+
+| Exit Code | Classification | Trigger Conditions |
+|-----------|----------------|--------------------|
+| `0` | Success | Clean operation |
+| `1` | Validation / Domain Error | `ValueError`, `json.JSONDecodeError`, size limit exceeded, invalid UTF-8 |
+| `2` | Syntax / Entity Not Found | `argparse` syntax error, `FileNotFoundError` |
+| `3` | I/O / Lock Contention | `OSError`, `PermissionError`, `filelock.Timeout` |
+| `4` | Missing Dependency | Missing binary dependency (`git`, `uv` in `update`) |
+| `130` | Interrupted | Manual termination (`KeyboardInterrupt` / SIGINT) |
+
+---
+
 ## MCP Tools Reference
 
 | Tool | Description |
@@ -160,6 +211,7 @@ Handoffs bridge consecutive work sessions for specific tasks.
 | `brain79_lint()` | Deterministic health check scan diagnosing broken links, namespace violations, structural errors, and orphans |
 | `brain79_context(task, top_n?)` | Retrieves top relevant wiki articles for a task using TF-IDF ranking |
 | `brain79_bootstrap(scope?, force?)` | Scans project structure and returns a manifest to seed the wiki from a legacy codebase |
+
 
 
 ---

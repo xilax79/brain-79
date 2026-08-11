@@ -4,7 +4,9 @@ from fastmcp import FastMCP
 
 from brain79.core import context as context_ops
 from brain79.core import handoff as handoff_ops
+from brain79.core import lint as lint_ops
 from brain79.core import wiki as wiki_ops
+
 
 # Suppress fastmcp startup banner and INFO logs — MCP hosts interpret
 # stderr output as a failure signal during the handshake phase.
@@ -144,7 +146,7 @@ def brain79_handoff_write(
     3. If there are no pending tasks (pending_work is empty), boot_instruction MUST explicitly indicate "no hay tareas pendientes" (hallucinating next steps is strictly forbidden).
     """
     try:
-        return handoff_ops.write_handoff(
+        rel_path = handoff_ops.write_handoff(
             session_type,
             previous_handoff_ref,
             summary,
@@ -156,8 +158,10 @@ def brain79_handoff_write(
             boot_instruction,
             wiki_deviation_justification,
         )
+        return f"Handoff successfully saved at: {rel_path}"
     except (ValueError, FileNotFoundError, OSError) as exc:
         return f"Validation Error: {exc}"
+
 
 
 @mcp.tool()
@@ -175,9 +179,19 @@ def brain79_handoff_read(handoff_ref: str = "latest") -> str:
     include a warning instructing you to call brain79_ingest immediately.
     """
     try:
-        return handoff_ops.read_handoff(handoff_ref)
+        content, has_promotion = handoff_ops.read_handoff(handoff_ref)
+        if has_promotion:
+            content += (
+                "\n\n> ⚠️ **ATENCIÓN:** Este handoff contiene elementos en "
+                "'Conocimiento pendiente de promoción'. Tu responsabilidad inmediata "
+                "es consolidarlos en la memoria a largo plazo usando `brain79_ingest`."
+            )
+        return content
+    except (handoff_ops.HandoffsDirNotFoundError, handoff_ops.NoHandoffsExistError) as exc:
+        return str(exc)
     except (ValueError, FileNotFoundError, OSError) as exc:
         return f"Error reading handoff: {exc}"
+
 
 
 @mcp.tool()
@@ -188,7 +202,8 @@ def brain79_lint() -> str:
     Diagnoses broken local links, namespace violations, structural errors/warnings,
     and orphan articles.
     """
-    return wiki_ops.lint_wiki()
+    return lint_ops.lint_wiki()
+
 
 
 @mcp.tool()

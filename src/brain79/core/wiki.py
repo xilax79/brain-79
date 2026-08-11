@@ -6,12 +6,12 @@ import subprocess
 import filelock
 
 from brain79.config import get_wiki_root
-from brain79.core.lint import lint_wiki
+
+
 
 # Directories excluded from article listings (raw sources are not wiki articles)
 _EXCLUDED_DIRS = {"_raw"}
 
-__all__ = ["lint_wiki"]
 
 
 _RG_PATH: str | None = shutil.which("rg")

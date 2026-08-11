@@ -1,7 +1,6 @@
-import argparse
 import os
-import sys
 from pathlib import Path
+import sys
 
 # Must be set before fastmcp is imported so the banner is suppressed.
 # MCP hosts (agy, opencode, etc.) treat any stderr output during the
@@ -9,60 +8,64 @@ from pathlib import Path
 os.environ.setdefault("FASTMCP_SHOW_SERVER_BANNER", "false")
 
 
-def _cmd_init(project_root: str) -> None:
-    from brain79.core.init_project import init_project
+def parse_global_flags(args: list[str]) -> tuple[Path | None, bool, list[str]]:
+    """Extract global --project-root and --debug flags regardless of position."""
+    project_root: Path | None = None
+    debug = False
+    filtered_args: list[str] = []
 
-    init_project(Path(project_root).resolve())
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--debug":
+            debug = True
+            i += 1
+        elif arg == "--project-root":
+            if i + 1 < len(args):
+                project_root = Path(args[i + 1]).resolve()
+                i += 2
+            else:
+                sys.stderr.write("Error: --project-root requires a path argument.\n")
+                sys.exit(2)
+
+        elif arg.startswith("--project-root="):
+            path_str = arg.split("=", 1)[1]
+            project_root = Path(path_str).resolve()
+            i += 1
+        else:
+            filtered_args.append(arg)
+            i += 1
+
+    return project_root, debug, filtered_args
 
 
-def _cmd_serve(project_root: str) -> None:
+def _cmd_serve(project_root: Path | None) -> None:
     from brain79 import config
+
+    if project_root is not None:
+        config.set_project_root(project_root)
     from brain79.server import mcp
 
-    config.set_project_root(Path(project_root).resolve())
     mcp.run()
 
 
 def main() -> None:
-    # Dispatch on first positional arg to avoid argparse subparser conflicts
-    # with MCP clients that pass --project-root directly (no subcommand).
     args = sys.argv[1:]
+    project_root, debug, filtered = parse_global_flags(args)
 
-    if args and args[0] == "init":
-        parser = argparse.ArgumentParser(prog="brain79 init")
-        parser.add_argument(
-            "--project-root",
-            default=".",
-            metavar="PATH",
-            help="Project root directory (default: current directory)",
-        )
-        parsed = parser.parse_args(args[1:])
-        _cmd_init(parsed.project_root)
-    elif args and args[0] == "update":
-        parser = argparse.ArgumentParser(prog="brain79 update")
-        parser.add_argument(
-            "--branch",
-            default=None,
-            help="Default branch (auto-detected or manually overridden)",
-        )
-        parsed = parser.parse_args(args[1:])
-        from brain79.core.update import update_project
+    if project_root is not None:
+        from brain79 import config
 
-        sys.exit(update_project(branch_override=parsed.branch))
+        config.set_project_root(project_root)
+
+    from brain79.cli import WHITELIST, run_cli
+
+    if filtered and filtered[0] in WHITELIST:
+        cmd = filtered[0]
+        sub_args = filtered[1:]
+        sys.exit(run_cli(cmd, sub_args, debug=debug))
     else:
-        # Default: MCP server mode (used by MCP clients via uvx / uv run)
-        parser = argparse.ArgumentParser(
-            prog="brain79",
-            description="Per-project AI memory system — MCP server",
-        )
-        parser.add_argument(
-            "--project-root",
-            default=".",
-            metavar="PATH",
-            help="Project root directory (default: current directory)",
-        )
-        parsed = parser.parse_args(args)
-        _cmd_serve(parsed.project_root)
+        _cmd_serve(project_root)
 
 
 if __name__ == "__main__":

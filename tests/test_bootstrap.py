@@ -428,8 +428,8 @@ def test_wiki_not_initialized_returns_error(tmp_path: Path) -> None:
     project_dir = tmp_path / "fresh"
     project_dir.mkdir()
     set_project_root(project_dir)
-    result = run_bootstrap()
-    assert "Bootstrap Error" in result
+    with pytest.raises(FileNotFoundError, match="wiki not initialized"):
+        run_bootstrap()
 
 
 def test_wiki_root_is_file_returns_error(tmp_path: Path) -> None:
@@ -438,8 +438,9 @@ def test_wiki_root_is_file_returns_error(tmp_path: Path) -> None:
     set_project_root(project_dir)
     wiki_root = project_dir / ".brain-79"
     wiki_root.write_text("not a directory")
-    result = run_bootstrap()
-    assert "Bootstrap Error" in result
+    with pytest.raises(FileNotFoundError, match="wiki not initialized"):
+        run_bootstrap()
+
 
 
 @pytest.fixture

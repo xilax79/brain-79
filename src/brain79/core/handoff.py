@@ -184,10 +184,11 @@ def write_handoff(
     content = "\n".join(lines)
     wiki_ops.write_article(rel_path, content)
 
-    return f"Handoff successfully saved at: {rel_path}"
+    return rel_path
 
 
-def read_handoff(ref: str = "latest") -> str:
+
+def read_handoff(ref: str = "latest") -> tuple[str, bool]:
     """
     Read a handoff document.
 
@@ -195,25 +196,17 @@ def read_handoff(ref: str = "latest") -> str:
         ref: "latest", "none", or "" (default to latest), or a specific timestamp with or without
              milliseconds or file extension (e.g., "2024-01-01-120000", "2024-01-01-120000-123", or "handoff-2024-01-01-120000.md").
              Timestamp prefixes are supported (e.g., "2024" or "2024-08" returns the latest handoff matching that prefix).
+
+    Returns:
+        tuple[str, bool]: (handoff_content, has_promotion_pending)
     """
-    try:
-        target_path = _resolve_handoff_path(ref)
-        wiki_root = get_wiki_root()
-        rel_path = str(target_path.relative_to(wiki_root))
-        content = wiki_ops.read_article(rel_path)
-    except (HandoffsDirNotFoundError, NoHandoffsExistError) as exc:
-        return str(exc)
-    except (HandoffNotFoundError, OSError, ValueError) as exc:
-        return f"Error reading handoff: {exc}"
+    target_path = _resolve_handoff_path(ref)
+    wiki_root = get_wiki_root()
+    rel_path = str(target_path.relative_to(wiki_root))
+    content = wiki_ops.read_article(rel_path)
 
     header = f"=== Handoff: {rel_path} ===\n\n"
+    has_promotion_pending = "## Conocimiento pendiente de promoción" in content
 
-    # Dynamic trigger to force wiki curation
-    if "## Conocimiento pendiente de promoción" in content:
-        content += (
-            "\n\n> ⚠️ **ATENCIÓN:** Este handoff contiene elementos en "
-            "'Conocimiento pendiente de promoción'. Tu responsabilidad inmediata "
-            "es consolidarlos en la memoria a largo plazo usando `brain79_ingest`."
-        )
+    return header + content, has_promotion_pending
 
-    return header + content

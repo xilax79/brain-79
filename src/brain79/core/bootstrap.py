@@ -555,9 +555,8 @@ def run_bootstrap(scope: str | None = None, force: bool = False) -> str:
 
     # Guard 1: wiki must be initialized
     if not wiki_root.exists() or not wiki_root.is_dir():
-        return (
-            "Bootstrap Error: wiki not initialized. "
-            "Run `brain79 init --project-root <path>` first."
+        raise FileNotFoundError(
+            "wiki not initialized. Run `brain79 init --project-root <path>` first."
         )
 
     project_root = get_project_root()
@@ -569,11 +568,11 @@ def run_bootstrap(scope: str | None = None, force: bool = False) -> str:
             state = _load_bootstrap_state(wiki_root)
             if state and not force:
                 return _format_idempotency_warning(state)
-    except filelock.Timeout:
-        return (
-            "Bootstrap Error: another bootstrap is already running. Retry in a"
-            " few seconds."
-        )
+    except filelock.Timeout as exc:
+        raise OSError(
+            "another bootstrap is already running. Retry in a few seconds."
+        ) from exc
+
 
     scope_str = _normalize_scope(scope)
     warnings: list[str] = []
