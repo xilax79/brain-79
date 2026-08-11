@@ -18,6 +18,10 @@
 - To resume a task, use `brain79_handoff_read` immediately.
 
 ## Available tools
+
+> [!IMPORTANT]
+> All functions below are **MCP tools** exposed by the brain79 server. You MUST invoke them exclusively using your native tool-calling capabilities. **Do NOT** attempt to execute them as bash commands or python scripts in the terminal.
+
 - `brain79_index` — orient yourself first
 - `brain79_search(query)` — find articles
 - `brain79_read(path)` / `brain79_write(path, content)` — read/edit articles
