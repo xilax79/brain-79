@@ -1,145 +1,47 @@
-# Brain-79 — Wiki schema
+# Brain-79 — Wiki Schema (Normative)
 
-This file defines the rules for maintaining this project's wiki.
-**The agent must read this file before writing or updating any wiki article.**
-
----
-
-## Purpose
-
-This wiki is a **compiled knowledge base** about the project — not a log, not a mirror of the code.
-Its purpose is to make any AI agent immediately productive in a new session without requiring
-the developer to re-explain context.
-
-Every article must earn its place. If information can be trivially inferred from the code itself,
-it does not belong here.
+This file defines the **enforced rules** for maintaining this project's wiki.
+The rules in this file are mechanically validated by `brain79_write` and `brain79_lint`.
+Violations will be rejected at write time and reported by the linter.
 
 ---
 
-## Directory structure
+## Project
 
-| Directory | What goes here |
-|-----------|---------------|
-| `product/` | Vision, domain model, user personas, core problems solved |
-| `architecture/` | Stack decisions, patterns in use, system topology, key constraints |
-| `features/` | One article per significant feature: what it does, how it works, known limitations |
-| `changelog/` | Chronological record of significant changes, by milestone or release |
-| `decisions/` | Why non-obvious choices were made (ADR-style: context → decision → consequences) |
-| `_raw/sessions/` | Immutable session summaries (input for curation, never edited after creation) |
-| `_raw/commits/` | Optional commit-linked metadata |
+This section defines the scope and governing standards of the wiki schema.
 
 ---
 
-## Article format
+## Current focus
 
-Every article is a markdown file. Use this structure:
-
-```markdown
-# Title
-
-> One-sentence summary of what this article covers.
-
-## Context
-[Why this topic matters in this project]
-
-## Content
-[The actual knowledge]
-
-## Related
-- [link to related article](../path/to/article.md)
-```
-
-Rules:
-- Keep articles **focused and atomic**: one clear topic per file.
-- Use `##` headings, never `#` inside an article body (the `# Title` is the only h1).
-- Link to related articles using relative markdown paths.
-- Prefer bullet points for lists of decisions or facts.
+Maintain strict organizational health and high signal-to-noise ratio across all wiki articles.
 
 ---
 
-## What belongs in the wiki
+## Quick navigation
 
-Include:
-- Non-obvious architectural decisions and the reasoning behind them
-- The current state of features (not the implementation, but the intent and behavior)
-- Domain concepts that are specific to this project
-- Known limitations, edge cases, or gotchas
-- Evolution: what changed and why (in `changelog/` or `decisions/`)
-- Conventions and patterns established for this codebase
-
-Do NOT include:
-- Code implementations (reference the file, don't duplicate the code)
-- Obvious things (e.g., "this is a REST API" if that's clear from context)
-- Unresolved speculation or "we might do X" (unless it's a decision under consideration)
-- Personal notes or conversational context that has no lasting value
-- Raw debugging output or stack traces
-- Information that will become stale faster than it will be read
+| Directory | Required `type` | Purpose |
+|-----------|-----------------|---------|
+| `INDEX.md` | `navigation` | Topological index only |
+| `handoffs/` | `handoff` | Immutable session handoffs |
+| `product/` | `product` | Vision, domain, personas |
+| `architecture/` | `architecture` | Stack, patterns, topology |
+| `features/` | `feature` | Feature documentation |
+| `decisions/` | `decision` | Architectural Decision Records |
+| `changelog/` | `changelog` | Versioned changes |
+| `_raw/sessions/` | `raw_session` | Immutable session summaries |
+| `_raw/commits/` | `raw_commit` | Commit metadata |
 
 ---
 
-## Cross-linking rules
+## Known issues
 
-- Always link between related articles.
-- The `INDEX.md` is the single entry point — it must link to every major section.
-- When creating a new article, ask: what existing articles should link to this one?
-  Update those articles to add the link.
-- `decisions/` articles should link to the features or architecture articles they affect.
+- Articles without valid YAML frontmatter are rejected at write time.
+- Inline decision declarations outside `decisions/` are forbidden.
 
 ---
 
-## Curation workflow (end-of-session ingest)
+## Roadmap
 
-When the developer asks to update the wiki after a session:
-
-1. Read the session summary from `_raw/sessions/` (the most recent one).
-2. Read this `SCHEMA.md` to recall the rules.
-3. Read `INDEX.md` to understand the current state.
-4. Identify what changed: new features, architectural decisions, bugs fixed with non-obvious root causes, patterns established.
-5. For each item of lasting value:
-   - Find the right article (or create a new one if the topic doesn't exist yet).
-   - Update the article with the new knowledge. Integrate, don't append.
-   - Update cross-links as needed.
-6. Update `INDEX.md` if the project state or focus changed significantly.
-7. Do not update the wiki with anything that isn't useful for a future session.
-
----
-
-## Maintenance rules (lint)
-
-Periodically check for:
-- **Contradictions**: two articles making incompatible claims about the same thing.
-- **Stale content**: articles referencing decisions that were subsequently reversed.
-- **Orphaned articles**: articles not linked from any other article or from `INDEX.md`.
-- **Oversized articles**: articles that have grown beyond a single clear topic (split them).
-- **Missing links**: mentions of a topic that has its own article but no link to it.
-
----
-
-## Size guidelines
-
-- Keep articles under **400 lines**. If an article grows beyond that, split it.
-- `INDEX.md` must fit comfortably under **150 lines** — it's read at the start of every session.
-- `SCHEMA.md` (this file) is read once per ingest, not per session — it can be longer.
-
----
-
-## Bootstrap Articles
-
-Articles generated by `brain79_bootstrap` are marked with YAML frontmatter:
-
-```yaml
----
-bootstrap: true
-generated_by: brain79_bootstrap
-generated_at: <ISO timestamp>
-project_type: <detected type>
----
-```
-
-Bootstrap articles represent an initial structural scan of the project — they are
-a starting point, not authoritative documentation. As the team works on the project,
-agents should update or replace bootstrap content with empirical knowledge.
-
-A bootstrap article that has been fully replaced by organic content should have its
-`bootstrap: true` frontmatter line removed during the next curation pass.
-
+- Mechanical validation enforced via pre-commit git hooks and MCP tools.
+- Progressive migration for legacy articles using `brain79 migrate`.

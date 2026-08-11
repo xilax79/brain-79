@@ -145,6 +145,19 @@ Handoffs bridge consecutive work sessions for specific tasks.
 
 ---
 
+### 🛡️ Wiki Organizational Enforcement
+
+brain-79 mechanically enforces high-signal wiki organization and prevents quality degradation:
+
+- **Schema & Validation**: Ensures mandatory YAML frontmatter (`type`, `last_updated`, `status`, `version`, `stability`) matches file locations.
+- **Decision & Tech Debt Leakage Prevention**: Enforces that structural decisions reside in `decisions/` and technical debt in `features/` (ignoring code fences).
+- **Auto-Generated Navigation Registry**: Maintains a thread-safe `.navigation_registry.json` and updates `INDEX.md` quick navigation.
+- **Git Pre-Commit Hook**: Automatically installed during `brain79 init` to validate staged `.brain-79/*.md` changes via `brain79 lint --strict` before `git commit`.
+- **Progressive V3 Migration**: Migrate un-frontmattered legacy wikis safely using `brain79 migrate` (assigns `status: legacy` / `stability: legacy` to request human review).
+- **Validation Bypass**: Bypasses validation when necessary via `--force-validation-skip` (logs `force_validation_skipped` flag visible in `brain79 lint`).
+
+---
+
 ## Hybrid CLI & MCP Architecture
 
 `brain79` operates as a dual-mode hybrid tool:
@@ -161,19 +174,21 @@ Handoffs bridge consecutive work sessions for specific tasks.
 
 | Subcommand | Description | Input Mode | Output Policy |
 |------------|-------------|------------|---------------|
-| `init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root` | Verbose status messages |
+| `init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root`, `--install-git-hooks` / `--no-git-hooks` | Verbose status messages |
 | `update` | Update editable installation from upstream git repo | `--branch` | Verbose status messages |
 | `index` | Print `INDEX.md` entry point | Positional | Pure content |
 | `read` | Read a wiki article by path | Path arg | Pure content |
-| `write` | Write or update a wiki article | `--content-file` / `--content-stdin` | Silent mutation (prints written path) |
+| `write` | Write or update a wiki article | `--content-file` / `--content-stdin`, `--force-validation-skip` | Silent mutation (prints written path) |
 | `list` | List wiki articles | `--section` (optional) | Pure list (newline separated) |
 | `search` | Search wiki articles by keyword | Query arg | Pure search results |
 | `ingest` | Save raw session summary to `_raw/sessions/` | `--summary-file` / `--summary-stdin`, `--instructions-file` / `--instructions-stdin` | Silent mutation (prints saved relative path) |
 | `handoff-write` | Write structured, immutable session handoff | `--session-type`, `--summary-file`/`stdin`, `--boot-instruction-file`/`stdin`, list args | Silent mutation (prints saved relative path) |
 | `handoff-read` | Read handoff document | Handoff ref arg (default `"latest"`) | Pure content (neutral stdout) |
-| `lint` | Run health check scan on project wiki | None | Pure diagnostic report |
+| `lint` | Run health check scan on project wiki | `--strict`, `--suggest-extract`, `--format json` | Pure diagnostic report |
 | `context` | Retrieve top relevant wiki articles via TF-IDF | Task arg, `--top-n` | Pure context summary |
 | `bootstrap` | Generate project scanning manifest for seeding empty wiki | `--scope`, `--force` | Pure manifest |
+| `navigate` | Manage `INDEX.md` navigation registry | `--regenerate` | Pure navigation markdown |
+| `migrate` | Add frontmatter to legacy wiki articles | `--dry-run` (default), `--apply`, `--suggest-relocations` | Migration report |
 
 ### Resilient I/O & Quoting Security
 
@@ -202,15 +217,17 @@ The CLI follows POSIX conventions (`sysexits.h`) for exit codes. All codes are v
 |------|-------------|
 | `brain79_index()` | Returns `INDEX.md` — project entry point (read first) |
 | `brain79_read(path)` | Reads a wiki article by relative path |
-| `brain79_write(path, content)` | Writes or updates a wiki article |
+| `brain79_write(path, content, force_validation_skip?)` | Writes or updates a wiki article |
 | `brain79_list(section?)` | Lists wiki articles, optionally filtered by section |
 | `brain79_search(query)` | Keyword search across all wiki articles |
-| `brain79_ingest(summary, instructions?)` | Ingests session summary into raw sources and returns curation guide |
+| `brain79_ingest(summary, instructions?)` | Ingests session summary into raw sources and returns state-aware curation guide |
 | `brain79_handoff_write(...)` | Writes a structured, immutable session handoff |
 | `brain79_handoff_read(ref?)` | Reads a handoff (`"latest"`, `"none"`, timestamp prefix, or filename) |
-| `brain79_lint()` | Deterministic health check scan diagnosing broken links, namespace violations, structural errors, and orphans |
+| `brain79_lint()` | Deterministic health check scan diagnosing broken links, namespace violations, structural errors, and organizational issues |
 | `brain79_context(task, top_n?)` | Retrieves top relevant wiki articles for a task using TF-IDF ranking |
 | `brain79_bootstrap(scope?, force?)` | Scans project structure and returns a manifest to seed the wiki from a legacy codebase |
+| `brain79_navigate(regenerate?)` | Manages `INDEX.md` navigation section and navigation registry |
+| `brain79_migrate(dry_run?)` | Adds frontmatter to legacy wiki articles defaulting to status=legacy |
 
 
 

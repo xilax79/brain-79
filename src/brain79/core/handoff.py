@@ -142,8 +142,13 @@ def write_handoff(
     timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S-%f")[:-3]
     rel_path = f"handoffs/handoff-{timestamp}.md"
 
+    today_iso = datetime.now(UTC).strftime("%Y-%m-%d")
     lines = [
         "---",
+        "type: handoff",
+        f"session_type: {session_type}",
+        f"previous_ref: {previous_handoff_ref or 'none'}",
+        f"last_updated: {today_iso}",
         "schema_version: 1",
         "---",
         "",

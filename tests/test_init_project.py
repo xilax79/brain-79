@@ -20,6 +20,10 @@ def test_init_project_fresh(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
     # Check template files inside wiki
     assert (wiki_root / "SCHEMA.md").exists()
     assert (wiki_root / "INDEX.md").exists()
+    assert (wiki_root / ".gitignore").exists()
+    gitignore_content = (wiki_root / ".gitignore").read_text(encoding="utf-8")
+    assert "*.lock" in gitignore_content
+    assert "*.tmp" in gitignore_content
 
     # Check .agents/mcp_config.json
     mcp_config_path = tmp_path / ".agents" / "mcp_config.json"
@@ -156,3 +160,15 @@ def test_init_project_mcp_json_is_directory(
 
     captured = capsys.readouterr()
     assert "exists and is a directory" in captured.out
+
+
+def test_init_schema_template_compliance(tmp_path: Path) -> None:
+    """Verify that freshly initialized SCHEMA.md and INDEX.md pass lint --strict with zero issues."""
+    from brain79.config import set_project_root
+    from brain79.core.lint import lint_wiki
+
+    set_project_root(tmp_path)
+    init_project(tmp_path)
+
+    report = lint_wiki()
+    assert "[Status: OK]" in report

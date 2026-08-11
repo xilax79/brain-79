@@ -8,6 +8,7 @@ from urllib.parse import unquote
 import filelock
 
 from brain79.config import get_wiki_root
+from brain79.core.lint_organizational import OrganizationalIssue
 
 # Directories excluded from article listings (raw sources are not wiki articles)
 _EXCLUDED_DIRS = {"_raw"}
@@ -225,13 +226,24 @@ def lint_wiki() -> str:
                 visited.add(neighbor)
                 queue.append(neighbor)
 
-    all_rel_files = set(str(p.relative_to(wiki_root)) for p in wiki_files)
+    all_rel_files = set(
+        str(p.relative_to(wiki_root))
+        for p in wiki_files
+        if p.name != "SCHEMA.md" and not str(p.relative_to(wiki_root)).startswith("handoffs/")
+    )
     orphans = sorted(list(all_rel_files - visited))
+
+    # Run organizational checks
+    from brain79.core.lint_organizational import lint_organizational
+    org_issues = lint_organizational(wiki_root)
+
+    org_errors = [i for i in org_issues if i.severity == "error"]
+    org_warnings = [i for i in org_issues if i.severity == "warning"]
 
     status = (
         "CRITICAL"
-        if (broken_links or namespace_violations)
-        else ("WARNING" if (structural_errors or orphans) else "OK")
+        if (broken_links or namespace_violations or org_errors)
+        else ("WARNING" if (structural_errors or orphans or org_warnings) else "OK")
     )
 
     return _format_report(
@@ -241,6 +253,7 @@ def lint_wiki() -> str:
         namespace_violations=namespace_violations,
         structural_errors=structural_errors,
         orphans=orphans,
+        org_issues=org_issues,
     )
 
 
@@ -251,13 +264,48 @@ def _format_report(
     namespace_violations: list[tuple[str, str]],
     structural_errors: list[tuple[str, str]],
     orphans: list[str],
+    org_issues: list[OrganizationalIssue] | None = None,
 ) -> str:
     lines: list[str] = [
         "# Brain-79 Lint Report",
         f"[Status: {status}] [timeout_reached: {str(timeout_reached).lower()}]",
         "",
-        f"## [CRITICAL] Broken Local Links ({len(broken_links)})",
     ]
+
+    if org_issues:
+        lines.append("## Organizational Health")
+        org_errors = [i for i in org_issues if i.severity == "error"]
+        org_warnings = [i for i in org_issues if i.severity == "warning"]
+        org_infos = [i for i in org_issues if i.severity == "info"]
+
+        if org_errors:
+            lines.append(f"### Errors ({len(org_errors)})")
+            for issue in org_errors[:MAX_REPORT_ITEMS]:
+                line_str = f" line {issue.line}" if issue.line else ""
+                lines.append(f"**ERROR**: `{issue.path}`{line_str}: {issue.message}")
+                lines.append(f"  → {issue.actionable}")
+            lines.append("")
+
+        if org_warnings:
+            lines.append(f"### Warnings ({len(org_warnings)})")
+            for issue in org_warnings[:MAX_REPORT_ITEMS]:
+                line_str = f" line {issue.line}" if issue.line else ""
+                lines.append(f"**WARN**: `{issue.path}`{line_str}: {issue.message}")
+                lines.append(f"  → {issue.actionable}")
+            lines.append("")
+
+        if org_infos:
+            lines.append(f"### Info ({len(org_infos)})")
+            for issue in org_infos[:MAX_REPORT_ITEMS]:
+                line_str = f" line {issue.line}" if issue.line else ""
+                lines.append(f"**INFO**: `{issue.path}`{line_str}: {issue.message}")
+                lines.append(f"  → {issue.actionable}")
+            lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+    lines.append(f"## [CRITICAL] Broken Local Links ({len(broken_links)})")
     for origin, target in broken_links[:MAX_REPORT_ITEMS]:
         lines.append(f"- {origin} → `{target}`: target not found")
     if len(broken_links) > MAX_REPORT_ITEMS:

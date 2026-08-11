@@ -6,7 +6,7 @@ import subprocess
 import filelock
 
 from brain79.config import get_wiki_root
-
+from brain79.core.validation import validate_article_content
 
 
 # Directories excluded from article listings (raw sources are not wiki articles)
@@ -41,7 +41,12 @@ def read_article(path: str) -> str:
     return target.read_text(encoding="utf-8")
 
 
-def write_article(path: str, content: str, timeout: float = 5.0) -> str:
+def write_article(
+    path: str,
+    content: str,
+    timeout: float = 5.0,
+    force_validation_skip: bool = False,
+) -> str:
     """
     Write or update an article atomically with file locking. Creates parent directories as needed.
 
@@ -53,6 +58,12 @@ def write_article(path: str, content: str, timeout: float = 5.0) -> str:
 
     if target.suffix != ".md":
         raise ValueError(f"write_article requires .md paths, got {path}")
+
+    wiki_root = get_wiki_root().resolve()
+    rel_path_str = str(target.relative_to(wiki_root))
+    content = validate_article_content(
+        rel_path_str, content, force_skip=force_validation_skip
+    )
 
     target.parent.mkdir(parents=True, exist_ok=True)
     lock_path = target.with_suffix(".md.lock")
@@ -71,6 +82,18 @@ def write_article(path: str, content: str, timeout: float = 5.0) -> str:
         raise OSError(
             f"El archivo {path} está bloqueado por otro proceso. Reintenta en unos segundos."
         )
+
+    # Best-effort navigation registration
+    try:
+        if rel_path_str != "INDEX.md" and rel_path_str != "SCHEMA.md" and not rel_path_str.startswith("_raw/"):
+            from brain79.core.navigation import extract_title_and_summary, register_article
+
+            rel_p = target.relative_to(wiki_root)
+            title, summary = extract_title_and_summary(content)
+            section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
+            register_article(wiki_root, str(rel_p), title, summary, section)
+    except Exception:
+        pass
 
     return f"Written: {path}"
 

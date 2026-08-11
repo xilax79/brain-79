@@ -47,16 +47,21 @@ def brain79_read(path: str) -> str:
 
 
 @mcp.tool()
-def brain79_write(path: str, content: str) -> str:
+def brain79_write(
+    path: str, content: str, force_validation_skip: bool = False
+) -> str:
     """
     Write or update a wiki article. Creates the file and parent directories if needed.
 
     Args:
         path: Relative path within .brain-79/ (e.g., "decisions/use-fastmcp.md")
         content: Full markdown content for the article
+        force_validation_skip: If True, bypasses organizational validation
     """
     try:
-        return wiki_ops.write_article(path, content)
+        return wiki_ops.write_article(
+            path, content, force_validation_skip=force_validation_skip
+        )
     except (ValueError, OSError) as exc:
         return f"Error: {exc}"
 
@@ -99,11 +104,11 @@ def brain79_search(query: str) -> str:
 @mcp.tool()
 def brain79_ingest(session_summary: str, instructions: str | None = None) -> str:
     """
-    Save a session summary to raw sources and return the curation workflow.
+    Save a session summary to raw sources and return state-aware curation guide.
 
     Call this first when the developer asks to update the wiki after a session.
     The session summary is saved as-is to _raw/sessions/ (immutable).
-    The agent then curates the wiki using brain79_read / brain79_write.
+    The agent then curates the wiki using state-aware guidance.
 
     Args:
         session_summary: What happened in the session (free text or structured)
@@ -111,17 +116,11 @@ def brain79_ingest(session_summary: str, instructions: str | None = None) -> str
                       (e.g., "focus on architecture changes, ignore debugging")
     """
     saved_path = wiki_ops.save_raw_session(session_summary, instructions)
+    from brain79.config import get_wiki_root
+    from brain79.core.curate import prepare_curation_guide
 
-    return (
-        f"Session saved to: {saved_path}\n\n"
-        "Curation workflow:\n"
-        "1. brain79_index()            — review current wiki state\n"
-        "2. brain79_read('SCHEMA.md')  — recall curation rules\n"
-        "3. Identify what changed that has lasting value\n"
-        "4. brain79_write(path, content) for each article to create or update\n"
-        "5. brain79_write('INDEX.md', ...) if project state changed\n\n"
-        "Remember: integrate knowledge, don't append. Curate, don't log."
-    )
+    guide = prepare_curation_guide(get_wiki_root(), session_summary)
+    return f"Session saved to: {saved_path}\n\n{guide}"
 
 
 @mcp.tool()
@@ -254,3 +253,45 @@ def brain79_bootstrap(
         return run_bootstrap(scope=scope, force=force)
     except (OSError, ValueError) as exc:
         return f"Bootstrap Error: {exc}"
+
+
+@mcp.tool()
+def brain79_navigate(regenerate: bool = False) -> str:
+    """
+    Manage INDEX.md navigation.
+
+    Args:
+        regenerate: If True, regenerates INDEX.md Quick navigation section from registry.
+    """
+    try:
+        from brain79.config import get_wiki_root
+        from brain79.core.navigation import (
+            generate_quick_navigation,
+            regenerate_index_navigation,
+        )
+
+        wiki_root = get_wiki_root()
+        if regenerate:
+            return regenerate_index_navigation(wiki_root)
+        else:
+            return generate_quick_navigation(wiki_root)
+    except (OSError, ValueError, FileNotFoundError) as exc:
+        return f"Navigation Error: {exc}"
+
+
+@mcp.tool()
+def brain79_migrate(dry_run: bool = True) -> str:
+    """
+    Add frontmatter to legacy wiki articles.
+
+    Args:
+        dry_run: If True, only preview changes without modifying files. Default True for safety.
+    """
+    try:
+        from brain79.config import get_wiki_root
+        from brain79.core.migration import migrate_wiki
+
+        wiki_root = get_wiki_root()
+        return migrate_wiki(wiki_root, dry_run=dry_run)
+    except (OSError, ValueError) as exc:
+        return f"Migration Error: {exc}"

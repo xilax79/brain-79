@@ -94,7 +94,10 @@ def test_cli_read_not_found(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_cli_write_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     content_file = tmp_path / "content.md"
-    content_file.write_text("# Test Title\n\nTest content", encoding="utf-8")
+    content_file.write_text(
+        "---\ntype: feature\nstatus: planned\nversion: 0.1.0\nlast_updated: 2026-08-11\n---\n\n# Test Title\n\nTest content",
+        encoding="utf-8",
+    )
 
     code = run_cli(
         "write", ["features/new.md", "--content-file", str(content_file)]
@@ -120,7 +123,9 @@ class DummyStdin:
 def test_cli_write_stdin(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    test_data = "# Stdin Title\nContent from stdin".encode("utf-8")
+    test_data = (
+        "---\ntype: decision\nstatus: accepted\ndate: 2026-08-11\ndeciders: [test]\nlast_updated: 2026-08-11\n---\n\n# Stdin Title\nContent from stdin"
+    ).encode("utf-8")
     monkeypatch.setattr(sys, "stdin", DummyStdin(test_data))
 
     code = run_cli("write", ["decisions/stdin_test.md", "--content-stdin"])
@@ -298,3 +303,76 @@ def test_subprocess_smoke_init_and_read(tmp_path: Path) -> None:
     )
     assert res_read.returncode == 0
     assert "# Project index" in res_read.stdout
+
+
+def test_cli_all_enforcement_flags(tmp_path: Path) -> None:
+    c_file = tmp_path / "draft.md"
+    c_file.write_text("# Draft\n- Decision: bypass\n", encoding="utf-8")
+    code_write_skip = run_cli(
+        "write",
+        ["features/draft1.md", "--content-file", str(c_file), "--force-validation-skip"],
+    )
+    assert code_write_skip == 0
+
+    code_write_alias = run_cli(
+        "write", ["features/draft2.md", "--content-file", str(c_file), "--force-skip"]
+    )
+    assert code_write_alias == 0
+
+    code_lint_suggest = run_cli("lint", ["--suggest-extract"])
+    assert code_lint_suggest == 0
+
+    code_lint_json = run_cli("lint", ["--format", "json"])
+    assert code_lint_json == 0
+
+    code_nav = run_cli("navigate", ["--regenerate"])
+    assert code_nav == 0
+
+    code_mig_dry = run_cli("migrate", ["--dry-run"])
+    assert code_mig_dry == 0
+
+    code_mig_reloc = run_cli("migrate", ["--suggest-relocations"])
+    assert code_mig_reloc == 0
+
+
+def test_migrate_defaults_to_dry_run(setup_cli_project: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """BUG-1: CLI `brain79 migrate` defaults to dry-run for MCP symmetry."""
+    features_dir = setup_cli_project / ".brain-79" / "features"
+    features_dir.mkdir(exist_ok=True)
+    bad_file = features_dir / "no-frontmatter.md"
+    bad_file.write_text("# No frontmatter\n", encoding="utf-8")
+
+    code = run_cli("migrate", [])
+    assert code == 0
+    content_after = bad_file.read_text(encoding="utf-8")
+    assert not content_after.startswith("---\n")
+    captured = capsys.readouterr()
+    assert "DRY RUN" in captured.out
+
+
+def test_migrate_apply_explicit(setup_cli_project: Path) -> None:
+    """BUG-1: CLI `brain79 migrate --apply` actually mutates."""
+    features_dir = setup_cli_project / ".brain-79" / "features"
+    features_dir.mkdir(exist_ok=True)
+    bad_file = features_dir / "no-frontmatter.md"
+    bad_file.write_text("# No frontmatter\n", encoding="utf-8")
+
+    code = run_cli("migrate", ["--apply"])
+    assert code == 0
+    content_after = bad_file.read_text(encoding="utf-8")
+    assert content_after.startswith("---\n")
+
+
+def test_mcp_migrate_defaults_to_dry_run(setup_cli_project: Path) -> None:
+    """BUG-1: MCP `brain79_migrate()` defaults to dry-run (safe)."""
+    from brain79.server import brain79_migrate
+
+    features_dir = setup_cli_project / ".brain-79" / "features"
+    features_dir.mkdir(exist_ok=True)
+    bad_file = features_dir / "no-frontmatter.md"
+    bad_file.write_text("# No frontmatter\n", encoding="utf-8")
+
+    result = brain79_migrate()
+    assert "DRY RUN" in result
+    content_after = bad_file.read_text(encoding="utf-8")
+    assert not content_after.startswith("---\n")

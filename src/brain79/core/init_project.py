@@ -11,19 +11,48 @@ WIKI_DIRS = [
     "architecture",
     "features",
     "changelog",
-    "decisions",
 ]
 
 TEMPLATE_FILES = ["SCHEMA.md", "INDEX.md"]
 
+PRE_COMMIT_HOOK_SCRIPT = """#!/usr/bin/env bash
+# brain-79 pre-commit hook: validate wiki changes via lint --strict
+set -e
 
-def init_project(project_root: Path) -> None:
+# Find staged wiki files
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^\\.brain-79/.*\\.md$" || true)
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+# Run lint --strict (fails on issues, blocks commit)
+brain79 --project-root . lint --strict
+"""
+
+
+def install_git_hooks(project_root: Path, install: bool = True) -> None:
+    """Install .git/hooks/pre-commit if .git directory exists and install is True."""
+    git_dir = project_root / ".git"
+    if not git_dir.exists() or not install:
+        return
+
+    hooks_dir = git_dir / "hooks"
+    hooks_dir.mkdir(exist_ok=True)
+    hook_path = hooks_dir / "pre-commit"
+
+    hook_path.write_text(PRE_COMMIT_HOOK_SCRIPT, encoding="utf-8")
+    mode = hook_path.stat().st_mode
+    hook_path.chmod(mode | 0o111)
+
+
+def init_project(project_root: Path, install_git_hooks_flag: bool = True) -> None:
     """Bootstrap .brain-79/ in a project directory and register MCP configurations."""
     wiki_root = project_root / ".brain-79"
 
     if wiki_root.exists():
         print(f"Wiki already exists at {wiki_root}")
         print("Delete .brain-79/ manually if you want to re-initialize.")
+        install_git_hooks(project_root, install=install_git_hooks_flag)
         return
 
     # Create directory structure
@@ -38,6 +67,9 @@ def init_project(project_root: Path) -> None:
     for name in TEMPLATE_FILES:
         content = (pkg_templates / name).read_text(encoding="utf-8")
         (wiki_root / name).write_text(content, encoding="utf-8")
+
+    # Ignore lock and temporary files in wiki_root
+    (wiki_root / ".gitignore").write_text("*.lock\n*.tmp\n", encoding="utf-8")
 
     binary_path = shutil.which("brain79") or "brain79"
 
@@ -102,16 +134,9 @@ def init_project(project_root: Path) -> None:
         }
         mcp_path.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8")
 
+    install_git_hooks(project_root, install=install_git_hooks_flag)
+
     print(f"Initialized .brain-79/ at {wiki_root}")
     print("Created .agents/mcp_config.json")
     print("Created/updated AGENTS.md (universal protocol manifest)")
     print("Created/updated .mcp.json (Pi and universal MCP registration)")
-    print()
-    print("Next steps:")
-    print("  1. Edit .brain-79/SCHEMA.md  — customize curation rules for this project")
-    print("  2. Edit .brain-79/INDEX.md   — fill in project name, purpose, and status")
-    print(
-        "  3. For pi CLI, run 'pi install npm:pi-mcp-adapter' if not already installed"
-    )
-    print("  4. For global agy access, add brain79 to ~/.gemini/config/mcp_config.json")
-    print("     (see README for the exact JSON snippet)")

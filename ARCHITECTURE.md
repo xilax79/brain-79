@@ -192,4 +192,55 @@ Heuristic, priority-ordered. First matching signal wins. Returns one of:
 ### 1:1 Static Symmetry Guarantee
 A static CI test (`tests/test_symmetry.py`) validates that `mcp_tools ⊆ cli_subs` and `cli_subs - mcp_tools == {"init", "update"}`.
 
+---
+
+## 9. Wiki Organizational Enforcement Pipeline
+
+`brain-79` includes a mechanical organizational enforcement pipeline that prevents quality degradation across LLM wiki articles.
+
+### Architecture Overview
+
+```
++---------------------------------------------------------------------------------+
+|                               Write-Time Enforcement                            |
+|  (`write_article` / `brain79_write` / `--force-validation-skip`)                 |
+|   • Frontmatter Schema & Required Fields Check                                  |
+|   • Type-Location Consistency Check                                             |
+|   • V5 Strict Structural Decision & Tech Debt Leakage Check (Fence Masked)       |
+|   • Atomic File Write via `.tmp` + `filelock.FileLock`                          |
+|   • Auto-Registration in Thread-Safe `.navigation_registry.json`                |
++---------------------------------------------------------------------------------+
+                                      ▲
+                                      | (Blocks Invalid Changes)
++---------------------------------------------------------------------------------+
+|                               Git Pre-Commit Hook                               |
+|                     (`.git/hooks/pre-commit` -> `lint --strict`)               |
+|   • Triggers automatically on `git commit` if staged `.brain-79/*.md` files exist |
++---------------------------------------------------------------------------------+
+                                      ▲
+                                      | (Audits Wiki State)
++---------------------------------------------------------------------------------+
+|                                Lint-Time Diagnostics                            |
+|                  (`brain79_lint` / `brain79 lint --strict`)                     |
+|   • INDEX.md 150-line limit & Whitelisted H2 Header Check                      |
+|   • Navigation Registry Freshness & Anchor Link Validation                       |
+|   • Legacy Article Tracking (`status: legacy` / `stability: legacy`)            |
+|   • Force-Skipped Article Tracking (`validation: force_skip`)                   |
+|   • Multi-Root BFS Reachability Analysis                                        |
++---------------------------------------------------------------------------------+
+```
+
+### Components & Invariants
+1. **Frontmatter Schema Validation (`frontmatter.py`)**:
+   Enforces YAML frontmatter schema per directory type. Strips CRLF and BOM cleanly before parsing.
+2. **Structural Decision & Tech Debt Regex Guard (`validation.py`)**:
+   Strict V5 structural decision regex (`^[-*]\s+(Decision|ADR-\d+)...:`) and technical debt regex (`^[-*]\s+(TD-\d+|technical debt)...:`). Masks CommonMark code fences (` ``` ` and `~~~`) with exact fence character matching to eliminate false positives in documentation code blocks.
+3. **Thread-Safe Navigation Registry (`navigation.py`)**:
+   Thread-safe `load_registry`, `register_article`, and `unregister_article` using `filelock.FileLock(".navigation_registry.lock")`. Escapes markdown special characters (`[`, `]`, `*`) in article titles and summaries.
+4. **Git Pre-Commit Hook (`init_project.py`)**:
+   Deployed during `init_project(install_git_hooks_flag=True)`. Inspects staged `.brain-79/*.md` files and runs `brain79 lint --strict`, rejecting non-compliant commits.
+5. **Progressive V3 Migration (`migrate_frontmatter.py`)**:
+   Enriches legacy un-frontmattered articles with type-specific defaults (`status: legacy`, `stability: legacy`), auto-registers articles in `.navigation_registry.json`, and supports dry-run preview and relocation suggestions (`--suggest-relocations`).
+
+
 

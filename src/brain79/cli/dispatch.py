@@ -22,6 +22,8 @@ WHITELIST = {
     "lint",
     "context",
     "bootstrap",
+    "navigate",
+    "migrate",
 }
 
 
@@ -54,6 +56,19 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             metavar="PATH",
             help="Project root directory (default: current directory)",
         )
+        parser.add_argument(
+            "--install-git-hooks",
+            dest="install_git_hooks",
+            action="store_true",
+            default=True,
+            help="Install .git/hooks/pre-commit if .git exists (default: True)",
+        )
+        parser.add_argument(
+            "--no-git-hooks",
+            dest="install_git_hooks",
+            action="store_false",
+            help="Skip git hook installation",
+        )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
         from brain79.config import get_project_root
@@ -64,7 +79,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             if parsed.project_root
             else get_project_root()
         )
-        init_project(target_root)
+        init_project(target_root, install_git_hooks_flag=parsed.install_git_hooks)
         return 0
 
 
@@ -107,11 +122,17 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             action="store_true",
             help="Read content from stdin",
         )
+        parser.add_argument(
+            "--force-validation-skip",
+            "--force-skip",
+            action="store_true",
+            help="Bypass organizational validation and inject force_validation_skipped metadata",
+        )
         parsed = parser.parse_args(sub_args)
         content = read_input_field(parsed.content_file, parsed.content_stdin, "content")
         from brain79.core.wiki import write_article
 
-        write_article(parsed.path, content)
+        write_article(parsed.path, content, force_validation_skip=parsed.force_validation_skip)
         _write_stdout(parsed.path)
         return 0
 
@@ -310,10 +331,58 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
 
     elif cmd == "lint":
         parser = argparse.ArgumentParser(prog="brain79 lint")
-        parser.parse_args(sub_args)
+        parser.add_argument(
+            "--suggest-extract",
+            action="store_true",
+            help="Show actionable extraction suggestions for INDEX.md",
+        )
+        parser.add_argument(
+            "--strict",
+            action="store_true",
+            help="Exit with non-zero code if any errors or warnings exist",
+        )
+        parser.add_argument(
+            "--format",
+            choices=["text", "json"],
+            default="text",
+            help="Output format (text or json)",
+        )
+        parsed = parser.parse_args(sub_args)
+        from brain79.config import get_wiki_root
         from brain79.core.lint import lint_wiki
+        from brain79.core.lint_organizational import (
+            generate_extraction_suggestions,
+            lint_organizational,
+        )
 
-        _write_stdout(lint_wiki())
+        wiki_root = get_wiki_root()
+
+        if parsed.suggest_extract:
+            _write_stdout(generate_extraction_suggestions(wiki_root))
+            return 0
+
+        report = lint_wiki()
+
+        if parsed.format == "json":
+            org_issues = lint_organizational(wiki_root)
+            issues_data = [
+                {
+                    "rule": i.rule,
+                    "path": i.path,
+                    "line": i.line,
+                    "severity": i.severity,
+                    "message": i.message,
+                    "actionable": i.actionable,
+                }
+                for i in org_issues
+            ]
+            _write_stdout(json.dumps({"issues": issues_data, "report": report}, indent=2))
+        else:
+            _write_stdout(report)
+
+        if parsed.strict and ("[Status: CRITICAL]" in report or "[Status: WARNING]" in report):
+            return 1
+
         return 0
 
     elif cmd == "context":
@@ -344,6 +413,60 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             sys.stderr.write(res + "\n")
             return 1
         _write_stdout(res)
+        return 0
+
+    elif cmd == "navigate":
+        parser = argparse.ArgumentParser(prog="brain79 navigate")
+        parser.add_argument(
+            "--regenerate",
+            action="store_true",
+            help="Regenerate INDEX.md Quick navigation from registry",
+        )
+        parsed = parser.parse_args(sub_args)
+        from brain79.config import get_wiki_root
+        from brain79.core.navigation import (
+            generate_quick_navigation,
+            regenerate_index_navigation,
+        )
+
+        wiki_root = get_wiki_root()
+        if parsed.regenerate:
+            res = regenerate_index_navigation(wiki_root)
+            _write_stdout(res)
+            return 0
+        else:
+            _write_stdout(generate_quick_navigation(wiki_root))
+            return 0
+
+    elif cmd == "migrate":
+        parser = argparse.ArgumentParser(prog="brain79 migrate")
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            default=True,
+            help="Preview changes without modifying files (default: True)",
+        )
+        parser.add_argument(
+            "--apply",
+            action="store_false",
+            dest="dry_run",
+            help="Apply changes to files (destructive, requires explicit flag)",
+        )
+        parser.add_argument(
+            "--suggest-relocations",
+            action="store_true",
+            help="Suggest where files should be moved based on type inference",
+        )
+        parsed = parser.parse_args(sub_args)
+        from brain79.config import get_wiki_root
+        from brain79.core.migration import migrate_wiki, suggest_relocations
+
+        wiki_root = get_wiki_root()
+        if parsed.suggest_relocations:
+            _write_stdout(suggest_relocations(wiki_root))
+            return 0
+        report = migrate_wiki(wiki_root, dry_run=parsed.dry_run)
+        _write_stdout(report)
         return 0
 
     raise ValueError(f"Unknown command: {cmd}")

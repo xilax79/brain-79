@@ -63,17 +63,17 @@ def test_safe_resolve_sibling_prefix_attack(tmp_path: Path) -> None:
 
 
 def test_write_and_read_roundtrip() -> None:
-    msg = wiki_ops.write_article("decisions/test.md", "# Test Decision")
+    msg = wiki_ops.write_article("decisions/test.md", "# Test Decision", force_validation_skip=True)
     assert msg == "Written: decisions/test.md"
 
     content = wiki_ops.read_article("decisions/test.md")
-    assert content == "# Test Decision"
+    assert "# Test Decision" in content
 
 
 def test_write_article_creates_parents() -> None:
     path = "deep/nested/sub/dir/doc.md"
-    wiki_ops.write_article(path, "Nested content")
-    assert wiki_ops.read_article(path) == "Nested content"
+    wiki_ops.write_article(path, "Nested content", force_validation_skip=True)
+    assert "Nested content" in wiki_ops.read_article(path)
 
 
 def test_read_article_not_found() -> None:
@@ -94,10 +94,10 @@ def test_write_article_requires_md_suffix() -> None:
 
 
 def test_write_article_uses_atomic_replace(setup_wiki_root: Path) -> None:
-    wiki_ops.write_article("atomic.md", "Content 1")
+    wiki_ops.write_article("atomic.md", "Content 1", force_validation_skip=True)
     target = setup_wiki_root / ".brain-79" / "atomic.md"
     assert target.exists()
-    assert target.read_text(encoding="utf-8") == "Content 1"
+    assert "Content 1" in target.read_text(encoding="utf-8")
 
     # Test error during atomic write cleans up .tmp file
     class DummyError(Exception):
@@ -109,10 +109,10 @@ def test_write_article_uses_atomic_replace(setup_wiki_root: Path) -> None:
     with pytest.raises(DummyError):
         with pytest.MonkeyPatch.context() as m:
             m.setattr(Path, "replace", mock_replace)
-            wiki_ops.write_article("atomic.md", "Content 2")
+            wiki_ops.write_article("atomic.md", "Content 2", force_validation_skip=True)
 
     # Target remains untouched and .tmp was removed
-    assert target.read_text(encoding="utf-8") == "Content 1"
+    assert "Content 1" in target.read_text(encoding="utf-8")
     assert not (setup_wiki_root / ".brain-79" / "atomic.md.tmp").exists()
 
 
@@ -125,17 +125,17 @@ def test_write_article_lock_timeout(setup_wiki_root: Path) -> None:
     lock.acquire()
     try:
         with pytest.raises(OSError, match="está bloqueado por otro proceso"):
-            wiki_ops.write_article("locked.md", "content", timeout=0.1)
+            wiki_ops.write_article("locked.md", "content", timeout=0.1, force_validation_skip=True)
     finally:
         lock.release()
 
 
 def test_write_article_lock_released_after_write(setup_wiki_root: Path) -> None:
-    wiki_ops.write_article("lock_release.md", "Initial content")
+    wiki_ops.write_article("lock_release.md", "Initial content", force_validation_skip=True)
 
     # Immediate second write must succeed without timing out
-    wiki_ops.write_article("lock_release.md", "Updated content", timeout=0.5)
-    assert wiki_ops.read_article("lock_release.md") == "Updated content"
+    wiki_ops.write_article("lock_release.md", "Updated content", timeout=0.5, force_validation_skip=True)
+    assert "Updated content" in wiki_ops.read_article("lock_release.md")
 
     # Confirm third-party lock acquisition succeeds immediately after write_article returns
     target = setup_wiki_root / ".brain-79" / "lock_release.md"
@@ -176,7 +176,7 @@ def test_list_articles_non_existent_section() -> None:
 
 
 def test_list_articles_excludes_raw() -> None:
-    wiki_ops.write_article("article1.md", "Article 1")
+    wiki_ops.write_article("article1.md", "Article 1", force_validation_skip=True)
     wiki_ops.write_article("_raw/sessions/session1.md", "Raw session")
 
     articles = wiki_ops.list_articles()
@@ -185,8 +185,8 @@ def test_list_articles_excludes_raw() -> None:
 
 
 def test_list_articles_with_section() -> None:
-    wiki_ops.write_article("arch/overview.md", "Overview")
-    wiki_ops.write_article("decisions/adr1.md", "ADR 1")
+    wiki_ops.write_article("arch/overview.md", "Overview", force_validation_skip=True)
+    wiki_ops.write_article("decisions/adr1.md", "ADR 1", force_validation_skip=True)
 
     arch_articles = wiki_ops.list_articles("arch")
     assert arch_articles == ["arch/overview.md"]
@@ -214,7 +214,7 @@ def test_get_index_fallback(setup_wiki_root: Path) -> None:
 
 
 def test_search_articles_case_insensitive() -> None:
-    wiki_ops.write_article("doc.md", "This has UNIQUE_KEYWORD in it.")
+    wiki_ops.write_article("doc.md", "This has UNIQUE_KEYWORD in it.", force_validation_skip=True)
     results = wiki_ops.search_articles("unique_keyword")
     assert len(results) == 1
     assert results[0]["path"] == "doc.md"
@@ -223,7 +223,7 @@ def test_search_articles_case_insensitive() -> None:
 
 def test_search_articles_excludes_raw() -> None:
     wiki_ops.write_article("_raw/sessions/session.md", "SECRET_KEYWORD")
-    wiki_ops.write_article("valid.md", "SECRET_KEYWORD here")
+    wiki_ops.write_article("valid.md", "SECRET_KEYWORD here", force_validation_skip=True)
 
     results = wiki_ops.search_articles("SECRET_KEYWORD")
     paths = [r["path"] for r in results]
@@ -233,7 +233,7 @@ def test_search_articles_excludes_raw() -> None:
 
 def test_search_articles_excerpt() -> None:
     content = "Line 1\nLine 2 with target term\nLine 3"
-    wiki_ops.write_article("excerpt_test.md", content)
+    wiki_ops.write_article("excerpt_test.md", content, force_validation_skip=True)
 
     results = wiki_ops.search_articles("target term")
     assert len(results) == 1
@@ -253,7 +253,7 @@ def test_save_raw_session() -> None:
 
 
 def test_search_articles_empty_query_returns_empty() -> None:
-    wiki_ops.write_article("doc.md", "Some content")
+    wiki_ops.write_article("doc.md", "Some content", force_validation_skip=True)
     assert wiki_ops.search_articles("") == []
     assert wiki_ops.search_articles("   ") == []
     assert wiki_ops.search_articles("\t\n") == []
@@ -283,7 +283,7 @@ def test_save_raw_session_timestamp_milliseconds() -> None:
 def test_search_articles_uses_ripgrep_when_available(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    wiki_ops.write_article("rg_test.md", "Ripgrep query string match.")
+    wiki_ops.write_article("rg_test.md", "Ripgrep query string match.", force_validation_skip=True)
 
     monkeypatch.setattr(wiki_ops, "_RG_PATH", shutil_rg := wiki_ops.shutil.which("rg"))
     if shutil_rg:
@@ -351,7 +351,7 @@ def test_search_articles_ripgrep_malformed_and_edge_cases(
 def test_search_articles_ripgrep_returncode_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    wiki_ops.write_article("fallback.md", "Fallback content")
+    wiki_ops.write_article("fallback.md", "Fallback content", force_validation_skip=True)
 
     def mock_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(
@@ -369,7 +369,7 @@ def test_search_articles_ripgrep_returncode_error(
 def test_search_articles_falls_back_to_python(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    wiki_ops.write_article("py_test.md", "Python fallback match.")
+    wiki_ops.write_article("py_test.md", "Python fallback match.", force_validation_skip=True)
 
     # Case 1: _RG_PATH is None
     monkeypatch.setattr(wiki_ops, "_RG_PATH", None)
@@ -394,8 +394,8 @@ def test_search_articles_python_unreadable_file(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(wiki_ops, "_RG_PATH", None)
-    wiki_ops.write_article("readable.md", "Search term")
-    wiki_ops.write_article("unreadable.md", "Search term")
+    wiki_ops.write_article("readable.md", "Search term", force_validation_skip=True)
+    wiki_ops.write_article("unreadable.md", "Search term", force_validation_skip=True)
     wiki_ops.write_article("_raw/sessions/session.md", "Search term")
 
     orig_read_text = Path.read_text
