@@ -54,6 +54,9 @@ degradation. Always run these checks before declaring wiki work complete.
 | **Suggest relocations** (where files should live) | — | `brain79 migrate --suggest-relocations` |
 | **Regenerate Quick navigation** from registry | `brain79_navigate(regenerate=true)` | `brain79 navigate --regenerate` |
 | **Print current Quick navigation** | `brain79_navigate()` | `brain79 navigate` |
+| **Purge all handoffs (preview)** | `brain79_handoff_purge()` (dry-run) | `brain79 handoff-purge` |
+| **Purge all handoffs (destructive)** | `brain79_handoff_purge(apply=True)` | `brain79 handoff-purge --apply` |
+
 
 ### When fixing wiki issues (workflow)
 

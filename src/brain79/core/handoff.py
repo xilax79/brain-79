@@ -215,3 +215,101 @@ def read_handoff(ref: str = "latest") -> tuple[str, bool]:
 
     return header + content, has_promotion_pending
 
+
+def purge_handoffs(wiki_root: Path, apply: bool = False) -> str:
+    """Empty the handoffs directory completely and unregister them from the navigation registry.
+
+    Deletes ALL files inside `.brain-79/handoffs/` (handoffs, stale locks, .gitkeep,
+    anything else). Leaves the directory itself in place but empty.
+
+    Args:
+        wiki_root: Path to .brain-79/.
+        apply: If False (default), only preview what would be deleted.
+               If True, actually delete the files and unregister navigation.
+
+    Returns:
+        Markdown-formatted report.
+
+    Safety:
+        - Deletes EVERYTHING inside `handoffs/` (leaves the directory itself)
+        - Does NOT touch `_raw/`, other wiki articles, or any other directory
+        - Does NOT scan articles for markdown links referencing handoffs
+          (the linter detects those; the agent fixes them)
+    """
+    handoffs_dir = wiki_root / "handoffs"
+
+    if not handoffs_dir.exists():
+        return f"# Handoff Purge ({'APPLIED' if apply else 'DRY RUN'})\n\nNo handoffs directory found. Nothing to do."
+
+    all_files = sorted(
+        f for f in handoffs_dir.iterdir()
+        if f.is_file() and f.name != ".gitkeep"
+    )
+
+    if not all_files:
+        return f"# Handoff Purge ({'APPLIED' if apply else 'DRY RUN'})\n\nHandoffs directory is already empty."
+
+    total_bytes = sum(f.stat().st_size for f in all_files)
+    file_count = len(all_files)
+
+    if not apply:
+        lines = [
+            "# Handoff Purge (DRY RUN)",
+            "",
+            f"Would delete {file_count} files ({total_bytes} bytes) and leave handoffs/ empty:",
+        ]
+        for f in all_files:
+            rel = f.relative_to(wiki_root)
+            lines.append(f"  - {rel}")
+        lines.append("")
+        lines.append("Would unregister handoff entries from `.navigation_registry.json`.")
+        lines.append("")
+        lines.append("Run with --apply (CLI) or apply=True (MCP) to actually delete.")
+        return "\n".join(lines)
+
+    # Apply: delete all files in handoffs/
+    deleted: list[Path] = []
+    deleted_bytes = 0
+    for f in all_files:
+        try:
+            file_size = f.stat().st_size
+            f.unlink()
+            deleted.append(f)
+            deleted_bytes += file_size
+        except OSError:
+            pass  # skip files we can't delete (permission, locked, etc.)
+
+    # Unregister from navigation registry
+    unregistered_count = 0
+    try:
+        from brain79.core.navigation import (
+            _get_lock,
+            _save_registry_unlocked,
+            load_registry,
+        )
+
+        lock = _get_lock(wiki_root)
+        with lock:
+            registry = load_registry(wiki_root)
+            handoff_paths = {f"handoffs/{f.name}" for f in deleted}
+            articles = registry.get("articles", [])
+            before = len(articles)
+            registry["articles"] = [
+                a for a in articles if a.get("path") not in handoff_paths
+            ]
+            after = len(registry["articles"])
+            unregistered_count = before - after
+            if unregistered_count > 0:
+                _save_registry_unlocked(wiki_root, registry)
+    except Exception:
+        pass  # best-effort; if registry fails, files are still deleted
+
+    lines = [
+        "# Handoff Purge (APPLIED)",
+        "",
+        f"Deleted {len(deleted)} files ({deleted_bytes} bytes). Handoffs directory is now empty.",
+        f"Unregistered {unregistered_count} navigation entries.",
+    ]
+    return "\n".join(lines)
+
+

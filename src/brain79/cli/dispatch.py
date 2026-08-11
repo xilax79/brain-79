@@ -24,6 +24,7 @@ WHITELIST = {
     "bootstrap",
     "navigate",
     "migrate",
+    "handoff-purge",
 }
 
 
@@ -469,7 +470,30 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         _write_stdout(report)
         return 0
 
+    elif cmd == "handoff-purge":
+        parser = argparse.ArgumentParser(prog="brain79 handoff-purge")
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            default=True,
+            help="Preview what would be deleted (default: True)",
+        )
+        parser.add_argument(
+            "--apply",
+            action="store_false",
+            dest="dry_run",
+            help="Actually delete files (destructive, requires explicit flag)",
+        )
+        parsed = parser.parse_args(sub_args)
+        from brain79.config import get_wiki_root
+        from brain79.core.handoff import purge_handoffs
+
+        wiki_root = get_wiki_root()
+        _write_stdout(purge_handoffs(wiki_root, apply=not parsed.dry_run))
+        return 0
+
     raise ValueError(f"Unknown command: {cmd}")
+
 
 
 def run_cli(cmd: str, sub_args: Sequence[str], debug: bool = False) -> int:

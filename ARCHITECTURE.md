@@ -44,6 +44,20 @@ This document outlines the internal architecture, design principles, and runtime
 1. **Flexible Reference Resolution:** `handoff_ref` handles `"latest"`, `"none"`, `""`, exact filenames, full timestamps, or prefix patterns (e.g., `"2024"` or `"2024-08"`).
 2. **Promotion Trigger:** Inject dynamic warning banner if `## Conocimiento pendiente de promoción` is present in content.
 
+### Handoff Immutability Exception
+
+Handoffs are designed as **immutable session records** (Phase 1.5). However,
+`brain79 handoff-purge` is the explicit exception for operational cleanup:
+
+- **Use cases**: legacy wiki cleanup, demo project reset, end-of-iteration flush
+- **What it deletes**: only `handoffs/handoff-*.md` files
+- **What it does NOT touch**: `_raw/sessions/`, `_raw/commits/`, other wiki articles
+- **Side effects**: unregisters from `.navigation_registry.json`
+- **Post-purge cleanup**: `brain79 lint --strict` will detect any markdown links
+  in other articles pointing to purged handoffs. The agent fixes them via
+  `brain79_write` using the lint output as guidance.
+
+
 ### Wiki Linter Invariants (`brain79_lint`)
 1. **Deterministic Sanitization:** Cleans frontmatter, fenced code blocks, images, and inline code spans (including multi-backtick spans) before link extraction.
 2. **Local Link & Namespace Resolution:** Decodes percent-encoded URLs (`unquote`) and strips anchor fragments (`#...`). Validates target existence and flags links into `_raw/` as critical Namespace Violations.

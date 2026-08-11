@@ -3,8 +3,10 @@ from pathlib import Path
 import pytest
 
 from brain79.config import set_project_root
+from brain79.core import handoff as handoff_ops
 from brain79.core.handoff import _normalize_list, read_handoff, write_handoff
 from brain79.core.init_project import init_project
+
 
 
 @pytest.fixture(autouse=True)
@@ -284,4 +286,163 @@ def test_wiki_deviation_section_skipped() -> None:
     )
     content, _ = read_handoff("latest")
     assert "Desviación de la wiki" not in content
+
+
+# --- purge_handoffs tests ---
+
+
+def test_purge_handoffs_dry_run_default(setup_wiki_root: Path) -> None:
+    """Default is dry-run; files are NOT deleted."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-2026-08-10-200321-173.md").write_text("# H1", encoding="utf-8")
+    (handoffs_dir / "handoff-2026-08-10-201816-035.md").write_text("# H2", encoding="utf-8")
+
+    result = handoff_ops.purge_handoffs(wiki_root, apply=False)
+    assert "DRY RUN" in result
+    assert "Would delete 2 files" in result
+    # Files still exist
+    assert (handoffs_dir / "handoff-2026-08-10-200321-173.md").exists()
+    assert (handoffs_dir / "handoff-2026-08-10-201816-035.md").exists()
+
+
+def test_purge_handoffs_apply_deletes_all(setup_wiki_root: Path) -> None:
+    """apply=True deletes all handoff files."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-A.md").write_text("# A", encoding="utf-8")
+    (handoffs_dir / "handoff-B.md").write_text("# B", encoding="utf-8")
+    (handoffs_dir / "handoff-C.md").write_text("# C", encoding="utf-8")
+
+    result = handoff_ops.purge_handoffs(wiki_root, apply=True)
+    assert "APPLIED" in result
+    assert "Deleted 3 files" in result
+    # Files are gone
+    assert not (handoffs_dir / "handoff-A.md").exists()
+    assert not (handoffs_dir / "handoff-B.md").exists()
+    assert not (handoffs_dir / "handoff-C.md").exists()
+
+
+def test_purge_handoffs_no_handoffs_dir(setup_wiki_root: Path) -> None:
+    """If handoffs/ doesn't exist, return clean message."""
+    import shutil
+
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    if handoffs_dir.exists():
+        shutil.rmtree(handoffs_dir)
+    result = handoff_ops.purge_handoffs(wiki_root, apply=False)
+    assert "No handoffs directory found" in result
+
+
+
+
+def test_purge_handoffs_empty_dir(setup_wiki_root: Path) -> None:
+    """If handoffs/ exists but is empty (only .gitkeep), return clean message."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / ".gitkeep").write_text("", encoding="utf-8")
+    result = handoff_ops.purge_handoffs(wiki_root, apply=False)
+    assert "Handoffs directory is already empty" in result
+
+
+def test_purge_handoffs_unregisters_navigation(setup_wiki_root: Path) -> None:
+    """Purge removes entries from .navigation_registry.json."""
+    from brain79.core.navigation import load_registry, register_article
+
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-X.md").write_text("# X", encoding="utf-8")
+
+    register_article(wiki_root, "handoffs/handoff-X.md", "Handoff X", "Sum", "handoffs")
+    register_article(wiki_root, "features/y.md", "Feature Y", "Sum", "features")
+
+    handoff_ops.purge_handoffs(wiki_root, apply=True)
+
+    registry = load_registry(wiki_root)
+    paths = [a["path"] for a in registry["articles"]]
+    assert "handoffs/handoff-X.md" not in paths
+    assert "features/y.md" in paths  # not touched
+
+
+def test_purge_handoffs_does_not_touch_raw(setup_wiki_root: Path) -> None:
+    """Purge does NOT delete files in _raw/."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    raw_sessions = wiki_root / "_raw" / "sessions"
+    raw_sessions.mkdir(parents=True, exist_ok=True)
+    raw_file = raw_sessions / "session-2026-08-10.md"
+    raw_file.write_text("# Raw session", encoding="utf-8")
+
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-A.md").write_text("# H", encoding="utf-8")
+
+    handoff_ops.purge_handoffs(wiki_root, apply=True)
+
+    assert raw_file.exists()  # _raw untouched
+
+
+def test_purge_handoffs_deletes_lock_files(setup_wiki_root: Path) -> None:
+    """Purge deletes ALL files in handoffs/ (including stale .lock files)."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-A.md").write_text("# A", encoding="utf-8")
+    lock = handoffs_dir / "handoff-B.md.lock"
+    lock.write_text("", encoding="utf-8")
+
+    handoff_ops.purge_handoffs(wiki_root, apply=True)
+
+    assert not lock.exists()  # .lock files ARE deleted
+    assert not (handoffs_dir / "handoff-A.md").exists()
+
+
+def test_purge_handoffs_preserves_gitkeep(setup_wiki_root: Path) -> None:
+    """Purge does NOT delete .gitkeep (keeps the directory in git tracking)."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-A.md").write_text("# A", encoding="utf-8")
+    gitkeep = handoffs_dir / ".gitkeep"
+    gitkeep.write_text("", encoding="utf-8")
+
+    handoff_ops.purge_handoffs(wiki_root, apply=True)
+
+    assert gitkeep.exists()  # .gitkeep IS preserved
+    assert not (handoffs_dir / "handoff-A.md").exists()
+
+
+def test_purge_handoffs_leaves_dir_empty_except_gitkeep(setup_wiki_root: Path) -> None:
+    """End state: handoffs/ contains only .gitkeep."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-1.md").write_text("# 1", encoding="utf-8")
+    (handoffs_dir / "handoff-2.md.lock").write_text("", encoding="utf-8")
+    (handoffs_dir / ".gitkeep").write_text("", encoding="utf-8")
+
+    handoff_ops.purge_handoffs(wiki_root, apply=True)
+
+    remaining = list(handoffs_dir.iterdir())
+    assert len(remaining) == 1
+    assert remaining[0].name == ".gitkeep"
+
+
+def test_purge_handoffs_idempotent(setup_wiki_root: Path) -> None:
+    """Running purge twice is safe (second run reports directory is empty)."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    handoffs_dir = wiki_root / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-A.md").write_text("# A", encoding="utf-8")
+    (handoffs_dir / ".gitkeep").write_text("", encoding="utf-8")
+
+    handoff_ops.purge_handoffs(wiki_root, apply=True)
+    result = handoff_ops.purge_handoffs(wiki_root, apply=True)
+
+    assert "Handoffs directory is already empty" in result
+
 

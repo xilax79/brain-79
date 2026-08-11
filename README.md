@@ -189,6 +189,7 @@ brain-79 mechanically enforces high-signal wiki organization and prevents qualit
 | `bootstrap` | Generate project scanning manifest for seeding empty wiki | `--scope`, `--force` | Pure manifest |
 | `navigate` | Manage `INDEX.md` navigation registry | `--regenerate` | Pure navigation markdown |
 | `migrate` | Add frontmatter to legacy wiki articles | `--dry-run` (default), `--apply`, `--suggest-relocations` | Migration report |
+| `handoff-purge` | Wipe all handoff files (destructive, use `--apply`) | `--dry-run` (default), `--apply` | Migration report |
 
 ### Resilient I/O & Quoting Security
 
@@ -223,6 +224,7 @@ The CLI follows POSIX conventions (`sysexits.h`) for exit codes. All codes are v
 | `brain79_ingest(summary, instructions?)` | Ingests session summary into raw sources and returns state-aware curation guide |
 | `brain79_handoff_write(...)` | Writes a structured, immutable session handoff |
 | `brain79_handoff_read(ref?)` | Reads a handoff (`"latest"`, `"none"`, timestamp prefix, or filename) |
+| `brain79_handoff_purge(apply?)` | Wipes all handoff files and unregisters them from navigation registry |
 | `brain79_lint()` | Deterministic health check scan diagnosing broken links, namespace violations, structural errors, and organizational issues |
 | `brain79_context(task, top_n?)` | Retrieves top relevant wiki articles for a task using TF-IDF ranking |
 | `brain79_bootstrap(scope?, force?)` | Scans project structure and returns a manifest to seed the wiki from a legacy codebase |

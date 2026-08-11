@@ -6,6 +6,10 @@ All notable changes to `brain-79` will be documented in this file.
 
 ### Added
 
+- **`brain79 handoff-purge`**: destructive command to wipe all handoff files
+  and unregister them from the navigation registry. CLI/MCP symmetric, defaults
+  to `--dry-run` for safety. Does not touch `_raw/` or auto-fix broken links
+  in other articles (lint + agent handles those).
 - **Wiki Organizational Enforcement System**:
   - Mechanical YAML frontmatter schema validation and type-location consistency checking (`frontmatter.py`, `validation.py`).
   - Strict V5 structural decision and technical debt leakage regex rules with CommonMark code fence masking.

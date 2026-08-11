@@ -79,6 +79,19 @@ Sistema mecánico de enforcement organizacional para prevenir la degradación or
 - symmetry 1:1 (estructural + semántica) entre CLI y MCP
 - Idempotencia de `brain79 init` verificada (preserva contenido legacy existente)
 
+**Fase 8 — Handoff Purge (`brain79_handoff_purge`): COMPLETA y funcionando.**
+
+Comando destructivo para limpiar todos los handoffs de un wiki. Excepción
+explícita a la inmutabilidad de handoffs (Phase 1.5), diseñado para cleanup
+operacional (legacy wikis, demo projects, end-of-iteration flush).
+
+- **CLI/MCP simétrico**: defaults a `--dry-run` / `apply=False` para safety.
+- **Side effects**: desregistra entradas del navigation registry.
+- **NO toca**: `_raw/sessions/`, `_raw/commits/`, otros artículos.
+- **NO auto-fix**: los markdown links rotos en otros artículos son detectados
+  por `brain79 lint` y corregidos por el agente vía `brain79_write`.
+
+
 ---
 
 ## Lo que se construyó

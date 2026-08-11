@@ -192,6 +192,39 @@ def brain79_handoff_read(handoff_ref: str = "latest") -> str:
         return f"Error reading handoff: {exc}"
 
 
+@mcp.tool()
+def brain79_handoff_purge(apply: bool = False) -> str:
+    """
+    Wipe all handoff files and unregister them from the navigation registry.
+
+    Handoffs are supertemporal transitional artifacts. This command is the
+    explicit exception to handoff immutability, intended for cleanup of
+    legacy wikis or operational resets.
+
+    Args:
+        apply: If False (default), only preview what would be deleted.
+               If True, actually delete the files.
+
+    Returns:
+        Markdown-formatted report listing files affected.
+
+    Safety:
+        - Only deletes `handoffs/handoff-*.md`
+        - Does NOT touch `_raw/sessions/`, `_raw/commits/`, or any other directory
+        - Does NOT auto-fix markdown links in other articles (lint detects them;
+          agent fixes them via brain79_write)
+    """
+    try:
+        from brain79.config import get_wiki_root
+        from brain79.core.handoff import purge_handoffs
+
+        wiki_root = get_wiki_root()
+        return purge_handoffs(wiki_root, apply=apply)
+    except (OSError, ValueError) as exc:
+        return f"Handoff Purge Error: {exc}"
+
+
+
 
 @mcp.tool()
 def brain79_lint() -> str:

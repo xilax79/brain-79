@@ -376,3 +376,44 @@ def test_mcp_migrate_defaults_to_dry_run(setup_cli_project: Path) -> None:
     assert "DRY RUN" in result
     content_after = bad_file.read_text(encoding="utf-8")
     assert not content_after.startswith("---\n")
+
+
+def test_cli_handoff_purge_dry_run_default(
+    setup_cli_project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """CLI default = dry-run."""
+    handoffs_dir = setup_cli_project / ".brain-79" / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-X.md").write_text("# X", encoding="utf-8")
+
+    code = run_cli("handoff-purge", [])
+    assert code == 0
+    captured = capsys.readouterr()
+    assert "DRY RUN" in captured.out
+    assert (handoffs_dir / "handoff-X.md").exists()
+
+
+def test_cli_handoff_purge_apply(setup_cli_project: Path) -> None:
+    """CLI --apply actually deletes."""
+    handoffs_dir = setup_cli_project / ".brain-79" / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-X.md").write_text("# X", encoding="utf-8")
+
+    code = run_cli("handoff-purge", ["--apply"])
+    assert code == 0
+    assert not (handoffs_dir / "handoff-X.md").exists()
+
+
+def test_mcp_handoff_purge_default_dry_run(setup_cli_project: Path) -> None:
+    """MCP brain79_handoff_purge() defaults to dry-run (safe)."""
+    from brain79.server import brain79_handoff_purge
+
+    handoffs_dir = setup_cli_project / ".brain-79" / "handoffs"
+    handoffs_dir.mkdir(exist_ok=True)
+    (handoffs_dir / "handoff-X.md").write_text("# X", encoding="utf-8")
+
+    result = brain79_handoff_purge()  # no args = apply=False default
+    assert "DRY RUN" in result
+    assert (handoffs_dir / "handoff-X.md").exists()  # not deleted
+
+
