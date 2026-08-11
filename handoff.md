@@ -43,6 +43,42 @@ Herramienta MCP que escanea proyectos sin historial de wiki y genera un **manife
 
 Suite de 69 pruebas unitarias en `tests/test_bootstrap.py` que cubren idempotencia, detección de tipo, scope handling, file budget, tree listing, manifest structure, error resilience, concurrencia, `_truncate_file`, `_resolve_scope_paths`, e integración MCP.
 
+**Fase 7 — Organizational Enforcement: COMPLETA y funcionando.**
+
+Sistema mecánico de enforcement organizacional para prevenir la degradación orgánica de wikis. 10 fases implementadas en el branch `feature/organizational-enforcement` y squash-merged en este handoff. Componentes:
+
+- **Validación de frontmatter estricta** (`core/frontmatter.py`): parser YAML multi-línea con mitigación de BOM/CRLF, validación de campos requeridos por tipo, validación de tipo-ubicación, y 9 tipos cerrados (`navigation`, `handoff`, `product`, `architecture`, `feature`, `decision`, `changelog`, `raw_session`, `raw_commit`).
+- **Validación estructural V5** (`core/validation.py`): regex estricto para detección de decision/TD leakage con masking de code fences CommonMark-compliant (tracking de `fence_char` 3+ para ` ``` ` y `~~~`).
+- **Navigation registry thread-safe** (`core/navigation.py`): atomic write con `filelock.FileLock`, escape markdown completo de GFM inline chars (`_`, `<`, `>`, `|`, `~`, `` ` ``, `[`, `]`, `*`), validación de path traversal, dedup automático.
+- **Lint extendido** (`core/lint_organizational.py`): 9 checks deterministas (`index_size`, `frontmatter_consistency`, `type_location`, `decision_leakage`, `article_atomicity`, `prohibited_content`, `navigation_freshness`, `legacy_articles`, `force_skipped_articles`) con `OrganizationalIssue` dataclass estructurado.
+- **Migración progresiva V3** (`core/migration.py`): asignación por defecto de `status: legacy` y `stability: legacy` (preserva intención semántica sin corrupción), atomic write con UUID-based tmp files, `--dry-run` (default) / `--apply` (destructivo) / `--suggest-relocations`.
+- **Git pre-commit hook** (`init_project.py` + `core/init_project.py`): hook ejecutable `.git/hooks/pre-commit` invoca `brain79 lint --strict` bloqueando commits con archivos `.brain-79/*.md` modificados. **Mitiga el vector V1** (bypass via edición directa).
+- **Cura state-aware** (`core/curate.py`): `WikiStateReport` con violations específicas del wiki actual, integrado en `brain79_ingest` con cap de 500 líneas.
+- **Templates reescritos** (`templates/SCHEMA.md`, `templates/INDEX.md`): cumplen las reglas que el propio linter impone (whitelist de headers H2, sin decision patterns).
+- **AGENTS.md actualizado** (`templates/AGENTS.md`): documenta los nuevos subcomandos (CLI y MCP), workflow de remediación, política de migration safety, y permite fallback CLI cuando MCP no está conectado.
+
+**Threat model V1-V5 completamente mitigado:**
+
+- **V1** (bypass via edición directa) → git pre-commit hook
+- **V2** (INDEX.md scalability catch-22) → Quick navigation auto-generada con registry thread-safe; límite de 150 solo para secciones manuales
+- **V3** (migration semantic corruption) → `status: legacy` default preserva intención
+- **V4** (YAML parser contradiction) → parser multi-línea con `csv.reader` para listas inline
+- **V5** (regex false positives) → regex estricto + CommonMark-compliant fence masking
+
+**Validación end-to-end con Truco Arena north-star:**
+
+- Snapshot inmutable en `tests/fixtures/truco_arena_snapshot/` (21 artículos)
+- 4 tests de integración en `tests/test_truco_arena_integration.py`: state violations conocidas, migration agrega `legacy` frontmatter, migration usa `legacy` status, full remediation pasa `lint --strict`
+- Script manual de refresh: `tests/fixtures/refresh_truco_arena.sh`
+
+**Quality gates finales:**
+
+- 300/300 tests passing
+- mypy strict: 0 errores en 41 source files
+- ruff: 0 warnings
+- symmetry 1:1 (estructural + semántica) entre CLI y MCP
+- Idempotencia de `brain79 init` verificada (preserva contenido legacy existente)
+
 ---
 
 ## Lo que se construyó
@@ -69,15 +105,17 @@ Suite de 69 pruebas unitarias en `tests/test_bootstrap.py` que cubren idempotenc
 
 - `brain79_index()` — devuelve `INDEX.md`
 - `brain79_read(path)` — lee un artículo
-- `brain79_write(path, content)` — escribe/actualiza un artículo
+- `brain79_write(path, content, force_validation_skip?)` — escribe/actualiza un artículo (con validación mecánica)
 - `brain79_list(section?)` — lista artículos
 - `brain79_search(query)` — búsqueda por keyword
-- `brain79_ingest(summary, instructions?)` — guarda sesión en `_raw/` y devuelve workflow de curación
+- `brain79_ingest(summary, instructions?)` — guarda sesión en `_raw/` y devuelve guía de curación state-aware con violations específicas
 - `brain79_handoff_write(...)` — escribe un documento inmutable de traspaso de sesión
 - `brain79_handoff_read(ref)` — lee un documento de traspaso y alerta sobre la promoción de conocimiento
-- `brain79_lint()` — escanea la wiki y devuelve reporte estricto de links rotos, namespace violations, errores y huérfanos
+- `brain79_lint()` — escanea la wiki y devuelve reporte estricto (links rotos, namespace violations, errores estructurales, organizational health)
 - `brain79_context(task, top_n?)` — recupera los artículos de la wiki más relevantes para una tarea mediante ranking ponderado TF-IDF
 - `brain79_bootstrap(scope?, force?)` — escanea un proyecto legacy y devuelve un manifest determinístico para que el LLM siembre la wiki inicial
+- `brain79_navigate(regenerate?)` — gestiona el registry de navegación y regenera Quick navigation en INDEX.md
+- `brain79_migrate(dry_run?)` — añade frontmatter a artículos legacy (default: `status: legacy` para preservar intención semántica)
 
 ---
 
@@ -115,6 +153,16 @@ Suite de 69 pruebas unitarias en `tests/test_bootstrap.py` que cubren idempotenc
 | `tests/test_bootstrap.py` | Pruebas unitarias del scanner de bootstrap (idempotencia, scope, concurrencia, etc.) |
 | `src/brain79/templates/SCHEMA.md` | Template de reglas — el artefacto más crítico |
 | `src/brain79/__main__.py` | Entry point y supresión de banner fastmcp |
+| `src/brain79/core/frontmatter.py` | Schema, parser YAML multi-línea y validación de campos por tipo |
+| `src/brain79/core/validation.py` | Validación de write-time con V5 strict regex y fence masking |
+| `src/brain79/core/navigation.py` | Registry thread-safe con filelock y Quick navigation auto-generada |
+| `src/brain79/core/lint_organizational.py` | 9 checks deterministas de salud organizacional |
+| `src/brain79/core/migration.py` | Migración progresiva V3 con `status: legacy` defaults |
+| `src/brain79/core/curate.py` | Guía de curación state-aware para ingest cycles |
+| `tests/test_truco_arena_integration.py` | Tests north-star de validación end-to-end con snapshot inmutable |
+| `tests/fixtures/truco_arena_snapshot/` | Snapshot inmutable de wiki legacy para tests de regresión |
+| `tests/fixtures/refresh_truco_arena.sh` | Script manual para regenerar el snapshot |
+| `.git/hooks/pre-commit` | Hook instalado por `brain79 init` que bloquea commits con wiki inválido |
 
 ---
 
