@@ -4,8 +4,10 @@ __pycache__/
 *.pyo
 .ruff_cache/
 .mypy_cache/
+.pytest_cache/
 .coverage
-
+htmlcov/
+coverage.xml
 
 # uv / build
 .venv/
@@ -15,7 +17,18 @@ dist/
 # OS
 .DS_Store
 
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local secrets / config (use .env.example for templates)
+.env
+.env.*
+!.env.example
+
 # Locks & Tmp
 *.md.lock
 *.md.tmp
-
