@@ -163,7 +163,7 @@ def test_init_project_mcp_json_is_directory(
 
 
 def test_init_schema_template_compliance(tmp_path: Path) -> None:
-    """Verify that freshly initialized SCHEMA.md and INDEX.md pass lint --strict with zero issues."""
+    """Verify that freshly initialized project reports warnings for unfilled placeholders, and passes [Status: OK] once customized."""
     from brain79.config import set_project_root
     from brain79.core.lint import lint_wiki
 
@@ -171,4 +171,30 @@ def test_init_schema_template_compliance(tmp_path: Path) -> None:
     init_project(tmp_path)
 
     report = lint_wiki()
-    assert "[Status: OK]" in report
+    assert "[Status: WARNING]" in report
+
+    clean_index = """---
+type: navigation
+last_updated: 2026-08-11
+---
+
+# Project index
+
+## Project
+
+**Name:** Test
+**Purpose:** Test purpose.
+**Status:** Active
+
+## Current focus
+- Testing.
+
+## Known issues
+- None.
+
+## Roadmap
+- None.
+"""
+    (tmp_path / ".brain-79" / "INDEX.md").write_text(clean_index, encoding="utf-8")
+    report_custom = lint_wiki()
+    assert "[Status: OK]" in report_custom

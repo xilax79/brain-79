@@ -366,6 +366,48 @@ def check_force_skipped_articles(wiki_root: Path) -> list[OrganizationalIssue]:
     return issues
 
 
+UNFILLED_PLACEHOLDER_PATTERNS = re.compile(
+    r"<!--\s*((?:project\s+name|one\s+sentence|e\.g\.,?\s+active|e\.g\.?|active\s+development|beta|production|maintenance|fill\s+in).*?)\s*-->",
+    re.IGNORECASE,
+)
+
+
+def check_unfilled_placeholders(wiki_root: Path) -> list[OrganizationalIssue]:
+    """Detect unfilled HTML comment placeholders in INDEX.md.
+
+    The default brain79 init template leaves several `<!-- placeholder -->` comments
+    in INDEX.md for users to fill in. This check ensures those are completed.
+
+    Returns:
+        List of OrganizationalIssue with rule='index_unfilled_placeholder'.
+    """
+    issues: list[OrganizationalIssue] = []
+    index_path = wiki_root / "INDEX.md"
+    if not index_path.exists():
+        return issues
+
+    content = index_path.read_text(encoding="utf-8")
+    masked = _mask_code_fences(content)
+
+    for line_no, line in enumerate(masked.splitlines(), start=1):
+        for match in UNFILLED_PLACEHOLDER_PATTERNS.finditer(line):
+            issues.append(
+                OrganizationalIssue(
+                    rule="index_unfilled_placeholder",
+                    path="INDEX.md",
+                    line=line_no,
+                    severity="warning",
+                    message=f"Unfilled template placeholder: '{match.group(0)}'",
+                    actionable=(
+                        "Replace this placeholder with the actual value, "
+                        "or remove the comment if not applicable. "
+                        "Run `brain79 init` to see the template structure."
+                    ),
+                )
+            )
+    return issues
+
+
 def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     """Run all organizational health checks on the wiki."""
     issues: list[OrganizationalIssue] = []
@@ -378,6 +420,7 @@ def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     issues.extend(check_navigation_freshness(wiki_root))
     issues.extend(check_legacy_articles(wiki_root))
     issues.extend(check_force_skipped_articles(wiki_root))
+    issues.extend(check_unfilled_placeholders(wiki_root))
     return issues
 
 

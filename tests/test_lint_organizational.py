@@ -169,7 +169,32 @@ def test_cli_lint_flags(setup_wiki_root: Path, capsys: pytest.CaptureFixture[str
 def test_cli_lint_strict_exit_codes(setup_wiki_root: Path) -> None:
     wiki_root = setup_wiki_root / ".brain-79"
 
-    # Fresh initialized template is now 100% compliant -> expect exit 0
+    # Fill in placeholders in INDEX.md so it is clean
+    clean_index = """---
+type: navigation
+last_updated: 2026-08-11
+---
+
+# Project index
+
+## Project
+
+**Name:** Test Project
+**Purpose:** Test purpose.
+**Status:** Active
+
+## Current focus
+- Testing.
+
+## Known issues
+- None.
+
+## Roadmap
+- None.
+"""
+    (wiki_root / "INDEX.md").write_text(clean_index, encoding="utf-8")
+
+    # Clean customized template -> expect exit 0
     code_fresh = run_cli("lint", ["--strict"])
     assert code_fresh == 0
 
@@ -250,3 +275,98 @@ last_updated: 2026-08-11
     atomicity_issues = [i for i in issues if i.rule == "article_not_atomic"]
     assert len(atomicity_issues) == 1
     assert "features/f.md" in atomicity_issues[0].path
+
+
+def test_unfilled_placeholder_detected(tmp_path: Path) -> None:
+    """BUG-11: unfilled HTML placeholders in INDEX.md are flagged."""
+    from brain79.core.init_project import init_project
+    from brain79.core.lint_organizational import check_unfilled_placeholders
+
+    project = tmp_path / "project"
+    project.mkdir()
+    set_project_root(project)
+    init_project(project)
+
+    # Verify the default template HAS unfilled placeholders and linter catches them
+    wiki_root = project / ".brain-79"
+    issues = check_unfilled_placeholders(wiki_root)
+    unfilled = [i for i in issues if i.rule == "index_unfilled_placeholder"]
+    assert len(unfilled) >= 3, f"Expected ≥3 unfilled placeholders, got {len(unfilled)}"
+
+    # Each issue should be severity=warning with the placeholder text
+    for issue in unfilled:
+        assert issue.severity == "warning"
+        assert "<!--" in issue.message
+
+
+def test_unfilled_placeholder_passes_after_customization(tmp_path: Path) -> None:
+    """After user fills in real values, linter reports no unfilled placeholders."""
+    from brain79.core.init_project import init_project
+    from brain79.core.lint_organizational import check_unfilled_placeholders
+
+    project = tmp_path / "project"
+    project.mkdir()
+    set_project_root(project)
+    init_project(project)
+    wiki_root = project / ".brain-79"
+
+    # Replace INDEX.md with content that has no placeholders
+    real_index = """---
+type: navigation
+last_updated: 2026-08-11
+---
+
+## Project
+
+**Name:** Real Project
+**Purpose:** A real project.
+**Status:** Production
+
+## Current focus
+- Real work.
+
+## Known issues
+- None.
+
+## Roadmap
+- Real roadmap.
+"""
+    (wiki_root / "INDEX.md").write_text(real_index, encoding="utf-8")
+
+    issues = check_unfilled_placeholders(wiki_root)
+    unfilled = [i for i in issues if i.rule == "index_unfilled_placeholder"]
+    assert len(unfilled) == 0
+
+
+def test_unfilled_placeholder_in_code_fence_ignored(tmp_path: Path) -> None:
+    """Placeholder inside a code fence is masked (not flagged)."""
+    from brain79.core.init_project import init_project
+    from brain79.core.lint_organizational import check_unfilled_placeholders
+
+    project = tmp_path / "project"
+    project.mkdir()
+    set_project_root(project)
+    init_project(project)
+    wiki_root = project / ".brain-79"
+
+    content_with_fence = """---
+type: navigation
+last_updated: 2026-08-11
+---
+
+## Project
+
+**Name:** Real
+
+```
+<!-- project name -->
+```
+
+This is documentation showing the placeholder syntax.
+"""
+    (wiki_root / "INDEX.md").write_text(content_with_fence, encoding="utf-8")
+
+    issues = check_unfilled_placeholders(wiki_root)
+    unfilled = [i for i in issues if i.rule == "index_unfilled_placeholder"]
+    assert len(unfilled) == 0
+

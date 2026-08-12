@@ -217,7 +217,7 @@ def test_escape_markdown_in_titles(setup_wiki_root: Path) -> None:
 
 
 def test_escape_markdown_full_chars(setup_wiki_root: Path) -> None:
-    """BUG-3: All GFM inline chars should be escaped."""
+    """BUG-3/12: GFM inline chars escaped (except backticks, which are valid inline code)."""
     wiki_root = setup_wiki_root / ".brain-79"
     register_article(
         wiki_root,
@@ -230,7 +230,8 @@ def test_escape_markdown_full_chars(setup_wiki_root: Path) -> None:
 
     assert "\\_italic\\_" in nav
     assert "\\*\\*bold\\*\\*" in nav
-    assert "\\`code\\`" in nav
+    assert "\\`code\\`" not in nav
+    assert "`code`" in nav
     assert "\\~\\~strike\\~\\~" in nav
     assert "\\<tag\\>" in nav
     assert "\\> arrow" in nav

@@ -114,7 +114,7 @@ _ESCAPE_CHARS = str.maketrans({
     ">": "\\>",
     "|": "\\|",
     "~": "\\~",
-    "`": "\\`",
+    # ` removed — backticks in link text are valid inline code (BUG-12 fix)
 })
 
 

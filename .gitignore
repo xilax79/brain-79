@@ -32,3 +32,6 @@ dist/
 # Locks & Tmp
 *.md.lock
 *.md.tmp
+
+# Ephemeral prompt manifests
+.pi/

@@ -1,0 +1,116 @@
+{
+  "articles": [
+    {
+      "path": "architecture/dispatcher.md",
+      "title": "Architecture \u2014 CLI Dispatcher",
+      "summary": "The CLI dispatcher system in `brain-79` is responsible for parsing global command-line flags and routing user invocations to deterministic CLI subcommands or launching the MCP server fallback.",
+      "section": "architecture",
+      "registered_at": "2026-08-12T00:07:08.171937+00:00"
+    },
+    {
+      "path": "architecture/mcp-server.md",
+      "title": "Architecture \u2014 MCP Server",
+      "summary": "The Model Context Protocol (MCP) server integration in `brain-79` enables AI assistants (such as Antigravity, Pi, OpenCode, Claude, Cursor) to interact with repository memory via standard JSON-RPC tools.",
+      "section": "architecture",
+      "registered_at": "2026-08-12T00:07:16.983924+00:00"
+    },
+    {
+      "path": "architecture/symmetry.md",
+      "title": "Architecture \u2014 CLI & MCP Symmetry",
+      "summary": "`brain-79` enforces strict 1:1 symmetry between CLI subcommands and MCP server tools. Any capability available to a human user in the terminal via `brain79 <subcommand>` is equally accessible to an AI agent via `brain79_<tool>()`.",
+      "section": "architecture",
+      "registered_at": "2026-08-12T00:07:20.961278+00:00"
+    },
+    {
+      "path": "features/cli.md",
+      "title": "Feature \u2014 Standalone CLI Interface",
+      "summary": "The Standalone CLI interface provides 13 deterministic command-line subcommands for managing the repository wiki, executing organizational linter checks, performing handoffs, and initializing memory protocols without requiring an active MCP host connection.",
+      "section": "features",
+      "registered_at": "2026-08-12T00:14:23.060224+00:00"
+    },
+    {
+      "path": "features/mcp-server.md",
+      "title": "Feature \u2014 FastMCP Integration",
+      "summary": "The Model Context Protocol (MCP) server feature exposes `brain-79` operations as structured tools over JSON-RPC over stdio, integrating seamlessly with AI clients such as Antigravity, Pi, OpenCode, Claude Desktop, and Cursor.",
+      "section": "features",
+      "registered_at": "2026-08-12T00:14:27.290538+00:00"
+    },
+    {
+      "path": "features/handoff-continuity.md",
+      "title": "Feature \u2014 Short-Term Handoff Continuity",
+      "summary": "The Short-Term Handoff feature provides tactical transition management between AI development sessions. Unlike long-term wiki knowledge stored in subfolders, handoffs are immutable, timestamped state snapshots stored in `.brain-79/handoffs/handoff-%Y-%m-%d-%H%M%S-%f.md`.",
+      "section": "features",
+      "registered_at": "2026-08-12T00:14:31.507354+00:00"
+    },
+    {
+      "path": "features/organizational-enforcement.md",
+      "title": "Feature \u2014 Wiki Organizational Enforcement",
+      "summary": "The Organizational Enforcement system prevents organic quality degradation of repository wikis. It automatically enforces frontmatter metadata schemas, checks type-location consistency, blocks structural decision leakage in non-decision folders, detects oversized or non-atomic articles, and identifies unfilled template placeholders in `INDEX.md`.",
+      "section": "features",
+      "registered_at": "2026-08-12T00:14:35.891423+00:00"
+    },
+    {
+      "path": "features/handoff-purge.md",
+      "title": "Feature \u2014 Handoff Purge Operations",
+      "summary": "`brain79 handoff-purge` provides an explicit operational exception to handoff immutability. It allows developers and agents to clean up tactical short-term handoffs (`.brain-79/handoffs/handoff-*.md`) upon completing sprint iterations, resetting demo repositories, or purging legacy session history.",
+      "section": "features",
+      "registered_at": "2026-08-12T00:14:40.164419+00:00"
+    },
+    {
+      "path": "decisions/adr-001-hybrid-cli.md",
+      "title": "ADR-001 \u2014 Architecture \u2014 Dual-Mode Hybrid CLI & MCP Server Interface",
+      "summary": "Accepted",
+      "section": "decisions",
+      "registered_at": "2026-08-12T00:15:02.843897+00:00"
+    },
+    {
+      "path": "decisions/adr-002-immutable-handoffs.md",
+      "title": "ADR-002 \u2014 Handoffs \u2014 Immutable Session Transition Records",
+      "summary": "Accepted",
+      "section": "decisions",
+      "registered_at": "2026-08-12T00:15:06.981688+00:00"
+    },
+    {
+      "path": "decisions/adr-003-v3-legacy-status.md",
+      "title": "ADR-003 \u2014 Migration \u2014 Progressive V3 Migration with Legacy Status Default",
+      "summary": "Accepted",
+      "section": "decisions",
+      "registered_at": "2026-08-12T00:15:11.364759+00:00"
+    },
+    {
+      "path": "decisions/adr-004-strict-write-validation.md",
+      "title": "ADR-004 \u2014 Curation \u2014 Synchronous Write-Time Frontmatter and Location Validation",
+      "summary": "Accepted",
+      "section": "decisions",
+      "registered_at": "2026-08-12T00:15:15.114594+00:00"
+    },
+    {
+      "path": "decisions/adr-005-fence-mask-tracking.md",
+      "title": "ADR-005 \u2014 Linter \u2014 Code Fence Masking for Decision and Debt Leakage Regex Rules",
+      "summary": "Accepted",
+      "section": "decisions",
+      "registered_at": "2026-08-12T00:15:20.457386+00:00"
+    },
+    {
+      "path": "architecture/current-state.md",
+      "title": "Architecture \u2014 System Current State",
+      "summary": "This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 1.0.0.",
+      "section": "architecture",
+      "registered_at": "2026-08-12T00:15:43.872227+00:00"
+    },
+    {
+      "path": "changelog/v1.md",
+      "title": "Changelog \u2014 Version 1.0.0",
+      "summary": "All notable changes to `brain-79` v1.0.0 release cycle.",
+      "section": "changelog",
+      "registered_at": "2026-08-12T00:16:11.256908+00:00"
+    },
+    {
+      "path": "product/overview.md",
+      "title": "Brain-79 \u2014 Product Vision",
+      "summary": "LLMs maintain wikis that degrade organically:",
+      "section": "product",
+      "registered_at": "2026-08-12T00:24:27.641174+00:00"
+    }
+  ]
+}
