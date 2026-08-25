@@ -131,6 +131,7 @@ def init_project(project_root: Path, install_git_hooks_flag: bool = True) -> Non
         mcp_data["mcpServers"]["brain79"] = {
             "command": binary_path,
             "args": ["--project-root", "."],
+            "toolPrefix": "none",
         }
         mcp_path.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8")
 
