@@ -85,6 +85,78 @@ def test_extract_title_and_summary() -> None:
     assert summary == "This is the summary of the feature."
 
 
+def test_extract_title_and_summary_from_frontmatter() -> None:
+    content = (
+        "---\n"
+        "type: feature\n"
+        "summary: Explicit one-line summary from frontmatter\n"
+        "status: planned\n"
+        "version: 0.1.0\n"
+        "last_updated: 2026-10-29\n"
+        "---\n\n"
+        "# Frontmatter Summary Feature\n\n"
+        "## Problem\n\n"
+        "This body text should not be used as summary because frontmatter defined it."
+    )
+    title, summary = extract_title_and_summary(content)
+    assert title == "Frontmatter Summary Feature"
+    assert summary == "Explicit one-line summary from frontmatter"
+
+
+def test_extract_title_and_summary_fallback_skips_colons_and_subheadings() -> None:
+    content = (
+        "---\n"
+        "type: product\n"
+        "last_updated: 2026-10-29\n"
+        "---\n\n"
+        "# Product Title\n\n"
+        "## Problem\n\n"
+        "LLMs maintain wikis that degrade organically:\n"
+        "- They prefer writing to INDEX.md\n"
+    )
+    title, summary = extract_title_and_summary(content)
+    assert title == "Product Title"
+    # Should strip trailing colon and not use hanging colon
+    assert not summary.endswith(":")
+
+
+def test_write_article_with_frontmatter_summary_indexes_into_quick_nav(
+    setup_wiki_root: Path,
+) -> None:
+    content = (
+        "---\n"
+        "type: feature\n"
+        "summary: High-performance streaming audio pipeline.\n"
+        "status: planned\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-10-29\n"
+        "---\n\n"
+        "# Audio Streaming\n\n"
+        "Implementation details here.\n\n"
+        "---\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
+    )
+    write_article("features/audio.md", content)
+
+    wiki_root = setup_wiki_root / ".brain-79"
+    index_file = wiki_root / "INDEX.md"
+    # Fill placeholders in template INDEX.md so strict lint passes
+    filled_index = (
+        index_file.read_text(encoding="utf-8")
+        .replace("<!-- project name -->", "Test Project")
+        .replace("<!-- one sentence: what problem does this project solve? -->", "Testing navigation.")
+        .replace("<!-- e.g., Active development / Beta / Production / Maintenance -->", "Production")
+    )
+    index_file.write_text(filled_index, encoding="utf-8")
+
+    index_content = (wiki_root / "INDEX.md").read_text(encoding="utf-8")
+    assert "- [Audio Streaming](features/audio.md) — High-performance streaming audio pipeline." in index_content
+
+    # Strict lint check should pass with the back-link included and no placeholder warnings
+    code = run_cli("lint", ["--strict"])
+    assert code == 0
+
+
 def test_generate_quick_navigation(setup_wiki_root: Path) -> None:
     wiki_root = setup_wiki_root / ".brain-79"
     register_article(wiki_root, "product/overview.md", "Overview", "Product overview", "product")

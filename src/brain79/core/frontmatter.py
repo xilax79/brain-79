@@ -54,45 +54,45 @@ class ValidationError(ValueError):
 TYPE_SCHEMA: dict[str, dict[str, Any]] = {
     "navigation": {
         "required": ["type", "last_updated"],
-        "optional": [],
+        "optional": ["summary"],
         "enum": {},
     },
     "handoff": {
         "required": ["type", "session_type", "previous_ref", "last_updated"],
-        "optional": ["supersedes", "related", "owner", "schema_version"],
+        "optional": ["summary", "supersedes", "related", "owner", "schema_version"],
         "enum": {
             "session_type": ["feature", "bugfix", "research", "brainstorming"],
         },
     },
     "product": {
         "required": ["type", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["summary", "supersedes", "related", "owner"],
         "enum": {},
     },
     "architecture": {
         "required": ["type", "stability", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["summary", "supersedes", "related", "owner"],
         "enum": {
             "stability": ["experimental", "stable", "legacy"],
         },
     },
     "feature": {
         "required": ["type", "status", "version", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["summary", "supersedes", "related", "owner"],
         "enum": {
             "status": ["planned", "in_progress", "shipped", "deprecated", "legacy"],
         },
     },
     "decision": {
         "required": ["type", "status", "date", "deciders", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["summary", "supersedes", "related", "owner"],
         "enum": {
             "status": ["proposed", "accepted", "superseded", "rejected", "legacy"],
         },
     },
     "changelog": {
         "required": ["type", "version", "date", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["summary", "supersedes", "related", "owner"],
         "enum": {},
     },
     "raw_session": {
@@ -129,6 +129,7 @@ ALLOWED_UNKNOWN_KEYS: set[str] = {
     "generated_at",
     "project_type",
     "force_validation_skipped",
+    "summary",
     "title",
     "tags",
     "created",
@@ -148,21 +149,21 @@ def generate_frontmatter_template(target_type: str) -> str:
     """Generate a ready-to-paste frontmatter snippet for target type."""
     today = date.today().isoformat()
     if target_type == "feature":
-        return f"---\ntype: feature\nstatus: planned  # <planned|in_progress|shipped|deprecated|legacy>\nversion: 0.1.0\nlast_updated: {today}\n---"
+        return f"---\ntype: feature\nsummary: <one-line summary of feature>\nstatus: planned  # <planned|in_progress|shipped|deprecated|legacy>\nversion: 0.1.0\nlast_updated: {today}\n---"
     elif target_type == "decision":
-        return f"---\ntype: decision\nstatus: proposed  # <proposed|accepted|superseded|rejected|legacy>\ndate: {today}\ndeciders: [author]\nlast_updated: {today}\n---"
+        return f"---\ntype: decision\nsummary: <one-line summary of decision>\nstatus: proposed  # <proposed|accepted|superseded|rejected|legacy>\ndate: {today}\ndeciders: [author]\nlast_updated: {today}\n---"
     elif target_type == "architecture":
-        return f"---\ntype: architecture\nstability: experimental  # <experimental|stable|legacy>\nlast_updated: {today}\n---"
+        return f"---\ntype: architecture\nsummary: <one-line summary of architecture>\nstability: experimental  # <experimental|stable|legacy>\nlast_updated: {today}\n---"
     elif target_type == "product":
-        return f"---\ntype: product\nlast_updated: {today}\n---"
+        return f"---\ntype: product\nsummary: <one-line summary of product vision or domain>\nlast_updated: {today}\n---"
     elif target_type == "changelog":
-        return f"---\ntype: changelog\nversion: 0.1.0\ndate: {today}\nlast_updated: {today}\n---"
+        return f"---\ntype: changelog\nsummary: <one-line summary of changelog>\nversion: 0.1.0\ndate: {today}\nlast_updated: {today}\n---"
     elif target_type == "navigation":
         return f"---\ntype: navigation\nlast_updated: {today}\n---"
     elif target_type == "handoff":
         return f"---\ntype: handoff\nsession_type: feature  # <feature|bugfix|research|brainstorming>\nprevious_ref: latest\nlast_updated: {today}\n---"
     else:
-        return f"---\ntype: {target_type}\nlast_updated: {today}\n---"
+        return f"---\ntype: {target_type}\nsummary: <one-line summary>\nlast_updated: {today}\n---"
 
 
 def dump_frontmatter(meta: dict[str, Any], body: str) -> str:

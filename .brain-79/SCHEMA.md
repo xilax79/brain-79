@@ -34,10 +34,13 @@ Maintain strict organizational health and high signal-to-noise ratio across all 
 
 ### Frontmatter Templates
 
+Optional fields accepted across all types: `summary` (single-line article description for `INDEX.md`), `supersedes`, `related`, `owner`.
+
 ```yaml
 # Feature (features/*.md)
 ---
 type: feature
+summary: One-line summary for INDEX.md entry
 status: planned  # planned | in_progress | shipped | deprecated | legacy
 version: 1.0.0
 last_updated: YYYY-MM-DD
@@ -46,6 +49,7 @@ last_updated: YYYY-MM-DD
 # Decision (decisions/adr-*.md)
 ---
 type: decision
+summary: One-line summary of architectural decision
 status: proposed  # proposed | accepted | superseded | rejected | legacy
 date: YYYY-MM-DD
 deciders: [author]
@@ -55,6 +59,7 @@ last_updated: YYYY-MM-DD
 # Architecture (architecture/*.md)
 ---
 type: architecture
+summary: One-line summary of subsystem or pattern
 stability: experimental  # experimental | stable | legacy
 last_updated: YYYY-MM-DD
 ---
@@ -62,8 +67,19 @@ last_updated: YYYY-MM-DD
 # Product (product/*.md)
 ---
 type: product
+summary: One-line summary of domain or vision
 last_updated: YYYY-MM-DD
 ---
+```
+
+### Back-Navigation Links
+
+Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions/`, `changelog/`) should conclude with a back-navigation link at the bottom of the article to facilitate reading in editors (VS Code, Obsidian, GitHub):
+
+```markdown
+---
+
+[← Volver al Índice](../INDEX.md)
 ```
 
 ---
