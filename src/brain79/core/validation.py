@@ -6,6 +6,10 @@ from brain79.core.frontmatter import (
     FrontmatterError,
     ValidationError,
     _normalize_content,
+    autofill_deterministic_fields,
+    dump_frontmatter,
+    generate_frontmatter_template,
+    infer_type_for_path,
     parse_frontmatter,
     validate_frontmatter,
     validate_location_consistency,
@@ -138,7 +142,9 @@ def validate_article_content(path: str, content: str, force_skip: bool = False) 
         # Check optional frontmatter if present
         if content.startswith("---\n"):
             try:
-                meta, _ = parse_frontmatter(content)
+                meta, body = parse_frontmatter(content)
+                meta = autofill_deterministic_fields(meta, rel_path)
+                content = dump_frontmatter(meta, body)
                 validate_frontmatter(meta, rel_path)
                 validate_location_consistency(meta, rel_path)
             except FrontmatterError as e:
@@ -153,15 +159,23 @@ def validate_article_content(path: str, content: str, force_skip: bool = False) 
 
     # Normal articles (not INDEX.md, not SCHEMA.md, not _raw/)
     try:
-        meta, _ = parse_frontmatter(content)
+        meta, body = parse_frontmatter(content)
     except FrontmatterError as e:
+        target_t = infer_type_for_path(rel_path)
+        tpl = generate_frontmatter_template(target_t) if target_t else ""
+        act = "Add YAML frontmatter with `type`, `last_updated`, etc. between `---` delimiters."
+        if tpl:
+            act += f"\n\nTemplate:\n```yaml\n{tpl}\n```"
         raise ValidationError(
             rule="frontmatter_missing",
             path=rel_path,
             message=str(e),
-            actionable="Add YAML frontmatter with `type`, `last_updated`, etc. between `---` delimiters.",
+            actionable=act,
+            target_type=target_t,
         )
 
+    meta = autofill_deterministic_fields(meta, rel_path)
+    content = dump_frontmatter(meta, body)
     validate_frontmatter(meta, rel_path)
     validate_location_consistency(meta, rel_path)
 

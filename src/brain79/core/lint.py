@@ -1,5 +1,6 @@
 import collections
 import os
+import posixpath
 import re
 import time
 from pathlib import Path
@@ -112,6 +113,7 @@ def lint_wiki() -> str:
                 wiki_files.append(Path(root) / f)
 
     index_roots: list[str] = []
+    existing_rel_files = {str(f.relative_to(wiki_root)): f for f in wiki_files}
 
     for p in wiki_files:
         if time.time() - start_time > TIMEOUT_SECONDS:
@@ -188,13 +190,27 @@ def lint_wiki() -> str:
             if not path_part:
                 continue
 
-            # 3. Resolve target path
+            # 3. Fast normalized relative target calculation (avoids thousands of resolve() syscalls)
             if path_part.startswith("/"):
-                target_abs = (wiki_root / path_part.lstrip("/")).resolve()
+                norm_rel = posixpath.normpath(path_part.lstrip("/"))
             else:
-                target_abs = (p.parent / path_part).resolve()
+                parent_rel = str(p.parent.relative_to(wiki_root))
+                combined = (parent_rel + "/" + path_part) if parent_rel != "." else path_part
+                norm_rel = posixpath.normpath(combined)
 
-            # Check if within wiki root
+            if norm_rel.startswith("../") or norm_rel == "..":
+                broken_links.append((rel_path, raw_target))
+                continue
+
+            if norm_rel in existing_rel_files:
+                if any(part in _EXCLUDED_DIRS for part in Path(norm_rel).parts):
+                    namespace_violations.append((rel_path, raw_target))
+                else:
+                    file_graph[rel_path].add(norm_rel)
+                continue
+
+            # Fallback to filesystem resolution for non-md files or special paths
+            target_abs = (wiki_root / norm_rel).resolve()
             try:
                 target_rel = target_abs.relative_to(wiki_root)
             except ValueError:

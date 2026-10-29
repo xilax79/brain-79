@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from brain79.core.lint import lint_wiki
-from brain79.core.lint_organizational import lint_organizational
+from brain79.core.lint_organizational import OrganizationalIssue, lint_organizational
 
 
 @dataclass
@@ -16,14 +16,17 @@ class WikiStateReport:
     issues_summary: list[str]
 
 
-def analyze_wiki_state(wiki_root: Path) -> WikiStateReport:
+def analyze_wiki_state(
+    wiki_root: Path, org_issues: list[OrganizationalIssue] | None = None
+) -> WikiStateReport:
     """Analyze current wiki state and return structured report for curation."""
     index_file = wiki_root / "INDEX.md"
     has_index = index_file.exists()
     index_lines = len(index_file.read_text(encoding="utf-8").splitlines()) if has_index else 0
 
-    articles = list(wiki_root.rglob("*.md"))
-    org_issues = lint_organizational(wiki_root)
+    articles = [f for f in wiki_root.rglob("*.md") if "_raw" not in f.parts]
+    if org_issues is None:
+        org_issues = lint_organizational(wiki_root)
 
     critical_count = sum(1 for i in org_issues if i.severity == "error")
     warning_count = sum(1 for i in org_issues if i.severity == "warning")
@@ -44,8 +47,8 @@ def analyze_wiki_state(wiki_root: Path) -> WikiStateReport:
 
 def prepare_curation_guide(wiki_root: Path, raw_content: str | None = None) -> str:
     """Generate state-aware curation guide for AI agent ingest cycles. Max 500 lines."""
-    state = analyze_wiki_state(wiki_root)
-    lint_report = lint_wiki()
+    org_issues = lint_organizational(wiki_root)
+    state = analyze_wiki_state(wiki_root, org_issues=org_issues)
 
     lines: list[str] = [
         "# Brain-79 — State-Aware Ingest & Curation Guide",
@@ -74,19 +77,25 @@ def prepare_curation_guide(wiki_root: Path, raw_content: str | None = None) -> s
         "## Step-by-Step Curation Workflow",
         "1. **Extract**: Identify new features, architectural decisions, or established conventions from session history.",
         "2. **Atomic Write**: Update existing target files or create new files in designated subdirectories (`features/`, `decisions/`, `architecture/`, `product/`).",
-        "3. **Navigation Sync**: Register new articles using `brain79 navigate --regenerate` or MCP `brain79_navigate(regenerate=True)`.",
-        "4. **Lint Verification**: Execute `brain79 lint --strict` to verify zero violations remain.",
+        "3. **Navigation Sync**: Automatically updated by `brain79_write` / `brain79_write_many`.",
+        "4. **Lint Verification**: Fast health check included with writes; run `brain79_lint()` for final whole-wiki scan.",
         "",
     ])
 
     if raw_content:
         lines.append("## Session Input Snippet")
-        snippet_lines = raw_content.splitlines()[:50]
+        snippet_lines = raw_content.splitlines()[:5]
         lines.extend(f"> {line_item}" for line_item in snippet_lines)
+        if len(raw_content.splitlines()) > 5:
+            lines.append("> ...")
         lines.append("")
 
     lines.append("## Diagnostic Summary")
-    lines.append(lint_report)
+    if state.critical_count == 0 and state.warning_count == 0:
+        lines.append("[Status: OK] Zero health violations detected.")
+    else:
+        lint_report = lint_wiki()
+        lines.append(lint_report)
 
     # Apply 500 lines hard limit cap
     if len(lines) > 500:

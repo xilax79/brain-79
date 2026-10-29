@@ -20,17 +20,51 @@ Maintain strict organizational health and high signal-to-noise ratio across all 
 
 ## Quick navigation
 
-| Directory | Required `type` | Purpose |
-|-----------|-----------------|---------|
-| `INDEX.md` | `navigation` | Topological index only |
-| `handoffs/` | `handoff` | Immutable session handoffs |
-| `product/` | `product` | Vision, domain, personas |
-| `architecture/` | `architecture` | Stack, patterns, topology |
-| `features/` | `feature` | Feature documentation |
-| `decisions/` | `decision` | Architectural Decision Records |
-| `changelog/` | `changelog` | Versioned changes |
-| `_raw/sessions/` | `raw_session` | Immutable session summaries |
-| `_raw/commits/` | `raw_commit` | Commit metadata |
+| Directory | Required `type` | Required Fields | Allowed Enums | Purpose |
+|-----------|-----------------|-----------------|---------------|---------|
+| `INDEX.md` | `navigation` | `type`, `last_updated` | — | Topological index only |
+| `handoffs/` | `handoff` | `type`, `session_type`, `previous_ref`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming | Immutable session handoffs |
+| `product/` | `product` | `type`, `last_updated` | — | Vision, domain, personas |
+| `architecture/` | `architecture` | `type`, `stability`, `last_updated` | `stability`: experimental, stable, legacy | Stack, patterns, topology |
+| `features/` | `feature` | `type`, `status`, `version`, `last_updated` | `status`: planned, in_progress, shipped, deprecated, legacy | Feature documentation |
+| `decisions/` | `decision` | `type`, `status`, `date`, `deciders`, `last_updated` | `status`: proposed, accepted, superseded, rejected, legacy | Architectural Decision Records |
+| `changelog/` | `changelog` | `type`, `version`, `date`, `last_updated` | — | Versioned changes |
+| `_raw/sessions/` | `raw_session` | `type`, `session_id`, `session_type`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming | Immutable session summaries |
+| `_raw/commits/` | `raw_commit` | `type`, `commit_sha`, `last_updated` | — | Commit metadata |
+
+### Frontmatter Templates
+
+```yaml
+# Feature (features/*.md)
+---
+type: feature
+status: planned  # planned | in_progress | shipped | deprecated | legacy
+version: 1.0.0
+last_updated: YYYY-MM-DD
+---
+
+# Decision (decisions/adr-*.md)
+---
+type: decision
+status: proposed  # proposed | accepted | superseded | rejected | legacy
+date: YYYY-MM-DD
+deciders: [author]
+last_updated: YYYY-MM-DD
+---
+
+# Architecture (architecture/*.md)
+---
+type: architecture
+stability: experimental  # experimental | stable | legacy
+last_updated: YYYY-MM-DD
+---
+
+# Product (product/*.md)
+---
+type: product
+last_updated: YYYY-MM-DD
+---
+```
 
 ---
 

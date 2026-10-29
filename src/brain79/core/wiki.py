@@ -6,6 +6,7 @@ import subprocess
 import filelock
 
 from brain79.config import get_wiki_root
+from brain79.core.frontmatter import ValidationError
 from brain79.core.validation import validate_article_content
 
 
@@ -46,6 +47,7 @@ def write_article(
     content: str,
     timeout: float = 5.0,
     force_validation_skip: bool = False,
+    _skip_nav_regen: bool = False,
 ) -> str:
     """
     Write or update an article atomically with file locking. Creates parent directories as needed.
@@ -83,19 +85,207 @@ def write_article(
             f"El archivo {path} está bloqueado por otro proceso. Reintenta en unos segundos."
         )
 
-    # Best-effort navigation registration
+    # Best-effort navigation registration & synchronization (P1.1, P0.5)
     try:
-        if rel_path_str != "INDEX.md" and rel_path_str != "SCHEMA.md" and not rel_path_str.startswith("_raw/"):
-            from brain79.core.navigation import extract_title_and_summary, register_article
+        if (
+            not force_validation_skip
+            and rel_path_str != "INDEX.md"
+            and rel_path_str != "SCHEMA.md"
+            and not rel_path_str.startswith("_raw/")
+            and not rel_path_str.startswith("handoffs/")
+        ):
+            from brain79.core.navigation import (
+                extract_title_and_summary,
+                regenerate_index_navigation,
+                register_article,
+            )
 
             rel_p = target.relative_to(wiki_root)
             title, summary = extract_title_and_summary(content)
             section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
             register_article(wiki_root, str(rel_p), title, summary, section)
+            if not _skip_nav_regen:
+                try:
+                    regenerate_index_navigation(wiki_root)
+                except Exception:
+                    pass
+        elif rel_path_str == "INDEX.md" and "## Quick navigation" in content:
+            if not _skip_nav_regen:
+                from brain79.core.navigation import regenerate_index_navigation
+
+                try:
+                    regenerate_index_navigation(wiki_root)
+                except Exception:
+                    pass
     except Exception:
         pass
 
     return f"Written: {path}"
+
+
+def check_file_health(wiki_root: Path, rel_path: str, content: str) -> list[str]:
+    """Run lightweight per-file health checks returning warnings (if any)."""
+    warnings: list[str] = []
+
+    # Exempt paths
+    if rel_path in ("SCHEMA.md",) or rel_path.startswith("_raw/") or rel_path.startswith("handoffs/"):
+        return warnings
+
+    # 1. H1 Header check
+    from brain79.core.lint import _extract_raw_link_targets, _has_h1_header
+    if not _has_h1_header(content):
+        warnings.append(f"Missing H1 header in '{rel_path}'.")
+
+    # 2. Decision leakage in non-decision documents
+    if not rel_path.startswith("decisions/") and rel_path != "INDEX.md":
+        from brain79.core.validation import (
+            DECISION_BULLET_STRICT,
+            DECISION_HEADER_STRICT,
+            TECHNICAL_DEBT_BULLET_STRICT,
+            TECHNICAL_DEBT_HEADER_STRICT,
+            _mask_code_fences,
+        )
+        masked = _mask_code_fences(content)
+        if DECISION_HEADER_STRICT.search(masked) or DECISION_BULLET_STRICT.search(masked):
+            warnings.append(
+                f"Structural decision leakage detected in non-decision article '{rel_path}'. Move decisions to decisions/."
+            )
+        if TECHNICAL_DEBT_HEADER_STRICT.search(masked) or TECHNICAL_DEBT_BULLET_STRICT.search(masked):
+            warnings.append(
+                f"Technical debt leakage detected in '{rel_path}'. Move to decisions/ or features/."
+            )
+
+    # 3. Broken local links in this article
+    from urllib.parse import unquote
+    raw_targets = _extract_raw_link_targets(content)
+    article_path = wiki_root / rel_path
+    for raw_target in raw_targets:
+        if (
+            raw_target.startswith(
+                ("http://", "https://", "mailto:", "ftp://", "file://", "//", "tel:", "data:")
+            )
+            or "://" in raw_target
+        ):
+            continue
+        path_part = unquote(raw_target.split("#", 1)[0])
+        if not path_part:
+            continue
+        if path_part.startswith("/"):
+            target_file = (wiki_root / path_part.lstrip("/")).resolve()
+        else:
+            target_file = (article_path.parent / path_part).resolve()
+        try:
+            target_rel = target_file.relative_to(wiki_root)
+            if not target_file.exists():
+                warnings.append(f"Broken local link: '{raw_target}' -> '{target_rel}' does not exist.")
+        except ValueError:
+            warnings.append(f"Link points outside wiki: '{raw_target}'.")
+
+    return warnings
+
+
+def edit_article(
+    path: str,
+    edits: list[dict[str, str]],
+    timeout: float = 5.0,
+    force_validation_skip: bool = False,
+) -> str:
+    """Apply one or more text replacements to an article, validate, and write atomically."""
+    if not edits:
+        raise ValueError("edits list cannot be empty.")
+
+    target = _safe_resolve(path)
+    if not target.exists() or not target.is_file():
+        raise FileNotFoundError(f"Article not found: {path}")
+
+    content = target.read_text(encoding="utf-8")
+
+    for idx, edit in enumerate(edits):
+        old_text = edit.get("old_text")
+        new_text = edit.get("new_text")
+        if old_text is None or new_text is None:
+            raise ValueError(f"Edit #{idx + 1} must contain 'old_text' and 'new_text'.")
+        if not old_text:
+            raise ValueError(f"Edit #{idx + 1} 'old_text' cannot be empty.")
+
+        count = content.count(old_text)
+        if count == 0:
+            snippet = old_text[:60] + "..." if len(old_text) > 60 else old_text
+            raise ValueError(f"Edit #{idx + 1} failed: 'old_text' not found: {snippet!r}")
+        if count > 1:
+            snippet = old_text[:60] + "..." if len(old_text) > 60 else old_text
+            raise ValueError(f"Edit #{idx + 1} ambiguous: 'old_text' matches {count} times: {snippet!r}")
+
+        content = content.replace(old_text, new_text, 1)
+
+    return write_article(
+        path, content, timeout=timeout, force_validation_skip=force_validation_skip
+    )
+
+
+def write_many_articles(
+    articles: list[dict[str, str]],
+    timeout: float = 5.0,
+    force_validation_skip: bool = False,
+) -> str:
+    """Validate all articles in batch first; if all valid, write them atomically."""
+    if not articles:
+        raise ValueError("articles list cannot be empty.")
+
+    wiki_root = get_wiki_root().resolve()
+    validated_contents: list[tuple[str, str]] = []
+    validation_errors: list[str] = []
+
+    # 1. Validation pass (all-or-nothing)
+    for idx, item in enumerate(articles):
+        p = item.get("path")
+        c = item.get("content")
+        if not p or c is None:
+            raise ValueError(f"Article #{idx + 1} must have 'path' and 'content'.")
+
+        target = _safe_resolve(p)
+        if target.suffix != ".md":
+            raise ValueError(f"write_many_articles requires .md paths, got {p}")
+
+        rel_path_str = str(target.relative_to(wiki_root))
+        try:
+            val_c = validate_article_content(rel_path_str, c, force_skip=force_validation_skip)
+            validated_contents.append((p, val_c))
+        except ValidationError as exc:
+            validation_errors.append(f"[{p}]\n{exc.format_user_message()}")
+        except Exception as exc:
+            validation_errors.append(f"[{p}] {exc}")
+
+    if validation_errors:
+        raise ValidationError(
+            rule="batch_validation_failed",
+            path="batch",
+            message=f"Batch validation failed for {len(validation_errors)} article(s):\n\n"
+            + "\n\n".join(validation_errors),
+            actionable="Fix all validation errors listed above before re-submitting batch.",
+        )
+
+    # 2. Write pass
+    written: list[str] = []
+    for p, val_c in validated_contents:
+        write_article(
+            p,
+            val_c,
+            timeout=timeout,
+            force_validation_skip=force_validation_skip,
+            _skip_nav_regen=True,
+        )
+        written.append(p)
+
+    # 3. Single navigation regeneration at the end of the batch
+    try:
+        from brain79.core.navigation import regenerate_index_navigation
+
+        regenerate_index_navigation(wiki_root)
+    except Exception:
+        pass
+
+    return f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · lint OK"
 
 
 def list_articles(section: str | None = None) -> list[str]:

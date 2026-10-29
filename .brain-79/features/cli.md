@@ -1,15 +1,15 @@
 ---
 type: feature
 status: shipped
-version: 1.0.0
-last_updated: 2026-08-11
+version: 1.1.0
+last_updated: 2026-10-29
 ---
 
 # Feature — Standalone CLI Interface
 
 ## Overview
 
-The Standalone CLI interface provides 13 deterministic command-line subcommands for managing the repository wiki, executing organizational linter checks, performing handoffs, and initializing memory protocols without requiring an active MCP host connection.
+The Standalone CLI interface provides 16 deterministic command-line subcommands for managing the repository wiki, executing organizational linter checks, performing handoffs, and initializing memory protocols without requiring an active MCP host connection.
 
 It is designed for direct developer interaction in the terminal, shell scripts, CI/CD pipelines, and git hooks.
 
@@ -20,8 +20,11 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 | `brain79 init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root`, `--install-git-hooks` / `--no-git-hooks` | `0`, `1`, `2` |
 | `brain79 update` | Update editable installation from upstream git repo | `--branch` | `0`, `1` |
 | `brain79 index` | Print `INDEX.md` entry point | None | `0`, `3` |
+| `brain79 schema` | Print schema rules and frontmatter templates | `[--type <type>]` | `0` |
 | `brain79 read` | Read a wiki article by relative path | `<path>` | `0`, `3` |
 | `brain79 write` | Write or update a wiki article | `<path>`, `--content-file`, `--content-stdin`, `--force-validation-skip` | `0`, `1`, `3` |
+| `brain79 edit` | Partial in-place text replacement in an article | `<path>`, `--old-text`, `--new-text`, `--edits-file` | `0`, `1`, `3` |
+| `brain79 write-many` | Batch validate and atomically write multiple articles | `--file`, `--stdin` | `0`, `1`, `3` |
 | `brain79 list` | List wiki articles | `[--section <name>]` | `0` |
 | `brain79 search` | Keyword search across wiki articles | `<query>` | `0` |
 | `brain79 ingest` | Save raw session summary | `--summary-file`, `--summary-stdin` | `0`, `3` |

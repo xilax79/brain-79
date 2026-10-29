@@ -1,0 +1,28 @@
+{
+  "current_wiki": {
+    "index_read_ms": 0.12,
+    "lint_strict_ms": 10.49,
+    "lint_org_ms": 4.43,
+    "curation_guide_ms": 4.23,
+    "nav_regenerate_ms": 1.76
+  },
+  "handoff_pollutes_nav": false,
+  "validation_error_behavior": {
+    "error_msg": "Frontmatter validation failed for 'features/test.md' with 4 violations:\n- Frontmatter for type='feature' lacks required field `status`.\n- Frontmatter for type='feature' lacks required field `version`.\n- Frontmatter for type='feature' lacks required field `last_updated`.\n- Unknown frontmatter key 'unknown_key' for type='feature'.",
+    "violations_detected_in_single_error": 4
+  },
+  "synth_50": {
+    "synthetic_50_lint_ms": 49.13,
+    "synthetic_50_org_ms": 9.91,
+    "synthetic_50_ingest_ms": 8.53,
+    "synthetic_50_write_ms": 2.64
+  },
+  "synth_300": {
+    "synthetic_300_lint_ms": 241.41,
+    "synthetic_300_org_ms": 54.82,
+    "synthetic_300_ingest_ms": 61.13,
+    "synthetic_300_write_ms": 1.78
+  },
+  "tool_count": 17,
+  "all_output_schemas_none": true
+}

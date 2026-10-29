@@ -55,10 +55,13 @@ def check_index_size(wiki_root: Path) -> list[OrganizationalIssue]:
     return []
 
 
-def check_frontmatter_consistency(wiki_root: Path) -> list[OrganizationalIssue]:
+def check_frontmatter_consistency(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
     """Every article (except INDEX.md, SCHEMA.md, and _raw/) MUST have valid frontmatter."""
     issues = []
-    for md_file in sorted(wiki_root.rglob("*.md")):
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    for md_file in files:
         rel = md_file.relative_to(wiki_root)
         rel_str = str(rel)
         if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] == "_raw":
@@ -119,10 +122,13 @@ def check_frontmatter_consistency(wiki_root: Path) -> list[OrganizationalIssue]:
     return issues
 
 
-def check_type_location_mismatch(wiki_root: Path) -> list[OrganizationalIssue]:
+def check_type_location_mismatch(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
     """Validate that article frontmatter type matches file location."""
     issues = []
-    for md_file in sorted(wiki_root.rglob("*.md")):
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    for md_file in files:
         rel = md_file.relative_to(wiki_root)
         rel_str = str(rel)
         if rel_str in ("SCHEMA.md",) or rel.parts[0] == "_raw":
@@ -167,10 +173,13 @@ def check_type_location_mismatch(wiki_root: Path) -> list[OrganizationalIssue]:
     return issues
 
 
-def check_decision_leakage(wiki_root: Path) -> list[OrganizationalIssue]:
+def check_decision_leakage(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
     """Detect structural decision declarations in non-decision directories."""
     issues = []
-    for md_file in sorted(wiki_root.rglob("*.md")):
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    for md_file in files:
         rel = md_file.relative_to(wiki_root)
         rel_str = str(rel)
         if rel.parts[0] in ("decisions", "_raw", "handoffs") or rel_str in ("INDEX.md", "SCHEMA.md"):
@@ -194,10 +203,13 @@ def check_decision_leakage(wiki_root: Path) -> list[OrganizationalIssue]:
     return issues
 
 
-def check_article_atomicity(wiki_root: Path) -> list[OrganizationalIssue]:
+def check_article_atomicity(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
     """Detect non-atomic or overly large articles (>400 lines or >7 H2 headings)."""
     issues = []
-    for md_file in sorted(wiki_root.rglob("*.md")):
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    for md_file in files:
         rel = md_file.relative_to(wiki_root)
         rel_str = str(rel)
         if rel.parts[0] in ("_raw", "handoffs", "decisions") or rel_str in ("INDEX.md", "SCHEMA.md"):
@@ -292,6 +304,8 @@ def check_navigation_freshness(wiki_root: Path) -> list[OrganizationalIssue]:
 
     for article in registry.get("articles", []):
         path_str = article.get("path", "")
+        if path_str.startswith("handoffs/") or article.get("section") == "handoffs":
+            continue
         if path_str and path_str not in qn_content:
             issues.append(
                 OrganizationalIssue(
@@ -306,10 +320,13 @@ def check_navigation_freshness(wiki_root: Path) -> list[OrganizationalIssue]:
     return issues
 
 
-def check_legacy_articles(wiki_root: Path) -> list[OrganizationalIssue]:
+def check_legacy_articles(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
     """Report articles with status=legacy or stability=legacy."""
     issues = []
-    for md_file in sorted(wiki_root.rglob("*.md")):
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    for md_file in files:
         rel = md_file.relative_to(wiki_root)
         rel_str = str(rel)
         if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
@@ -334,10 +351,13 @@ def check_legacy_articles(wiki_root: Path) -> list[OrganizationalIssue]:
     return issues
 
 
-def check_force_skipped_articles(wiki_root: Path) -> list[OrganizationalIssue]:
+def check_force_skipped_articles(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
     """Report articles created with validation=force_skip."""
     issues = []
-    for md_file in sorted(wiki_root.rglob("*.md")):
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    for md_file in files:
         rel = md_file.relative_to(wiki_root)
         rel_str = str(rel)
         if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
@@ -410,16 +430,17 @@ def check_unfilled_placeholders(wiki_root: Path) -> list[OrganizationalIssue]:
 
 def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     """Run all organizational health checks on the wiki."""
+    md_files = [f for f in sorted(wiki_root.rglob("*.md")) if "_raw" not in f.parts]
     issues: list[OrganizationalIssue] = []
     issues.extend(check_index_size(wiki_root))
-    issues.extend(check_frontmatter_consistency(wiki_root))
-    issues.extend(check_type_location_mismatch(wiki_root))
-    issues.extend(check_decision_leakage(wiki_root))
-    issues.extend(check_article_atomicity(wiki_root))
+    issues.extend(check_frontmatter_consistency(wiki_root, md_files=md_files))
+    issues.extend(check_type_location_mismatch(wiki_root, md_files=md_files))
+    issues.extend(check_decision_leakage(wiki_root, md_files=md_files))
+    issues.extend(check_article_atomicity(wiki_root, md_files=md_files))
     issues.extend(check_prohibited_content(wiki_root))
     issues.extend(check_navigation_freshness(wiki_root))
-    issues.extend(check_legacy_articles(wiki_root))
-    issues.extend(check_force_skipped_articles(wiki_root))
+    issues.extend(check_legacy_articles(wiki_root, md_files=md_files))
+    issues.extend(check_force_skipped_articles(wiki_root, md_files=md_files))
     issues.extend(check_unfilled_placeholders(wiki_root))
     return issues
 

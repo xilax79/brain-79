@@ -80,14 +80,14 @@ def _resolve_handoff_path(ref: str) -> Path:
 
 def write_handoff(
     session_type: str,
-    previous_handoff_ref: str,
-    summary: str,
-    completed_work: list[str],
-    pending_work: list[str],
-    knowledge_pending_promotion: list[str],
-    resources: list[str],
-    gotchas: list[str],
-    boot_instruction: str,
+    previous_handoff_ref: str = "latest",
+    summary: str = "",
+    completed_work: list[str] | None = None,
+    pending_work: list[str] | None = None,
+    knowledge_pending_promotion: list[str] | None = None,
+    resources: list[str] | None = None,
+    gotchas: list[str] | None = None,
+    boot_instruction: str = "",
     wiki_deviation_justification: str = "",
 ) -> str:
     """Generate and save an immutable handoff file validating design rules."""
@@ -104,21 +104,30 @@ def write_handoff(
         raise ValueError("summary cannot be empty.")
 
     # Validation: lineage reference
-    previous_handoff_ref = previous_handoff_ref.strip()
-    if previous_handoff_ref and previous_handoff_ref.lower() != "none":
+    raw_ref = (previous_handoff_ref or "").strip()
+    if not raw_ref or raw_ref.lower() in ("none", "initial"):
+        previous_handoff_ref = "none"
+    elif raw_ref.lower() == "latest":
         try:
-            _resolve_handoff_path(previous_handoff_ref)
-        except HandoffNotFoundError:
+            _resolve_handoff_path("latest")
+            previous_handoff_ref = "latest"
+        except (HandoffNotFoundError, NoHandoffsExistError):
+            previous_handoff_ref = "none"
+    else:
+        try:
+            _resolve_handoff_path(raw_ref)
+            previous_handoff_ref = raw_ref
+        except (HandoffNotFoundError, NoHandoffsExistError):
             raise FileNotFoundError(
-                f"The previous_handoff_ref '{previous_handoff_ref}' does not exist."
+                f"The previous_handoff_ref '{raw_ref}' does not exist."
             )
 
     # Normalization
-    completed_work = _normalize_list(completed_work)
-    pending_work = _normalize_list(pending_work)
-    knowledge_pending_promotion = _normalize_list(knowledge_pending_promotion)
-    resources = _normalize_list(resources)
-    gotchas = _normalize_list(gotchas)
+    completed_work = _normalize_list(completed_work or [])
+    pending_work = _normalize_list(pending_work or [])
+    knowledge_pending_promotion = _normalize_list(knowledge_pending_promotion or [])
+    resources = _normalize_list(resources or [])
+    gotchas = _normalize_list(gotchas or [])
 
     # Validation: boot_instruction anti-hallucination
     # NOTE: boot_instruction is rendered as plain markdown; not sanitized for HTML.
@@ -133,6 +142,13 @@ def write_handoff(
             "no hay pendientes",
             "no hay trabajo",
             "no pending",
+            "no pending tasks",
+            "no remaining tasks",
+            "no remaining work",
+            "none",
+            "all done",
+            "all complete",
+            "ninguna",
         ]
         if not any(k in boot_instruction.lower() for k in anti_hallucination_keywords):
             raise ValueError(

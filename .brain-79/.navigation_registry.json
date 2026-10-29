@@ -111,6 +111,20 @@
       "summary": "LLMs maintain wikis that degrade organically:",
       "section": "product",
       "registered_at": "2026-08-12T00:24:27.641174+00:00"
+    },
+    {
+      "path": "decisions/adr-006-auto-navigation-and-batch-operations.md",
+      "title": "ADR-006 \u2014 Architecture \u2014 Automatic Navigation Regeneration, Inline Health Checks, and Partial/Batch Operations",
+      "summary": "Accepted",
+      "section": "decisions",
+      "registered_at": "2026-10-29T20:15:29.220437+00:00"
+    },
+    {
+      "path": "changelog/v1-1.md",
+      "title": "Changelog \u2014 Version 1.1.0 \u2014 Performance & Session Workflow Optimization",
+      "summary": "Notable improvements addressing end-of-session wiki update performance and tool usability.",
+      "section": "changelog",
+      "registered_at": "2026-10-29T20:16:17.838515+00:00"
     }
   ]
 }

@@ -1,0 +1,42 @@
+{
+  "current_wiki": {
+    "index_read_ms": 0.27,
+    "lint_strict_ms": 12.68,
+    "lint_org_ms": 4.91,
+    "curation_guide_ms": 13.78,
+    "nav_regenerate_ms": 0.37
+  },
+  "handoff_pollutes_nav": true,
+  "validation_error_behavior": {
+    "error_msg": "Frontmatter for type='feature' lacks required field `status`.",
+    "violations_detected_in_single_error": 1
+  },
+  "synth_50": {
+    "synthetic_50_lint_ms": 34.86,
+    "synthetic_50_org_ms": 39.38,
+    "synthetic_50_ingest_ms": 41.21,
+    "synthetic_50_write_ms": 1.08
+  },
+  "synth_300": {
+    "synthetic_300_lint_ms": 159.29,
+    "synthetic_300_org_ms": 56.6,
+    "synthetic_300_ingest_ms": 234.29,
+    "synthetic_300_write_ms": 2.05
+  },
+  "tool_schemas": {
+    "brain79_index": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_read": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_write": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_list": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_search": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_ingest": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_handoff_write": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_handoff_read": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_handoff_purge": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_lint": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_context": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_bootstrap": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_navigate": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}",
+    "brain79_migrate": "{'properties': {'result': {'type': 'string'}}, 'required': ['result'], 'type': 'object', 'x-fastmcp-wrap-result': True}"
+  }
+}

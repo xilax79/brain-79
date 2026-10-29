@@ -29,9 +29,12 @@
 | Purpose | MCP tool | CLI command |
 |---|---|---|
 | Orient yourself | `brain79_index()` | `brain79 index` |
+| Inspect schema & templates | `brain79_schema(type?)` | `brain79 schema [--type <type>]` |
 | Find articles | `brain79_search(query)` | `brain79 search <query>` |
 | Read article | `brain79_read(path)` | `brain79 read <path>` |
 | Write/update article | `brain79_write(path, content)` | `brain79 write <path> --content-file /dev/stdin` |
+| Partial edit | `brain79_edit(path, edits)` | `brain79 edit <path> --old-text ... --new-text ...` |
+| Batch write | `brain79_write_many(articles)` | `brain79 write-many --file <path>` |
 | Browse sections | `brain79_list(section?)` | `brain79 list [--section <name>]` |
 | Save raw session | `brain79_ingest(summary, instructions?)` | `brain79 ingest --summary-file /dev/stdin` |
 | Session handoff (write) | `brain79_handoff_write(...)` | `brain79 handoff-write --session-type feature --summary-file /dev/stdin --boot-instruction-file /dev/stdin` |
@@ -45,7 +48,7 @@ degradation. Always run these checks before declaring wiki work complete.
 
 | Purpose | MCP tool | CLI command |
 |---|---|---|
-| **Lint wiki** (find violations) | (no MCP equivalent — use CLI) | `brain79 lint` |
+| **Lint wiki** (find violations) | `brain79_lint()` | `brain79 lint` |
 | **Strict lint** (CI mode, exits 1 on issues) | — | `brain79 lint --strict` |
 | **Machine-readable lint** | — | `brain79 lint --strict --format json \| jq '.issues'` |
 | **Extraction suggestions** for INDEX.md | — | `brain79 lint --suggest-extract` |
@@ -56,6 +59,12 @@ degradation. Always run these checks before declaring wiki work complete.
 | **Print current Quick navigation** | `brain79_navigate()` | `brain79 navigate` |
 | **Purge all handoffs (preview)** | `brain79_handoff_purge()` (dry-run) | `brain79 handoff-purge` |
 | **Purge all handoffs (destructive)** | `brain79_handoff_purge(apply=True)` | `brain79 handoff-purge --apply` |
+
+### Fast End-of-Session Recipe (Target: 2-3 calls)
+
+1. `brain79_ingest(summary)` — Records raw session notes and outputs curation guide.
+2. `brain79_write(path, content)` / `brain79_edit(path, edits)` / `brain79_write_many(articles)` — Writes automatically sync navigation and run inline health checks.
+3. `brain79_handoff_write(...)` — Preserves short-term transition state for the next session.
 
 
 ### When fixing wiki issues (workflow)

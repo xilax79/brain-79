@@ -1,8 +1,8 @@
 ---
 type: feature
 status: shipped
-version: 1.0.0
-last_updated: 2026-08-11
+version: 1.1.0
+last_updated: 2026-10-29
 ---
 
 # Feature — FastMCP Integration
@@ -11,21 +11,25 @@ last_updated: 2026-08-11
 
 The Model Context Protocol (MCP) server feature exposes `brain-79` operations as structured tools over JSON-RPC over stdio, integrating seamlessly with AI clients such as Antigravity, Pi, OpenCode, Claude Desktop, and Cursor.
 
-Built using `FastMCP 2.0`, it suppresses standard error banners during initialization to prevent connection handshakes from failing.
+Built using `FastMCP 2.0+`, it suppresses standard error banners during initialization and configures `output_schema=None` across tools to prevent redundant response wrapping, saving token bandwidth in AI harnesses.
 
 ## MCP Tools Reference
 
 | MCP Tool | CLI Equivalent | Purpose |
 |---|---|---|
 | `brain79_index()` | `brain79 index` | Retrieve `INDEX.md` entry point |
+| `brain79_schema(target_type?)` | `brain79 schema` | Inspect schema constraints and copy-paste templates |
 | `brain79_read(path)` | `brain79 read <path>` | Read wiki article safely |
-| `brain79_write(path, content, force_validation_skip)` | `brain79 write <path>` | Write or update wiki article with validation |
+| `brain79_write(path, content, force_validation_skip)` | `brain79 write <path>` | Write or update wiki article with validation and auto-navigation |
+| `brain79_edit(path, edits, force_validation_skip)` | `brain79 edit <path>` | Targeted text replacement without re-emitting entire article |
+| `brain79_write_many(articles, force_validation_skip)` | `brain79 write-many` | Batch validate and atomically write multiple articles |
 | `brain79_list(section)` | `brain79 list [--section <name>]` | List available wiki articles |
 | `brain79_search(query)` | `brain79 search <query>` | High-speed keyword search via ripgrep |
 | `brain79_ingest(session_summary, instructions)` | `brain79 ingest` | Ingest raw session summary to `_raw/sessions/` |
 | `brain79_handoff_write(...)` | `brain79 handoff-write` | Create structured, immutable session handoff |
 | `brain79_handoff_read(ref)` | `brain79 handoff-read` | Read referenced session handoff |
 | `brain79_handoff_purge(apply)` | `brain79 handoff-purge` | Purge short-term handoffs |
+| `brain79_lint()` | `brain79 lint` | Run deterministic health check scan |
 | `brain79_bootstrap(scope, force)` | `brain79 bootstrap` | Scan repository and return manifest |
 | `brain79_navigate(regenerate)` | `brain79 navigate` | Query or update navigation registry |
 | `brain79_context(query)` | `brain79 context` | Retrieve relevant articles via TF-IDF |

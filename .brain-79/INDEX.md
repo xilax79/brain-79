@@ -48,6 +48,7 @@ last_updated: 2026-08-11
 
 ### Changelog
 - [Changelog — Version 1.0.0](changelog/v1.md) — All notable changes to `brain-79` v1.0.0 release cycle.
+- [Changelog — Version 1.1.0 — Performance & Session Workflow Optimization](changelog/v1-1.md) — Notable improvements addressing end-of-session wiki update performance and tool usability.
 
 ### Decisions
 - [ADR-001 — Architecture — Dual-Mode Hybrid CLI & MCP Server Interface](decisions/adr-001-hybrid-cli.md) — Accepted
@@ -55,6 +56,7 @@ last_updated: 2026-08-11
 - [ADR-003 — Migration — Progressive V3 Migration with Legacy Status Default](decisions/adr-003-v3-legacy-status.md) — Accepted
 - [ADR-004 — Curation — Synchronous Write-Time Frontmatter and Location Validation](decisions/adr-004-strict-write-validation.md) — Accepted
 - [ADR-005 — Linter — Code Fence Masking for Decision and Debt Leakage Regex Rules](decisions/adr-005-fence-mask-tracking.md) — Accepted
+- [ADR-006 — Architecture — Automatic Navigation Regeneration, Inline Health Checks, and Partial/Batch Operations](decisions/adr-006-auto-navigation-and-batch-operations.md) — Accepted
 
 ### Features
 - [Feature — FastMCP Integration](features/mcp-server.md) — The Model Context Protocol (MCP) server feature exposes `brain-79` operations as structured tools over JSON-RPC over stdio, integrating seamlessly with AI clients such as Antigravity, Pi, OpenCode, Claude Desktop, and Cursor.

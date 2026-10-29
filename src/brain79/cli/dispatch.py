@@ -14,6 +14,9 @@ WHITELIST = {
     "index",
     "read",
     "write",
+    "edit",
+    "write-many",
+    "schema",
     "list",
     "search",
     "ingest",
@@ -135,6 +138,82 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
 
         write_article(parsed.path, content, force_validation_skip=parsed.force_validation_skip)
         _write_stdout(parsed.path)
+        return 0
+
+    elif cmd == "schema":
+        parser = argparse.ArgumentParser(prog="brain79 schema")
+        parser.add_argument("--type", default=None, dest="target_type", help="Optional type to inspect")
+        parsed = parser.parse_args(sub_args)
+        from brain79.core.frontmatter import get_schema_documentation
+
+        _write_stdout(get_schema_documentation(parsed.target_type))
+        return 0
+
+    elif cmd == "edit":
+        parser = argparse.ArgumentParser(prog="brain79 edit")
+        parser.add_argument("path", help="Relative path within .brain-79/")
+        parser.add_argument("--old-text", help="Exact text to replace")
+        parser.add_argument("--new-text", help="Replacement text")
+        parser.add_argument(
+            "--edits-file",
+            help="Path to JSON file containing list of edits [{old_text, new_text}]",
+        )
+        parser.add_argument(
+            "--force-validation-skip",
+            "--force-skip",
+            action="store_true",
+            help="Bypass organizational validation and inject force_validation_skipped metadata",
+        )
+        parsed = parser.parse_args(sub_args)
+        from brain79.core.wiki import edit_article
+
+        if parsed.edits_file:
+            with open(parsed.edits_file, "r", encoding="utf-8") as f:
+                edits = json.load(f)
+        elif parsed.old_text is not None and parsed.new_text is not None:
+            edits = [{"old_text": parsed.old_text, "new_text": parsed.new_text}]
+        else:
+            raise ValueError(
+                "Must provide either --edits-file or both --old-text and --new-text."
+            )
+
+        msg = edit_article(
+            parsed.path, edits, force_validation_skip=parsed.force_validation_skip
+        )
+        _write_stdout(msg)
+        return 0
+
+    elif cmd == "write-many":
+        parser = argparse.ArgumentParser(prog="brain79 write-many")
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument(
+            "--file",
+            help="Path to JSON file containing list of articles [{path, content}]",
+        )
+        group.add_argument(
+            "--stdin",
+            action="store_true",
+            help="Read JSON list of articles from stdin",
+        )
+        parser.add_argument(
+            "--force-validation-skip",
+            "--force-skip",
+            action="store_true",
+            help="Bypass organizational validation and inject force_validation_skipped metadata",
+        )
+        parsed = parser.parse_args(sub_args)
+        from brain79.core.wiki import write_many_articles
+
+        if parsed.file:
+            with open(parsed.file, "r", encoding="utf-8") as f:
+                articles = json.load(f)
+        else:
+            articles = json.loads(sys.stdin.read())
+
+        msg = write_many_articles(
+            articles, force_validation_skip=parsed.force_validation_skip
+        )
+        _write_stdout(msg)
         return 0
 
     elif cmd == "list":
@@ -514,6 +593,9 @@ def run_cli(cmd: str, sub_args: Sequence[str], debug: bool = False) -> int:
         if debug:
             traceback.print_exc()
         else:
-            sys.stderr.write(f"Error: {exc}\n")
+            if hasattr(exc, "format_user_message"):
+                sys.stderr.write(f"Error: {exc.format_user_message()}\n")
+            else:
+                sys.stderr.write(f"Error: {exc}\n")
         return code
 

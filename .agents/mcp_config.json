@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "brain79": {
+      "command": "/Users/xilax/Documents/GitHub/brain-79/.venv/bin/brain79",
+      "args": ["--project-root", "."]
+    }
+  }
+}

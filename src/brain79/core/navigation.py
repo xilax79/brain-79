@@ -56,10 +56,26 @@ def register_article(
     if ".." in p.parts or path.startswith("/") or p.is_absolute():
         raise ValueError(f"Invalid path for navigation registry: {path}")
 
+    # Exclude handoffs from navigation registry (P0.5)
+    if path.startswith("handoffs/") or section == "handoffs":
+        return
+
     lock = _get_lock(wiki_root)
     with lock:
         registry = load_registry(wiki_root)
-        registry["articles"] = [a for a in registry.get("articles", []) if a.get("path") != path]
+        articles = registry.get("articles", [])
+
+        # Avoid updating registered_at if content metadata has not changed (P2.2)
+        existing = next((a for a in articles if a.get("path") == path), None)
+        if (
+            existing is not None
+            and existing.get("title") == (title or path)
+            and existing.get("summary") == summary
+            and existing.get("section") == section
+        ):
+            return
+
+        registry["articles"] = [a for a in articles if a.get("path") != path]
         registry["articles"].append({
             "path": path,
             "title": title or path,
@@ -128,7 +144,10 @@ def generate_quick_navigation(wiki_root: Path) -> str:
     registry = load_registry(wiki_root)
     by_section: dict[str, list[dict[str, Any]]] = {}
     for article in registry.get("articles", []):
+        path_str = article.get("path", "")
         sec = article.get("section", "root")
+        if path_str.startswith("handoffs/") or sec == "handoffs":
+            continue
         by_section.setdefault(sec, []).append(article)
 
     lines = ["## Quick navigation", ""]
@@ -150,23 +169,53 @@ def generate_quick_navigation(wiki_root: Path) -> str:
 
 
 def regenerate_index_navigation(wiki_root: Path) -> str:
-    """Regenerate Quick navigation section in INDEX.md from navigation registry."""
+    """Regenerate Quick navigation section in INDEX.md from navigation registry (atomic & locked)."""
     index_path = wiki_root / "INDEX.md"
     if not index_path.exists():
         raise FileNotFoundError("INDEX.md not found.")
 
+    # Self-heal registry: purge any handoff articles that may have been previously registered (P0.5)
+    lock_reg = _get_lock(wiki_root)
+    with lock_reg:
+        registry = load_registry(wiki_root)
+        articles = registry.get("articles", [])
+        cleaned = [
+            a for a in articles
+            if not a.get("path", "").startswith("handoffs/") and a.get("section") != "handoffs"
+        ]
+        if len(cleaned) != len(articles):
+            registry["articles"] = cleaned
+            _save_registry_unlocked(wiki_root, registry)
+
     new_section = generate_quick_navigation(wiki_root)
-    content = index_path.read_text(encoding="utf-8")
 
-    # Remove ALL existing Quick navigation sections to avoid duplicates
-    cleaned_content = re.sub(
-        r"## Quick navigation\n.*?(?=\n## |\Z)",
-        "",
-        content,
-        flags=re.DOTALL,
-    ).rstrip()
+    # Use INDEX.md.lock for synchronization with writes (P1.1)
+    index_lock_path = index_path.with_suffix(".md.lock")
+    index_lock = filelock.FileLock(str(index_lock_path), timeout=5.0)
 
-    # Insert the new Quick navigation section
-    updated = cleaned_content + "\n\n" + new_section + "\n"
-    index_path.write_text(updated, encoding="utf-8")
+    with index_lock:
+        content = index_path.read_text(encoding="utf-8")
+
+        # Remove ALL existing Quick navigation sections to avoid duplicates
+        cleaned_content = re.sub(
+            r"## Quick navigation\n.*?(?=\n## |\Z)",
+            "",
+            content,
+            flags=re.DOTALL,
+        ).rstrip()
+
+        # Insert the new Quick navigation section
+        updated = cleaned_content + "\n\n" + new_section + "\n"
+
+        tmp_path = index_path.with_suffix(f".tmp.{uuid.uuid4().hex}")
+        try:
+            tmp_path.write_text(updated, encoding="utf-8")
+            tmp_path.replace(index_path)
+        finally:
+            if tmp_path.exists():
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+
     return "INDEX.md Quick navigation regenerated."
