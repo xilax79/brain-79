@@ -185,7 +185,7 @@ Heuristic, priority-ordered. First matching signal wins. Returns one of:
 2. **Interface Banner Decoupling:** `core.handoff.read_handoff(ref)` returns `tuple[str, bool]` (`(content, has_promotion_pending)`). `server.py` uses `has_promotion_pending` to append the LLM warning banner for MCP clients (`brain79_handoff_read`). The CLI `handoff-read` output remains neutral.
 
 ### Dispatcher Invariants & Global Flag Pre-Processing
-1. **Strict Closed Whitelist:** Closed subcommand set `{"init", "update", "index", "read", "write", "list", "search", "ingest", "handoff-write", "handoff-read", "lint", "context", "bootstrap"}`.
+1. **Strict Closed Whitelist:** Closed subcommand set `{"init", "update", "index", "read", "write", "edit", "write-many", "schema", "list", "search", "ingest", "handoff-write", "handoff-read", "handoff-purge", "navigate", "migrate", "lint", "bootstrap", "context"}`.
 2. **Dual-Position Pre-Processing:** Global flags `--project-root` and `--debug` are extracted from `sys.argv[1:]` prior to `argparse` dispatch, guaranteeing that `config.set_project_root()` is applied regardless of flag ordering (`brain79 --project-root /foo read` vs `brain79 read --project-root /foo`).
 3. **Strict Import Order:** `FASTMCP_SHOW_SERVER_BANNER=false` is set in `__main__.py` before any module imports. FastMCP server initialization (`server.py`) is lazy-loaded only when no CLI subcommand matches.
 
@@ -246,15 +246,42 @@ A static CI test (`tests/test_symmetry.py`) validates that `mcp_tools ⊆ cli_su
 
 ### Components & Invariants
 1. **Frontmatter Schema Validation (`frontmatter.py`)**:
-   Enforces YAML frontmatter schema per directory type. Strips CRLF and BOM cleanly before parsing.
+   Enforces YAML frontmatter schema per directory type. Strips CRLF and BOM cleanly before parsing. Recopilates all schema violations in a single pass (`ValidationError.issues`) and renders ready-to-paste snippet templates (`generate_frontmatter_template`).
 2. **Structural Decision & Tech Debt Regex Guard (`validation.py`)**:
    Strict V5 structural decision regex (`^[-*]\s+(Decision|ADR-\d+)...:`) and technical debt regex (`^[-*]\s+(TD-\d+|technical debt)...:`). Masks CommonMark code fences (` ``` ` and `~~~`) with exact fence character matching to eliminate false positives in documentation code blocks.
 3. **Thread-Safe Navigation Registry (`navigation.py`)**:
-   Thread-safe `load_registry`, `register_article`, and `unregister_article` using `filelock.FileLock(".navigation_registry.lock")`. Escapes markdown special characters (`[`, `]`, `*`) in article titles and summaries.
+   Thread-safe `load_registry`, `register_article`, and `unregister_article` using `filelock.FileLock(".navigation_registry.lock")`. Escapes markdown special characters (`[`, `]`, `*`) in article titles and summaries. Prevents metadata churn by updating `registered_at` only when article metadata changes. Automatically filters and self-heals handoff files.
 4. **Git Pre-Commit Hook (`init_project.py`)**:
    Deployed during `init_project(install_git_hooks_flag=True)`. Inspects staged `.brain-79/*.md` files and runs `brain79 lint --strict`, rejecting non-compliant commits.
 5. **Progressive V3 Migration (`migrate_frontmatter.py`)**:
    Enriches legacy un-frontmattered articles with type-specific defaults (`status: legacy`, `stability: legacy`), auto-registers articles in `.navigation_registry.json`, and supports dry-run preview and relocation suggestions (`--suggest-relocations`).
+
+---
+
+## 10. Performance & Session Workflow Optimization Architecture (v1.1.0)
+
+Version 1.1.0 introduces systemic optimizations to streamline end-of-session wiki updates and minimize LLM token round trips:
+
+### 1. Token De-duplication (`server.py`)
+- Configures `@mcp.tool(output_schema=None)` across all FastMCP tools.
+- Prevents redundant emission of `structuredContent={'result': ...}` in AI client harnesses (such as Pi), reducing input token consumption by ~50% per tool call.
+
+### 2. Deterministic Field Auto-Fill (ADR-004 Amendment)
+- `autofill_deterministic_fields`: Infers `type` from target directory (`LOCATION_TO_TYPE`), normalizes `last_updated` to current UTC ISO date, and defaults `date` to today for `decision` and `changelog` articles if omitted.
+- Automatically strips commonly hallucinated frontmatter keys (`title`, `tags`, `created`) at write time, eliminating spurious validation failures.
+
+### 3. Automatic Navigation Synchronization & Inline Health Checks (ADR-006)
+- **Automatic Navigation Sync:** Non-bypass article writes (`write_article`) automatically update `.navigation_registry.json` and execute an atomic, lock-synchronized regeneration of `INDEX.md` (`INDEX.md.lock`).
+- **Batch Regeneration Consolidation:** `write_many_articles` passes `_skip_nav_regen=True` during sequential article writes and executes a single consolidated navigation regeneration pass upon batch completion.
+- **Inline Health Diagnostics:** `brain79_write` and `brain79_edit` run lightweight per-file linting (H1 header presence, broken local links, decision leakage) and return inline statuses (`· lint OK` or warnings), removing the need for a separate `brain79_lint` turn.
+
+### 4. High-Efficiency Partial & Batch Write Primitives
+- **Partial Edits (`brain79_edit`):** In-place string substitution (`[{old_text, new_text}]`) with uniqueness checking and atomic write-time validation, eliminating full-file re-generation for minor documentation updates.
+- **Batch Writes (`brain79_write_many`):** Atomic "all-or-nothing" validation of multiple articles prior to writing any files to disk.
+
+### 5. Linter Traversal & Path Normalization Scalability
+- **In-Memory Link Resolution:** `lint.py` precomputes `existing_rel_files` and resolves relative links via in-memory `posixpath.normpath`, bypassing O(N) filesystem `Path.resolve()` and `is_file()` syscalls.
+- **Shared File Walks:** `lint_organizational.py` collects `.md` files once, pruning `_raw/` early, and passes the shared collection across diagnostic checks.
 
 
 
