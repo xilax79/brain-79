@@ -5,6 +5,8 @@ last_updated: 2026-08-11
 
 # Brain-79 — Product Vision
 
+Deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
+
 ## Problem
 
 LLMs maintain wikis that degrade organically:

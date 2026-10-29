@@ -106,13 +106,6 @@
       "registered_at": "2026-08-12T00:16:11.256908+00:00"
     },
     {
-      "path": "product/overview.md",
-      "title": "Brain-79 \u2014 Product Vision",
-      "summary": "LLMs maintain wikis that degrade organically:",
-      "section": "product",
-      "registered_at": "2026-08-12T00:24:27.641174+00:00"
-    },
-    {
       "path": "decisions/adr-006-auto-navigation-and-batch-operations.md",
       "title": "ADR-006 \u2014 Architecture \u2014 Automatic Navigation Regeneration, Inline Health Checks, and Partial/Batch Operations",
       "summary": "Accepted",
@@ -125,6 +118,13 @@
       "summary": "Notable improvements addressing end-of-session wiki update performance and tool usability.",
       "section": "changelog",
       "registered_at": "2026-10-29T20:16:17.838515+00:00"
+    },
+    {
+      "path": "product/overview.md",
+      "title": "Brain-79 \u2014 Product Vision",
+      "summary": "Deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
+      "section": "product",
+      "registered_at": "2026-10-29T22:45:41.027086+00:00"
     }
   ]
 }

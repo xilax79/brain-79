@@ -66,4 +66,4 @@ last_updated: 2026-10-29
 - [Feature — Wiki Organizational Enforcement](features/organizational-enforcement.md) — The Organizational Enforcement system prevents organic quality degradation of repository wikis. It automatically enforces frontmatter metadata schemas, checks type-location consistency, blocks structural decision leakage in non-decision folders, detects oversized or non-atomic articles, and identifies unfilled template placeholders in `INDEX.md`.
 
 ### Product
-- [Brain-79 — Product Vision](product/overview.md) — LLMs maintain wikis that degrade organically:
+- [Brain-79 — Product Vision](product/overview.md) — Deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
