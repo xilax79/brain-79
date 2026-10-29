@@ -1,7 +1,7 @@
 ---
 type: architecture
 stability: stable
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # Architecture — CLI & MCP Symmetry
@@ -13,7 +13,7 @@ last_updated: 2026-08-11
 ## Symmetry Guarantee & Enforcement
 
 Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite inspects:
-- Every subcommand in `WHITELIST` (`dispatch.py`) has a corresponding `@mcp.tool()` definition in `server.py`.
+- Every subcommand in `WHITELIST` (`dispatch.py`) has a corresponding `@mcp.tool()` definition in `server.py` (with the exception of CLI-only setup commands `init` and `update`).
 - Parameter mappings, default values, and operational semantics match identically across interfaces.
 
 ## Operational Mapping Table
@@ -23,8 +23,11 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 | Initialize wiki protocol | `brain79 init` | (CLI only setup step) |
 | Self-update installation | `brain79 update` | (CLI only setup step) |
 | Read INDEX.md entrypoint | `brain79 index` | `brain79_index()` |
+| Inspect schema & templates | `brain79 schema [--type <t>]` | `brain79_schema(target_type)` |
 | Read wiki article | `brain79 read <path>` | `brain79_read(path)` |
 | Write wiki article | `brain79 write <path>` | `brain79_write(path, content)` |
+| Partial in-place edit | `brain79 edit <path>` | `brain79_edit(path, edits)` |
+| Batch write articles | `brain79 write-many --file <f>` | `brain79_write_many(articles)` |
 | List articles | `brain79 list [--section <name>]` | `brain79_list(section)` |
 | Search articles | `brain79 search <query>` | `brain79_search(query)` |
 | Ingest session summary | `brain79 ingest` | `brain79_ingest(session_summary)` |
@@ -35,7 +38,7 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 | Sync navigation registry | `brain79 navigate [--regenerate]` | `brain79_navigate(regenerate)` |
 | Query relevant context | `brain79 context <query>` | `brain79_context(query)` |
 | Migrate legacy frontmatter | `brain79 migrate [--apply]` | `brain79_migrate(dry_run, apply)` |
-| Lint wiki organization | `brain79 lint [--strict]` | (CLI primary, called via hooks & scripts) |
+| Lint wiki organization | `brain79 lint [--strict]` | `brain79_lint()` |
 
 ## Dry-Run Default Invariant
 

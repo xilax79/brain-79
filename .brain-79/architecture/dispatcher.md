@@ -1,7 +1,7 @@
 ---
 type: architecture
 stability: stable
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # Architecture — CLI Dispatcher
@@ -25,7 +25,7 @@ Global flags can appear before or after subcommands without breaking parsing:
 ## Whitelist Routing & Fallback Execution
 
 The dispatcher maintains a strict whitelist (`WHITELIST`) of subcommands:
-`init`, `update`, `index`, `read`, `write`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`.
+`init`, `update`, `index`, `read`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`.
 
 If `sys.argv[1:]` starts with a whitelisted command, execution routes to `run_cli(cmd, sub_args, debug)`.
 If no subcommand is provided (e.g. `brain79 --project-root .`), execution falls back to `_cmd_serve()`, launching the FastMCP server on standard IO.
@@ -35,7 +35,6 @@ If no subcommand is provided (e.g. `brain79 --project-root .`), execution falls 
 Subcommand execution maps exceptions to deterministic POSIX exit codes:
 - `0`: Clean success.
 - `1`: Validation or operational failure (e.g., linter issues in `--strict` mode).
-- `2`: Invalid argument or missing required parameter.
-- `3`: File access error or path containment violation (`FileNotFoundError`, `OSError`).
-- `4`: Concurrent file lock timeout (`TimeoutError`).
+- `2`: Invalid argument or missing required parameter (`FileNotFoundError` also maps to 2).
+- `3`: File access error or concurrency timeout (`PermissionError`, `TimeoutError`, `OSError`).
 - `130`: Process interrupted via `KeyboardInterrupt` / `SIGINT`.

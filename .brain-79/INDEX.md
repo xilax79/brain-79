@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # Project index
@@ -14,15 +14,15 @@ last_updated: 2026-08-11
 
 **Name:** Brain-79
 **Purpose:** AI memory protocol with mechanical validation for project wikis.
-**Status:** Production (v1.0.0) — stable
+**Status:** Production (v1.1.0) — stable
 
 ---
 
 ## Current focus
 
-- Maintenance of the organizational enforcement feature.
-- Stabilization of `brain79_handoff_purge` and `brain79_migrate`.
-- Full self-documentation of the wiki (dogfooding).
+- Deployment of performance improvements and session workflow optimizations (v1.1.0).
+- Maintenance of partial edits (`brain79_edit`), batch writes (`brain79_write_many`), and schema inspection tools.
+- Preparation for PyPI package publishing.
 
 ---
 

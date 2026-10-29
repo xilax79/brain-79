@@ -1,7 +1,7 @@
 ---
 type: architecture
 stability: stable
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # Architecture — MCP Server
@@ -12,7 +12,7 @@ The Model Context Protocol (MCP) server integration in `brain-79` enables AI ass
 
 ## Components & Server Lifecycle
 
-1. **`src/brain79/server.py`**: Declares the `FastMCP("brain79")` instance and registers all `brain79_*` tools.
+1. **`src/brain79/server.py`**: Declares the `FastMCP("brain79")` instance and registers all `brain79_*` tools with `output_schema=None` to prevent redundant response payloads.
 2. **`src/brain79/__main__.py`**: Invokes `_cmd_serve()` when no subcommand is provided.
 
 ## Startup Banner & Logging Suppression
@@ -27,14 +27,18 @@ To prevent connection drops:
 
 All MCP tools are named with the `brain79_` prefix:
 - `brain79_index()`: Returns contents of `INDEX.md`.
+- `brain79_schema(target_type)`: Returns schema rules and copy-paste templates.
 - `brain79_read(path)`: Reads a wiki article safely.
-- `brain79_write(path, content, force_validation_skip)`: Validates and writes a wiki article.
+- `brain79_write(path, content, force_validation_skip)`: Validates and writes a wiki article, auto-regenerating navigation and returning an inline health check.
+- `brain79_edit(path, edits, force_validation_skip)`: Performs targeted in-place text replacements without re-emitting entire articles.
+- `brain79_write_many(articles, force_validation_skip)`: Validates all articles upfront (all-or-nothing) and writes in batch.
 - `brain79_list(section)`: Lists wiki articles.
 - `brain79_search(query)`: High-speed keyword search.
 - `brain79_ingest(session_summary, instructions)`: Saves raw session log to `_raw/sessions/`.
 - `brain79_handoff_write(...)`: Creates an immutable session handoff.
 - `brain79_handoff_read(ref)`: Reads a session handoff note.
 - `brain79_handoff_purge(apply)`: Purges short-term handoffs.
+- `brain79_lint()`: Runs full health check scan across the entire wiki.
 - `brain79_bootstrap(scope, force)`: Scans repository and returns bootstrap manifest.
 - `brain79_navigate(regenerate)`: Queries or regenerates navigation registry.
 - `brain79_context(...)`: Performs TF-IDF relevance scoring across articles.
