@@ -1,5 +1,6 @@
 ---
 type: decision
+summary: Synchronous write-time schema validation with multi-error reporting and deterministic field auto-fill
 status: accepted
 date: 2026-08-11
 deciders: [xilax]
@@ -42,3 +43,7 @@ We chose to enforce synchronous, write-time validation in `brain79_write` / `bra
 
 - **Asynchronous linter checks only**: Rejected because malformed files accumulated in the repository prior to linting.
 - **Require LLM to guess all fields**: Rejected due to high token cost and multi-turn retry chains.
+
+---
+
+[← Volver al Índice](../INDEX.md)

@@ -1,9 +1,10 @@
 ---
 type: decision
+summary: Tactical handoff immutability via unique timestamped files to maintain audit trail and prevent context loss
 status: accepted
 date: 2026-08-11
 deciders: [xilax]
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # ADR-002 — Handoffs — Immutable Session Transition Records
@@ -32,3 +33,7 @@ We chose to enforce strict immutability for session handoffs:
 ## Alternatives Considered
 
 - **Single mutable `handoff.md` file**: Rejected due to frequent context loss and accidental overwrites during multi-turn sessions.
+
+---
+
+[← Volver al Índice](../INDEX.md)

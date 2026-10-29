@@ -1,5 +1,6 @@
 ---
 type: architecture
+summary: CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 stability: stable
 last_updated: 2026-10-29
 ---
@@ -38,3 +39,7 @@ Subcommand execution maps exceptions to deterministic POSIX exit codes:
 - `2`: Invalid argument or missing required parameter (`FileNotFoundError` also maps to 2).
 - `3`: File access error or concurrency timeout (`PermissionError`, `TimeoutError`, `OSError`).
 - `130`: Process interrupted via `KeyboardInterrupt` / `SIGINT`.
+
+---
+
+[← Volver al Índice](../INDEX.md)

@@ -1,5 +1,6 @@
 ---
 type: architecture
+summary: Enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 stability: stable
 last_updated: 2026-10-29
 ---
@@ -45,3 +46,7 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 To ensure safety across both interfaces, destructive actions default to dry-run preview:
 - `brain79 handoff-purge` defaults to preview (requires `--apply` or `apply=True` to execute deletions).
 - `brain79 migrate` defaults to dry-run preview (requires `--apply` or `apply=True` to apply frontmatter mutations).
+
+---
+
+[← Volver al Índice](../INDEX.md)

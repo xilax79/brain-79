@@ -41,29 +41,30 @@ last_updated: 2026-10-29
 ## Quick navigation
 
 ### Architecture
-- [Architecture — CLI & MCP Symmetry](architecture/symmetry.md) — `brain-79` enforces strict 1:1 symmetry between CLI subcommands and MCP server tools. Any capability available to a human user in the terminal via `brain79 \<subcommand\>` is equally accessible to an AI agent via `brain79\_\<tool\>()`.
-- [Architecture — CLI Dispatcher](architecture/dispatcher.md) — The CLI dispatcher system in `brain-79` is responsible for parsing global command-line flags and routing user invocations to deterministic CLI subcommands or launching the MCP server fallback.
-- [Architecture — MCP Server](architecture/mcp-server.md) — The Model Context Protocol (MCP) server integration in `brain-79` enables AI assistants (such as Antigravity, Pi, OpenCode, Claude, Cursor) to interact with repository memory via standard JSON-RPC tools.
-- [Architecture — System Current State](architecture/current-state.md) — This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 1.0.0.
+- [Architecture — CLI & MCP Symmetry](architecture/symmetry.md) — Enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
+- [Architecture — CLI Dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
+- [Architecture — MCP Server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
+- [Architecture — System Current State](architecture/current-state.md) — High-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
 ### Changelog
-- [Changelog — Version 1.0.0](changelog/v1.md) — All notable changes to `brain-79` v1.0.0 release cycle.
-- [Changelog — Version 1.1.0 — Performance & Session Workflow Optimization](changelog/v1-1.md) — Notable improvements addressing end-of-session wiki update performance and tool usability.
+- [Changelog — Version 1.0.0](changelog/v1.md) — Initial production release of brain-79 with mechanical organizational enforcement and handoff continuity
+- [Changelog — Version 1.1.0 — Performance & Session Workflow Optimization](changelog/v1-1.md) — Performance and session workflow optimizations, partial edits, batch writes, and schema inspection
 
 ### Decisions
-- [ADR-001 — Architecture — Dual-Mode Hybrid CLI & MCP Server Interface](decisions/adr-001-hybrid-cli.md) — Accepted
-- [ADR-002 — Handoffs — Immutable Session Transition Records](decisions/adr-002-immutable-handoffs.md) — Accepted
-- [ADR-003 — Migration — Progressive V3 Migration with Legacy Status Default](decisions/adr-003-v3-legacy-status.md) — Accepted
-- [ADR-004 — Curation — Synchronous Write-Time Frontmatter and Location Validation](decisions/adr-004-strict-write-validation.md) — Accepted
-- [ADR-005 — Linter — Code Fence Masking for Decision and Debt Leakage Regex Rules](decisions/adr-005-fence-mask-tracking.md) — Accepted
-- [ADR-006 — Architecture — Automatic Navigation Regeneration, Inline Health Checks, and Partial/Batch Operations](decisions/adr-006-auto-navigation-and-batch-operations.md) — Accepted
+- [ADR-001 — Architecture — Dual-Mode Hybrid CLI & MCP Server Interface](decisions/adr-001-hybrid-cli.md) — Dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server
+- [ADR-002 — Handoffs — Immutable Session Transition Records](decisions/adr-002-immutable-handoffs.md) — Tactical handoff immutability via unique timestamped files to maintain audit trail and prevent context loss
+- [ADR-003 — Migration — Progressive V3 Migration with Legacy Status Default](decisions/adr-003-v3-legacy-status.md) — Assigning status legacy during progressive V3 migration to preserve semantic intent without blocking adoption
+- [ADR-004 — Curation — Synchronous Write-Time Frontmatter and Location Validation](decisions/adr-004-strict-write-validation.md) — Synchronous write-time schema validation with multi-error reporting and deterministic field auto-fill
+- [ADR-005 — Linter — Code Fence Masking for Decision and Debt Leakage Regex Rules](decisions/adr-005-fence-mask-tracking.md) — Enforcing code fence masking in organizational linter to eliminate false positives in documentation examples
+- [ADR-006 — Architecture — Automatic Navigation Regeneration, Inline Health Checks, and Partial/Batch Operations](decisions/adr-006-auto-navigation-and-batch-operations.md) — Automatic thread-safe navigation synchronization, inline write diagnostics, and partial/batch write operations
+- [ADR-007 — Navigation — Explicit Frontmatter Summary and Article Backlinks](decisions/adr-007-frontmatter-summary-and-backlink-navigation.md) — Standardize explicit frontmatter summary field and footer backlink navigation convention
 
 ### Features
-- [Feature — FastMCP Integration](features/mcp-server.md) — The Model Context Protocol (MCP) server feature exposes `brain-79` operations as structured tools over JSON-RPC over stdio, integrating seamlessly with AI clients such as Antigravity, Pi, OpenCode, Claude Desktop, and Cursor.
-- [Feature — Handoff Purge Operations](features/handoff-purge.md) — `brain79 handoff-purge` provides an explicit operational exception to handoff immutability. It allows developers and agents to clean up tactical short-term handoffs (`.brain-79/handoffs/handoff-\*.md`) upon completing sprint iterations, resetting demo repositories, or purging legacy session history.
-- [Feature — Short-Term Handoff Continuity](features/handoff-continuity.md) — The Short-Term Handoff feature provides tactical transition management between AI development sessions. Unlike long-term wiki knowledge stored in subfolders, handoffs are immutable, timestamped state snapshots stored in `.brain-79/handoffs/handoff-%Y-%m-%d-%H%M%S-%f.md`.
-- [Feature — Standalone CLI Interface](features/cli.md) — The Standalone CLI interface provides 13 deterministic command-line subcommands for managing the repository wiki, executing organizational linter checks, performing handoffs, and initializing memory protocols without requiring an active MCP host connection.
-- [Feature — Wiki Organizational Enforcement](features/organizational-enforcement.md) — The Organizational Enforcement system prevents organic quality degradation of repository wikis. It automatically enforces frontmatter metadata schemas, checks type-location consistency, blocks structural decision leakage in non-decision folders, detects oversized or non-atomic articles, and identifies unfilled template placeholders in `INDEX.md`.
+- [Feature — FastMCP Integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
+- [Feature — Handoff Purge Operations](features/handoff-purge.md) — Safe batch deletion of short-term handoffs with dry-run default guard and navigation registry cleanup
+- [Feature — Short-Term Handoff Continuity](features/handoff-continuity.md) — Tactical session transitions, immutable state snapshots, and anti-hallucination work tracking
+- [Feature — Standalone CLI Interface](features/cli.md) — Deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
+- [Feature — Wiki Organizational Enforcement](features/organizational-enforcement.md) — Prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing
 
 ### Product
 - [Brain-79 — Product Vision](product/overview.md) — Deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.

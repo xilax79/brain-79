@@ -1,9 +1,10 @@
 ---
 type: decision
+summary: Dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server
 status: accepted
 date: 2026-08-11
 deciders: [xilax]
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # ADR-001 — Architecture — Dual-Mode Hybrid CLI & MCP Server Interface
@@ -34,3 +35,7 @@ We chose to implement `brain-79` as a dual-mode hybrid tool:
 
 - **Separate CLI binary (`brain79-cli`)**: Rejected to avoid binary clutter and separate package entry points.
 - **MCP-only interface**: Rejected because git hooks and terminal pipelines cannot interact with stdio JSON-RPC directly.
+
+---
+
+[← Volver al Índice](../INDEX.md)

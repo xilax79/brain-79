@@ -1,8 +1,9 @@
 ---
 type: feature
+summary: Tactical session transitions, immutable state snapshots, and anti-hallucination work tracking
 status: shipped
 version: 1.0.0
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # Feature — Short-Term Handoff Continuity
@@ -47,3 +48,7 @@ brain79 handoff-read latest
 
 - Handoffs are strictly immutable. Updating state requires writing a new handoff that references the previous one.
 - To wipe handoffs operational cleanup (e.g. end of sprint), use `brain79 handoff-purge`.
+
+---
+
+[← Volver al Índice](../INDEX.md)

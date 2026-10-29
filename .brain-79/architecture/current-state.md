@@ -1,5 +1,6 @@
 ---
 type: architecture
+summary: High-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
 last_updated: 2026-10-29
 ---
@@ -8,7 +9,7 @@ last_updated: 2026-10-29
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 1.1.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 1.1.0+.
 
 ## Completed Milestones & Merged Features
 
@@ -18,6 +19,7 @@ This document maintains a high-level summary of the repository's current archite
 - **Phase 7 – Organizational Enforcement**: 10-subphase linter engine (`lint_organizational.py`), YAML frontmatter schema validation, location consistency checks, decision leakage prevention, and navigation registry generation.
 - **Phase 8 – Operational Handoff Purge**: Destructive short-term handoff purge subcommand (`brain79 handoff-purge`) with dry-run default guard.
 - **Phase 9 – Performance & Session Workflow Optimization (v1.1.0)**: Output schema de-duplication (`output_schema=None`), multi-error validation reporting with templates, deterministic field auto-fill (ADR-004 amendment), automatic navigation synchronization and inline health checks on write (ADR-006), partial in-place edits (`brain79_edit`), batch write execution (`brain79_write_many`), schema inspection (`brain79_schema`), handoff navigation isolation, and linter path resolution optimization.
+- **Phase 10 – Frontmatter Summary & Backlinks**: Frontmatter `summary` extraction in $O(1)$ for `INDEX.md`, hardened heuristic fallbacks against colon and subheading truncation, and standardized article backlink navigation (`[← Volver al Índice](../INDEX.md)`).
 - **Self-Wiki Dogfooding (Phase A-D)**: Fully populated self-documenting `.brain-79/` wiki verified by `brain79 lint --strict`.
 
 ## System Invariants & Invariant Guards
@@ -33,3 +35,7 @@ This document maintains a high-level summary of the repository's current archite
 - Maintenance of organizational linter rules and schema validation.
 - Preservation of 100% test coverage and static type safety (`mypy --strict`, `ruff`).
 - Preparation for PyPI packaging release (v1.1.0).
+
+---
+
+[← Volver al Índice](../INDEX.md)
