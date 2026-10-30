@@ -84,6 +84,23 @@ Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions
 
 ---
 
+## Writing & Documentation Guidelines (Clean B2)
+
+To ensure the wiki remains accessible to human engineers and easy for LLMs to reason over without high entropy:
+
+1. **Tone & Level (Clean B2):**
+   - Write in direct, accessible English (CEFR B2).
+   - Use straightforward Subject-Verb-Object sentence structures.
+   - Avoid inflated language, baroque adjectives, and convoluted phrasing.
+2. **Technical Precision:**
+   - Always preserve exact engineering terms (`atomic rename`, `POSIX mutex`, `BFS reachability`, `FastMCP`, `JSON-RPC`, `TF-IDF`, `WAL`).
+   - Define technical interactions by explaining *what happens* and *why it matters*.
+3. **Visual Structure:**
+   - Prefer concise bullet lists, visual ASCII topologies, and structured tables over unbroken blocks of prose.
+   - Maintain clear H2/H3 hierarchies to support fast scanning.
+
+---
+
 ## Known issues
 
 - Articles without valid YAML frontmatter are rejected at write time.
