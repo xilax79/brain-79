@@ -1,8 +1,9 @@
 ---
 type: feature
+summary: Safe batch deletion of short-term handoffs with dry-run default guard and navigation registry cleanup
 status: shipped
 version: 1.0.0
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # Feature — Handoff Purge Operations
@@ -40,3 +41,7 @@ brain79 handoff-purge --apply
 
 - Purging handoffs does not automatically rewrite markdown links in other articles that reference purged handoff files.
 - Re-running `brain79 lint` after purge will flag any broken local links to deleted handoffs, allowing the agent or developer to clean them up via `brain79_write`.
+
+---
+
+[← Volver al Índice](../INDEX.md)

@@ -1,6 +1,7 @@
 ---
 type: product
-last_updated: 2026-08-11
+summary: Deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
+last_updated: 2026-10-29
 ---
 
 # Brain-79 — Product Vision
@@ -30,3 +31,7 @@ LLMs maintain wikis that degrade organically:
 - Development projects where an AI agent works in recurring sessions.
 - Knowledge wikis with `INDEX.md` that grows uncontrollably or without structure.
 - Teams that require mechanical and deterministic validation of project documentation.
+
+---
+
+[← Volver al Índice](../INDEX.md)

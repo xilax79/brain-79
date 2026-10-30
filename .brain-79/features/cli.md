@@ -1,5 +1,6 @@
 ---
 type: feature
+summary: Deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
 status: shipped
 version: 1.1.0
 last_updated: 2026-10-29
@@ -53,3 +54,7 @@ brain79 lint --strict --format json
 
 - Global flags (`--project-root`, `--debug`) can be placed before or after the subcommand.
 - Terminal output for `read` and `index` outputs pure content without decorative headers to facilitate shell piping.
+
+---
+
+[← Volver al Índice](../INDEX.md)

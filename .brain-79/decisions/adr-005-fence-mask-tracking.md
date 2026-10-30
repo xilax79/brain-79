@@ -1,9 +1,10 @@
 ---
 type: decision
+summary: Enforcing code fence masking in organizational linter to eliminate false positives in documentation examples
 status: accepted
 date: 2026-08-11
 deciders: [xilax]
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # ADR-005 — Linter — Code Fence Masking for Decision and Debt Leakage Regex Rules
@@ -33,3 +34,7 @@ We chose to implement CommonMark code-fence masking (`_mask_code_fences`) prior 
 
 - **Ignoring code blocks completely**: Rejected because line number alignment would be lost.
 - **AST-based Markdown parsing**: Rejected to avoid external dependencies beyond basic standard library regex.
+
+---
+
+[← Volver al Índice](../INDEX.md)

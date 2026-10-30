@@ -1,5 +1,6 @@
 ---
 type: feature
+summary: Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
 status: shipped
 version: 1.1.0
 last_updated: 2026-10-29
@@ -46,3 +47,7 @@ In an AI assistant session:
 
 - Stderr output during handshake drops connection on strict clients (`agy`, `pi`); suppressed via `FASTMCP_SHOW_SERVER_BANNER=false`.
 - Writes are guarded by inter-process `filelock` to ensure atomic mutations during concurrent execution.
+
+---
+
+[← Volver al Índice](../INDEX.md)

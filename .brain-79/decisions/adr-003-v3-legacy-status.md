@@ -1,9 +1,10 @@
 ---
 type: decision
+summary: Assigning status legacy during progressive V3 migration to preserve semantic intent without blocking adoption
 status: accepted
 date: 2026-08-11
 deciders: [xilax]
-last_updated: 2026-08-11
+last_updated: 2026-10-29
 ---
 
 # ADR-003 — Migration — Progressive V3 Migration with Legacy Status Default
@@ -35,3 +36,7 @@ We chose to implement a progressive migration mechanism (`brain79 migrate`) that
 
 - **Strict failure on un-frontmattered legacy files**: Rejected because it blocks adoption on existing projects with large wikis.
 - **Auto-promoting to `status: shipped`**: Rejected because unverified documentation would bypass human review.
+
+---
+
+[← Volver al Índice](../INDEX.md)

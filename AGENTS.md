@@ -67,6 +67,12 @@ degradation. Always run these checks before declaring wiki work complete.
 3. `brain79_handoff_write(...)` — Preserves short-term transition state for the next session.
 
 
+### Article authoring conventions
+
+When creating or updating wiki articles via `brain79_write`, `brain79_edit`, or `brain79_write_many`:
+1. **Frontmatter Summary**: Provide a concise one-line `summary:` in YAML frontmatter (e.g. `summary: One-line explanation of the article`). This summary is indexed directly into `INDEX.md` Quick navigation.
+2. **Back-Navigation**: Include a backlink at the end of the article (`[← Volver al Índice](../INDEX.md)`) for seamless reading in VS Code, Obsidian, and GitHub.
+
 ### When fixing wiki issues (workflow)
 
 1. **Survey**: run `brain79 lint --strict --format json | jq '.issues'` to see all violations.
@@ -90,6 +96,24 @@ If you must write an article that violates validation (e.g., importing legacy co
 - CLI: `brain79 write <path> --content-file /dev/stdin --force-validation-skip`
 
 The article is tagged `force_validation_skipped: true` in its frontmatter and surfaces as a `force_skipped_article` warning in `brain79 lint`. Plan to remediate these in a follow-up.
+
+## Documentation & Style Guidelines (Human-First, Clean B2)
+
+To maintain consistent, high-quality documentation across all agent and human interactions:
+
+1. **Language Level & Tone (Clean B2):**
+   - Write clear, concise, direct English (CEFR B2 level). Avoid convoluted prose, academic fluff, and excessive jargon.
+   - Respect precise technical terms (`atomic rename`, `POSIX mutex`, `BFS reachability`, `JSON-RPC`, `FastMCP`, `TF-IDF`), but explain concepts using plain subject-verb-object sentences.
+2. **Visual & Structural Clarity:**
+   - Prefer structured comparisons, concise bullet points, and clean ASCII/text diagrams over dense walls of text.
+   - Use clear H2/H3 section hierarchies that allow quick scanning.
+3. **Dual-Audience Rule (Human & Agent Symbiosis):**
+   - While documentation is indexed and consumed by LLMs, it is reviewed and audited by human engineers in Git PRs.
+   - Never write cryptic, machine-only shorthand. Plain, clean English reduces entropy for LLM reasoning and guarantees human auditability.
+3. **Pure Index Invariant**: `INDEX.md` is an automated routing table, not a freeform scratchpad. Never write hardcoded roadmaps, task lists, or status paragraphs directly inside `INDEX.md`. Detailed planning belongs in `architecture/`, `product/`, or `decisions/` and is referenced through the index.
+4. **Summary & Navigation Invariants**:
+   - Every wiki article must declare an explicit, one-line `summary:` in its frontmatter.
+   - Every subfolder article must conclude with the standard back-navigation footer (`[← Volver al Índice](../INDEX.md)`).
 
 ## Project notes
 

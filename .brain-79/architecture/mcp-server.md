@@ -1,5 +1,6 @@
 ---
 type: architecture
+summary: FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 stability: stable
 last_updated: 2026-10-29
 ---
@@ -47,3 +48,7 @@ All MCP tools are named with the `brain79_` prefix:
 ## File Descriptor Teardown (`mcp.close()`)
 
 During shutdown or client disconnection, `FastMCP` closes associated file descriptors cleanly to prevent socket or lock leaks.
+
+---
+
+[← Volver al Índice](../INDEX.md)

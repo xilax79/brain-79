@@ -2,6 +2,13 @@
 
 All notable changes to `brain-79` will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Frontmatter `summary` support**: articles can declare an explicit `summary` in YAML frontmatter, indexed directly into `INDEX.md` Quick navigation in $O(1)$ time without relying on body heuristics.
+- **Article Backlink Convention**: documented and templated footer navigation links (`[← Volver al Índice](../INDEX.md)`) for seamless reading across editors.
+- **Hardened Navigation Fallback**: improved `extract_title_and_summary` to ignore subheadings, bullet items, and trailing colons when no frontmatter summary is defined.
+
 ## [1.1.0] - 2026-10-29
 
 ### Added

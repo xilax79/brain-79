@@ -1,5 +1,6 @@
 ---
 type: decision
+summary: Automatic thread-safe navigation synchronization, inline write diagnostics, and partial/batch write operations
 status: accepted
 date: 2026-10-29
 deciders:
@@ -40,3 +41,7 @@ Furthermore, handoff transitional files were being mistakenly registered into `.
 - **Positive**: Completely stops handoff pollution of `INDEX.md`.
 - **Positive**: Prevents race conditions during index navigation updates through `INDEX.md.lock`.
 - **Neutral**: `write_article` now modifies `INDEX.md` as an atomic side-effect.
+
+---
+
+[← Volver al Índice](../INDEX.md)

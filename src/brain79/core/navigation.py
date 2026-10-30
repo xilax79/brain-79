@@ -96,16 +96,32 @@ def unregister_article(wiki_root: Path, path: str) -> None:
 
 
 def extract_title_and_summary(content: str) -> tuple[str, str]:
-    """Extract first H1 as title and first non-heading text line as summary."""
+    """Extract first H1 as title and summary from frontmatter or lead paragraph."""
     working_content = content
-    if working_content.startswith("---\n"):
-        end_idx = working_content.find("\n---\n", 4)
-        if end_idx != -1:
-            working_content = working_content[end_idx + 5:]
+    summary = ""
+    title = ""
+
+    # 1. Try to extract summary and title from frontmatter if present
+    if working_content.startswith("---\n") or working_content == "---":
+        try:
+            from brain79.core.frontmatter import parse_frontmatter
+            meta, body = parse_frontmatter(working_content)
+            if meta and meta.get("summary"):
+                s = " ".join(str(meta["summary"]).strip().strip('"\'').split())
+                if s:
+                    summary = s
+            if meta and meta.get("title") and not title:
+                t = str(meta["title"]).strip()
+                if t:
+                    title = t
+            working_content = body
+        except Exception:
+            # Fallback to manual split if frontmatter parsing fails
+            end_idx = working_content.find("\n---\n", 4)
+            if end_idx != -1:
+                working_content = working_content[end_idx + 5:]
 
     lines = working_content.split("\n")
-    title = ""
-    summary = ""
     after_h1 = False
 
     for line in lines:
@@ -114,9 +130,50 @@ def extract_title_and_summary(content: str) -> tuple[str, str]:
             title = stripped[2:].strip()
             after_h1 = True
             continue
-        if after_h1 and stripped and not stripped.startswith("#") and not stripped.startswith(">"):
+
+        # If summary was already extracted from frontmatter, only title was needed
+        if summary:
+            if title:
+                break
+            continue
+
+        if after_h1:
+            # Stop if we hit a subheading before finding a lead paragraph
+            if stripped.startswith("## ") or stripped.startswith("### "):
+                break
+            # Skip empty lines, blockquotes, list items, code fences
+            if (
+                not stripped
+                or stripped.startswith("#")
+                or stripped.startswith(">")
+                or stripped.startswith("- ")
+                or stripped.startswith("* ")
+                or stripped.startswith("1. ")
+                or stripped.startswith("```")
+                or stripped.startswith("~~~")
+            ):
+                continue
+            # Skip lines ending with colon (like "Problem:", "Requirements:")
+            if stripped.endswith(":"):
+                continue
+            # Found clean lead paragraph
             summary = stripped
-            break
+            if title:
+                break
+
+    # Secondary fallback for summary if still empty and we have lines after H1
+    if not summary and after_h1:
+        for line in lines:
+            stripped = line.strip()
+            if (
+                stripped
+                and not stripped.startswith("#")
+                and not stripped.startswith(">")
+                and not stripped.startswith("```")
+                and not stripped.startswith("~~~")
+            ):
+                summary = stripped.rstrip(":")
+                break
 
     return title, summary
 
@@ -195,6 +252,16 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
 
     with index_lock:
         content = index_path.read_text(encoding="utf-8")
+
+        # Update last_updated date in frontmatter to today
+        today = datetime.now(UTC).strftime("%Y-%m-%d")
+        if content.startswith("---\n"):
+            content = re.sub(
+                r"^last_updated:\s*.*$",
+                f"last_updated: {today}",
+                content,
+                flags=re.MULTILINE,
+            )
 
         # Remove ALL existing Quick navigation sections to avoid duplicates
         cleaned_content = re.sub(
