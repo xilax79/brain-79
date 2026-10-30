@@ -89,6 +89,13 @@ To ensure the wiki remains accessible to human engineers and easy for LLMs to re
 
 ---
 
+## Operational Invariants
+
+- **Zero-Modification Idempotence**: Do not mutate wiki files unless concrete repository changes (code, tests, architecture decisions) occurred in the session.
+- **Pure Routing Table**: `INDEX.md` is strictly an automated index; freeform prose blocks are forbidden.
+
+---
+
 ## Known issues
 
 - Articles without valid YAML frontmatter are rejected at write time.

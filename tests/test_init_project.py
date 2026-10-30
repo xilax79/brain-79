@@ -163,7 +163,7 @@ def test_init_project_mcp_json_is_directory(
 
 
 def test_init_schema_template_compliance(tmp_path: Path) -> None:
-    """Verify that freshly initialized project passes linting cleanly with pure index routing table."""
+    """Verify that freshly initialized project passes linting cleanly with pure index routing table and has zero-modification invariant."""
     from brain79.config import set_project_root
     from brain79.core.lint import lint_wiki
 
@@ -172,3 +172,12 @@ def test_init_schema_template_compliance(tmp_path: Path) -> None:
 
     report = lint_wiki()
     assert "[Status: OK]" in report
+
+    # Verify AGENTS.md includes No-Op idempotence rule
+    agents_content = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+    assert "No-Op Idempotence" in agents_content
+    assert "Zero-Modification Rule" in agents_content
+
+    # Verify SCHEMA.md includes operational invariants
+    schema_content = (tmp_path / ".brain-79" / "SCHEMA.md").read_text(encoding="utf-8")
+    assert "Zero-Modification Idempotence" in schema_content
