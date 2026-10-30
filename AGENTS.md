@@ -110,10 +110,15 @@ To maintain consistent, high-quality documentation across all agent and human in
 3. **Dual-Audience Rule (Human & Agent Symbiosis):**
    - While documentation is indexed and consumed by LLMs, it is reviewed and audited by human engineers in Git PRs.
    - Never write cryptic, machine-only shorthand. Plain, clean English reduces entropy for LLM reasoning and guarantees human auditability.
-3. **Pure Index Invariant**: `INDEX.md` is an automated routing table, not a freeform scratchpad. Never write hardcoded roadmaps, task lists, or status paragraphs directly inside `INDEX.md`. Detailed planning belongs in `architecture/`, `product/`, or `decisions/` and is referenced through the index.
-4. **Summary & Navigation Invariants**:
+4. **Pure Index Invariant**: `INDEX.md` is an automated routing table, not a freeform scratchpad. Never write hardcoded roadmaps, task lists, or status paragraphs directly inside `INDEX.md`. Detailed planning belongs in `architecture/`, `product/`, or `decisions/` and is referenced through the index.
+5. **Summary & Navigation Invariants**:
    - Every wiki article must declare an explicit, one-line `summary:` in its frontmatter.
    - Every subfolder article must conclude with the standard back-navigation footer (`[← Volver al Índice](../INDEX.md)`).
+6. **No-Op Idempotence (Zero-Modification Rule)**:
+   - When asked to "update the wiki", "sync docs", or wrap up a session: first check `git status` and session history.
+   - If no code, features, architectural decisions, or tests were created, modified, or planned during the session, **DO NOT invent or artificially edit articles**.
+   - Simply verify wiki health with `brain79 lint --strict` and state clearly: *"The wiki is up-to-date with repository state. No modifications required."*
+   - Wiki changes must strictly mirror real repository mutations, never synthetic edits to satisfy an action bias.
 
 ## Project notes
 

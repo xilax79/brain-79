@@ -73,6 +73,11 @@ When creating or updating wiki articles via `brain79_write`, `brain79_edit`, or 
 1. **Frontmatter Summary**: Provide a concise one-line `summary:` in YAML frontmatter (e.g. `summary: One-line explanation of the article`). This summary is indexed directly into `INDEX.md` Quick navigation.
 2. **Back-Navigation**: Include a backlink at the end of the article (`[← Volver al Índice](../INDEX.md)`) for seamless reading in VS Code, Obsidian, and GitHub.
 3. **Pure Index Invariant**: `INDEX.md` is an automated routing table, not a freeform scratchpad. Never write hardcoded roadmaps, task lists, or status paragraphs directly inside `INDEX.md`. Detailed planning belongs in `architecture/`, `product/`, or `decisions/` and is referenced through the index.
+4. **No-Op Idempotence (Zero-Modification Rule)**:
+   - When asked to "update the wiki", "sync docs", or wrap up a session: first check `git status` and session history.
+   - If no code, features, architectural decisions, or tests were created, modified, or planned during the session, **DO NOT invent or artificially edit articles**.
+   - Simply verify wiki health with `brain79 lint --strict` and state clearly: *"The wiki is up-to-date with repository state. No modifications required."*
+   - Wiki changes must strictly mirror real repository mutations, never synthetic edits to satisfy an action bias.
 
 ### When fixing wiki issues (workflow)
 
