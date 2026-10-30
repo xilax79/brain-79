@@ -97,6 +97,23 @@ If you must write an article that violates validation (e.g., importing legacy co
 
 The article is tagged `force_validation_skipped: true` in its frontmatter and surfaces as a `force_skipped_article` warning in `brain79 lint`. Plan to remediate these in a follow-up.
 
+## Documentation & Style Guidelines (Human-First, Clean B2)
+
+To maintain consistent, high-quality documentation across all agent and human interactions:
+
+1. **Language Level & Tone (Clean B2):**
+   - Write clear, concise, direct English (CEFR B2 level). Avoid convoluted prose, academic fluff, and excessive jargon.
+   - Respect precise technical terms (`atomic rename`, `POSIX mutex`, `BFS reachability`, `JSON-RPC`, `FastMCP`, `TF-IDF`), but explain concepts using plain subject-verb-object sentences.
+2. **Visual & Structural Clarity:**
+   - Prefer structured comparisons, concise bullet points, and clean ASCII/text diagrams over dense walls of text.
+   - Use clear H2/H3 section hierarchies that allow quick scanning.
+3. **Dual-Audience Rule (Human & Agent Symbiosis):**
+   - While documentation is indexed and consumed by LLMs, it is reviewed and audited by human engineers in Git PRs.
+   - Never write cryptic, machine-only shorthand. Plain, clean English reduces entropy for LLM reasoning and guarantees human auditability.
+4. **Summary & Navigation Invariants:**
+   - Every wiki article must declare an explicit, one-line `summary:` in its frontmatter.
+   - Every subfolder article must conclude with the standard back-navigation footer (`[← Volver al Índice](../INDEX.md)`).
+
 ## Project notes
 
 > Add project-specific guidance here: coding conventions, deployment steps,
