@@ -6,18 +6,6 @@ Violations will be rejected at write time and reported by the linter.
 
 ---
 
-## Project
-
-This section defines the scope and governing standards of the wiki schema.
-
----
-
-## Current focus
-
-Maintain strict organizational health and high signal-to-noise ratio across all wiki articles.
-
----
-
 ## Quick navigation
 
 | Directory | Required `type` | Required Fields | Allowed Enums | Purpose |

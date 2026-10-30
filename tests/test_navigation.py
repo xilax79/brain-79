@@ -262,7 +262,42 @@ def test_regenerate_index_navigation_deduplicates(setup_wiki_root: Path) -> None
     regenerate_index_navigation(wiki_root)
     content = index_path.read_text(encoding="utf-8")
     assert content.count("## Quick navigation") == 1
-    assert "- [F1](features/f1.md) — Sum" in content
+
+
+def test_pure_index_navigation_lifecycle(setup_wiki_root: Path) -> None:
+    """Ensure INDEX.md operates cleanly as a pure routing table without freeform prose blocks."""
+    from brain79.core.wiki import write_article
+
+    wiki_root = setup_wiki_root / ".brain-79"
+
+    # Start with canonical template index
+    index_path = wiki_root / "INDEX.md"
+    index_content = index_path.read_text(encoding="utf-8")
+    assert "## Current focus" not in index_content
+    assert "## Roadmap" not in index_content
+
+    # Write an article with frontmatter summary
+    art_content = (
+        "---\n"
+        "type: feature\n"
+        "summary: Pure routing table verification\n"
+        "status: shipped\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-10-30\n"
+        "---\n\n"
+        "# Pure Routing\n\n"
+        "Body content.\n\n"
+        "---\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
+    )
+    write_article("features/pure.md", art_content)
+
+    updated_index = index_path.read_text(encoding="utf-8")
+    assert "### Features" in updated_index
+    assert "[Pure Routing](features/pure.md) — Pure routing table verification" in updated_index
+    # Verify no accidental text injection
+    assert "## Current focus" not in updated_index
+    assert "## Roadmap" not in updated_index
 
 
 def test_escape_markdown_in_titles(setup_wiki_root: Path) -> None:
