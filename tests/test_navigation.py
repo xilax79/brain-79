@@ -1,5 +1,6 @@
 import concurrent.futures
 from pathlib import Path
+import re
 
 import pytest
 
@@ -298,6 +299,9 @@ def test_pure_index_navigation_lifecycle(setup_wiki_root: Path) -> None:
     # Verify no accidental text injection
     assert "## Current focus" not in updated_index
     assert "## Roadmap" not in updated_index
+    # Verify last_updated is refreshed to ISO date and not left as YYYY-MM-DD
+    assert "last_updated: YYYY-MM-DD" not in updated_index
+    assert re.search(r"last_updated:\s*\d{4}-\d{2}-\d{2}", updated_index) is not None
 
 
 def test_escape_markdown_in_titles(setup_wiki_root: Path) -> None:

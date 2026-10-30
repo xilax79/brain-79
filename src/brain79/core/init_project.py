@@ -1,5 +1,6 @@
-import json
+from datetime import datetime, timezone
 from importlib import resources
+import json
 from pathlib import Path
 import shutil
 
@@ -64,8 +65,10 @@ def init_project(project_root: Path, install_git_hooks_flag: bool = True) -> Non
 
     # Copy templates
     pkg_templates = resources.files("brain79.templates")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for name in TEMPLATE_FILES:
         content = (pkg_templates / name).read_text(encoding="utf-8")
+        content = content.replace("YYYY-MM-DD", today)
         (wiki_root / name).write_text(content, encoding="utf-8")
 
     # Ignore lock and temporary files in wiki_root

@@ -253,6 +253,16 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
     with index_lock:
         content = index_path.read_text(encoding="utf-8")
 
+        # Update last_updated date in frontmatter to today
+        today = datetime.now(UTC).strftime("%Y-%m-%d")
+        if content.startswith("---\n"):
+            content = re.sub(
+                r"^last_updated:\s*.*$",
+                f"last_updated: {today}",
+                content,
+                flags=re.MULTILINE,
+            )
+
         # Remove ALL existing Quick navigation sections to avoid duplicates
         cleaned_content = re.sub(
             r"## Quick navigation\n.*?(?=\n## |\Z)",
