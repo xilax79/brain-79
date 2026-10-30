@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>brain-79 — Deterministic AI Memory Engine (Whitepaper & Briefing)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(20, 27, 45, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-emerald: #34d399;
+      --accent-purple: #c084fc;
+      --accent-amber: #fbbf24;
+      --accent-rose: #f43f5e;
+      --code-bg: #030712;
+      --glow-blue: rgba(56, 189, 248, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      padding: 2.5rem 1.5rem;
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 60%, rgba(192, 132, 252, 0.08) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Header & Hero */
+    header {
+      margin-bottom: 4rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--accent-blue);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent-emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .lead {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      max-width: 760px;
+      margin: 0 auto;
+      font-weight: 400;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3.5rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3.5rem;
+    }
+
+    /* Card Styling */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+    }
+
+    .card-problem {
+      border-top: 3px solid var(--accent-rose);
+    }
+
+    .card-solution {
+      border-top: 3px solid var(--accent-emerald);
+    }
+
+    .card-header-icon {
+      font-size: 1.75rem;
+      margin-bottom: 0.75rem;
+      display: inline-block;
+    }
+
+    .card h3 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Visual Architecture Box */
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
+      max-width: 700px;
+    }
+
+    .topology-container {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 1.25rem;
+      padding: 2.5rem;
+      margin-bottom: 4rem;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .topology-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      align-items: center;
+      text-align: center;
+    }
+
+    .node {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 0.75rem;
+      padding: 1rem 2rem;
+      min-width: 280px;
+    }
+
+    .node-agent {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 20px rgba(192, 132, 252, 0.12);
+    }
+
+    .node-engine {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
+      background: rgba(30, 41, 59, 0.6);
+    }
+
+    .flow-arrow {
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    .memory-tier {
+      display: flex;
+      gap: 1.5rem;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .tier-box {
+      flex: 1;
+      min-width: 280px;
+      padding: 1.25rem;
+      border-radius: 0.75rem;
+      text-align: left;
+    }
+
+    .tier-longterm {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+    }
+
+    .tier-shortterm {
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+    }
+
+    .tier-box h4 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tier-box ul {
+      list-style: none;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .tier-box li {
+      margin-bottom: 0.35rem;
+      position: relative;
+      padding-left: 1.2rem;
+    }
+
+    .tier-box li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent-blue);
+    }
+
+    /* Key Metrics / Highlights */
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 4rem;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 0.85rem;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .metric-val {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Interactive Comparison Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 4rem;
+      background: var(--card-bg);
+      border-radius: 1rem;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+    }
+
+    th, td {
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+      font-weight: 600;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .highlight-cell {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .tag-green { background: rgba(52, 211, 153, 0.15); color: var(--accent-emerald); }
+    .tag-red { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding-top: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-blue);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 0.15rem 0.35rem;
+      border-radius: 0.25rem;
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Header -->
+    <header>
+      <div class="badge-pill">
+        <span class="badge-dot"></span>
+        <span>Version 1.1.0 • Enterprise-Ready</span>
+      </div>
+      <h1>brain-79: Deterministic AI Memory</h1>
+      <p class="lead">
+        A mechanical memory protocol for AI assistants. Preventing context rot, eliminating broken documentation, and ensuring seamless agent continuity across sessions.
+      </p>
+    </header>
+
+    <!-- Metrics Bar -->
+    <div class="metrics-bar">
+      <div class="metric-card">
+        <div class="metric-val" style="color: var(--accent-emerald);">334</div>
+        <div class="metric-label">Automated Tests</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val" style="color: var(--accent-blue);">&lt; 8 ms</div>
+        <div class="metric-label">Engine Latency</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val" style="color: var(--accent-purple);">100%</div>
+        <div class="metric-label">CLI & MCP Parity</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val" style="color: var(--accent-amber);">0</div>
+        <div class="metric-label">External API Billing</div>
+      </div>
+    </div>
+
+    <!-- The Core Dilemma (Problem vs Solution) -->
+    <div class="grid-2">
+      <div class="card card-problem">
+        <span class="card-header-icon">⚠️</span>
+        <h3>The Problem: Organic AI Decay</h3>
+        <p>
+          AI agents generate high-quality prose, but across multiple sessions they degrade knowledge organically:
+        </p>
+        <ul style="margin-top: 0.75rem; padding-left: 1.25rem; color: var(--text-muted); font-size: 0.9rem;">
+          <li><strong>Amnesia:</strong> Every session re-reads files from scratch, burning token budgets.</li>
+          <li><strong>Hallucinated References:</strong> Agents invent dead markdown links and phantom folders.</li>
+          <li><strong>Decision Clutter:</strong> Architecture choices get lost inside general conversation logs.</li>
+        </ul>
+      </div>
+
+      <div class="card card-solution">
+        <span class="card-header-icon">🛡️</span>
+        <h3>The Solution: Deterministic Memory</h3>
+        <p>
+          brain-79 treats memory like compiled software code rather than an unstructured pile of notes:
+        </p>
+        <ul style="margin-top: 0.75rem; padding-left: 1.25rem; color: var(--text-muted); font-size: 0.9rem;">
+          <li><strong>Dual-Memory Hierarchy:</strong> Clear separation of tactical handoffs vs. permanent wiki.</li>
+          <li><strong>Mechanical Linters:</strong> Rejects broken links and missing frontmatter at write-time.</li>
+          <li><strong>Sub-second Orientation:</strong> Agent reads <code>INDEX.md</code> and knows the state in 1 turn.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Visual Architecture & Flow -->
+    <h2 class="section-title">⚡ System Topology & Data Flow</h2>
+    <p class="section-desc">
+      How agents, human developers, and local repository storage connect without vendor lock-in.
+    </p>
+
+    <div class="topology-container">
+      <div class="topology-flow">
+        
+        <!-- Agent / Human Layer -->
+        <div style="display: flex; gap: 1.5rem; justify-content: center; width: 100%; flex-wrap: wrap;">
+          <div class="node node-agent">
+            <strong>🤖 AI Agents</strong><br>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Pi, Cursor, Claude Code, Devin</span>
+          </div>
+          <div class="node node-agent">
+            <strong>👨‍💻 Human Developers</strong><br>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Terminal CLI (POSIX compliant)</span>
+          </div>
+        </div>
+
+        <div class="flow-arrow">
+          <span>│</span>
+          <span>▼ JSON-RPC (FastMCP) or CLI Dispatcher</span>
+        </div>
+
+        <!-- Brain-79 Core -->
+        <div class="node node-engine" style="width: 80%; max-width: 650px;">
+          <div style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.25rem; color: #fff;">
+            🧠 brain-79 Core Engine
+          </div>
+          <div style="font-size: 0.85rem; color: var(--accent-blue); margin-bottom: 0.5rem;">
+            Atomic Mutations • Schema Enforcement • Ripgrep Search • Link Sanitizer
+          </div>
+        </div>
+
+        <div class="flow-arrow">
+          <span>│</span>
+          <span>▼ Atomic POSIX Writes & Graph Navigation</span>
+        </div>
+
+        <!-- Dual Memory Storage Tier -->
+        <div class="memory-tier">
+          <div class="tier-box tier-longterm">
+            <h4 style="color: var(--accent-emerald);">📚 Long-Term Memory (.brain-79/)</h4>
+            <ul>
+              <li><strong>product/</strong>: Domain specs & user requirements</li>
+              <li><strong>architecture/</strong>: System design & active milestones</li>
+              <li><strong>features/</strong>: Functional documentation</li>
+              <li><strong>decisions/</strong>: Immutable Architecture Decision Records (ADR)</li>
+            </ul>
+          </div>
+
+          <div class="tier-box tier-shortterm">
+            <h4 style="color: var(--accent-blue);">⏱️ Short-Term Memory (.brain-79/handoffs/)</h4>
+            <ul>
+              <li><strong>Tactical Handoffs</strong>: Immutable timestamped session records</li>
+              <li><strong>Anti-Hallucination Guard</strong>: Strict verification of pending work</li>
+              <li><strong>Lineage Tracking</strong>: Continuous chain across agent executions</li>
+              <li><strong>Audit Trail</strong>: Full human traceability in Git</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Comparative Table -->
+    <h2 class="section-title">📊 Architectural Comparison</h2>
+    <p class="section-desc">
+      Why a mechanical, repository-native wiki outperforms ad-hoc vector databases and cloud second-brains.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>Raw RAG / Vector DBs</th>
+          <th>Cloud Second Brains (e.g. Notion, Cortex)</th>
+          <th>brain-79 (v1.1)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="highlight-cell">Data Ownership</td>
+          <td>Proprietary cloud or local binary vectors</td>
+          <td>External SaaS database / API keys required</td>
+          <td><span class="tag tag-green">100% Local Git Markdown</span></td>
+        </tr>
+        <tr>
+          <td class="highlight-cell">Quality Enforcement</td>
+          <td><span class="tag tag-red">None</span> (accepts any corrupted text)</td>
+          <td>Manual human curation</td>
+          <td><span class="tag tag-green">Mechanical Linter (Strict)</span></td>
+        </tr>
+        <tr>
+          <td class="highlight-cell">Multi-Session Continuity</td>
+          <td>Search-based (fuzzy, loses exact task state)</td>
+          <td>Ad-hoc notes</td>
+          <td><span class="tag tag-green">Immutable Handoffs</span></td>
+        </tr>
+        <tr>
+          <td class="highlight-cell">Agent Token Overhead</td>
+          <td>High (dumps massive unrelated chunks)</td>
+          <td>High (unfiltered note text)</td>
+          <td><span class="tag tag-green">Minimal (Surgical Edits & H2 Filtering)</span></td>
+        </tr>
+        <tr>
+          <td class="highlight-cell">Human Readability</td>
+          <td>Opaque (vector blobs)</td>
+          <td>Proprietary web views</td>
+          <td><span class="tag tag-green">Native in GitHub & VS Code</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Strategic Horizon -->
+    <h2 class="section-title">🚀 Industrial Scale Horizon</h2>
+    <p class="section-desc">
+      The ongoing evolution towards enterprise multi-agent fleets and universal knowledge domains.
+    </p>
+
+    <div class="grid-3">
+      <div class="card">
+        <div style="color: var(--accent-blue); font-weight: 700; margin-bottom: 0.5rem;">Phase 1: Universal Domains</div>
+        <p>Decouple schema validation to support academic research, legal briefs, and book writing via <code>--profile</code> presets.</p>
+      </div>
+      <div class="card">
+        <div style="color: var(--accent-purple); font-weight: 700; margin-bottom: 0.5rem;">Phase 2: Sub-Second Wrap</div>
+        <p>Unified <code>brain79_session_commit</code> wrapping file writes, edits, and handoffs into a single turn call.</p>
+      </div>
+      <div class="card">
+        <div style="color: var(--accent-emerald); font-weight: 700; margin-bottom: 0.5rem;">Phase 3: SQLite WAL Concurrency</div>
+        <p>Zero-lock contention under swarms of 10+ concurrent agents executing on the same codebase.</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>brain-79 Protocol • Open Source under MIT License • Designed for Agent-Human Symbiosis</p>
+    </footer>
+
+  </div>
+
+</body>
+</html>

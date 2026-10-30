@@ -1,287 +1,147 @@
-# brain-79 Architecture & Design Specifications
+# brain-79 Architecture & Technical Specifications
 
-This document outlines the internal architecture, design principles, and runtime invariants governing `brain-79`.
+> **System architecture, design principles, and mechanical runtime invariants.**
 
 ---
 
-## 1. Dual-Memory Model & Adversarial Hierarchy
+## 1. System Overview & The Dual-Memory Model
 
-`brain-79` enforces a strict two-tier memory hierarchy:
+`brain-79` separates memory into two distinct operational tiers to prevent context confusion between immediate session tasks and long-term repository knowledge:
 
 ```
-+-------------------------------------------------------------+
-|                      Long-Term Memory                       |
-|               (.brain-79/ - Curated LLM Wiki)               |
-|   • Invariant source of truth for repository context        |
-|   • Architecture, ADRs, Domain Rules, Product Specifications|
-+-------------------------------------------------------------+
-                              ▲
-                              | (Promoted via brain79_ingest)
-+-------------------------------------------------------------+
-|                      Short-Term Memory                      |
-|          (.brain-79/handoffs/handoff-<timestamp>.md)        |
-|   • Tactical, session-bound state transitions               |
-|   • Strict isolation of completed vs. pending tasks         |
-+-------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             LONG-TERM MEMORY                                │
+│                     (.brain-79/ - Curated Knowledge Wiki)                   │
+│                                                                             │
+│  • Single source of truth for repository context                            │
+│  • Product requirements, Architecture, ADRs, Domain rules                   │
+│  • Enforced YAML frontmatter and strict directory schemas                   │
+└──────────────────────────────────────▲──────────────────────────────────────┘
+                                       │
+                                       │ Promoted via brain79_ingest
+                                       │
+┌──────────────────────────────────────┴──────────────────────────────────────┐
+│                             SHORT-TERM MEMORY                               │
+│                 (.brain-79/handoffs/handoff-<timestamp>.md)                 │
+│                                                                             │
+│  • Tactical state records generated at session boundaries                   │
+│  • Clear separation between completed tasks and pending tasks               │
+│  • Immutable transition log preventing context loss                         │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Hierarchy Rules & Conflict Resolution
-- **Wiki Primacy:** The Wiki is the ultimate source of truth. If a short-term handoff contradicts the Wiki, the Wiki always wins.
-- **Explicit Deviation Justification:** A handoff may temporarily deviate from the Wiki only if it provides a non-empty `wiki_deviation_justification`.
-- **Knowledge Promotion:** Hard-won empirical insights recorded under `knowledge_pending_promotion` in a handoff automatically trigger a warning during `brain79_handoff_read`, instructing the incoming agent to ingest those learnings into the long-term Wiki using `brain79_ingest`.
+### Hierarchy & Conflict Resolution Rules
+
+1. **Wiki Primacy:** The Wiki is the absolute source of truth. If a tactical handoff contradicts a wiki article, the wiki wins.
+2. **Deviation Justification:** A handoff may record an active deviation from the wiki only if it supplies an explicit, non-empty `wiki_deviation_justification`.
+3. **Knowledge Promotion:** Critical discoveries flagged under `knowledge_pending_promotion` in a handoff trigger a runtime banner during `brain79_handoff_read`, instructing the incoming agent to distill those insights into the permanent wiki.
 
 ---
 
-## 2. Technical Invariants & Runtime Validation
+## 2. Core Architectural Layers
 
-### Handoff Write Invariants (`brain79_handoff_write`)
-1. **Enum Strictness:** `session_type` must be one of `{"feature", "bugfix", "research", "brainstorming"}` (case-insensitive and trimmed).
-2. **Lineage Tracking:** `previous_handoff_ref` verifies existence of the referenced handoff (via exact filename, stem, or timestamp prefix).
-3. **Anti-Hallucination Guard:** If `pending_work` is empty, `boot_instruction` must explicitly indicate that no pending tasks remain.
-4. **Immutability:** Every handoff is written to a unique timestamped file (`handoff-%Y-%m-%d-%H%M%S-%f.md`), preventing overwrites and ensuring an immutable audit trail.
+The system is organized into four clean, isolated layers:
 
-### Handoff Read Invariants (`brain79_handoff_read`)
-1. **Flexible Reference Resolution:** `handoff_ref` handles `"latest"`, `"none"`, `""`, exact filenames, full timestamps, or prefix patterns (e.g., `"2024"` or `"2024-08"`).
-2. **Promotion Trigger:** Inject dynamic warning banner if `## Conocimiento pendiente de promoción` is present in content.
+```
+                      [ AI Agents ]            [ Humans ]
+                     (Pi, Claude, etc.)       (Terminal CLI)
+                             │                      │
+                             ▼                      ▼
+  LAYER 1: INTERFACE   FastMCP Stdio Server     CLI Dispatcher
+                      (server.py)             (cli/dispatch.py)
+                             └──────────┬───────────┘
+                                        ▼ (1:1 Symmetry)
+  LAYER 2: CORE ENGINE       Wiki Operations & Linter
+                             (core/wiki.py, core/lint.py)
+                                        │
+                                        ▼
+  LAYER 3: VALIDATION        Mechanical Enforcement
+                             (core/frontmatter.py, validation.py)
+                                        │
+                                        ▼
+  LAYER 4: STORAGE           Atomic Filesystem & Navigation Registry
+                             (POSIX filelock, atomic rename, JSON cache)
+```
 
-### Handoff Immutability Exception
+### 1. The Interface Layer (1:1 Symmetry)
+- **FastMCP Stdio Server:** Exposes tools to agent harnesses via JSON-RPC. Suppresses all stdout pollution to guarantee clean protocol handshakes.
+- **CLI Dispatcher:** Exposes the exact same capabilities to developers with colored human terminal output, machine-readable JSON flags, and standard POSIX exit codes.
+- **Guaranteed Parity:** Unit tests (`tests/test_symmetry.py`) programmatically enforce that every CLI command has an identical MCP tool counterpart.
 
-Handoffs are designed as **immutable session records** (Phase 1.5). However,
-`brain79 handoff-purge` is the explicit exception for operational cleanup:
+### 2. The Core Engine
+- High-speed file operations powered by Rust-backed `ripgrep` (`rg -F`) for instant text searches, with a pure Python fallback.
+- In-memory TF-IDF context retriever with multi-language stop-word filtering.
+- Graph-based reachability analysis (BFS) mapping links from `INDEX.md`.
 
-- **Use cases**: legacy wiki cleanup, demo project reset, end-of-iteration flush
-- **What it deletes**: only `handoffs/handoff-*.md` files
-- **What it does NOT touch**: `_raw/sessions/`, `_raw/commits/`, other wiki articles
-- **Side effects**: unregisters from `.navigation_registry.json`
-- **Post-purge cleanup**: `brain79 lint --strict` will detect any markdown links
-  in other articles pointing to purged handoffs. The agent fixes them via
-  `brain79_write` using the lint output as guidance.
+### 3. The Validation Layer
+- **Write-Time Enforcement:** Validates required frontmatter keys, allowed enum values, and directory locations *before* touching the disk.
+- **Reference Integrity:** Detects broken markdown links and prevents links into internal raw directories (`_raw/`).
+- **Sanitization:** Masks fenced code blocks and inline code spans before link extraction to prevent false-positive warnings on sample code.
 
-
-### Wiki Linter Invariants (`brain79_lint`)
-1. **Deterministic Sanitization:** Cleans frontmatter, fenced code blocks, images, and inline code spans (including multi-backtick spans) before link extraction.
-2. **Local Link & Namespace Resolution:** Decodes percent-encoded URLs (`unquote`) and strips anchor fragments (`#...`). Validates target existence and flags links into `_raw/` as critical Namespace Violations.
-3. **Multi-Root BFS Reachability:** Executes graph BFS from all `INDEX.md` entry points (`follow_symlinks=False`) to report orphan articles.
-4. **Non-Blocking Lock & Resource Guards:** Checks file lock state via non-blocking `filelock` (skipping locked files as warnings), enforces a 1 MB file size limit, and limits execution to 15 seconds.
-
-### Context Retrieval Invariants (`brain79_context`)
-1. **NFKC & Stop-Word Sanitization:** Normalizes input via NFKC, strips apostrophes, tokenizes alnum sequences (`\w+`), deduplicates, and filters out stop-words (EN/ES/LLM domains) and tokens < 3 characters.
-2. **Boundary Heuristic:** Enforces exact word boundary (`\b{kw}\b`) for alnum tokens <= 4 characters, and free substring matching for tokens > 4 characters.
-3. **TF-IDF & Fallback Short-Circuit:** Ranks articles using TF-IDF (`TF * (log(N/df) + 1.0)`). If no valid keywords remain, short-circuits execution without launching `ThreadPoolExecutor` and enters Fallback Mode (returning `INDEX.md` and recent articles by `st_mtime_ns`).
-4. **ARG_MAX & FD Safety:** Manages temporary file lists via `mkstemp` and POSIX file descriptor lifecycle management, executing parallel keyword search with fallback from `ripgrep` to pure Python regex.
-
-
-
----
-
-## 3. Wiki Core IO Invariants (`wiki.py`)
-
-1. **Path Traversal Security:** `_safe_resolve` strictly enforces absolute directory containment using `is_relative_to`, preventing sibling-prefix attacks and sandbox escapes.
-2. **Atomic Writes & Concurrency Control:** All file modifications are protected by inter-process `filelock` and executed via atomic POSIX `rename` (writing to a `.md.tmp` file and replacing the target). This prevents race conditions between concurrent agents and protects against file corruption upon process crashes (e.g. SIGKILL).
-3. **Isolated Search (Ripgrep):** `brain79_search` uses `ripgrep` (`rg`) for instantaneous, massive-scale exact string matching (with `-F` and null delimiters) for top performance, automatically and safely falling back to pure Python if `rg` is unavailable.
-4. **Namespace Integrity:** The `_raw/` directory is strictly excluded from all public listings (`list_articles`, `search_articles`) to prevent bleeding unstructured text into the curated Wiki domain.
+### 4. Storage & Concurrency
+- **Zero Cloud Lock-in:** Plain Markdown files stored in Git under `.brain-79/`.
+- **Atomic POSIX Writes:** All writes write to a temporary `.md.tmp` file and perform an atomic `os.replace` under an inter-process `filelock`. Crashes or terminations never leave corrupted files.
+- **Fast Navigation Cache:** Maintains `.navigation_registry.json` for $O(1)$ section lookups and instant `INDEX.md` regeneration.
 
 ---
 
-## 4. Directory Layout
+## 3. Directory Layout & Roles
 
 ```
 .brain-79/
-├── SCHEMA.md        ← Curation rules and guidelines for LLM curation
-├── INDEX.md         ← Central directory index (always read first by LLMs)
-├── handoffs/        ← Immutable short-term session handoffs
-├── product/         ← Business domain and requirements
-├── architecture/    ← System design, stack, and ADRs
-├── features/        ← Per-feature functional specs
-├── decisions/       ← Consolidated decision logs
-└── _raw/            ← Immutable raw session logs
-    ├── sessions/    ← Raw text session logs
-    └── commits/     ← Commit metadata
+├── SCHEMA.md        ← Authoritative validation rules and frontmatter definitions
+├── INDEX.md         ← Central knowledge index (read first by agents)
+├── handoffs/        ← Immutable timestamped session handoff notes
+├── product/         ← Product overview, user personas, and domain requirements
+├── architecture/    ← Architectural specs, current state, and roadmaps
+├── features/        ← Detailed functional specifications
+├── decisions/       ← Architecture Decision Records (ADRs)
+└── _raw/            ← Append-only raw logs (excluded from search and index)
+    ├── sessions/    ← Ingested session dumps
+    └── commits/     ← Raw commit metadata
 ```
 
 ---
 
-## 5. Tool Provisioning & Installation Architecture (`scripts/install.py`)
+## 4. Key Runtime Invariants
 
-Local installation and lifecycle management of the `brain79` binary is delegated exclusively to `scripts/install.py`.
-
-- **Cross-Platform Tool Management:** Abstracts `uv tool install --editable --reinstall .`, `uv tool uninstall brain79`, and `uv tool list`.
-- **Fail-Fast Environment Guards:** Pre-flight validation checks `uv` binary presence (`shutil.which`) and repository root integrity (`pyproject.toml`).
-- **Clean Execution & Diagnostics:** Prevents raw traceback leakage by suppressing unhandled exceptions and providing clean error output to `stderr` with appropriate exit codes.
-
----
-
-## 6. Update Subcommand Architecture (`brain79 update`)
-
-The `brain79 update` command enables in-place updating of editable installations directly from the upstream repository.
-
-- **CLI Dispatch Mechanism (`__main__.py`):** Positionally dispatches `update` subcommands via `sys.argv[1:]` before initializing FastMCP, ensuring zero side-effects or stderr outputs during normal server operations.
-- **Isolated Module Resolution (`importlib.util`):** Locates the installed package path dynamically using `importlib.util.find_spec("brain79")` without executing module import side-effects. Traverses directory parents to identify the `.git` repository root.
-- **Fail-Fast Safety Checks:** Enforces strict invariants prior to mutating state:
-  1. Validates presence of `git` and `uv` binaries.
-  2. Ensures working tree is clean (`git status --porcelain`).
-  3. Verifies git HEAD is not detached and resides on the remote default branch (`origin/HEAD` or `--branch` override).
-- **Atomic Pull & Rebuild Protocol:** Executes `git fetch origin`, verifies hash diffs, performs fast-forward pull (`git pull --ff-only`), and rebuilds the tool environment (`uv tool install --force .`). Gracefully handles cancellation via `KeyboardInterrupt` (exit code `130`).
+| Component | Invariant | Purpose |
+|:---|:---|:---|
+| **Handoffs** | **Strict Immutability** | Handoffs use unique timestamped files (`handoff-%Y-%m-%d-%H%M%S-%f.md`). They are never modified in place, maintaining a clean historical audit trail. |
+| **Handoffs** | **Anti-Hallucination Guard** | If `pending_work` is empty, the agent is forced to explicitly write in `boot_instruction` that no pending work remains, preventing agents from imagining unfinished tasks. |
+| **Wiki IO** | **Path Traversal Protection** | All file paths are strictly resolved against the repository root using `is_relative_to`, preventing sandbox escapes. |
+| **Wiki IO** | **Atomic File Mutations** | Every write or edit is guarded by a process mutex and executed through atomic temporary file replacement. |
+| **Linter** | **Link & Namespace Guards** | Absolute paths, broken relative references, or references pointing into `_raw/` fail strict lint checks immediately. |
 
 ---
 
-## 7. Bootstrap Tool Architecture (`bootstrap.py`)
-
-`brain79_bootstrap` enables wiki seeding for existing projects without prior wiki history.
-
-### Design Principles
-- **LLM is the intelligence; scanner is the eyes.** The tool performs only deterministic
-  file system operations. The LLM interprets the manifest and writes wiki articles using
-  `brain79_write`.
-- **Strict budget enforcement.** Total content returned is capped at 80 KB.
-  Individual root files: 8 KB. Scope files: 4 KB. Files are read incrementally
-  (never load full file into memory for truncation).
-- **No hallucination surface from the tool.** Bootstrap Instructions explicitly prohibit
-  the LLM from writing content not evidenced in the manifest.
-
-### Idempotency & Concurrency Contract
-1. `.brain-79/.bootstrap_state.json` is written atomically via `tmp+rename`.
-2. A `filelock` protects the read-check and state-write phases only.
-   The file scan itself runs outside the lock to avoid holding it during slow I/O.
-3. Subsequent calls without `force=True` return a warning with the previous timestamp.
-4. Corrupt or missing state is treated as "never run" — bootstrap proceeds.
-
-### Security Invariants
-1. **Excluded dirs:** `.git`, `node_modules`, `.venv`, `.brain-79`, and all
-   cache dirs are never walked.
-2. **Binary extension skip:** No content is read from known binary file types.
-3. **Scope path validation:** Paths in `scope` that resolve outside `project_root`
-   are silently dropped (no warning, no information leakage).
-4. **In-bounds but missing paths:** Scope paths inside `project_root` that do not
-   exist produce a warning in the manifest (usability).
-5. **No writes to wiki:** The tool writes only `.bootstrap_state.json`. All wiki
-   article creation is delegated to the LLM via `brain79_write`.
-
-### Frontmatter Traceability
-All bootstrap-generated articles carry YAML frontmatter (`bootstrap: true`,
-`generated_by`, `generated_at`, `project_type`). This enables future tooling
-to distinguish bootstrap content from organically curated knowledge.
-
-### Scan Budget Algorithm
-1. Root-level structural pass always runs first (tree + priority key files by category).
-2. Remaining budget allocated to scope files if `scope` was provided.
-3. Files read in priority order; scanning halts when `_TOTAL_CONTENT_BUDGET_BYTES` exhausted.
-4. Per-file truncation uses incremental read — `stat().st_size` checked before allocation.
-
-### Project Type Detection
-Heuristic, priority-ordered. First matching signal wins. Returns one of:
-`python-package`, `python-script`, `node-package`, `rust-crate`, `go-module`,
-`java-maven`, `java-gradle`, `ruby-gem`, `docker-service`, `research-paper`,
-`documentation`, `unknown`.
-
----
-
-## 8. Hybrid CLI Subcommand & Dispatch Architecture
-
-`brain79` features a closed-whitelist CLI dispatcher operating alongside the FastMCP server entrypoint.
-
-### Core Purity & Banner Decoupling
-1. **Core Invariant:** `core/` functions raise native Python exceptions (`ValueError`, `FileNotFoundError`, `OSError`, `PermissionError`, etc.) and return pure data. They do not print LLM-targeted warning banners to `stdout` or `stderr`.
-2. **Interface Banner Decoupling:** `core.handoff.read_handoff(ref)` returns `tuple[str, bool]` (`(content, has_promotion_pending)`). `server.py` uses `has_promotion_pending` to append the LLM warning banner for MCP clients (`brain79_handoff_read`). The CLI `handoff-read` output remains neutral.
-
-### Dispatcher Invariants & Global Flag Pre-Processing
-1. **Strict Closed Whitelist:** Closed subcommand set `{"init", "update", "index", "read", "write", "edit", "write-many", "schema", "list", "search", "ingest", "handoff-write", "handoff-read", "handoff-purge", "navigate", "migrate", "lint", "bootstrap", "context"}`.
-2. **Dual-Position Pre-Processing:** Global flags `--project-root` and `--debug` are extracted from `sys.argv[1:]` prior to `argparse` dispatch, guaranteeing that `config.set_project_root()` is applied regardless of flag ordering (`brain79 --project-root /foo read` vs `brain79 read --project-root /foo`).
-3. **Strict Import Order:** `FASTMCP_SHOW_SERVER_BANNER=false` is set in `__main__.py` before any module imports. FastMCP server initialization (`server.py`) is lazy-loaded only when no CLI subcommand matches.
-
-### Input Ergonomics & Resilience
-1. **Quoting Security:** Large text fields (`summary`, `boot_instruction`, `wiki_deviation_justification`, `instructions`, `content`) omit inline string flags. Inputs are accepted strictly via mutually exclusive `--<field>-file` or `--<field>-stdin` options.
-2. **Fail-Fast Size & Encoding Guards:** File and stdin inputs enforce a 1 MB limit via `Path.stat()` / `os.fstat()` / stream byte checks before processing. Text decoding strictly enforces UTF-8 (`errors="strict"`).
-
-### Standardized Unix Exit Code Taxonomy
-| Exit Code | Exception / Trigger | Category |
-|-----------|---------------------|----------|
-| `0` | Clean execution | Success |
-| `1` | `ValueError`, `json.JSONDecodeError`, input limit / encoding error | Validation & Domain Error |
-| `2` | `FileNotFoundError`, `HandoffNotFoundError`, `argparse.ArgumentError` | Syntax / Entity Not Found |
-| `3` | `OSError`, `PermissionError`, `filelock.Timeout` | I/O & Concurrency Contention |
-| `4` | Missing binary dependency (`git`, `uv`) | Binary Dependency Error |
-| `130` | `KeyboardInterrupt` | Interrupted |
-
-### 1:1 Static Symmetry Guarantee
-A static CI test (`tests/test_symmetry.py`) validates that `mcp_tools ⊆ cli_subs` and `cli_subs - mcp_tools == {"init", "update"}`.
-
----
-
-## 9. Wiki Organizational Enforcement Pipeline
-
-`brain-79` includes a mechanical organizational enforcement pipeline that prevents quality degradation across LLM wiki articles.
-
-### Architecture Overview
+## 5. Typical Lifecycle: An Agent Session
 
 ```
-+---------------------------------------------------------------------------------+
-|                               Write-Time Enforcement                            |
-|  (`write_article` / `brain79_write` / `--force-validation-skip`)                 |
-|   • Frontmatter Schema & Required Fields Check                                  |
-|   • Type-Location Consistency Check                                             |
-|   • V5 Strict Structural Decision & Tech Debt Leakage Check (Fence Masked)       |
-|   • Atomic File Write via `.tmp` + `filelock.FileLock`                          |
-|   • Auto-Registration in Thread-Safe `.navigation_registry.json`                |
-+---------------------------------------------------------------------------------+
-                                      ▲
-                                      | (Blocks Invalid Changes)
-+---------------------------------------------------------------------------------+
-|                               Git Pre-Commit Hook                               |
-|                     (`.git/hooks/pre-commit` -> `lint --strict`)               |
-|   • Triggers automatically on `git commit` if staged `.brain-79/*.md` files exist |
-+---------------------------------------------------------------------------------+
-                                      ▲
-                                      | (Audits Wiki State)
-+---------------------------------------------------------------------------------+
-|                                Lint-Time Diagnostics                            |
-|                  (`brain79_lint` / `brain79 lint --strict`)                     |
-|   • INDEX.md 150-line limit & Whitelisted H2 Header Check                      |
-|   • Navigation Registry Freshness & Anchor Link Validation                       |
-|   • Legacy Article Tracking (`status: legacy` / `stability: legacy`)            |
-|   • Force-Skipped Article Tracking (`validation: force_skip`)                   |
-|   • Multi-Root BFS Reachability Analysis                                        |
-+---------------------------------------------------------------------------------+
-```
+1. COLD START
+   AI Agent awakens
+   │
+   ├─► Calls brain79_index() ────────► Reads INDEX.md (Instant overview)
+   └─► Calls brain79_handoff_read() ──► Ingests latest handoff & pending tasks
 
-### Components & Invariants
-1. **Frontmatter Schema Validation (`frontmatter.py`)**:
-   Enforces YAML frontmatter schema per directory type. Strips CRLF and BOM cleanly before parsing. Recopilates all schema violations in a single pass (`ValidationError.issues`) and renders ready-to-paste snippet templates (`generate_frontmatter_template`).
-2. **Structural Decision & Tech Debt Regex Guard (`validation.py`)**:
-   Strict V5 structural decision regex (`^[-*]\s+(Decision|ADR-\d+)...:`) and technical debt regex (`^[-*]\s+(TD-\d+|technical debt)...:`). Masks CommonMark code fences (` ``` ` and `~~~`) with exact fence character matching to eliminate false positives in documentation code blocks.
-3. **Thread-Safe Navigation Registry (`navigation.py`)**:
-   Thread-safe `load_registry`, `register_article`, and `unregister_article` using `filelock.FileLock(".navigation_registry.lock")`. Escapes markdown special characters (`[`, `]`, `*`) in article titles and summaries. Prevents metadata churn by updating `registered_at` only when article metadata changes. Automatically filters and self-heals handoff files.
-4. **Git Pre-Commit Hook (`init_project.py`)**:
-   Deployed during `init_project(install_git_hooks_flag=True)`. Inspects staged `.brain-79/*.md` files and runs `brain79 lint --strict`, rejecting non-compliant commits.
-5. **Progressive V3 Migration (`migrate_frontmatter.py`)**:
-   Enriches legacy un-frontmattered articles with type-specific defaults (`status: legacy`, `stability: legacy`), auto-registers articles in `.navigation_registry.json`, and supports dry-run preview and relocation suggestions (`--suggest-relocations`).
+2. EXECUTION
+   AI Agent designs or modifies features
+   │
+   ├─► Calls brain79_search(query) ──► Instant ripgrep lookup across wiki
+   ├─► Calls brain79_read(path) ─────► Retrieves specific article
+   └─► Calls brain79_edit(path, ...) ─► Applies targeted changes (saves tokens)
+
+3. FINALIZATION
+   AI Agent concludes work
+   │
+   ├─► Calls brain79_handoff_write() ─► Records what was completed & next steps
+   └─► brain-79 auto-regenerates ───► Updates navigation index & runs linter
+```
 
 ---
 
-## 10. Performance & Session Workflow Optimization Architecture (v1.1.0)
+## 6. Strategic Evolution
 
-Version 1.1.0 introduces systemic optimizations to streamline end-of-session wiki updates and minimize LLM token round trips:
-
-### 1. Token De-duplication (`server.py`)
-- Configures `@mcp.tool(output_schema=None)` across all FastMCP tools.
-- Prevents redundant emission of `structuredContent={'result': ...}` in AI client harnesses (such as Pi), reducing input token consumption by ~50% per tool call.
-
-### 2. Deterministic Field Auto-Fill (ADR-004 Amendment)
-- `autofill_deterministic_fields`: Infers `type` from target directory (`LOCATION_TO_TYPE`), normalizes `last_updated` to current UTC ISO date, and defaults `date` to today for `decision` and `changelog` articles if omitted.
-- Automatically strips commonly hallucinated frontmatter keys (`title`, `tags`, `created`) at write time, eliminating spurious validation failures.
-
-### 3. Automatic Navigation Synchronization & Inline Health Checks (ADR-006)
-- **Automatic Navigation Sync:** Non-bypass article writes (`write_article`) automatically update `.navigation_registry.json` and execute an atomic, lock-synchronized regeneration of `INDEX.md` (`INDEX.md.lock`).
-- **Batch Regeneration Consolidation:** `write_many_articles` passes `_skip_nav_regen=True` during sequential article writes and executes a single consolidated navigation regeneration pass upon batch completion.
-- **Inline Health Diagnostics:** `brain79_write` and `brain79_edit` run lightweight per-file linting (H1 header presence, broken local links, decision leakage) and return inline statuses (`· lint OK` or warnings), removing the need for a separate `brain79_lint` turn.
-
-### 4. High-Efficiency Partial & Batch Write Primitives
-- **Partial Edits (`brain79_edit`):** In-place string substitution (`[{old_text, new_text}]`) with uniqueness checking and atomic write-time validation, eliminating full-file re-generation for minor documentation updates.
-- **Batch Writes (`brain79_write_many`):** Atomic "all-or-nothing" validation of multiple articles prior to writing any files to disk.
-
-### 5. Linter Traversal & Path Normalization Scalability
-- **In-Memory Link Resolution:** `lint.py` precomputes `existing_rel_files` and resolves relative links via in-memory `posixpath.normpath`, bypassing O(N) filesystem `Path.resolve()` and `is_file()` syscalls.
-- **Shared File Walks:** `lint_organizational.py` collects `.md` files once, pruning `_raw/` early, and passes the shared collection across diagnostic checks.
-
-
-
+For the upcoming industrial roadmap (dynamic multi-domain schemas, SQLite WAL storage, single-turn session commits, and embedded local semantic search), see:
+- 🗺️ [**Industrial Scale Roadmap**](.brain-79/architecture/roadmap-industrial-scale.md)
+- 📜 [**Changelog & Releases**](CHANGELOG.md)
