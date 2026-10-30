@@ -1,6 +1,7 @@
 """Tests for performance improvements and optimizations from 2026-10-29 performance report."""
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -381,7 +382,7 @@ def test_write_many_articles_single_nav_regeneration(
     calls = 0
     orig_regen = navigation.regenerate_index_navigation
 
-    def counting_regen(*args, **kwargs):
+    def counting_regen(*args: Any, **kwargs: Any) -> Any:
         nonlocal calls
         calls += 1
         return orig_regen(*args, **kwargs)

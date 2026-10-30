@@ -7,7 +7,7 @@ import filelock
 import pytest
 
 from brain79.config import set_project_root
-from brain79.core import wiki as wiki_ops
+import brain79.core.wiki as wiki_ops
 from brain79.core.init_project import init_project
 
 
