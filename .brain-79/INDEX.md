@@ -20,23 +20,27 @@ last_updated: 2026-10-29
 
 ## Current focus
 
-- Deployment of performance improvements and session workflow optimizations (v1.1.0).
-- Maintenance of partial edits (`brain79_edit`), batch writes (`brain79_write_many`), and schema inspection tools.
-- Preparation for PyPI package publishing.
+- **Active branch**: Stabilization and UAT for frontmatter summaries and backlink navigation (`feat/frontmatter-summary-and-backlinks`).
+- **Immediate milestone**: Decoupling schema validation to support arbitrary knowledge domains (`--profile presets`).
 
 ---
 
-
 ## Known issues
 
-- None reported currently. Minor cosmetic issues are tracked on GitHub.
+- None reported currently. Issues and discussions are tracked on GitHub.
 
 ---
 
 ## Roadmap
 
-- PyPI publication (v1.1.0) — next iteration.
-- Optional auto-fix support for broken markdown links (future).
+The authoritative, long-term engineering roadmap is maintained in:
+👉 [**Industrial-Scale Roadmap & Performance Evolution**](architecture/roadmap-industrial-scale.md)
+
+Key upcoming milestones:
+1. **Universal Knowledge Domains (`--profile`)**: Research, writing, and custom domain schemas.
+2. **Sub-Second Session Finalization**: Atomic `brain79_session_commit` in a single tool turn.
+3. **High-Concurrency Storage**: SQLite WAL transactional registry (`.cache.db`).
+4. **Embedded Local Semantic Search**: Hybrid BM25 and `sqlite-vec` engine.
 
 ## Quick navigation
 
