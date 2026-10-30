@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 ---
 
 # Project index
@@ -29,6 +29,7 @@ last_updated: 2026-10-29
 - [ADR-005 — Linter — Code Fence Masking for Decision and Debt Leakage Regex Rules](decisions/adr-005-fence-mask-tracking.md) — Enforcing code fence masking in organizational linter to eliminate false positives in documentation examples
 - [ADR-006 — Architecture — Automatic Navigation Regeneration, Inline Health Checks, and Partial/Batch Operations](decisions/adr-006-auto-navigation-and-batch-operations.md) — Automatic thread-safe navigation synchronization, inline write diagnostics, and partial/batch write operations
 - [ADR-007 — Navigation — Explicit Frontmatter Summary and Article Backlinks](decisions/adr-007-frontmatter-summary-and-backlink-navigation.md) — Standardize explicit frontmatter summary field and footer backlink navigation convention
+- [ADR-008 — Architecture — Pure Automated Routing Table for INDEX.md](decisions/adr-008-pure-index-routing-table.md) — Pure automated routing table architecture for INDEX.md and automated timestamp synchronization
 
 ### Features
 - [Feature — FastMCP Integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication

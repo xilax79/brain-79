@@ -2,7 +2,7 @@
 type: architecture
 summary: High-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 ---
 
 # Architecture — System Current State
@@ -20,6 +20,7 @@ This document maintains a high-level summary of the repository's current archite
 - **Phase 8 – Operational Handoff Purge**: Destructive short-term handoff purge subcommand (`brain79 handoff-purge`) with dry-run default guard.
 - **Phase 9 – Performance & Session Workflow Optimization (v1.1.0)**: Output schema de-duplication (`output_schema=None`), multi-error validation reporting with templates, deterministic field auto-fill (ADR-004 amendment), automatic navigation synchronization and inline health checks on write (ADR-006), partial in-place edits (`brain79_edit`), batch write execution (`brain79_write_many`), schema inspection (`brain79_schema`), handoff navigation isolation, and linter path resolution optimization.
 - **Phase 10 – Frontmatter Summary & Backlinks**: Frontmatter `summary` extraction in $O(1)$ for `INDEX.md`, hardened heuristic fallbacks against colon and subheading truncation, and standardized article backlink navigation (`[← Volver al Índice](../INDEX.md)`).
+- **Phase 11 – Pure Routing Table Index (ADR-008)**: Transformed `INDEX.md` into a pure automated routing table, eliminating hardcoded prose drift and automating timestamp updates on navigation sync.
 - **Self-Wiki Dogfooding (Phase A-D)**: Fully populated self-documenting `.brain-79/` wiki verified by `brain79 lint --strict`.
 
 ## System Invariants & Invariant Guards

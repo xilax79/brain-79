@@ -139,6 +139,13 @@
       "summary": "Strategic roadmap for enterprise-grade scalability, concurrency, sub-second session commits, and local semantic retrieval",
       "section": "architecture",
       "registered_at": "2026-10-30T12:17:41.949860+00:00"
+    },
+    {
+      "path": "decisions/adr-008-pure-index-routing-table.md",
+      "title": "ADR-008 \u2014 Architecture \u2014 Pure Automated Routing Table for INDEX.md",
+      "summary": "Pure automated routing table architecture for INDEX.md and automated timestamp synchronization",
+      "section": "decisions",
+      "registered_at": "2026-10-30T17:04:21.361851+00:00"
     }
   ]
 }
