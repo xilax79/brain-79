@@ -43,6 +43,7 @@ last_updated: 2026-10-29
 ### Architecture
 - [Architecture — CLI & MCP Symmetry](architecture/symmetry.md) — Enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI Dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
+- [Architecture — Industrial-Scale Roadmap & Performance Evolution](architecture/roadmap-industrial-scale.md) — Strategic roadmap for enterprise-grade scalability, concurrency, sub-second session commits, and local semantic retrieval
 - [Architecture — MCP Server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 - [Architecture — System Current State](architecture/current-state.md) — High-level overview of system architecture, active milestones, runtime invariants, and roadmap
 

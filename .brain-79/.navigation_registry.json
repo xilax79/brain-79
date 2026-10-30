@@ -132,6 +132,13 @@
       "summary": "Prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing",
       "section": "features",
       "registered_at": "2026-10-29T23:10:51.711764+00:00"
+    },
+    {
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-Scale Roadmap & Performance Evolution",
+      "summary": "Strategic roadmap for enterprise-grade scalability, concurrency, sub-second session commits, and local semantic retrieval",
+      "section": "architecture",
+      "registered_at": "2026-10-30T12:17:41.949860+00:00"
     }
   ]
 }
