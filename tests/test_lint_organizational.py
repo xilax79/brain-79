@@ -278,17 +278,27 @@ last_updated: 2026-08-11
 
 
 def test_unfilled_placeholder_detected(tmp_path: Path) -> None:
-    """BUG-11: unfilled HTML placeholders in INDEX.md are flagged."""
-    from brain79.core.init_project import init_project
+    """BUG-11: unfilled HTML placeholders in INDEX.md are flagged if present."""
     from brain79.core.lint_organizational import check_unfilled_placeholders
 
-    project = tmp_path / "project"
-    project.mkdir()
-    set_project_root(project)
-    init_project(project)
+    wiki_root = tmp_path / ".brain-79"
+    wiki_root.mkdir()
+    index_with_placeholders = """---
+type: navigation
+last_updated: 2026-08-11
+---
 
-    # Verify the default template HAS unfilled placeholders and linter catches them
-    wiki_root = project / ".brain-79"
+# Project index
+
+## Project
+**Name:** <!-- project name -->
+**Purpose:** <!-- one sentence -->
+**Status:** <!-- e.g. Active -->
+
+## Quick navigation
+"""
+    (wiki_root / "INDEX.md").write_text(index_with_placeholders, encoding="utf-8")
+
     issues = check_unfilled_placeholders(wiki_root)
     unfilled = [i for i in issues if i.rule == "index_unfilled_placeholder"]
     assert len(unfilled) >= 3, f"Expected ≥3 unfilled placeholders, got {len(unfilled)}"

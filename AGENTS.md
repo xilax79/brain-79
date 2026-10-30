@@ -110,7 +110,8 @@ To maintain consistent, high-quality documentation across all agent and human in
 3. **Dual-Audience Rule (Human & Agent Symbiosis):**
    - While documentation is indexed and consumed by LLMs, it is reviewed and audited by human engineers in Git PRs.
    - Never write cryptic, machine-only shorthand. Plain, clean English reduces entropy for LLM reasoning and guarantees human auditability.
-4. **Summary & Navigation Invariants:**
+3. **Pure Index Invariant**: `INDEX.md` is an automated routing table, not a freeform scratchpad. Never write hardcoded roadmaps, task lists, or status paragraphs directly inside `INDEX.md`. Detailed planning belongs in `architecture/`, `product/`, or `decisions/` and is referenced through the index.
+4. **Summary & Navigation Invariants**:
    - Every wiki article must declare an explicit, one-line `summary:` in its frontmatter.
    - Every subfolder article must conclude with the standard back-navigation footer (`[← Volver al Índice](../INDEX.md)`).
 

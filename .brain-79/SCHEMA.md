@@ -22,7 +22,7 @@ Maintain strict organizational health and high signal-to-noise ratio across all 
 
 | Directory | Required `type` | Required Fields | Allowed Enums | Purpose |
 |-----------|-----------------|-----------------|---------------|---------|
-| `INDEX.md` | `navigation` | `type`, `last_updated` | — | Topological index only |
+| `INDEX.md` | `navigation` | `type`, `last_updated` | — | Automated routing table only (no freeform prose) |
 | `handoffs/` | `handoff` | `type`, `session_type`, `previous_ref`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming | Immutable session handoffs |
 | `product/` | `product` | `type`, `last_updated` | — | Vision, domain, personas |
 | `architecture/` | `architecture` | `type`, `stability`, `last_updated` | `stability`: experimental, stable, legacy | Stack, patterns, topology |

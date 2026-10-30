@@ -6,41 +6,7 @@ last_updated: 2026-10-29
 # Project index
 
 > **Read this first at the start of every session.**
-> This is the entry point to the project's wiki. It reflects the current state of the project.
-
----
-
-## Project
-
-**Name:** Brain-79
-**Purpose:** AI memory protocol with mechanical validation for project wikis.
-**Status:** Production (v1.1.0) — stable
-
----
-
-## Current focus
-
-- **Active branch**: Stabilization and UAT for frontmatter summaries and backlink navigation (`feat/frontmatter-summary-and-backlinks`).
-- **Immediate milestone**: Decoupling schema validation to support arbitrary knowledge domains (`--profile presets`).
-
----
-
-## Known issues
-
-- None reported currently. Issues and discussions are tracked on GitHub.
-
----
-
-## Roadmap
-
-The authoritative, long-term engineering roadmap is maintained in:
-👉 [**Industrial-Scale Roadmap & Performance Evolution**](architecture/roadmap-industrial-scale.md)
-
-Key upcoming milestones:
-1. **Universal Knowledge Domains (`--profile`)**: Research, writing, and custom domain schemas.
-2. **Sub-Second Session Finalization**: Atomic `brain79_session_commit` in a single tool turn.
-3. **High-Concurrency Storage**: SQLite WAL transactional registry (`.cache.db`).
-4. **Embedded Local Semantic Search**: Hybrid BM25 and `sqlite-vec` engine.
+> This is the automated routing table for the project wiki.
 
 ## Quick navigation
 
