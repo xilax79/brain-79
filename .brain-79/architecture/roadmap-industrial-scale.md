@@ -73,6 +73,13 @@ A quantitative and architectural audit reveals five primary ceilings in the curr
 #### 1.3 Context-Aware Linter Rules
 - Conditionally disable software-specific checks (e.g. decision leakage, ADR numbering format) when operating in non-software profiles.
 
+#### 1.4 Single Source of Truth for Roadmaps (Anti-Drift Guard)
+- **Problem:** When agents write static bullet lists under `## Roadmap` in `INDEX.md`, the index inevitably drifts from detailed architecture specifications over subsequent sessions.
+- **Solution:**
+  - Modernize the canonical `INDEX.md` archetype deployed by `brain79 init` to mandate that roadmaps are referenced via markdown links to authoritative documents (e.g. `architecture/roadmap.md`) rather than inlined as task scratchpads.
+  - Implement a dedicated linter rule (`inline_roadmap_in_index`) in `lint_organizational.py` that flags static task lists under `## Roadmap` in `INDEX.md`, requiring a link to an authoritative specification instead.
+  - Formally record the invariant in `AGENTS.md` and `SCHEMA.md`: *"INDEX.md is a routing table, not a planning scratchpad"*.
+
 ---
 
 ### Pillar 2: Zero-Turn Overhead (Batch Read & Atomic Session Commit)
