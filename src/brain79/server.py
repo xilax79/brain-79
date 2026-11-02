@@ -19,7 +19,7 @@ mcp = FastMCP(
     "brain79",
     instructions=(
         "brain79 is a per-project AI memory system. "
-        "Always call brain79_index() at the start of a session to orient yourself. "
+        "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation. "
         "Call brain79_schema() before writing or updating articles to inspect exact frontmatter rules."
     ),
 )
