@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 import uuid
 
-from brain79.core.frontmatter import LOCATION_TO_TYPE, parse_frontmatter
+from brain79.core.frontmatter import ActiveSchema, LOCATION_TO_TYPE, load_active_schema, parse_frontmatter
 
 _TYPE_DEFAULTS: dict[str, dict[str, str]] = {
     "decision": {
@@ -17,6 +17,13 @@ _TYPE_DEFAULTS: dict[str, dict[str, str]] = {
     },
     "architecture": {
         "stability": "legacy",
+    },
+    "topic": {
+        "status": "legacy",
+    },
+    "context": {},
+    "log": {
+        "date": "<file mtime or today>",
     },
     "changelog": {
         "version": "unknown",
@@ -36,9 +43,10 @@ _TYPE_DEFAULTS: dict[str, dict[str, str]] = {
 }
 
 
-def _infer_type_from_location(rel_path: Path) -> str | None:
-    """Infer frontmatter type from relative file location."""
-    for location_prefix, expected_type in LOCATION_TO_TYPE.items():
+def _infer_type_from_location(rel_path: Path, schema: ActiveSchema | None = None) -> str | None:
+    """Infer frontmatter type from relative file location using active schema."""
+    loc_map = schema.location_to_type if schema else LOCATION_TO_TYPE
+    for location_prefix, expected_type in loc_map.items():
         if str(rel_path) == location_prefix or str(rel_path).startswith(location_prefix + "/"):
             return expected_type
     return None
@@ -46,6 +54,7 @@ def _infer_type_from_location(rel_path: Path) -> str | None:
 
 def suggest_relocations(wiki_root: Path) -> str:
     """Suggest directory relocations for articles based on frontmatter type or content inference."""
+    schema = load_active_schema(wiki_root)
     suggestions: list[str] = ["# Suggested Article Relocations", ""]
 
     for md_file in sorted(wiki_root.rglob("*.md")):
@@ -60,7 +69,7 @@ def suggest_relocations(wiki_root: Path) -> str:
                 meta, _ = parse_frontmatter(content)
                 declared_type = meta.get("type")
                 if declared_type:
-                    expected_dirs = [d for d, t in LOCATION_TO_TYPE.items() if t == declared_type]
+                    expected_dirs = [d for d, t in schema.location_to_type.items() if t == declared_type]
                     if expected_dirs and not any(
                         rel_str == d or rel_str.startswith(d + "/") for d in expected_dirs
                     ):
@@ -70,10 +79,11 @@ def suggest_relocations(wiki_root: Path) -> str:
             except Exception:
                 pass
         else:
-            inferred = _infer_type_from_location(rel)
+            inferred = _infer_type_from_location(rel, schema=schema)
             if inferred is None and len(rel.parts) == 1:
+                known_dirs = [f"`{d}/`" for d in schema.location_to_type.keys() if d not in ("INDEX.md", "handoffs", "_raw/sessions", "_raw/commits")]
                 suggestions.append(
-                    f"- Loose file in root `{rel_str}` → consider moving into `features/`, `decisions/`, `architecture/`, or `product/`"
+                    f"- Loose file in root `{rel_str}` → consider moving into {', '.join(known_dirs)}"
                 )
 
     if len(suggestions) == 2:
@@ -86,6 +96,7 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
     """Add frontmatter to legacy articles that lack it, defaulting to status=legacy."""
     from brain79.core.navigation import register_article
 
+    schema = load_active_schema(wiki_root)
     changes: list[str] = []
     skipped: list[str] = []
 
@@ -103,7 +114,7 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
         content = md_file.read_text(encoding="utf-8")
         today = datetime.now(UTC).strftime("%Y-%m-%d")
         file_mtime = datetime.fromtimestamp(md_file.stat().st_mtime, UTC).strftime("%Y-%m-%d")
-        inferred_type = _infer_type_from_location(rel)
+        inferred_type = _infer_type_from_location(rel, schema=schema)
 
         if content.startswith("---\n"):
             try:

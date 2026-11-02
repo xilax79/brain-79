@@ -1,12 +1,24 @@
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
 
 from brain79.config import get_wiki_root
 from brain79.core import wiki as wiki_ops
+from brain79.core.frontmatter import load_active_schema
 
-SessionType = Literal["feature", "bugfix", "research", "brainstorming"]
+SessionType = str
 VALID_SESSION_TYPES = {"feature", "bugfix", "research", "brainstorming"}
+
+
+def get_valid_session_types(wiki_root: Path | None = None) -> set[str]:
+    """Retrieve allowed session types for handoffs based on active schema."""
+    try:
+        active = load_active_schema(wiki_root or get_wiki_root())
+        allowed = active.types.get("handoff", {}).get("enum", {}).get("session_type")
+        if allowed:
+            return set(allowed)
+    except Exception:
+        pass
+    return VALID_SESSION_TYPES
 
 
 class HandoffNotFoundError(FileNotFoundError):
@@ -51,6 +63,9 @@ def _resolve_handoff_path(ref: str) -> Path:
 
     # Specific ref provided
     raw_ref = ref.strip()
+    if raw_ref.startswith("handoffs/"):
+        raw_ref = raw_ref[len("handoffs/"):]
+
     if raw_ref.endswith(".md"):
         candidate = raw_ref
     elif raw_ref.startswith("handoff-"):
@@ -93,9 +108,10 @@ def write_handoff(
     """Generate and save an immutable handoff file validating design rules."""
     # Validation: session_type strip & case-insensitivity
     session_type = session_type.strip().lower()
-    if session_type not in VALID_SESSION_TYPES:
+    valid_types = get_valid_session_types()
+    if session_type not in valid_types:
         raise ValueError(
-            f"Invalid session_type '{session_type}'. Must be one of: {sorted(VALID_SESSION_TYPES)}"
+            f"Invalid session_type '{session_type}'. Must be one of: {sorted(valid_types)}"
         )
 
     # Validation: summary non-empty

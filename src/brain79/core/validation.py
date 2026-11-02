@@ -178,7 +178,7 @@ def validate_article_content(path: str, content: str, force_skip: bool = False) 
     except Exception:
         active_s = None
 
-    meta = autofill_deterministic_fields(meta, rel_path, body=body)
+    meta = autofill_deterministic_fields(meta, rel_path, body=body, schema=active_s)
     content = dump_frontmatter(meta, body)
     validate_frontmatter(meta, rel_path, schema=active_s)
     validate_location_consistency(meta, rel_path, schema=active_s)

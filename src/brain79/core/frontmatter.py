@@ -402,14 +402,19 @@ def sanitize_summary(summary_text: str) -> str:
 
 
 def autofill_deterministic_fields(
-    meta: dict[str, Any], path: str, body: str = ""
+    meta: dict[str, Any],
+    path: str,
+    body: str = "",
+    schema: ActiveSchema | None = None,
 ) -> dict[str, Any]:
     """Auto-fill deterministic frontmatter fields and strip hallucinated keys."""
     today = date.today().isoformat()
+    active = schema or load_active_schema()
+    active_types = active.types
 
     # 1. Infer type if missing (for non-INDEX files)
     if ("type" not in meta or not meta["type"]) and path != "INDEX.md":
-        inferred = infer_type_for_path(path)
+        inferred = infer_type_for_path(path, schema=active)
         if inferred:
             meta["type"] = inferred
 
@@ -427,13 +432,17 @@ def autofill_deterministic_fields(
     if "last_updated" not in meta or not meta["last_updated"]:
         meta["last_updated"] = today
 
-    # 4. Default date to today for decision and changelog if missing
-    if meta.get("type") in ("decision", "changelog") and "date" not in meta:
+    # 4. Default date to today if 'date' is required or accepted on this type
+    declared_type = meta.get("type")
+    type_cfg = active_types.get(declared_type, {}) if declared_type else {}
+    if ("date" in type_cfg.get("required", []) or declared_type in ("decision", "changelog", "log")) and "date" not in meta:
         meta["date"] = today
 
-    # 5. Strip commonly hallucinated keys so files stay clean
-    for hallucinated in ("title", "tags", "created"):
-        meta.pop(hallucinated, None)
+    # 5. Strip commonly hallucinated keys only if they are NOT allowed in the active type
+    allowed_keys = set(type_cfg.get("required", [])) | set(type_cfg.get("optional", []))
+    for candidate in ("title", "tags", "created"):
+        if candidate not in allowed_keys:
+            meta.pop(candidate, None)
 
     return meta
 
@@ -523,7 +532,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     raw_yaml_block = "\n".join(lines[1:end_idx])
     metadata: dict[str, Any] = {}
     try:
-        import yaml  # type: ignore[import-untyped]
+        import yaml
         parsed = yaml.safe_load(raw_yaml_block)
         if isinstance(parsed, dict):
             # Normalize dates/numbers to strings where expected (e.g. date objects to YYYY-MM-DD)

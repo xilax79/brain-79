@@ -12,6 +12,7 @@ license = { text = "MIT" }
 dependencies = [
     "fastmcp>=2.0.0",
     "filelock>=3.32.2",
+    "pyyaml>=6.0.0",
 ]
 
 [project.scripts]
@@ -40,6 +41,7 @@ dev = [
     "mypy>=2.3.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=0.23.0",
+    "types-pyyaml>=6.0.12.20240917",
 ]
 
 

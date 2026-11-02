@@ -136,8 +136,9 @@ def check_file_health(wiki_root: Path, rel_path: str, content: str) -> list[str]
     if not _has_h1_header(content):
         warnings.append(f"Missing H1 header in '{rel_path}'.")
 
-    # 2. Decision leakage in non-decision documents
+    # 2. Decision & Technical Debt leakage in non-decision documents
     if not rel_path.startswith("decisions/") and rel_path != "INDEX.md":
+        from brain79.core.frontmatter import load_active_schema
         from brain79.core.validation import (
             DECISION_BULLET_STRICT,
             DECISION_HEADER_STRICT,
@@ -150,10 +151,13 @@ def check_file_health(wiki_root: Path, rel_path: str, content: str) -> list[str]
             warnings.append(
                 f"Structural decision leakage detected in non-decision article '{rel_path}'. Move decisions to decisions/."
             )
-        if TECHNICAL_DEBT_HEADER_STRICT.search(masked) or TECHNICAL_DEBT_BULLET_STRICT.search(masked):
-            warnings.append(
-                f"Technical debt leakage detected in '{rel_path}'. Move to decisions/ or features/."
-            )
+
+        active_schema = load_active_schema(wiki_root)
+        if active_schema.supports_technical_debt_leakage:
+            if TECHNICAL_DEBT_HEADER_STRICT.search(masked) or TECHNICAL_DEBT_BULLET_STRICT.search(masked):
+                warnings.append(
+                    f"Technical debt leakage detected in '{rel_path}'. Move to decisions/ or features/."
+                )
 
     # 3. Broken local links in this article
     from urllib.parse import unquote

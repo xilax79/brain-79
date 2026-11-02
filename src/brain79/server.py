@@ -1,5 +1,4 @@
 import logging
-from typing import Literal
 
 from fastmcp import FastMCP
 
@@ -208,7 +207,7 @@ def brain79_ingest(session_summary: str, instructions: str | None = None) -> str
 
 @mcp.tool(output_schema=None)
 def brain79_handoff_write(
-    session_type: Literal["feature", "bugfix", "research", "brainstorming"],
+    session_type: str,
     previous_handoff_ref: str = "latest",
     summary: str = "",
     completed_work: list[str] | None = None,

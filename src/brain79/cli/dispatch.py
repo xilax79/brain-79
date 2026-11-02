@@ -310,8 +310,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser.add_argument(
             "--session-type",
             required=True,
-            choices=["feature", "bugfix", "research", "brainstorming"],
-            help="Session type",
+            help="Session type (e.g., feature, bugfix, research, brainstorming, work, writing, analysis)",
         )
         parser.add_argument(
             "--previous-handoff-ref",
