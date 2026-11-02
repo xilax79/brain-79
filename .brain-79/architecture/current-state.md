@@ -2,7 +2,7 @@
 type: architecture
 summary: High-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-10-30
+last_updated: 2026-11-02
 ---
 
 # Architecture — System Current State
@@ -22,6 +22,7 @@ This document maintains a high-level summary of the repository's current archite
 - **Phase 10 – Frontmatter Summary & Backlinks**: Frontmatter `summary` extraction in $O(1)$ for `INDEX.md`, hardened heuristic fallbacks against colon and subheading truncation, and standardized article backlink navigation (`[← Volver al Índice](../INDEX.md)`).
 - **Phase 11 – Pure Routing Table Index (ADR-008)**: Transformed `INDEX.md` into a pure automated routing table, eliminating hardcoded prose drift and automating timestamp updates on navigation sync.
 - **Phase 12 – Zero-Modification Idempotence & Static Type Compliance**: Formally mandated the Zero-Modification Rule across `AGENTS.md` and `SCHEMA.md` to prevent synthetic wiki updates without real repository mutations. Resolved static typing in test suites, achieving zero errors across `uv run mypy src tests`.
+- **Phase 13 – Phase 0: Core Bug Fixes & Invariant Alignment**: Achieved 100% validator-linter parity via `check_frontmatter_consistency`, enforced strict ADR-008 (`INDEX_ALLOWED_H2` restricted to `Quick navigation`), aligned `brain79_bootstrap` seed manifests with schema validation, mandated `summary` across indexable articles with deterministic sanitization (`sanitize_summary`), added YAML frontmatter to `_raw/sessions/`, and repaired legacy migration edge cases.
 - **Self-Wiki Dogfooding (Phase A-D)**: Fully populated self-documenting `.brain-79/` wiki verified by `brain79 lint --strict`.
 
 ## System Invariants & Invariant Guards
