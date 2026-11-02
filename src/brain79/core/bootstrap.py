@@ -526,21 +526,31 @@ You have received a project scan manifest. Follow these steps exactly:
    present in this manifest. Do not invent details not shown here.
    If a section has insufficient data, write what is known and mark gaps
    with `<!-- insufficient data: <reason> -->`.
-3. Every article you write MUST start with this exact YAML frontmatter block:
+3. Every article you write MUST include valid frontmatter for its type (see SCHEMA.md).
+   Include these bootstrap provenance keys alongside standard required fields:
+     bootstrap: true
+     generated_by: brain79_bootstrap
+     generated_at: {now_iso}
+     project_type: {project_type}
 
+   Example for `architecture/overview.md`:
    ---
+   type: architecture
+   summary: High-level architectural overview and component structure
+   stability: stable
    bootstrap: true
    generated_by: brain79_bootstrap
    generated_at: {now_iso}
    project_type: {project_type}
+   last_updated: {now_iso[:10]}
    ---
 
-4. After writing all articles, call `brain79_lint()` to verify structural integrity.
+4. After writing articles, navigation in `INDEX.md` will synchronize automatically.
+5. Call `brain79_lint()` to verify structural integrity.
 
 **Required articles:**
-- `architecture/overview.md` — Project structure, purpose, main components.
-- `INDEX.md` — Update with project name, one-sentence purpose, and link to overview.
-  (INDEX.md already exists; update it in place, preserving its structure.)
+- `product/overview.md` — Project context, vision, and high-level purpose.
+- `architecture/overview.md` — Project structure, components, and design patterns.
 
 **Conditional articles (write only if evidence exists in this manifest):**
 - `architecture/stack.md` — [include if tech stack signals detected]

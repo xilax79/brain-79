@@ -177,20 +177,8 @@ last_updated: 2026-08-11
 
 # Project index
 
-## Project
-
-**Name:** Test Project
-**Purpose:** Test purpose.
-**Status:** Active
-
-## Current focus
-- Testing.
-
-## Known issues
-- None.
-
-## Roadmap
-- None.
+## Quick navigation
+- [Schema](SCHEMA.md)
 """
     (wiki_root / "INDEX.md").write_text(clean_index, encoding="utf-8")
 

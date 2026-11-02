@@ -6,7 +6,9 @@ from typing import Literal
 from brain79.core.frontmatter import (
     LOCATION_TO_TYPE,
     TYPE_SCHEMA,
+    ValidationError,
     parse_frontmatter,
+    validate_frontmatter,
     validate_location_consistency,
 )
 from brain79.core.navigation import load_registry
@@ -80,34 +82,26 @@ def check_frontmatter_consistency(
                         line=1,
                         severity="error",
                         message="Article lacks frontmatter.",
-                        actionable="Add frontmatter with `type` and `last_updated` fields.",
+                        actionable="Add frontmatter with `type`, `summary`, and `last_updated` fields.",
                     )
                 )
                 continue
 
             meta, _ = parse_frontmatter(content)
-            if "type" not in meta:
-                issues.append(
-                    OrganizationalIssue(
-                        rule="frontmatter_missing_type",
-                        path=rel_str,
-                        line=1,
-                        severity="error",
-                        message="Frontmatter missing required 'type' key.",
-                        actionable="Specify 'type' in frontmatter.",
+            try:
+                validate_frontmatter(meta, rel_str)
+            except ValidationError as ve:
+                for vi in ve.issues:
+                    issues.append(
+                        OrganizationalIssue(
+                            rule=vi.get("rule", "frontmatter_invalid"),
+                            path=rel_str,
+                            line=1,
+                            severity="error",
+                            message=vi.get("message", str(ve)),
+                            actionable=vi.get("actionable", "Review schema requirements."),
+                        )
                     )
-                )
-            elif "last_updated" not in meta:
-                issues.append(
-                    OrganizationalIssue(
-                        rule="frontmatter_missing_last_updated",
-                        path=rel_str,
-                        line=1,
-                        severity="error",
-                        message="Frontmatter missing required 'last_updated' key.",
-                        actionable="Specify 'last_updated' (YYYY-MM-DD) in frontmatter.",
-                    )
-                )
         except Exception as exc:
             issues.append(
                 OrganizationalIssue(

@@ -72,7 +72,7 @@ def prepare_curation_guide(wiki_root: Path, raw_content: str | None = None) -> s
         "1. Every new or updated article MUST include valid YAML frontmatter containing `type` and `last_updated`.",
         "2. Architectural decisions MUST be created as separate files in `decisions/` (never declared inline).",
         "3. Technical debt items MUST be recorded in `features/` or `decisions/`.",
-        "4. `INDEX.md` MUST remain under 150 lines and contain ONLY whitelisted H2 section headers (`Project`, `Current focus`, `Quick navigation`, `Known issues`, `Roadmap`).",
+        "4. `INDEX.md` MUST remain under 150 lines and contain ONLY `## Quick navigation` as its H2 section header (Pure Routing Table Invariant).",
         "",
         "## Step-by-Step Curation Workflow",
         "1. **Extract**: Identify new features, architectural decisions, or established conventions from session history.",

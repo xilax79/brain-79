@@ -65,39 +65,39 @@ TYPE_SCHEMA: dict[str, dict[str, Any]] = {
         },
     },
     "product": {
-        "required": ["type", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner"],
+        "required": ["type", "summary", "last_updated"],
+        "optional": ["supersedes", "related", "owner"],
         "enum": {},
     },
     "architecture": {
-        "required": ["type", "stability", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner"],
+        "required": ["type", "summary", "stability", "last_updated"],
+        "optional": ["supersedes", "related", "owner"],
         "enum": {
             "stability": ["experimental", "stable", "legacy"],
         },
     },
     "feature": {
-        "required": ["type", "status", "version", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner"],
+        "required": ["type", "summary", "status", "version", "last_updated"],
+        "optional": ["supersedes", "related", "owner"],
         "enum": {
             "status": ["planned", "in_progress", "shipped", "deprecated", "legacy"],
         },
     },
     "decision": {
-        "required": ["type", "status", "date", "deciders", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner"],
+        "required": ["type", "summary", "status", "date", "deciders", "last_updated"],
+        "optional": ["supersedes", "related", "owner"],
         "enum": {
             "status": ["proposed", "accepted", "superseded", "rejected", "legacy"],
         },
     },
     "changelog": {
-        "required": ["type", "version", "date", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner"],
+        "required": ["type", "summary", "version", "date", "last_updated"],
+        "optional": ["supersedes", "related", "owner"],
         "enum": {},
     },
     "raw_session": {
         "required": ["type", "session_id", "session_type", "last_updated"],
-        "optional": [],
+        "optional": ["instructions"],
         "enum": {
             "session_type": ["feature", "bugfix", "research", "brainstorming"],
         },
@@ -184,7 +184,9 @@ def dump_frontmatter(meta: dict[str, Any], body: str) -> str:
     return "\n".join(lines) + ("\n" + clean_body if clean_body else "")
 
 
-def autofill_deterministic_fields(meta: dict[str, Any], path: str) -> dict[str, Any]:
+def autofill_deterministic_fields(
+    meta: dict[str, Any], path: str, body: str = ""
+) -> dict[str, Any]:
     """Auto-fill deterministic frontmatter fields and strip hallucinated keys."""
     today = date.today().isoformat()
 
@@ -194,15 +196,23 @@ def autofill_deterministic_fields(meta: dict[str, Any], path: str) -> dict[str, 
         if inferred:
             meta["type"] = inferred
 
-    # 2. Set last_updated to today if missing or empty
+    # 2. Auto-fill summary if missing from body if available
+    if ("summary" not in meta or not meta["summary"]) and path != "INDEX.md" and body:
+        from brain79.core.navigation import extract_title_and_summary
+
+        _, extracted_summary = extract_title_and_summary(body)
+        if extracted_summary:
+            meta["summary"] = extracted_summary
+
+    # 3. Set last_updated to today if missing or empty
     if "last_updated" not in meta or not meta["last_updated"]:
         meta["last_updated"] = today
 
-    # 3. Default date to today for decision and changelog if missing
+    # 4. Default date to today for decision and changelog if missing
     if meta.get("type") in ("decision", "changelog") and "date" not in meta:
         meta["date"] = today
 
-    # 4. Strip commonly hallucinated keys so files stay clean
+    # 5. Strip commonly hallucinated keys so files stay clean
     for hallucinated in ("title", "tags", "created"):
         meta.pop(hallucinated, None)
 

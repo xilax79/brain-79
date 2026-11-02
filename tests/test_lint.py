@@ -15,9 +15,9 @@ def test_lint_read_only_contract(tmp_path: Path) -> None:
     features_dir.mkdir(parents=True)
 
     idx = wiki_dir / "INDEX.md"
-    idx.write_text("# Main Index\n\n[Doc](features/doc.md)\n", encoding="utf-8")
+    idx.write_text("# Main Index\n\n## Quick navigation\n- [Doc](features/doc.md)\n", encoding="utf-8")
     doc = features_dir / "doc.md"
-    doc.write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Document\n", encoding="utf-8")
+    doc.write_text("---\ntype: feature\nsummary: Doc summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Document\n", encoding="utf-8")
 
     mtime_before = {p: p.stat().st_mtime_ns for p in wiki_dir.rglob("*")}
 
@@ -41,7 +41,7 @@ def test_lint_vacios_absolutos(tmp_path: Path) -> None:
     handoff_dir = wiki_dir / "handoffs"
     handoff_dir.mkdir(parents=True)
     (handoff_dir / "handoff-1.md").write_text(
-        "---\ntype: handoff\nsession_type: interactive\nprevious_ref: none\nlast_updated: 2026-08-11\n---\n\n"
+        "---\ntype: handoff\nsession_type: feature\nprevious_ref: none\nlast_updated: 2026-08-11\n---\n\n"
         "# Handoff\nNo index link.\n", encoding="utf-8"
     )
 
@@ -59,10 +59,10 @@ def test_lint_unicode_resilience(tmp_path: Path) -> None:
     sub_dir = wiki_dir / "features" / "路径"
     sub_dir.mkdir(parents=True)
     target_file = sub_dir / "文件.md"
-    target_file.write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Target\n", encoding="utf-8")
+    target_file.write_text("---\ntype: feature\nsummary: Unicode target\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Target\n", encoding="utf-8")
 
     idx = wiki_dir / "INDEX.md"
-    idx.write_text("# Index\n\n[Exotic](features/路径/文件.md)\n", encoding="utf-8")
+    idx.write_text("# Index\n\n## Quick navigation\n- [Exotic](features/路径/文件.md)\n", encoding="utf-8")
 
     report = lint_wiki()
     assert "[Status: OK]" in report
@@ -76,11 +76,11 @@ def test_lint_reference_titles(tmp_path: Path) -> None:
     features_dir.mkdir(parents=True)
 
     target = features_dir / "target.md"
-    target.write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Target Document\n", encoding="utf-8")
+    target.write_text("---\ntype: feature\nsummary: Target document summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Target Document\n", encoding="utf-8")
 
     idx = wiki_dir / "INDEX.md"
     idx.write_text(
-        '# Index\n\n[Ref link][ref]\n\n[ref]: features/target.md "Some Title"\n',
+        '# Index\n\n## Quick navigation\n- [Ref link][ref]\n\n[ref]: features/target.md "Some Title"\n',
         encoding="utf-8",
     )
 
@@ -97,11 +97,11 @@ def test_lint_space_resilience(tmp_path: Path) -> None:
     space_dir = wiki_dir / "features" / "path with spaces"
     space_dir.mkdir(parents=True)
     space_file = space_dir / "file.md"
-    space_file.write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Spaced File\n", encoding="utf-8")
+    space_file.write_text("---\ntype: feature\nsummary: Spaced file summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Spaced File\n", encoding="utf-8")
 
     idx = wiki_dir / "INDEX.md"
     idx.write_text(
-        "# Index\n\n[Space Link](features/path with spaces/file.md)\n",
+        "# Index\n\n## Quick navigation\n- [Space Link](features/path with spaces/file.md)\n",
         encoding="utf-8",
     )
 
@@ -147,12 +147,12 @@ def test_lint_structural_errors_and_truncation(tmp_path: Path) -> None:
     (features_dir / "empty.md").write_text("", encoding="utf-8")
 
     # Missing H1 header
-    (features_dir / "no_h1.md").write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\nNo header here.\n", encoding="utf-8")
+    (features_dir / "no_h1.md").write_text("---\ntype: feature\nsummary: No h1\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\nNo header here.\n", encoding="utf-8")
 
     # Create 55 missing H1 files to test truncation
     for i in range(55):
         file_name = f"no_h1_{i:02d}.md"
-        (features_dir / file_name).write_text(f"---\ntype: feature\nlast_updated: 2026-08-11\n---\n\nLine {i}\n", encoding="utf-8")
+        (features_dir / file_name).write_text(f"---\ntype: feature\nsummary: Line {i}\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\nLine {i}\n", encoding="utf-8")
         idx.write_text(
             idx.read_text(encoding="utf-8") + f"[{file_name}](features/{file_name})\n",
             encoding="utf-8",
@@ -160,7 +160,7 @@ def test_lint_structural_errors_and_truncation(tmp_path: Path) -> None:
 
     # File too large
     huge = features_dir / "huge.md"
-    huge.write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Huge Header\n" + "x" * (1024 * 1024 + 10), encoding="utf-8")
+    huge.write_text("---\ntype: feature\nsummary: Huge\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Huge Header\n" + "x" * (1024 * 1024 + 10), encoding="utf-8")
     idx.write_text(
         idx.read_text(encoding="utf-8") + "[Huge](features/huge.md)\n", encoding="utf-8"
     )
@@ -180,16 +180,16 @@ def test_lint_orphans_bfs_analysis(tmp_path: Path) -> None:
     features_dir.mkdir(parents=True)
 
     idx = wiki_dir / "INDEX.md"
-    idx.write_text("# Index\n\n[Article 1](features/art1.md)\n", encoding="utf-8")
+    idx.write_text("# Index\n\n## Quick navigation\n- [Article 1](features/art1.md)\n", encoding="utf-8")
 
     art1 = features_dir / "art1.md"
-    art1.write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Article 1\n\n[Article 2](art2.md)\n", encoding="utf-8")
+    art1.write_text("---\ntype: feature\nsummary: Art 1 summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Article 1\n\n[Article 2](art2.md)\n", encoding="utf-8")
 
     art2 = features_dir / "art2.md"
-    art2.write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Article 2\n", encoding="utf-8")
+    art2.write_text("---\ntype: feature\nsummary: Art 2 summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Article 2\n", encoding="utf-8")
 
     orphan = features_dir / "orphan.md"
-    orphan.write_text("---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Lonely Article\n", encoding="utf-8")
+    orphan.write_text("---\ntype: feature\nsummary: Orphan summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Lonely Article\n", encoding="utf-8")
 
     report = lint_wiki()
     assert "[Status: WARNING]" in report

@@ -31,13 +31,9 @@ def get_index_max_lines() -> int:
     return DEFAULT_INDEX_MAX_LINES
 
 
-# Allowed H2 headers in INDEX.md
+# Allowed H2 headers in INDEX.md (ADR-008: Pure automated routing table)
 INDEX_ALLOWED_H2 = frozenset({
-    "Project",
-    "Current focus",
     "Quick navigation",
-    "Known issues",
-    "Roadmap",
 })
 
 # V5 strict decision / TD patterns in INDEX.md (Appendix B.1)
@@ -143,7 +139,7 @@ def validate_article_content(path: str, content: str, force_skip: bool = False) 
         if content.startswith("---\n"):
             try:
                 meta, body = parse_frontmatter(content)
-                meta = autofill_deterministic_fields(meta, rel_path)
+                meta = autofill_deterministic_fields(meta, rel_path, body=body)
                 content = dump_frontmatter(meta, body)
                 validate_frontmatter(meta, rel_path)
                 validate_location_consistency(meta, rel_path)
@@ -174,7 +170,7 @@ def validate_article_content(path: str, content: str, force_skip: bool = False) 
             target_type=target_t,
         )
 
-    meta = autofill_deterministic_fields(meta, rel_path)
+    meta = autofill_deterministic_fields(meta, rel_path, body=body)
     content = dump_frontmatter(meta, body)
     validate_frontmatter(meta, rel_path)
     validate_location_consistency(meta, rel_path)

@@ -431,13 +431,26 @@ def search_articles(query: str) -> list[dict[str, str]]:
 
 def save_raw_session(session_summary: str, instructions: str | None = None) -> str:
     """Save a raw session summary to _raw/sessions/ and return the saved path."""
-    timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S-%f")[:-3]
-    rel_path = f"_raw/sessions/session-{timestamp}.md"
+    now = datetime.now(UTC)
+    timestamp = now.strftime("%Y-%m-%d-%H%M%S-%f")[:-3]
+    today = now.strftime("%Y-%m-%d")
+    session_id = f"session-{timestamp}"
+    rel_path = f"_raw/sessions/{session_id}.md"
 
-    lines = [f"# Session — {timestamp}\n"]
+    frontmatter_lines = [
+        "---",
+        "type: raw_session",
+        f"session_id: {session_id}",
+        "session_type: feature",
+        f"last_updated: {today}",
+        "---",
+        "",
+        f"# Session — {timestamp}",
+        "",
+    ]
     if instructions:
-        lines.append(f"> **Curation instructions:** {instructions}\n")
-    lines.append(session_summary)
+        frontmatter_lines.append(f"> **Curation instructions:** {instructions}\n")
+    frontmatter_lines.append(session_summary)
 
-    write_article(rel_path, "\n".join(lines))
+    write_article(rel_path, "\n".join(frontmatter_lines))
     return rel_path

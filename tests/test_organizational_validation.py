@@ -21,6 +21,7 @@ def test_validate_valid_feature_article() -> None:
     content = (
         "---\n"
         "type: feature\n"
+        "summary: Valid feature summary\n"
         "status: planned\n"
         "version: 0.1.0\n"
         "last_updated: 2026-08-11\n"
@@ -73,27 +74,27 @@ def test_validate_index_max_lines_override(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_validate_index_prohibited_header() -> None:
-    content = "# Index\n\n## Project\nText\n\n## Invalid Section Header\nText\n"
+    content = "# Index\n\n## Invalid Section Header\nText\n"
     with pytest.raises(ValidationError) as exc_info:
         validate_article_content("INDEX.md", content)
     assert exc_info.value.rule == "index_prohibited_header"
 
 
 def test_index_does_not_block_project_narrative() -> None:
-    content = "# Index\n\n## Project\n- We chose Postgres for the backend.\n- Trade-off between simplicity and flexibility.\n- The team decided to ship Friday.\n"
+    content = "# Index\n\n## Quick navigation\n- We chose Postgres for the backend.\n- Trade-off between simplicity and flexibility.\n- The team decided to ship Friday.\n"
     res = validate_article_content("INDEX.md", content)
     assert res == content
 
 
 def test_index_does_not_block_decision_in_code_fence() -> None:
-    content = "# Index\n\n## Project\n\n```yaml\n- Decision: use this format\n## ADR Log\n```\n"
+    content = "# Index\n\n## Quick navigation\n\n```yaml\n- Decision: use this format\n## ADR Log\n```\n"
     res = validate_article_content("INDEX.md", content)
     assert res == content
 
 
 def test_index_does_not_block_decision_in_mixed_fence() -> None:
     content = (
-        "# Index\n\n## Project\n\n"
+        "# Index\n\n## Quick navigation\n\n"
         "```markdown\n"
         "To use tilde fences:\n\n"
         "~~~yaml\n"
@@ -106,41 +107,41 @@ def test_index_does_not_block_decision_in_mixed_fence() -> None:
 
 
 def test_index_blocks_decision_bullet() -> None:
-    content = "# Index\n\n## Project\n- Decision: use Yjs for real-time sync.\n"
+    content = "# Index\n\n## Quick navigation\n- Decision: use Yjs for real-time sync.\n"
     with pytest.raises(ValidationError) as exc_info:
         validate_article_content("INDEX.md", content)
     assert exc_info.value.rule == "index_prohibited_content"
 
 
 def test_index_blocks_adr_bullet() -> None:
-    content = "# Index\n\n## Project\n- ADR-001: Adopt event sourcing.\n"
+    content = "# Index\n\n## Quick navigation\n- ADR-001: Adopt event sourcing.\n"
     with pytest.raises(ValidationError) as exc_info:
         validate_article_content("INDEX.md", content)
     assert exc_info.value.rule == "index_prohibited_content"
 
 
 def test_index_blocks_spanish_decision() -> None:
-    content = "# Index\n\n## Project\n- Decisión: stack MERN.\n"
+    content = "# Index\n\n## Quick navigation\n- Decisión: stack MERN.\n"
     with pytest.raises(ValidationError) as exc_info:
         validate_article_content("INDEX.md", content)
     assert exc_info.value.rule == "index_prohibited_content"
 
 
 def test_index_blocks_td_bullet() -> None:
-    content = "# Index\n\n## Project\n- TD-123: Fix memory leak.\n"
+    content = "# Index\n\n## Quick navigation\n- TD-123: Fix memory leak.\n"
     with pytest.raises(ValidationError) as exc_info:
         validate_article_content("INDEX.md", content)
     assert exc_info.value.rule == "index_prohibited_content"
 
 
 def test_index_with_valid_frontmatter() -> None:
-    content = "---\ntype: navigation\nlast_updated: 2026-08-11\n---\n\n# Index\n\n## Project\nProject overview\n"
+    content = "---\ntype: navigation\nlast_updated: 2026-08-11\n---\n\n# Index\n\n## Quick navigation\nProject overview\n"
     res = validate_article_content("INDEX.md", content)
     assert res == content
 
 
 def test_index_with_invalid_frontmatter_type() -> None:
-    content = "---\ntype: product\nlast_updated: 2026-08-11\n---\n\n# Index\n"
+    content = "---\ntype: product\nsummary: Test\nlast_updated: 2026-08-11\n---\n\n# Index\n"
     with pytest.raises(ValidationError) as exc_info:
         validate_article_content("INDEX.md", content)
     assert exc_info.value.rule == "type_location_mismatch"
@@ -157,6 +158,7 @@ def test_write_article_validation_integration(setup_wiki_root: Path) -> None:
     valid_content = (
         "---\n"
         "type: feature\n"
+        "summary: Integration feature summary\n"
         "status: planned\n"
         "version: 0.1.0\n"
         "last_updated: 2026-08-11\n"

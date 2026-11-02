@@ -416,7 +416,7 @@ def test_schema_documentation_generation() -> None:
     assert "## Type: `decision`" in doc_all
 
     doc_feature = get_schema_documentation("feature")
-    assert "**Required fields**: type, status, version, last_updated" in doc_feature
+    assert "**Required fields**: type, summary, status, version, last_updated" in doc_feature
     assert "planned, in_progress, shipped, deprecated, legacy" in doc_feature
 
     doc_unknown = get_schema_documentation("unknown_type")

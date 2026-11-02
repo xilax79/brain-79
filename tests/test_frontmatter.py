@@ -81,6 +81,7 @@ def test_parse_frontmatter_malformed_line() -> None:
 def test_validate_frontmatter_valid_feature() -> None:
     meta = {
         "type": "feature",
+        "summary": "Valid feature summary",
         "status": "planned",
         "version": "0.1.0",
         "last_updated": "2026-08-11",
@@ -91,6 +92,7 @@ def test_validate_frontmatter_valid_feature() -> None:
 def test_validate_frontmatter_legacy_status() -> None:
     meta = {
         "type": "decision",
+        "summary": "Legacy decision summary",
         "status": "legacy",
         "date": "2026-08-11",
         "deciders": ["migrated"],
@@ -123,6 +125,7 @@ def test_validate_frontmatter_missing_required_field() -> None:
 def test_validate_frontmatter_invalid_enum() -> None:
     meta = {
         "type": "feature",
+        "summary": "Feature summary",
         "status": "invalid_status",
         "version": "0.1.0",
         "last_updated": "2026-08-11",
@@ -135,6 +138,7 @@ def test_validate_frontmatter_invalid_enum() -> None:
 def test_validate_frontmatter_invalid_date() -> None:
     meta = {
         "type": "product",
+        "summary": "Product summary",
         "last_updated": "11-08-2026",  # Not ISO YYYY-MM-DD
     }
     with pytest.raises(ValidationError) as exc_info:
@@ -145,6 +149,7 @@ def test_validate_frontmatter_invalid_date() -> None:
 def test_validate_frontmatter_unknown_key() -> None:
     meta = {
         "type": "product",
+        "summary": "Product summary",
         "last_updated": "2026-08-11",
         "unknown_extra_key": "val",
     }
@@ -156,6 +161,7 @@ def test_validate_frontmatter_unknown_key() -> None:
 def test_validate_frontmatter_allowed_unknown_key() -> None:
     meta = {
         "type": "product",
+        "summary": "Product summary",
         "last_updated": "2026-08-11",
         "force_validation_skipped": True,
     }

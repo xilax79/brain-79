@@ -166,6 +166,17 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
                     value = default_template
                 lines.append(f"{key}: {value}")
 
+            # Auto-populate summary if missing
+            try:
+                from brain79.core.navigation import extract_title_and_summary
+                _, inferred_summary = extract_title_and_summary(content)
+                if inferred_summary:
+                    lines.append(f"summary: {inferred_summary}")
+                else:
+                    lines.append(f"summary: Legacy migrated {inferred_type}")
+            except Exception:
+                lines.append(f"summary: Legacy migrated {inferred_type}")
+
             lines.append("---")
             lines.append("")
 

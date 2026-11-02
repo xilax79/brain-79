@@ -80,7 +80,7 @@ def test_truco_arena_full_remediation_passes_lint_strict(truco_arena_workdir: Pa
     game_table = wiki_root / "architecture" / "game-table.md"
     if game_table.exists():
         game_table.write_text(
-            "---\ntype: architecture\nstability: stable\nlast_updated: 2026-08-11\n---\n\n# Game Table Architecture\n",
+            "---\ntype: architecture\nsummary: Game table architecture and state machines\nstability: stable\nlast_updated: 2026-08-11\n---\n\n# Game Table Architecture\n",
             encoding="utf-8",
         )
 
@@ -89,21 +89,11 @@ def test_truco_arena_full_remediation_passes_lint_strict(truco_arena_workdir: Pa
     index_file.write_text(
         "# Project index\n\n"
         "> Entry point to Truco Arena wiki.\n\n"
-        "## Project\n"
-        "**Name:** Truco Arena\n"
-        "**Purpose:** Multiplayer Truco card game platform.\n"
-        "**Status:** Active development.\n\n"
-        "## Current focus\n"
-        "- Refactoring game engine and state synchronization.\n\n"
         "## Quick navigation\n"
         "- [Schema](SCHEMA.md)\n"
         "- [Product Overview](product/overview.md)\n"
         "- [Game Table Architecture](architecture/game-table.md)\n"
-        "- [Handoffs](handoffs/)\n\n"
-        "## Known issues\n"
-        "- None currently reported.\n\n"
-        "## Roadmap\n"
-        "- Complete organizational enforcement migration.\n",
+        "- [Handoffs](handoffs/)\n",
         encoding="utf-8",
     )
 

@@ -52,7 +52,7 @@ def test_pre_commit_script_runs_lint_strict(tmp_path: Path) -> None:
     # Make INDEX.md compliant so lint --strict would pass
     index_file = tmp_path / ".brain-79" / "INDEX.md"
     index_file.write_text(
-        "# Index\n\n[Schema](SCHEMA.md)\n\n## Project\nClean project.\n",
+        "# Index\n\n## Quick navigation\n- [Schema](SCHEMA.md)\n",
         encoding="utf-8",
     )
 
