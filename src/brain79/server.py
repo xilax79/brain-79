@@ -54,13 +54,21 @@ def brain79_schema(target_type: str | None = None) -> str:
     """
     Inspect frontmatter schema requirements and copy-paste templates.
 
-    Args:
-        target_type: Optional type to inspect (e.g., "feature", "decision", "architecture").
-                     If omitted, returns the complete schema reference for all types.
-    """
-    from brain79.core.frontmatter import get_schema_documentation
+    Respects the project's active profile and custom types declared in .brain-79/SCHEMA.md.
 
-    return get_schema_documentation(target_type)
+    Args:
+        target_type: Optional type to inspect (e.g., "feature", "decision", "topic", "context").
+                     If omitted, returns the complete schema reference for the active profile.
+    """
+    from brain79.config import get_wiki_root
+    from brain79.core.frontmatter import get_schema_documentation, load_active_schema
+
+    try:
+        active_schema = load_active_schema(get_wiki_root())
+    except Exception:
+        active_schema = None
+
+    return get_schema_documentation(target_type, schema=active_schema)
 
 
 @mcp.tool(output_schema=None)

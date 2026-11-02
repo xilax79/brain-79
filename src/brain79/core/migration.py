@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 import uuid
 
 from brain79.core.frontmatter import LOCATION_TO_TYPE, parse_frontmatter
@@ -181,22 +182,26 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
 
             # Auto-populate summary if missing
             try:
-                from brain79.core.frontmatter import sanitize_summary
+                from brain79.core.frontmatter import dump_frontmatter, sanitize_summary
                 from brain79.core.navigation import extract_title_and_summary
                 _, inferred_summary = extract_title_and_summary(content)
-                if inferred_summary:
-                    clean_s = sanitize_summary(inferred_summary)
-                    lines.append(f"summary: {clean_s}")
-                else:
-                    lines.append(f"summary: Legacy migrated {inferred_type}")
+                meta_dict: dict[str, Any] = {"type": inferred_type, "last_updated": today}
+                for key, default_template in defaults.items():
+                    if default_template == "<file mtime>":
+                        val = file_mtime
+                    elif default_template == "<today>":
+                        val = today
+                    elif default_template == "<file mtime or today>":
+                        val = file_mtime or today
+                    else:
+                        val = default_template
+                    meta_dict[key] = val
+                clean_s = sanitize_summary(inferred_summary) if inferred_summary else f"Legacy migrated {inferred_type}"
+                meta_dict["summary"] = clean_s
+                new_content = dump_frontmatter(meta_dict, content)
             except Exception:
-                lines.append(f"summary: Legacy migrated {inferred_type}")
-
-            lines.append("---")
-            lines.append("")
-
-            frontmatter = "\n".join(lines) + "\n"
-            new_content = frontmatter + content
+                meta_dict = {"type": inferred_type, "last_updated": today, "summary": f"Legacy migrated {inferred_type}"}
+                new_content = dump_frontmatter(meta_dict, content)
 
         if not dry_run:
             tmp_path = md_file.with_suffix(f".tmp.{uuid.uuid4().hex}")

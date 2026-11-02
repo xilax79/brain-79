@@ -1,3 +1,6 @@
+---
+profile: software
+---
 # Brain-79 — Wiki Schema (Normative)
 
 This file defines the **enforced rules** for maintaining this project's wiki.

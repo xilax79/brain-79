@@ -170,9 +170,17 @@ def validate_article_content(path: str, content: str, force_skip: bool = False) 
             target_type=target_t,
         )
 
+    from brain79.config import get_wiki_root
+    from brain79.core.frontmatter import load_active_schema
+
+    try:
+        active_s = load_active_schema(get_wiki_root())
+    except Exception:
+        active_s = None
+
     meta = autofill_deterministic_fields(meta, rel_path, body=body)
     content = dump_frontmatter(meta, body)
-    validate_frontmatter(meta, rel_path)
-    validate_location_consistency(meta, rel_path)
+    validate_frontmatter(meta, rel_path, schema=active_s)
+    validate_location_consistency(meta, rel_path, schema=active_s)
 
     return content

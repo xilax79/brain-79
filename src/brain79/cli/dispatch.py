@@ -73,6 +73,12 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             action="store_false",
             help="Skip git hook installation",
         )
+        parser.add_argument(
+            "--profile",
+            choices=["software", "general"],
+            default="software",
+            help="Ontology profile to initialize ('software' or 'general', default: software)",
+        )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
         from brain79.config import get_project_root
@@ -83,7 +89,11 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             if parsed.project_root
             else get_project_root()
         )
-        init_project(target_root, install_git_hooks_flag=parsed.install_git_hooks)
+        init_project(
+            target_root,
+            install_git_hooks_flag=parsed.install_git_hooks,
+            profile=parsed.profile,
+        )
         return 0
 
 
@@ -144,9 +154,15 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser = argparse.ArgumentParser(prog="brain79 schema")
         parser.add_argument("--type", default=None, dest="target_type", help="Optional type to inspect")
         parsed = parser.parse_args(sub_args)
-        from brain79.core.frontmatter import get_schema_documentation
+        from brain79.config import get_wiki_root
+        from brain79.core.frontmatter import get_schema_documentation, load_active_schema
 
-        _write_stdout(get_schema_documentation(parsed.target_type))
+        try:
+            active_schema = load_active_schema(get_wiki_root())
+        except Exception:
+            active_schema = None
+
+        _write_stdout(get_schema_documentation(parsed.target_type, schema=active_schema))
         return 0
 
     elif cmd == "edit":

@@ -4,9 +4,8 @@ import re
 from typing import Literal
 
 from brain79.core.frontmatter import (
-    LOCATION_TO_TYPE,
-    TYPE_SCHEMA,
     ValidationError,
+    load_active_schema,
     parse_frontmatter,
     validate_frontmatter,
     validate_location_consistency,
@@ -62,6 +61,7 @@ def check_frontmatter_consistency(
 ) -> list[OrganizationalIssue]:
     """Every article (except INDEX.md, SCHEMA.md, and _raw/) MUST have valid frontmatter."""
     issues = []
+    schema = load_active_schema(wiki_root)
     files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
@@ -89,7 +89,7 @@ def check_frontmatter_consistency(
 
             meta, _ = parse_frontmatter(content)
             try:
-                validate_frontmatter(meta, rel_str)
+                validate_frontmatter(meta, rel_str, schema=schema)
             except ValidationError as ve:
                 for vi in ve.issues:
                     issues.append(
@@ -121,6 +121,7 @@ def check_type_location_mismatch(
 ) -> list[OrganizationalIssue]:
     """Validate that article frontmatter type matches file location."""
     issues = []
+    schema = load_active_schema(wiki_root)
     files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
@@ -135,7 +136,7 @@ def check_type_location_mismatch(
                 continue
 
             declared_type = meta["type"]
-            if declared_type not in TYPE_SCHEMA:
+            if declared_type not in schema.types:
                 issues.append(
                     OrganizationalIssue(
                         rule="type_invalid",
@@ -143,15 +144,16 @@ def check_type_location_mismatch(
                         line=None,
                         severity="error",
                         message=f"Unknown frontmatter type '{declared_type}'.",
-                        actionable=f"Use one of: {sorted(TYPE_SCHEMA.keys())}",
+                        actionable=f"Use one of: {sorted(schema.types.keys())}",
                     )
                 )
                 continue
 
             try:
-                validate_location_consistency(meta, rel_str)
+                validate_location_consistency(meta, rel_str, schema=schema)
             except Exception as exc:
-                expected_dirs = [d for d, t in LOCATION_TO_TYPE.items() if t == declared_type]
+                expected_dirs = [d for d, t in schema.location_to_type.items() if t == declared_type]
+                exp_msg = f"'{expected_dirs[0]}/'" if expected_dirs else "matching directory"
                 issues.append(
                     OrganizationalIssue(
                         rule="type_location_mismatch",
@@ -159,7 +161,7 @@ def check_type_location_mismatch(
                         line=None,
                         severity="error",
                         message=str(exc),
-                        actionable=f"Move file to '{expected_dirs[0]}/' or change frontmatter type.",
+                        actionable=f"Move file to {exp_msg} or change frontmatter type.",
                     )
                 )
         except Exception:
@@ -192,6 +194,40 @@ def check_decision_leakage(
                         severity="warning",
                         message=f"Decision declaration detected: `{line[:80].strip()}`",
                         actionable=f"Move to 'decisions/{rel.stem}.md' if this is a structural decision.",
+                    )
+                )
+    return issues
+
+
+def check_technical_debt_leakage(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
+    """Detect technical debt declarations outside features/ or decisions/ (software profile only)."""
+    schema = load_active_schema(wiki_root)
+    if not schema.supports_technical_debt_leakage:
+        return []
+
+    issues = []
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    for md_file in files:
+        rel = md_file.relative_to(wiki_root)
+        rel_str = str(rel)
+        if rel.parts[0] in ("features", "decisions", "_raw", "handoffs") or rel_str in ("INDEX.md", "SCHEMA.md"):
+            continue
+
+        content = md_file.read_text(encoding="utf-8")
+        masked_content = _mask_code_fences(content)
+
+        for line_no, line in enumerate(masked_content.splitlines(), start=1):
+            if TECHNICAL_DEBT_BULLET_STRICT.search(line) or TECHNICAL_DEBT_HEADER_STRICT.search(line):
+                issues.append(
+                    OrganizationalIssue(
+                        rule="technical_debt_leakage",
+                        path=rel_str,
+                        line=line_no,
+                        severity="warning",
+                        message=f"Technical debt declaration detected: `{line[:80].strip()}`",
+                        actionable="Move technical debt items to 'features/' or 'decisions/'.",
                     )
                 )
     return issues
@@ -430,6 +466,7 @@ def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     issues.extend(check_frontmatter_consistency(wiki_root, md_files=md_files))
     issues.extend(check_type_location_mismatch(wiki_root, md_files=md_files))
     issues.extend(check_decision_leakage(wiki_root, md_files=md_files))
+    issues.extend(check_technical_debt_leakage(wiki_root, md_files=md_files))
     issues.extend(check_article_atomicity(wiki_root, md_files=md_files))
     issues.extend(check_prohibited_content(wiki_root))
     issues.extend(check_navigation_freshness(wiki_root))

@@ -4,14 +4,28 @@ import json
 from pathlib import Path
 import shutil
 
-WIKI_DIRS = [
+WIKI_DIRS_SOFTWARE = [
     "_raw/sessions",
     "_raw/commits",
     "handoffs",
     "product",
     "architecture",
     "features",
+    "decisions",
     "changelog",
+]
+
+# Backward compatibility alias
+WIKI_DIRS = WIKI_DIRS_SOFTWARE
+
+WIKI_DIRS_GENERAL = [
+    "_raw/sessions",
+    "_raw/commits",
+    "handoffs",
+    "context",
+    "topics",
+    "decisions",
+    "log",
 ]
 
 TEMPLATE_FILES = ["SCHEMA.md", "INDEX.md"]
@@ -46,7 +60,11 @@ def install_git_hooks(project_root: Path, install: bool = True) -> None:
     hook_path.chmod(mode | 0o111)
 
 
-def init_project(project_root: Path, install_git_hooks_flag: bool = True) -> None:
+def init_project(
+    project_root: Path,
+    install_git_hooks_flag: bool = True,
+    profile: str = "software",
+) -> None:
     """Bootstrap .brain-79/ in a project directory and register MCP configurations."""
     wiki_root = project_root / ".brain-79"
 
@@ -56,8 +74,14 @@ def init_project(project_root: Path, install_git_hooks_flag: bool = True) -> Non
         install_git_hooks(project_root, install=install_git_hooks_flag)
         return
 
+    profile_clean = profile.strip().lower()
+    if profile_clean not in ("software", "general"):
+        raise ValueError(f"Unknown profile '{profile}'. Choose 'software' or 'general'.")
+
+    wiki_dirs = WIKI_DIRS_GENERAL if profile_clean == "general" else WIKI_DIRS_SOFTWARE
+
     # Create directory structure
-    for dir_path in WIKI_DIRS:
+    for dir_path in wiki_dirs:
         target_dir = wiki_root / dir_path
         target_dir.mkdir(parents=True, exist_ok=True)
         # Keep empty dirs tracked by git
@@ -66,10 +90,17 @@ def init_project(project_root: Path, install_git_hooks_flag: bool = True) -> Non
     # Copy templates
     pkg_templates = resources.files("brain79.templates")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    for name in TEMPLATE_FILES:
-        content = (pkg_templates / name).read_text(encoding="utf-8")
-        content = content.replace("YYYY-MM-DD", today)
-        (wiki_root / name).write_text(content, encoding="utf-8")
+
+    # SCHEMA template selection
+    schema_template_name = "SCHEMA_GENERAL.md" if profile_clean == "general" else "SCHEMA.md"
+    schema_content = (pkg_templates / schema_template_name).read_text(encoding="utf-8")
+    schema_content = schema_content.replace("YYYY-MM-DD", today)
+    (wiki_root / "SCHEMA.md").write_text(schema_content, encoding="utf-8")
+
+    # INDEX template
+    index_content = (pkg_templates / "INDEX.md").read_text(encoding="utf-8")
+    index_content = index_content.replace("YYYY-MM-DD", today)
+    (wiki_root / "INDEX.md").write_text(index_content, encoding="utf-8")
 
     # Ignore lock and temporary files in wiki_root
     (wiki_root / ".gitignore").write_text("*.lock\n*.tmp\n", encoding="utf-8")
