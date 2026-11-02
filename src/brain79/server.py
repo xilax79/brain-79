@@ -332,15 +332,20 @@ def brain79_lint() -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_context(task: str, top_n: int = 3) -> str:
+def brain79_context(
+    task: str,
+    top_n: int = 3,
+    paths: list[str] | None = None,
+) -> str:
     """
-    Retrieve top relevant wiki articles for a task using TF-IDF ranking.
+    Retrieve top relevant wiki articles for a task using 3-signal context ranking.
 
     Args:
         task: Description of task or search query
         top_n: Maximum number of articles to return (default 3)
+        paths: Optional list of workspace file paths being inspected/modified
     """
-    return context_ops.get_context(task, top_n)
+    return context_ops.get_context(task=task, top_n=top_n, paths=paths)
 
 
 @mcp.tool(output_schema=None)

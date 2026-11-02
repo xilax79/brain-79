@@ -9,13 +9,13 @@
 - **If using `agy`, `opencode`, `claude`, `cursor`, or other MCP-compatible CLIs:** Ensure `brain79` is registered in your client's MCP configuration (`.mcp.json` or global config).
 
 ## Cold Start (Start of task)
-1. ALWAYS use the `brain79_index` tool to orient yourself before touching code.
+1. ALWAYS use the `brain79_orient(task?, paths?)` tool to orient yourself in a single turn before touching code (ingests `INDEX.md`, active handoff, and inlined governing articles & ADRs).
 2. If working on a project with an empty wiki, call `brain79_bootstrap` to generate a scan manifest and seed the wiki via `brain79_write`.
 3. The `.brain-79/` directory contains the ultimate source of truth.
 
 ## Mid-Session and Handoffs (End of task)
 - Before concluding a session, use `brain79_handoff_write` to store progress.
-- To resume a task, use `brain79_handoff_read` immediately.
+- To resume a task, `brain79_orient` automatically provides the latest handoff state (or use `brain79_handoff_read` directly).
 
 ## Available tools
 
@@ -28,7 +28,9 @@
 
 | Purpose | MCP tool | CLI command |
 |---|---|---|
-| Orient yourself | `brain79_index()` | `brain79 index` |
+| Complete 1-call cold start | `brain79_orient(task?, paths?)` | `brain79 orient [--task ...] [--paths ...]` |
+| Orient yourself (index only) | `brain79_index()` | `brain79 index` |
+| 3-signal context search | `brain79_context(task, top_n?, paths?)` | `brain79 context <task> [--paths ...]` |
 | Inspect schema & templates | `brain79_schema(type?)` | `brain79 schema [--type <type>]` |
 | Find articles | `brain79_search(query)` | `brain79 search <query>` |
 | Read article | `brain79_read(path)` | `brain79 read <path>` |

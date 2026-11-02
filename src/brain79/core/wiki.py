@@ -18,23 +18,23 @@ _EXCLUDED_DIRS = {"_raw"}
 _RG_PATH: str | None = shutil.which("rg")
 
 
-def _safe_resolve(path: str) -> Path:
+def _safe_resolve(path: str, wiki_root: Path | None = None) -> Path:
     """Resolve a relative wiki path and verify it stays within the wiki root."""
-    wiki_root = get_wiki_root().resolve()
-    target = (wiki_root / path).resolve()
-    if not target.is_relative_to(wiki_root):
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    target = (w_root / path).resolve()
+    if not target.is_relative_to(w_root):
         raise ValueError(f"Path '{path}' resolves outside the wiki directory.")
     return target
 
 
-def resolve_wiki_path(path: str) -> Path:
+def resolve_wiki_path(path: str, wiki_root: Path | None = None) -> Path:
     """Public alias to resolve a relative wiki path safely."""
-    return _safe_resolve(path)
+    return _safe_resolve(path, wiki_root=wiki_root)
 
 
-def read_article(path: str) -> str:
+def read_article(path: str, wiki_root: Path | None = None) -> str:
     """Read an article by its relative path within the wiki."""
-    target = _safe_resolve(path)
+    target = _safe_resolve(path, wiki_root=wiki_root)
     if not target.exists():
         raise FileNotFoundError(f"Article not found: {path}")
     if not target.is_file():
@@ -103,7 +103,7 @@ def write_article(
 
             rel_p = target.relative_to(wiki_root)
             title, summary = extract_title_and_summary(content)
-            graph_meta = extract_graph_metadata(content)
+            graph_meta = extract_graph_metadata(content, rel_path=str(rel_p))
             section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
             register_article(
                 wiki_root,
@@ -326,10 +326,10 @@ def list_articles(section: str | None = None) -> list[str]:
     return articles
 
 
-def get_index() -> str:
+def get_index(wiki_root: Path | None = None) -> str:
     """Return the content of INDEX.md."""
     try:
-        return read_article("INDEX.md")
+        return read_article("INDEX.md", wiki_root=wiki_root)
     except FileNotFoundError:
         return (
             "INDEX.md not found.\n"

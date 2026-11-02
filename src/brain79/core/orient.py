@@ -43,7 +43,7 @@ def orient(
 
     # 1. INDEX.md / Routing Table
     try:
-        index_content = get_index()
+        index_content = get_index(wiki_root=w_root)
         sections.append(index_content.strip())
     except Exception as exc:
         sections.append(f"*Could not read INDEX.md: {exc}*")
@@ -52,7 +52,7 @@ def orient(
 
     # 2. Latest Handoff
     try:
-        handoff_content, has_promotion_pending = read_handoff("latest")
+        handoff_content, has_promotion_pending = read_handoff("latest", wiki_root=w_root)
         if has_promotion_pending:
             sections.append(
                 "> ⚠️ **Knowledge Pending Promotion**: The prior session noted critical insights "
@@ -82,12 +82,13 @@ def orient(
             sections.append("No specific governing articles matched the task or paths.")
         else:
             inlined_count = 0
-            for score, article_p, reasons in ranked[:effective_max]:
+            # Inline top candidates AND expanded 1-hop ADRs without truncation
+            for score, article_p, reasons in ranked:
                 try:
                     rel_p = str(article_p.relative_to(w_root))
                     if rel_p == "INDEX.md":
                         continue
-                    content = read_article(rel_p)
+                    content = read_article(rel_p, wiki_root=w_root)
                     reasons_str = ", ".join(reasons)
                     sections.append(f"### === Article: {rel_p} ===")
                     sections.append(f"*Relevance Score: {score:.1f} | Match Signals: {reasons_str}*")

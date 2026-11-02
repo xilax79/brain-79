@@ -487,10 +487,22 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser.add_argument(
             "--top-n", type=int, default=3, help="Maximum number of articles to return"
         )
+        parser.add_argument(
+            "--paths",
+            nargs="*",
+            default=None,
+            help="Workspace file paths being inspected or modified",
+        )
         parsed = parser.parse_args(sub_args)
         from brain79.core.context import get_context
 
-        _write_stdout(get_context(parsed.task, parsed.top_n))
+        _write_stdout(
+            get_context(
+                task=parsed.task,
+                top_n=parsed.top_n,
+                paths=parsed.paths,
+            )
+        )
         return 0
 
     elif cmd == "bootstrap":

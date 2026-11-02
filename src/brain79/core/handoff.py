@@ -47,10 +47,10 @@ def _normalize_list(items: list[str]) -> list[str]:
     return cleaned
 
 
-def _resolve_handoff_path(ref: str) -> Path:
+def _resolve_handoff_path(ref: str, wiki_root: Path | None = None) -> Path:
     """Resolve a handoff reference ('latest', 'none', '', timestamp, or filename) to a Path."""
-    wiki_root = get_wiki_root()
-    handoffs_dir = wiki_root / "handoffs"
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    handoffs_dir = w_root / "handoffs"
 
     cleaned_ref = ref.strip().lower()
     if cleaned_ref in ("", "none", "latest"):
@@ -74,7 +74,7 @@ def _resolve_handoff_path(ref: str) -> Path:
         candidate = f"handoff-{raw_ref}.md"
 
     try:
-        target = wiki_ops.resolve_wiki_path(f"handoffs/{candidate}")
+        target = wiki_ops.resolve_wiki_path(f"handoffs/{candidate}", wiki_root=w_root)
         if target.exists():
             return target
     except ValueError:
@@ -225,7 +225,7 @@ def write_handoff(
 
 
 
-def read_handoff(ref: str = "latest") -> tuple[str, bool]:
+def read_handoff(ref: str = "latest", wiki_root: Path | None = None) -> tuple[str, bool]:
     """
     Read a handoff document.
 
@@ -233,14 +233,15 @@ def read_handoff(ref: str = "latest") -> tuple[str, bool]:
         ref: "latest", "none", or "" (default to latest), or a specific timestamp with or without
              milliseconds or file extension (e.g., "2024-01-01-120000", "2024-01-01-120000-123", or "handoff-2024-01-01-120000.md").
              Timestamp prefixes are supported (e.g., "2024" or "2024-08" returns the latest handoff matching that prefix).
+        wiki_root: Optional custom wiki root path.
 
     Returns:
         tuple[str, bool]: (handoff_content, has_promotion_pending)
     """
-    target_path = _resolve_handoff_path(ref)
-    wiki_root = get_wiki_root()
-    rel_path = str(target_path.relative_to(wiki_root))
-    content = wiki_ops.read_article(rel_path)
+    target_path = _resolve_handoff_path(ref, wiki_root=wiki_root)
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    rel_path = str(target_path.relative_to(w_root))
+    content = wiki_ops.read_article(rel_path, wiki_root=w_root)
 
     header = f"=== Handoff: {rel_path} ===\n\n"
     has_promotion_pending = "## Conocimiento pendiente de promoción" in content

@@ -45,8 +45,13 @@ def _save_registry_unlocked(wiki_root: Path, registry: dict[str, Any]) -> None:
                 pass
 
 
-def extract_graph_metadata(content: str) -> dict[str, Any]:
-    """Extract applies_to, related, and outgoing markdown links from article content."""
+def extract_graph_metadata(content: str, rel_path: str | None = None) -> dict[str, Any]:
+    """Extract applies_to, related, and outgoing markdown links from article content.
+
+    If rel_path is provided, relative Markdown links (e.g. `../decisions/adr-001.md`)
+    are normalized relative to the article's parent directory, producing clean wiki-root relative paths.
+    """
+    import posixpath
     from brain79.core.frontmatter import parse_frontmatter
     from brain79.core.lint import _extract_raw_link_targets
 
@@ -80,15 +85,31 @@ def extract_graph_metadata(content: str) -> dict[str, Any]:
     # Outgoing markdown links
     raw_targets = _extract_raw_link_targets(body or content)
     outgoing_links: list[str] = []
+    parent_dir = posixpath.dirname(rel_path.replace("\\", "/")) if rel_path else ""
+
     for raw in raw_targets:
         if "://" in raw or raw.startswith(("#", "mailto:", "//")):
             continue
         cleaned = raw.split("#", 1)[0].strip()
         if cleaned.endswith(".md"):
-            # Normalize target relative path if it uses ../
-            clean_norm = str(Path(cleaned))
-            if clean_norm not in outgoing_links:
-                outgoing_links.append(clean_norm)
+            # If target begins with a known top-level wiki directory or is already relative to root,
+            # or if it begins with ../, resolve accurately
+            if parent_dir and not cleaned.startswith("/"):
+                # If cleaned is something like "../decisions/adr-001.md"
+                joined = posixpath.normpath(posixpath.join(parent_dir, cleaned))
+                # If user wrote "decisions/adr-001.md" directly from subfolder, check if it already targets a top-level folder
+                top_level_dirs = {"product", "architecture", "features", "decisions", "changelog", "context", "topics", "log", "_raw"}
+                first_part = cleaned.split("/", 1)[0]
+                if first_part in top_level_dirs and not cleaned.startswith("../"):
+                    normalized = posixpath.normpath(cleaned)
+                else:
+                    normalized = joined
+            else:
+                normalized = posixpath.normpath(cleaned.lstrip("/"))
+
+            # Avoid resolving outside wiki root
+            if not normalized.startswith("..") and normalized not in outgoing_links:
+                outgoing_links.append(normalized)
 
     return {
         "applies_to": applies_to,

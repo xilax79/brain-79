@@ -107,7 +107,7 @@ def extract_keywords(task: str) -> list[str]:
     return keywords
 
 
-def get_wiki_snapshot() -> list[Path]:
+def get_wiki_snapshot(wiki_root: Path | None = None) -> list[Path]:
     """
     Build in-memory snapshot of valid wiki articles.
 
@@ -117,15 +117,15 @@ def get_wiki_snapshot() -> list[Path]:
     - Excludes files inside _raw/ or handoffs/
     - Returns absolute resolved paths
     """
-    wiki_root = get_wiki_root().resolve()
-    if not wiki_root.exists():
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    if not w_root.exists():
         return []
 
     snapshot: list[Path] = []
-    for p in wiki_root.rglob("*.md"):
+    for p in w_root.rglob("*.md"):
         try:
             abs_path = p.resolve()
-            rel = abs_path.relative_to(wiki_root)
+            rel = abs_path.relative_to(w_root)
             if any(part in _EXCLUDED_DIRS for part in rel.parts):
                 continue
             if not abs_path.is_file():
@@ -136,7 +136,7 @@ def get_wiki_snapshot() -> list[Path]:
         except OSError:
             continue
 
-    snapshot.sort(key=lambda x: str(x.relative_to(wiki_root)))
+    snapshot.sort(key=lambda x: str(x.relative_to(w_root)))
     return snapshot
 
 
@@ -264,6 +264,31 @@ def _match_applies_to(path_pattern: str, target_path: str) -> bool:
     return False
 
 
+def _extract_paths_from_text(text: str) -> list[str]:
+    """Extract candidate workspace file paths or directory paths mentioned in free text."""
+    if not text:
+        return []
+    # Match tokens with / (e.g. src/auth/jwt.py) or known code/doc extensions
+    tokens = re.findall(r"(?:[a-zA-Z0-9_\-\.]+/+[a-zA-Z0-9_\-\./]+|[a-zA-Z0-9_\-]+\.(?:py|ts|js|md|json|toml|rs|go|yaml|yml))", text)
+    paths: list[str] = []
+    for t in tokens:
+        cleaned = t.strip("`'\"(),;:")
+        if cleaned and cleaned not in paths:
+            paths.append(cleaned)
+    return paths
+
+
+def _count_keyword_occurrences(kw: str, text: str) -> int:
+    """Count keyword occurrences using word boundaries for short tokens (<=4 chars)."""
+    if not kw or not text:
+        return 0
+    is_short_alnum = len(kw) <= 4 and bool(re.match(r"^[a-z0-9]+$", kw))
+    if is_short_alnum:
+        pattern = re.compile(rf"\b{re.escape(kw)}\b", re.IGNORECASE)
+        return len(pattern.findall(text))
+    return text.lower().count(kw.lower())
+
+
 def rank_context_articles(
     task: str | None = None,
     paths: list[str] | None = None,
@@ -272,18 +297,18 @@ def rank_context_articles(
 ) -> list[tuple[float, Path, list[str]]]:
     """
     3-Signal Deterministic Context Ranker:
-    - Signal 1 (Deterministic Path Binding): Matches applies_to globs against touched paths.
-    - Signal 2 (Field-Weighted TF-IDF): Searches title/summary/content, down-ranking superseded articles.
+    - Signal 1 (Deterministic Path Binding): Matches applies_to globs against touched paths or paths in task.
+    - Signal 2 (Field-Weighted TF-IDF): Searches title/H1/H2/summary/content with word-boundary awareness.
     - Signal 3 (1-Hop ADR Reference Expansion): Pulls accepted ADRs linked from matched articles.
 
     Returns:
         List of tuples: (score, article_path, hit_reasons)
     """
     from brain79.core.frontmatter import parse_frontmatter
-    from brain79.core.navigation import load_registry
+    from brain79.core.navigation import extract_title_and_summary, load_registry
 
     w_root = (wiki_root or get_wiki_root()).resolve()
-    snapshot = get_wiki_snapshot()
+    snapshot = get_wiki_snapshot(wiki_root=w_root)
     if not snapshot:
         return []
 
@@ -291,7 +316,15 @@ def rank_context_articles(
     registry_by_path = {a.get("path"): a for a in registry.get("articles", [])}
 
     scored_map: dict[Path, tuple[float, list[str]]] = {}
-    normalized_paths = [p.strip().lstrip("/") for p in (paths or []) if p.strip()]
+
+    # Gather explicit paths and paths mentioned in task description (Defect 5)
+    extracted_from_task = _extract_paths_from_text(task or "")
+    combined_paths = list(paths or [])
+    for ep in extracted_from_task:
+        if ep not in combined_paths:
+            combined_paths.append(ep)
+
+    normalized_paths = [p.strip().lstrip("/") for p in combined_paths if p.strip()]
 
     # SIGNAL 1: Deterministic Path Match via applies_to
     if normalized_paths:
@@ -328,23 +361,41 @@ def rank_context_articles(
     keywords = extract_keywords(task or "")
     if keywords:
         n_docs = len(snapshot)
-        # Search title, summary, and content
-        doc_contents: dict[Path, tuple[str, str, str, dict[str, Any]]] = {}
+        # Search title (H1), H2 subheadings, summary, and content (Defect 2 & Defect 4)
+        doc_contents: dict[Path, tuple[str, str, str, str, dict[str, Any]]] = {}
         df_map: dict[str, int] = {kw: 0 for kw in keywords}
 
         for p in snapshot:
             try:
                 c = p.read_text(encoding="utf-8")
+                rel_str = str(p.relative_to(w_root))
+                reg_entry = registry_by_path.get(rel_str)
+
+                # Extract H1 title and summary
+                if reg_entry and reg_entry.get("title") and reg_entry.get("summary"):
+                    title = reg_entry["title"]
+                    summary = reg_entry["summary"]
+                else:
+                    title, summary = extract_title_and_summary(c)
+
                 meta, body = parse_frontmatter(c) if c.startswith("---\n") else ({}, c)
-                title = str(meta.get("title", "")) if meta else ""
-                summary = str(meta.get("summary", "")) if meta else ""
-                doc_contents[p] = (title.lower(), summary.lower(), (body or "").lower(), meta or {})
+                body_clean = body or ""
+
+                # Extract H2 subheadings
+                h2_lines = [
+                    line.removeprefix("## ").strip()
+                    for line in body_clean.splitlines()
+                    if line.strip().startswith("## ")
+                ]
+                h2_text = " ".join(h2_lines)
+
+                doc_contents[p] = (title.lower(), h2_text.lower(), summary.lower(), body_clean.lower(), meta or {})
             except Exception:
-                doc_contents[p] = ("", "", "", {})
+                doc_contents[p] = ("", "", "", "", {})
 
         for kw in keywords:
-            for p, (t, s, b, _) in doc_contents.items():
-                if kw in t or kw in s or kw in b:
+            for p, (t, h2, s, b, _) in doc_contents.items():
+                if _count_keyword_occurrences(kw, t) > 0 or _count_keyword_occurrences(kw, h2) > 0 or _count_keyword_occurrences(kw, s) > 0 or _count_keyword_occurrences(kw, b) > 0:
                     df_map[kw] += 1
 
         idf_map: dict[str, float] = {}
@@ -352,15 +403,17 @@ def rank_context_articles(
             df = df_map[kw]
             idf_map[kw] = math.log((n_docs + 1) / (df + 1)) + 1.0 if df > 0 else 0.0
 
-        for p, (t, s, b, meta) in doc_contents.items():
+        for p, (t, h2, s, b, meta) in doc_contents.items():
             text_score = 0.0
             hits: list[str] = []
             for kw in keywords:
-                tf_title = t.count(kw)
-                tf_summary = s.count(kw)
-                tf_body = b.count(kw)
-                # Field weighting: title 3x, summary 2x, body 1x
-                weighted_count = (tf_title * 3) + (tf_summary * 2) + tf_body
+                tf_title = _count_keyword_occurrences(kw, t)
+                tf_h2 = _count_keyword_occurrences(kw, h2)
+                tf_summary = _count_keyword_occurrences(kw, s)
+                tf_body = _count_keyword_occurrences(kw, b)
+
+                # Field weighting: title 3x, H2 2x, summary 2x, body 1x
+                weighted_count = (tf_title * 3) + (tf_h2 * 2) + (tf_summary * 2) + tf_body
                 if weighted_count > 0:
                     tf = 1.0 + math.log(weighted_count)
                     text_score += tf * idf_map[kw]
@@ -404,7 +457,7 @@ def rank_context_articles(
             try:
                 c = p.read_text(encoding="utf-8")
                 from brain79.core.navigation import extract_graph_metadata
-                gm = extract_graph_metadata(c)
+                gm = extract_graph_metadata(c, rel_path=rel_str)
                 linked_targets.extend(gm.get("related", []))
                 linked_targets.extend(gm.get("outgoing_links", []))
             except Exception:
@@ -431,22 +484,19 @@ def rank_context_articles(
                         expanded_adrs.append(candidate_path)
                         already_selected.add(candidate_path)
 
+    # Defect 1: Preserve top_candidates AND append expanded ADRs without truncation
     final_results: list[tuple[float, Path, list[str]]] = list(top_candidates)
     for adr_p in expanded_adrs:
         final_results.append((50.0, adr_p, ["graph:1-hop ADR expansion"]))
 
-    # Sort final combined list
-    final_results.sort(
-        key=lambda item: (-item[0], str(item[1].relative_to(w_root)))
-    )
-
-    return final_results[: max(top_n, len(final_results))]
+    return final_results
 
 
 def get_context(
     task: str,
     top_n: int = 3,
     paths: list[str] | None = None,
+    wiki_root: Path | None = None,
 ) -> str:
     """
     Retrieve top relevant wiki articles for a task using 3-signal context ranking.
@@ -455,23 +505,24 @@ def get_context(
         task: User task or search prompt.
         top_n: Number of top articles to return (defaults to 3 if <= 0).
         paths: Optional list of workspace file paths being inspected/modified.
+        wiki_root: Optional custom wiki root path.
 
     Returns:
         Formatted markdown report string.
     """
-    snapshot = get_wiki_snapshot()
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    snapshot = get_wiki_snapshot(wiki_root=w_root)
     if not snapshot:
         return "No hay artículos válidos en la wiki para analizar."
 
     effective_top_n = top_n if top_n > 0 else 3
-    wiki_root = get_wiki_root().resolve()
-    ranked = rank_context_articles(task=task, paths=paths, top_n=effective_top_n, wiki_root=wiki_root)
+    ranked = rank_context_articles(task=task, paths=paths, top_n=effective_top_n, wiki_root=w_root)
 
     # Fallback if no scored articles found
     if not ranked:
         keywords = extract_keywords(task)
         if not keywords and not paths:
-            index_path = (wiki_root / "INDEX.md").resolve()
+            index_path = (w_root / "INDEX.md").resolve()
             has_index = index_path in snapshot
 
             if has_index:
@@ -479,7 +530,7 @@ def get_context(
                 remaining.sort(
                     key=lambda x: (
                         -_safe_mtime_ns(x),
-                        str(x.relative_to(wiki_root)),
+                        str(x.relative_to(w_root)),
                     )
                 )
                 fallback_items = [index_path] + remaining[: effective_top_n - 1]
@@ -488,7 +539,7 @@ def get_context(
                     snapshot,
                     key=lambda x: (
                         -_safe_mtime_ns(x),
-                        str(x.relative_to(wiki_root)),
+                        str(x.relative_to(w_root)),
                     ),
                 )
                 fallback_items = sorted_snapshot[:effective_top_n]
@@ -502,11 +553,11 @@ def get_context(
                 "## Artículos recientes (Fallback de Supervivencia):",
             ]
             for idx, item in enumerate(fallback_items, 1):
-                rel = item.relative_to(wiki_root)
+                rel = item.relative_to(w_root)
                 lines.append(f"{idx}. `{rel}` (Score: N/A)")
             return "\n".join(lines)
 
-    top_articles = ranked[:effective_top_n]
+    top_articles = ranked
     lines = [
         "# Context Retrieval Report",
         "<!-- Ranking matemático ponderado vía motor 3-Signal (Path + TF-IDF + Graph) -->",
@@ -525,7 +576,7 @@ def get_context(
         )
     else:
         for idx, (score, p, hits) in enumerate(top_articles, 1):
-            rel = p.relative_to(wiki_root)
+            rel = p.relative_to(w_root)
             hits_formatted = ", ".join(f"`{h}`" for h in hits)
             lines.append(
                 f"{idx}. `{rel}` (Score: {score:.2f}) - Hits: {hits_formatted}"
