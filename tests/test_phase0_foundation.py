@@ -221,3 +221,77 @@ def test_writing_article_without_summary_raises_validation_error(project_env: Pa
         write_article("architecture/test.md", content)
     assert exc_info.value.rule == "frontmatter_missing_field"
     assert "summary" in exc_info.value.message
+
+
+# ==============================================================================
+# Adversarial Findings Tests
+# ==============================================================================
+
+
+def test_schema_md_declares_summary_as_required(project_env: Path) -> None:
+    """Finding 1: SCHEMA.md (both template and project root) must declare summary as required."""
+    schema_path = project_env / ".brain-79" / "SCHEMA.md"
+    content = schema_path.read_text(encoding="utf-8")
+
+    # In Required Fields table lines
+    assert "`type`, `summary`, `last_updated`" in content
+    assert "`type`, `summary`, `stability`, `last_updated`" in content
+    assert "`type`, `summary`, `status`, `version`, `last_updated`" in content
+
+    # In Optional Fields note
+    assert "Optional fields accepted across all types: `summary`" not in content
+
+
+def test_migrate_wiki_repairs_missing_summary_in_existing_frontmatter(project_env: Path) -> None:
+    """Finding 2: migrate_wiki must add summary to articles that have frontmatter but lack summary."""
+    from brain79.core.migration import migrate_wiki
+
+    wiki_root = project_env / ".brain-79"
+    legacy_file = wiki_root / "features" / "has_fm_no_summary.md"
+    legacy_file.write_text(
+        "---\n"
+        "type: feature\n"
+        "status: shipped\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-10-29\n"
+        "---\n\n"
+        "# Feature Without Summary\n\n"
+        "This feature was created before summary was mandatory.\n",
+        encoding="utf-8",
+    )
+
+    report = migrate_wiki(wiki_root, dry_run=False)
+    assert "features/has_fm_no_summary.md" in report
+
+    # Verify that summary was added and linter passes
+    meta, _ = parse_frontmatter(legacy_file.read_text(encoding="utf-8"))
+    assert "summary" in meta
+    assert meta["summary"] == "This feature was created before summary was mandatory."
+
+    issues = check_frontmatter_consistency(wiki_root)
+    assert not any(i.path == "features/has_fm_no_summary.md" for i in issues)
+
+
+def test_autofill_sanitizes_bracket_and_newline_summaries(project_env: Path) -> None:
+    """Finding 3: Auto-extracted summary must not be corrupted by leading brackets or newlines."""
+    body_with_brackets = (
+        "# Bracket Feature\n\n"
+        "[RFC-101] Core architecture for user authentication.\n"
+    )
+    content = (
+        "---\n"
+        "type: feature\n"
+        "status: planned\n"
+        "version: 0.1.0\n"
+        "---\n\n"
+    ) + body_with_brackets
+
+    write_article("features/bracket.md", content)
+    saved = read_article("features/bracket.md")
+    meta, _ = parse_frontmatter(saved)
+
+    # Must be a string, NOT parsed as list ['RFC-101']
+    assert isinstance(meta["summary"], str)
+    assert "RFC-101" in meta["summary"]
+    assert "\n" not in meta["summary"]
+

@@ -12,17 +12,17 @@ Violations will be rejected at write time and reported by the linter.
 |-----------|-----------------|-----------------|---------------|---------|
 | `INDEX.md` | `navigation` | `type`, `last_updated` | — | Automated routing table only (no freeform prose) |
 | `handoffs/` | `handoff` | `type`, `session_type`, `previous_ref`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming | Immutable session handoffs |
-| `product/` | `product` | `type`, `last_updated` | — | Vision, domain, personas |
-| `architecture/` | `architecture` | `type`, `stability`, `last_updated` | `stability`: experimental, stable, legacy | Stack, patterns, topology |
-| `features/` | `feature` | `type`, `status`, `version`, `last_updated` | `status`: planned, in_progress, shipped, deprecated, legacy | Feature documentation |
-| `decisions/` | `decision` | `type`, `status`, `date`, `deciders`, `last_updated` | `status`: proposed, accepted, superseded, rejected, legacy | Architectural Decision Records |
-| `changelog/` | `changelog` | `type`, `version`, `date`, `last_updated` | — | Versioned changes |
+| `product/` | `product` | `type`, `summary`, `last_updated` | — | Vision, domain, personas |
+| `architecture/` | `architecture` | `type`, `summary`, `stability`, `last_updated` | `stability`: experimental, stable, legacy | Stack, patterns, topology |
+| `features/` | `feature` | `type`, `summary`, `status`, `version`, `last_updated` | `status`: planned, in_progress, shipped, deprecated, legacy | Feature documentation |
+| `decisions/` | `decision` | `type`, `summary`, `status`, `date`, `deciders`, `last_updated` | `status`: proposed, accepted, superseded, rejected, legacy | Architectural Decision Records |
+| `changelog/` | `changelog` | `type`, `summary`, `version`, `date`, `last_updated` | — | Versioned changes |
 | `_raw/sessions/` | `raw_session` | `type`, `session_id`, `session_type`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming | Immutable session summaries |
 | `_raw/commits/` | `raw_commit` | `type`, `commit_sha`, `last_updated` | — | Commit metadata |
 
 ### Frontmatter Templates
 
-Optional fields accepted across all types: `summary` (single-line article description for `INDEX.md`), `supersedes`, `related`, `owner`.
+Optional fields accepted across types: `supersedes`, `related`, `owner` (plus `summary` on `navigation` and `handoff`).
 
 ```yaml
 # Feature (features/*.md)

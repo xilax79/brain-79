@@ -107,7 +107,14 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
         if content.startswith("---\n"):
             try:
                 meta, body = parse_frontmatter(content)
-                if meta and "type" in meta:
+                target_type = (meta.get("type") if meta else None) or inferred_type
+                needs_summary_repair = bool(
+                    target_type
+                    and target_type not in ("navigation", "handoff", "raw_session", "raw_commit")
+                    and (not meta or "summary" not in meta or not meta["summary"])
+                )
+
+                if meta and "type" in meta and not needs_summary_repair:
                     skipped.append(f"{rel_str}: already has valid frontmatter")
                     if not dry_run:
                         try:
@@ -118,15 +125,17 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
                         except Exception:
                             pass
                     continue
-                # Frontmatter exists but is missing 'type'
-                if inferred_type is None:
+
+                # Frontmatter exists but is missing 'type' or needs summary repair
+                if target_type is None:
                     skipped.append(f"{rel_str}: has incomplete frontmatter but cannot infer type")
                     continue
                 meta = meta or {}
-                meta["type"] = inferred_type
+                meta["type"] = target_type
                 if "last_updated" not in meta:
                     meta["last_updated"] = today
-                defaults = _TYPE_DEFAULTS.get(inferred_type, {})
+
+                defaults = _TYPE_DEFAULTS.get(target_type, {})
                 for key, default_template in defaults.items():
                     if key not in meta:
                         if default_template == "<file mtime>":
@@ -139,11 +148,15 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
                             val = default_template
                         meta[key] = val
 
-                fm_lines = ["---"]
-                for k, v in meta.items():
-                    fm_lines.append(f"{k}: {v}")
-                fm_lines.append("---")
-                new_content = "\n".join(fm_lines) + "\n\n" + body.lstrip()
+                if needs_summary_repair:
+                    from brain79.core.frontmatter import sanitize_summary
+                    from brain79.core.navigation import extract_title_and_summary
+
+                    _, extracted_s = extract_title_and_summary(body)
+                    meta["summary"] = sanitize_summary(extracted_s or f"Legacy migrated {target_type}")
+
+                from brain79.core.frontmatter import dump_frontmatter
+                new_content = dump_frontmatter(meta, body)
             except Exception:
                 skipped.append(f"{rel_str}: malformed frontmatter")
                 continue
@@ -168,10 +181,12 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
 
             # Auto-populate summary if missing
             try:
+                from brain79.core.frontmatter import sanitize_summary
                 from brain79.core.navigation import extract_title_and_summary
                 _, inferred_summary = extract_title_and_summary(content)
                 if inferred_summary:
-                    lines.append(f"summary: {inferred_summary}")
+                    clean_s = sanitize_summary(inferred_summary)
+                    lines.append(f"summary: {clean_s}")
                 else:
                     lines.append(f"summary: Legacy migrated {inferred_type}")
             except Exception:

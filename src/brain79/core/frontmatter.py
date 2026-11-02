@@ -184,6 +184,24 @@ def dump_frontmatter(meta: dict[str, Any], body: str) -> str:
     return "\n".join(lines) + ("\n" + clean_body if clean_body else "")
 
 
+def sanitize_summary(summary_text: str) -> str:
+    """Sanitize summary text into a clean single line safe for frontmatter serialization.
+
+    Prevents raw newlines, leading/trailing whitespace, and ensures text starting/ending
+    with brackets is not accidentally deserialized as a YAML list by parse_frontmatter.
+    """
+    clean = " ".join(summary_text.replace("\r", " ").replace("\n", " ").split()).strip()
+    if not clean:
+        return ""
+
+    # If the text starts with '[' and ends with ']' or contains quotes, quote it safely
+    # so YAML parsers treat it strictly as a string, not an inline list.
+    if clean.startswith("[") and clean.endswith("]"):
+        clean = f'"{clean}"'
+
+    return clean
+
+
 def autofill_deterministic_fields(
     meta: dict[str, Any], path: str, body: str = ""
 ) -> dict[str, Any]:
@@ -202,7 +220,9 @@ def autofill_deterministic_fields(
 
         _, extracted_summary = extract_title_and_summary(body)
         if extracted_summary:
-            meta["summary"] = extracted_summary
+            meta["summary"] = sanitize_summary(extracted_summary)
+    elif "summary" in meta and meta["summary"] and isinstance(meta["summary"], str):
+        meta["summary"] = sanitize_summary(meta["summary"])
 
     # 3. Set last_updated to today if missing or empty
     if "last_updated" not in meta or not meta["last_updated"]:
