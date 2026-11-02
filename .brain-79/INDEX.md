@@ -30,6 +30,7 @@ last_updated: 2026-11-02
 - [ADR-006 — Architecture — Automatic Navigation Regeneration, Inline Health Checks, and Partial/Batch Operations](decisions/adr-006-auto-navigation-and-batch-operations.md) — Automatic thread-safe navigation synchronization, inline write diagnostics, and partial/batch write operations
 - [ADR-007 — Navigation — Explicit Frontmatter Summary and Article Backlinks](decisions/adr-007-frontmatter-summary-and-backlink-navigation.md) — Standardize explicit frontmatter summary field and footer backlink navigation convention
 - [ADR-008 — Architecture — Pure Automated Routing Table for INDEX.md](decisions/adr-008-pure-index-routing-table.md) — Pure automated routing table architecture for INDEX.md and automated timestamp synchronization
+- [ADR-009 — Declarative Schema Loading & Dual Built-In Ontologies (Mechanism vs. Policy)](decisions/adr-009-declarative-schema-and-dual-ontologies.md) — Decoupling validation mechanism from ontology policy with dual built-in profiles and custom folder support
 
 ### Features
 - [Feature — FastMCP Integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication

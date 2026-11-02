@@ -5,9 +5,21 @@ All notable changes to `brain-79` will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Phase 1: Declarative Schema & Dual Ontology**:
+  - Decoupled validation engine (mechanism) from directory/type policies via `load_active_schema` with high-speed mtime caching.
+  - Added built-in dual ontologies (`software` and `general`) supported via `brain79 init [--profile software|general]`.
+  - Added support for arbitrary custom directories and frontmatter types declared in `.brain-79/SCHEMA.md` (`custom_types`).
+  - Added dynamic profile sensitivity to `brain79 schema` / `brain79_schema()`.
+  - Added dynamic `session_type` validation for handoffs, enabling general profile session types (`work`, `writing`, `analysis`, `research`).
+  - Added schema-aware field preservation in `autofill_deterministic_fields` (preserving declared optional fields like `tags` on `topic` and auto-filling `date` on `log`).
+  - Added explicit direct package dependency on `pyyaml` and `types-pyyaml`.
 - **Frontmatter `summary` support**: articles can declare an explicit `summary` in YAML frontmatter, indexed directly into `INDEX.md` Quick navigation in $O(1)$ time without relying on body heuristics.
 - **Article Backlink Convention**: documented and templated footer navigation links (`[← Volver al Índice](../INDEX.md)`) for seamless reading across editors.
 - **Hardened Navigation Fallback**: improved `extract_title_and_summary` to ignore subheadings, bullet items, and trailing colons when no frontmatter summary is defined.
+- **Phase 0: Foundation Cleanup & Parity**:
+  - Unification of organizational linter with write validation (`validate_frontmatter`).
+  - Strict enforcement of ADR-008 (*Pure Routing Table*) in `INDEX_ALLOWED_H2`.
+  - Validation alignment for `brain79_bootstrap` manifests and `_raw/sessions/` frontmatter.
 
 ## [1.1.0] - 2026-10-29
 

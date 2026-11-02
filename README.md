@@ -72,10 +72,15 @@ uv run scripts/install.py
 Go to your project repository and initialize the memory protocol:
 ```bash
 cd /path/to/your-project
+
+# For software engineering projects (default):
 brain79 init
+
+# Or for general knowledge, research, or writing projects:
+brain79 init --profile general
 ```
 This automatically sets up:
-- `.brain-79/` directory structure with seed templates.
+- `.brain-79/` directory structure with seed templates matched to the chosen ontology.
 - `AGENTS.md` (universal cold-start instructions for LLMs).
 - `.mcp.json` / FastMCP server definitions for your editor and agent harness.
 

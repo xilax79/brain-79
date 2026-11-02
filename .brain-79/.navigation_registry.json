@@ -146,6 +146,13 @@
       "summary": "Industrial-scale roadmap focused on the Two-Call Session Protocol, graph-verified context loading, lightweight dual ontology (software + general), and invariant alignment",
       "section": "architecture",
       "registered_at": "2026-11-02T15:50:37.801571+00:00"
+    },
+    {
+      "path": "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+      "title": "ADR-009 \u2014 Declarative Schema Loading & Dual Built-In Ontologies (Mechanism vs. Policy)",
+      "summary": "Decoupling validation mechanism from ontology policy with dual built-in profiles and custom folder support",
+      "section": "decisions",
+      "registered_at": "2026-11-02T19:03:36.625140+00:00"
     }
   ]
 }

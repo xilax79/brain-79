@@ -73,7 +73,10 @@ The system is organized into four clean, isolated layers:
 - In-memory TF-IDF context retriever with multi-language stop-word filtering.
 - Graph-based reachability analysis (BFS) mapping links from `INDEX.md`.
 
-### 3. The Validation Layer
+### 3. The Validation & Ontology Layer
+- **Declarative Active Schema:** Loads ontology rules from `.brain-79/SCHEMA.md` with in-memory nanosecond caching keyed by mtime.
+- **Dual Ontologies:** Supports `software` profile (default: `product/`, `architecture/`, `features/`, `decisions/`, `changelog/`) and `general` profile (`context/`, `topics/`, `decisions/`, `log/`).
+- **Custom Folder Extensions:** Any repository can define custom folder rules directly in `.brain-79/SCHEMA.md` frontmatter (`custom_types`).
 - **Write-Time Enforcement:** Validates required frontmatter keys, allowed enum values, and directory locations *before* touching the disk.
 - **Reference Integrity:** Detects broken markdown links and prevents links into internal raw directories (`_raw/`).
 - **Sanitization:** Masks fenced code blocks and inline code spans before link extraction to prevent false-positive warnings on sample code.
