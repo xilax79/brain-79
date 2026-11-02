@@ -26,6 +26,29 @@ mcp = FastMCP(
 
 
 @mcp.tool(output_schema=None)
+def brain79_orient(
+    task: str | None = None,
+    paths: list[str] | None = None,
+    max_articles: int = 4,
+) -> str:
+    """
+    1-call complete cold start orientation.
+
+    Combines INDEX.md routing table, latest handoff state (with promotion warnings),
+    and inlined content of top governing articles (via 3-signal path matching, weighted TF-IDF,
+    and 1-hop ADR graph expansion).
+
+    Args:
+        task: Optional high-level goal or task description.
+        paths: Optional list of workspace file paths the agent intends to touch.
+        max_articles: Maximum number of governing articles to inline (default: 4).
+    """
+    from brain79.core.orient import orient
+
+    return orient(task=task, paths=paths, max_articles=max_articles)
+
+
+@mcp.tool(output_schema=None)
 def brain79_index() -> str:
     """
     Return INDEX.md — the project wiki's entry point.

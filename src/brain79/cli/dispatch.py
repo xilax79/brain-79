@@ -28,6 +28,7 @@ WHITELIST = {
     "navigate",
     "migrate",
     "handoff-purge",
+    "orient",
 }
 
 
@@ -561,6 +562,36 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             _write_stdout(suggest_relocations(wiki_root))
             return 0
         report = migrate_wiki(wiki_root, dry_run=parsed.dry_run)
+        _write_stdout(report)
+        return 0
+
+    elif cmd == "orient":
+        parser = argparse.ArgumentParser(prog="brain79 orient")
+        parser.add_argument(
+            "--task",
+            default=None,
+            help="High-level goal or task description",
+        )
+        parser.add_argument(
+            "--paths",
+            nargs="*",
+            default=None,
+            help="Workspace file paths being inspected or modified",
+        )
+        parser.add_argument(
+            "--max-articles",
+            type=int,
+            default=4,
+            help="Maximum number of governing articles to inline (default: 4)",
+        )
+        parsed = parser.parse_args(sub_args)
+        from brain79.core.orient import orient
+
+        report = orient(
+            task=parsed.task,
+            paths=parsed.paths,
+            max_articles=parsed.max_articles,
+        )
         _write_stdout(report)
         return 0
 

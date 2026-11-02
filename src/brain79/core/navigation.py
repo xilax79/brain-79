@@ -45,8 +45,66 @@ def _save_registry_unlocked(wiki_root: Path, registry: dict[str, Any]) -> None:
                 pass
 
 
+def extract_graph_metadata(content: str) -> dict[str, Any]:
+    """Extract applies_to, related, and outgoing markdown links from article content."""
+    from brain79.core.frontmatter import parse_frontmatter
+    from brain79.core.lint import _extract_raw_link_targets
+
+    meta, body = parse_frontmatter(content)
+    meta = meta or {}
+
+    applies_to_val = meta.get("applies_to", [])
+    if isinstance(applies_to_val, str):
+        applies_to = [applies_to_val]
+    elif isinstance(applies_to_val, list):
+        applies_to = [str(x) for x in applies_to_val if x]
+    else:
+        applies_to = []
+
+    related_val = meta.get("related", [])
+    if isinstance(related_val, str):
+        related = [related_val]
+    elif isinstance(related_val, list):
+        related = [str(x) for x in related_val if x]
+    else:
+        related = []
+
+    supersedes_val = meta.get("supersedes", [])
+    if isinstance(supersedes_val, str):
+        supersedes = [supersedes_val]
+    elif isinstance(supersedes_val, list):
+        supersedes = [str(x) for x in supersedes_val if x]
+    else:
+        supersedes = []
+
+    # Outgoing markdown links
+    raw_targets = _extract_raw_link_targets(body or content)
+    outgoing_links: list[str] = []
+    for raw in raw_targets:
+        if "://" in raw or raw.startswith(("#", "mailto:", "//")):
+            continue
+        cleaned = raw.split("#", 1)[0].strip()
+        if cleaned.endswith(".md"):
+            # Normalize target relative path if it uses ../
+            clean_norm = str(Path(cleaned))
+            if clean_norm not in outgoing_links:
+                outgoing_links.append(clean_norm)
+
+    return {
+        "applies_to": applies_to,
+        "related": related,
+        "supersedes": supersedes,
+        "outgoing_links": outgoing_links,
+    }
+
+
 def register_article(
-    wiki_root: Path, path: str, title: str, summary: str, section: str
+    wiki_root: Path,
+    path: str,
+    title: str,
+    summary: str,
+    section: str,
+    graph_meta: dict[str, Any] | None = None,
 ) -> None:
     """Add or update article in navigation registry (thread-safe and atomic)."""
     if not path or not path.strip():
@@ -60,6 +118,12 @@ def register_article(
     if path.startswith("handoffs/") or section == "handoffs":
         return
 
+    graph_meta = graph_meta or {}
+    applies_to = graph_meta.get("applies_to", [])
+    related = graph_meta.get("related", [])
+    supersedes = graph_meta.get("supersedes", [])
+    outgoing_links = graph_meta.get("outgoing_links", [])
+
     lock = _get_lock(wiki_root)
     with lock:
         registry = load_registry(wiki_root)
@@ -72,17 +136,31 @@ def register_article(
             and existing.get("title") == (title or path)
             and existing.get("summary") == summary
             and existing.get("section") == section
+            and existing.get("applies_to", []) == applies_to
+            and existing.get("related", []) == related
+            and existing.get("supersedes", []) == supersedes
+            and existing.get("outgoing_links", []) == outgoing_links
         ):
             return
 
         registry["articles"] = [a for a in articles if a.get("path") != path]
-        registry["articles"].append({
+        entry: dict[str, Any] = {
             "path": path,
             "title": title or path,
             "summary": summary,
             "section": section,
             "registered_at": datetime.now(UTC).isoformat(),
-        })
+        }
+        if applies_to:
+            entry["applies_to"] = applies_to
+        if related:
+            entry["related"] = related
+        if supersedes:
+            entry["supersedes"] = supersedes
+        if outgoing_links:
+            entry["outgoing_links"] = outgoing_links
+
+        registry["articles"].append(entry)
         _save_registry_unlocked(wiki_root, registry)
 
 

@@ -59,40 +59,40 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "handoff": {
         "required": ["type", "session_type", "previous_ref", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner", "schema_version"],
+        "optional": ["summary", "supersedes", "related", "owner", "schema_version", "applies_to"],
         "enum": {
             "session_type": ["feature", "bugfix", "research", "brainstorming"],
         },
     },
     "product": {
         "required": ["type", "summary", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["supersedes", "related", "owner", "applies_to"],
         "enum": {},
     },
     "architecture": {
         "required": ["type", "summary", "stability", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["supersedes", "related", "owner", "applies_to"],
         "enum": {
             "stability": ["experimental", "stable", "legacy"],
         },
     },
     "feature": {
         "required": ["type", "summary", "status", "version", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["supersedes", "related", "owner", "applies_to"],
         "enum": {
             "status": ["planned", "in_progress", "shipped", "deprecated", "legacy"],
         },
     },
     "decision": {
         "required": ["type", "summary", "status", "date", "deciders", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["supersedes", "related", "owner", "applies_to"],
         "enum": {
             "status": ["proposed", "accepted", "superseded", "rejected", "legacy"],
         },
     },
     "changelog": {
         "required": ["type", "summary", "version", "date", "last_updated"],
-        "optional": ["supersedes", "related", "owner"],
+        "optional": ["supersedes", "related", "owner", "applies_to"],
         "enum": {},
     },
     "raw_session": {
@@ -129,33 +129,33 @@ GENERAL_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "handoff": {
         "required": ["type", "session_type", "previous_ref", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner", "schema_version"],
+        "optional": ["summary", "supersedes", "related", "owner", "schema_version", "applies_to"],
         "enum": {
             "session_type": ["feature", "bugfix", "research", "brainstorming", "work", "general", "writing", "analysis"],
         },
     },
     "context": {
         "required": ["type", "summary", "last_updated"],
-        "optional": ["supersedes", "related", "owner", "scope"],
+        "optional": ["supersedes", "related", "owner", "scope", "applies_to"],
         "enum": {},
     },
     "topic": {
         "required": ["type", "summary", "last_updated"],
-        "optional": ["status", "supersedes", "related", "owner", "tags"],
+        "optional": ["status", "supersedes", "related", "owner", "tags", "applies_to"],
         "enum": {
             "status": ["draft", "active", "archived", "legacy"],
         },
     },
     "decision": {
         "required": ["type", "summary", "status", "date", "last_updated"],
-        "optional": ["deciders", "supersedes", "related", "owner"],
+        "optional": ["deciders", "supersedes", "related", "owner", "applies_to"],
         "enum": {
             "status": ["proposed", "accepted", "superseded", "rejected", "legacy"],
         },
     },
     "log": {
         "required": ["type", "summary", "date", "last_updated"],
-        "optional": ["version", "supersedes", "related", "owner"],
+        "optional": ["version", "supersedes", "related", "owner", "applies_to"],
         "enum": {},
     },
     "raw_session": {

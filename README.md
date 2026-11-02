@@ -91,7 +91,7 @@ This automatically sets up:
 ### For AI Agents (via MCP)
 When integrated with tools like **Pi**, **Claude Code**, **Cursor**, or **Devin**, the agent uses dedicated MCP tools:
 
-1. **Orientation (Cold Start):** The agent calls `brain79_index()` or reads `INDEX.md` to map out the system.
+1. **Instant Orientation (1-Call Cold Start):** The agent calls `brain79_orient(task=..., paths=[...])` to ingest the routing table (`INDEX.md`), latest handoff state, and the full text of governing architecture articles and ADRs in a single round-trip.
 2. **Focused Reading:** Calls `brain79_read("features/auth.md")` or searches via `brain79_search("JWT")`.
 3. **Surgical Updates:** Modifies sections cleanly using `brain79_edit` or writes new specs using `brain79_write`.
 4. **Session Handoff:** At the end of the session, the agent calls `brain79_handoff_write(...)` to store an immutable snapshot of what was finished and what remains to be done.
@@ -100,6 +100,9 @@ When integrated with tools like **Pi**, **Claude Code**, **Cursor**, or **Devin*
 Everything available to the agent is equally accessible to you in the terminal with 100% feature symmetry:
 
 ```bash
+# Instant orientation for a task and files
+brain79 orient --task "implement JWT rotation" --paths "src/auth/jwt.py"
+
 # Check wiki health (broken links, schema violations, orphans)
 brain79 lint --strict
 

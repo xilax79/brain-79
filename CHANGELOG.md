@@ -5,6 +5,14 @@ All notable changes to `brain-79` will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Phase 2: Deterministic Pre-Work Context & Graph-Augmented Cold Start**:
+  - Introduced `brain79 orient` (CLI) and `brain79_orient(task?, paths?, max_articles?)` (MCP), consolidating routing table, latest handoff state, promotion alerts, and inlined governing documents into a single tool call.
+  - Upgraded context ranking (`rank_context_articles`) to a 3-signal deterministic engine:
+    1. *Signal 1*: Exact and glob matching of `applies_to` frontmatter against workspace files.
+    2. *Signal 2*: Field-weighted TF-IDF (title $3\times$, summary $2\times$, body $1\times$) with down-ranking of superseded articles.
+    3. *Signal 3*: 1-Hop ADR reference graph expansion pulling active governing decisions linked from matched articles.
+  - Extended frontmatter schema and templates to recognize `applies_to`, `related`, and `supersedes` across all article types.
+  - Updated navigation registry indexing to capture article graph edges (`applies_to`, `related`, and `outgoing_links`).
 - **Phase 1: Declarative Schema & Dual Ontology**:
   - Decoupled validation engine (mechanism) from directory/type policies via `load_active_schema` with high-speed mtime caching.
   - Added built-in dual ontologies (`software` and `general`) supported via `brain79 init [--profile software|general]`.

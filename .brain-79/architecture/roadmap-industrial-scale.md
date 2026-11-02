@@ -45,15 +45,15 @@ A technical audit of the v1.1.0 codebase and real-world agent sessions identifie
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 0: Core Bug Fixes & Invariant Alignment (Foundation Cleanup)                |
+| Phase 0: Core Bug Fixes & Invariant Alignment (Foundation Cleanup) | [x] Completed (2026-11-02) |
 +-----------------------------------------------------------------------------------+
-| Phase 1: Mechanism vs. Policy — Declarative Schema & Dual Ontology                |
+| Phase 1: Mechanism vs. Policy — Declarative Schema & Dual Ontology | [x] Completed (2026-11-02) |
 +-----------------------------------------------------------------------------------+
-| Phase 2: Deterministic Pre-Work Context & Graph-Augmented Cold Start              |
+| Phase 2: Deterministic Pre-Work Context & Graph-Augmented Cold Start | [x] Completed (2026-11-02) |
 +-----------------------------------------------------------------------------------+
-| Phase 3: Zero-Turn Session Execution (Session Commit & Section-Projected Reads)   |
+| Phase 3: Zero-Turn Session Execution (Session Commit & Section-Projected Reads) | [ ] Planned |
 +-----------------------------------------------------------------------------------+
-| Phase 4: Structural Article Quality & Deterministic Drift Detection               |
+| Phase 4: Structural Article Quality & Deterministic Drift Detection | [ ] Planned |
 +-----------------------------------------------------------------------------------+
 ```
 

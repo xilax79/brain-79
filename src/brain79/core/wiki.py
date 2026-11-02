@@ -95,6 +95,7 @@ def write_article(
             and not rel_path_str.startswith("handoffs/")
         ):
             from brain79.core.navigation import (
+                extract_graph_metadata,
                 extract_title_and_summary,
                 regenerate_index_navigation,
                 register_article,
@@ -102,8 +103,16 @@ def write_article(
 
             rel_p = target.relative_to(wiki_root)
             title, summary = extract_title_and_summary(content)
+            graph_meta = extract_graph_metadata(content)
             section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
-            register_article(wiki_root, str(rel_p), title, summary, section)
+            register_article(
+                wiki_root,
+                str(rel_p),
+                title,
+                summary,
+                section,
+                graph_meta=graph_meta,
+            )
             if not _skip_nav_regen:
                 try:
                     regenerate_index_navigation(wiki_root)

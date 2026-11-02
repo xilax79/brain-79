@@ -121,24 +121,24 @@ The system is organized into four clean, isolated layers:
 ## 5. Typical Lifecycle: An Agent Session
 
 ```
-1. COLD START
+1. COLD START (Single Turn)
    AI Agent awakens
    │
-   ├─► Calls brain79_index() ────────► Reads INDEX.md (Instant overview)
-   └─► Calls brain79_handoff_read() ──► Ingests latest handoff & pending tasks
+   └─► Calls brain79_orient(task, paths) ─► Ingests INDEX, handoff state,
+                                             and inlined governing articles & ADRs
 
 2. EXECUTION
    AI Agent designs or modifies features
    │
-   ├─► Calls brain79_search(query) ──► Instant ripgrep lookup across wiki
-   ├─► Calls brain79_read(path) ─────► Retrieves specific article
-   └─► Calls brain79_edit(path, ...) ─► Applies targeted changes (saves tokens)
+   ├─► Calls brain79_search(query) ──────► Instant ripgrep lookup across wiki
+   ├─► Calls brain79_read(path) ─────────► Retrieves specific article
+   └─► Calls brain79_edit(path, ...) ─────► Applies targeted changes (saves tokens)
 
 3. FINALIZATION
    AI Agent concludes work
    │
-   ├─► Calls brain79_handoff_write() ─► Records what was completed & next steps
-   └─► brain-79 auto-regenerates ───► Updates navigation index & runs linter
+   ├─► Calls brain79_handoff_write() ────► Records what was completed & next steps
+   └─► brain-79 auto-regenerates ───────► Updates navigation index & runs linter
 ```
 
 ---
