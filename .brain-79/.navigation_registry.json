@@ -240,29 +240,6 @@
       ]
     },
     {
-      "path": "architecture/roadmap-industrial-scale.md",
-      "title": "Architecture \u2014 Industrial-Scale Roadmap & Adoption Evolution",
-      "summary": "Industrial-scale roadmap covering completed core protocol phases (0-4) and next-stage adoption, portability, and release governance (5-8)",
-      "section": "architecture",
-      "registered_at": "2026-11-03T17:53:53.533452+00:00",
-      "applies_to": [
-        "src/brain79/__init__.py",
-        "src/brain79/__main__.py",
-        "pyproject.toml"
-      ],
-      "related": [
-        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-011-session-commit-and-batch-reading.md",
-        "decisions/adr-012-structural-quality-and-drift-detection.md",
-        "features/version-governance.md"
-      ],
-      "outgoing_links": [
-        "features/version-governance.md",
-        "INDEX.md"
-      ]
-    },
-    {
       "path": "changelog/v2-0.md",
       "title": "Changelog \u2014 Version 2.0.0 \u2014 Two-Call Protocol & Release Governance",
       "summary": "Major release 2.0.0 introducing Two-Call Session Protocol, declarative ontologies, deterministic drift detection, and release governance",
@@ -289,6 +266,63 @@
         "architecture/roadmap-industrial-scale.md",
         "features/version-governance.md"
       ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/cross-platform-and-lock-isolation.md",
+      "title": "Feature \u2014 Cross-Platform Portability & Centralized Lock Isolation (Phase 6 Specification)",
+      "summary": "Centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests",
+      "section": "features",
+      "registered_at": "2026-11-03T19:04:02.177767+00:00",
+      "applies_to": [
+        "src/brain79/core/wiki.py",
+        "src/brain79/core/navigation.py",
+        "src/brain79/core/lint.py",
+        "src/brain79/core/bootstrap.py",
+        "src/brain79/core/drift.py",
+        "src/brain79/core/init_project.py",
+        "src/brain79/core/migration.py"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-Scale Roadmap & Adoption Evolution",
+      "summary": "Industrial-scale roadmap covering completed core protocol phases (0-4) and next-stage adoption, portability, and release governance (5-8)",
+      "section": "architecture",
+      "registered_at": "2026-11-03T19:04:16.976308+00:00",
+      "applies_to": [
+        "src/brain79/__init__.py",
+        "src/brain79/__main__.py",
+        "pyproject.toml"
+      ],
+      "related": [
+        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-013-versioning-and-release-governance.md",
+        "features/version-governance.md",
+        "features/cross-platform-and-lock-isolation.md"
+      ],
+      "outgoing_links": [
+        "features/cross-platform-and-lock-isolation.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "changelog/v2-0-1.md",
+      "title": "Changelog \u2014 Version 2.0.1 \u2014 Purge Obsolete Integration Fixture",
+      "summary": "Remove obsolete legacy Truco Arena test fixture and decouple local development paths",
+      "section": "changelog",
+      "registered_at": "2026-11-03T19:42:45.256062+00:00",
       "outgoing_links": [
         "INDEX.md"
       ]
