@@ -25,11 +25,15 @@ Global flags can appear before or after subcommands without breaking parsing:
 
 ## Whitelist Routing & Fallback Execution
 
-The dispatcher maintains a strict whitelist (`WHITELIST`) of subcommands:
-`init`, `update`, `index`, `read`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`.
+The dispatcher maintains a strict whitelist (`WHITELIST`) of 22 subcommands:
+`init`, `update`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
 
-If `sys.argv[1:]` starts with a whitelisted command, execution routes to `run_cli(cmd, sub_args, debug)`.
-If no subcommand is provided (e.g. `brain79 --project-root .`), execution falls back to `_cmd_serve()`, launching the FastMCP server on standard IO.
+Routing order in `src/brain79/__main__.py`:
+1. **Empty arguments** (e.g. `brain79` or `brain79 --project-root .`): Launches `_cmd_serve()`, starting the FastMCP server on standard IO.
+2. **Help flags/commands** (`-h`, `--help`, `help [subcmd]`): Prints domain-agnostic root usage or delegates to `<subcmd> --help` and exits with `0`.
+3. **Version flags** (`-v`, `--version`): Prints `brain79 <version>` and exits with `0`.
+4. **Whitelisted subcommands**: Routes to `run_cli(cmd, sub_args, debug)`.
+5. **Unknown commands or flags**: Emits an actionable error to `stderr` and exits with code `2` (never falling through to the MCP stdio loop).
 
 ## Exit Code Mapping Policy
 

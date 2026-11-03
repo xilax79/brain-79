@@ -9,7 +9,7 @@ last_updated: 2026-11-03
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 1.1.0+.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 2.0.0.
 
 ## Completed Milestones & Merged Features
 
@@ -27,6 +27,7 @@ This document maintains a high-level summary of the repository's current archite
 - **Phase 15 – Phase 2: Deterministic Pre-Work Context & Graph-Augmented Cold Start**: Collapsed cold-start orientation into a 1-call tool (`brain79_orient` / `brain79 orient`) powered by a 3-signal deterministic ranker (exact/glob path matches via `applies_to`, field-weighted TF-IDF with H1/H2 weighting, and 1-hop active ADR graph expansion). Documented in [ADR-010](../decisions/adr-010-orient-and-3-signal-context-ranking.md).
 - **Phase 16 – Phase 3: Zero-Turn Session Execution**: Completed the Two-Call Session Protocol with 1-call atomic session finalization (`brain79_session_commit` / `brain79 session-commit`) guaranteeing all-or-nothing rollback across writes, in-memory simulated edits, and handoffs, and section-projected batch reading (`brain79_read_batch`, `brain79_read` with `sections`). Documented in [ADR-011](../decisions/adr-011-session-commit-and-batch-reading.md).
 - **Phase 17 – Phase 4: Structural Article Quality & Deterministic Drift Detection**: Enforced document structural integrity with section skeletons per document type, automatic idempotent backlink footer normalization on write (`[← Volver al Índice](../INDEX.md)`), and deterministic code-to-wiki drift detection via `applies_to` frontmatter against git commit timestamps and filesystem mtimes, surfacing alerts in `brain79 lint` and `brain79_orient`. Documented in [ADR-012](../decisions/adr-012-structural-quality-and-drift-detection.md).
+- **Phase 18 – Phase 5: Versioning & Release Governance (v2.0.0)**: Single-source semantic versioning via Hatchling dynamic metadata resolution (`__version__ = "2.0.0"` in `src/brain79/__init__.py`), FastMCP server initialization version handshake exposure, and automated test-enforced release parity across SemVer syntax, Hatchling dynamic build settings, README badges, and changelog presence. Documented in [ADR-013](../decisions/adr-013-versioning-and-release-governance.md).
 - **Self-Wiki Dogfooding (Phase A-D)**: Fully populated self-documenting `.brain-79/` wiki verified by `brain79 lint --strict`.
 
 ## System Invariants & Invariant Guards
@@ -42,7 +43,7 @@ This document maintains a high-level summary of the repository's current archite
 
 - Maintenance of organizational linter rules and schema validation.
 - Preservation of 100% test coverage and static type safety (`mypy --strict`, `ruff`).
-- Preparation for PyPI packaging release (v1.1.0).
+- Preparation for PyPI packaging release (v2.0.0) and execution of Phase 6 (Cross-Platform OS Portability & CI Matrix).
 
 ---
 

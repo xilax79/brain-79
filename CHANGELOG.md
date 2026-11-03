@@ -4,7 +4,18 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-03
+
 ### Added
+- **Phase 5: Single-Source Semantic Versioning & Release Governance**:
+  - Established `src/brain79/__init__.py` as the single source of truth for versioning, resolved dynamically by Hatchling (`dynamic = ["version"]`).
+  - Added `version=__version__` to `FastMCP("brain79")` initialization for accurate JSON-RPC handshake metadata.
+  - Enhanced CLI root help (`brain79 --help` / `brain79 help <subcmd>`) and added `-v` / `--version` flags with strict exit code 2 on unknown commands.
+  - Implemented mechanical release parity test suite (`tests/test_version_governance.py`) enforcing SemVer compliance, Hatchling dynamic build configuration, README badge synchronization, and changelog parity across both `.brain-79/changelog/` and root `CHANGELOG.md`.
+- **Phase 4: Structural Article Quality & Deterministic Drift Detection**:
+  - Enforced document structural integrity with section skeletons per document type (`## Status`, `## Context`, `## Decision`, `## Consequences` for decisions; `## Overview` for features).
+  - Automated backlink injection (`[← Volver al Índice](../INDEX.md)`) across all subfolder articles during write normalization.
+  - Implemented Git-backed code-to-wiki drift detection (`documentation_drift_suspected`) alerting when workspace source files change after governing documentation `last_updated` dates.
 - **Phase 3: Zero-Turn Session Execution (The Two-Call Session Protocol)**:
   - Introduced `brain79_session_commit` (FastMCP) and `brain79 session-commit` (CLI) providing 1-call atomic end-of-session finalization:
     - Pre-flight in-memory simulation and validation of writes, edits, and handoff anti-hallucination constraints with an all-or-nothing rollback guarantee (zero files hit disk on error).

@@ -2,10 +2,10 @@
 
 > **Persistent, curated memory for AI coding assistants. Zero hallucination, zero context rot, and sub-second agent orientation.**
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-brightgreen.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-334%20passed-success.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-434%20passed-success.svg)](tests/)
 
 ---
 

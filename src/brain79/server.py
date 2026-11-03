@@ -3,6 +3,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 
+from brain79 import __version__
 from brain79.config import get_wiki_root
 from brain79.core import context as context_ops
 from brain79.core import handoff as handoff_ops
@@ -18,6 +19,7 @@ logging.getLogger("mcp").setLevel(logging.WARNING)
 
 mcp = FastMCP(
     "brain79",
+    version=__version__,
     instructions=(
         "brain79 is a per-project AI memory system. "
         "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation. "
