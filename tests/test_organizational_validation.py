@@ -26,7 +26,11 @@ def test_validate_valid_feature_article() -> None:
         "version: 0.1.0\n"
         "last_updated: 2026-08-11\n"
         "---\n\n"
-        "# Feature Title\n"
+        "# Feature Title\n\n"
+        "## Overview\n"
+        "Feature overview.\n\n"
+        "---\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
     )
     result = validate_article_content("features/my-feature.md", content)
     assert result == content

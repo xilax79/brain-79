@@ -17,7 +17,7 @@ def test_lint_read_only_contract(tmp_path: Path) -> None:
     idx = wiki_dir / "INDEX.md"
     idx.write_text("# Main Index\n\n## Quick navigation\n- [Doc](features/doc.md)\n", encoding="utf-8")
     doc = features_dir / "doc.md"
-    doc.write_text("---\ntype: feature\nsummary: Doc summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Document\n", encoding="utf-8")
+    doc.write_text("---\ntype: feature\nsummary: Doc summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Document\n\n## Overview\nDoc overview.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n", encoding="utf-8")
 
     mtime_before = {p: p.stat().st_mtime_ns for p in wiki_dir.rglob("*")}
 
@@ -59,7 +59,7 @@ def test_lint_unicode_resilience(tmp_path: Path) -> None:
     sub_dir = wiki_dir / "features" / "路径"
     sub_dir.mkdir(parents=True)
     target_file = sub_dir / "文件.md"
-    target_file.write_text("---\ntype: feature\nsummary: Unicode target\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Target\n", encoding="utf-8")
+    target_file.write_text("---\ntype: feature\nsummary: Unicode target\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Target\n\n## Overview\nUnicode target.\n\n---\n\n[← Volver al Índice](../../INDEX.md)\n", encoding="utf-8")
 
     idx = wiki_dir / "INDEX.md"
     idx.write_text("# Index\n\n## Quick navigation\n- [Exotic](features/路径/文件.md)\n", encoding="utf-8")
@@ -76,7 +76,7 @@ def test_lint_reference_titles(tmp_path: Path) -> None:
     features_dir.mkdir(parents=True)
 
     target = features_dir / "target.md"
-    target.write_text("---\ntype: feature\nsummary: Target document summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Target Document\n", encoding="utf-8")
+    target.write_text("---\ntype: feature\nsummary: Target document summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Target Document\n\n## Overview\nTarget overview.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n", encoding="utf-8")
 
     idx = wiki_dir / "INDEX.md"
     idx.write_text(
@@ -97,7 +97,7 @@ def test_lint_space_resilience(tmp_path: Path) -> None:
     space_dir = wiki_dir / "features" / "path with spaces"
     space_dir.mkdir(parents=True)
     space_file = space_dir / "file.md"
-    space_file.write_text("---\ntype: feature\nsummary: Spaced file summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Spaced File\n", encoding="utf-8")
+    space_file.write_text("---\ntype: feature\nsummary: Spaced file summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Spaced File\n\n## Overview\nSpaced overview.\n\n---\n\n[← Volver al Índice](../../INDEX.md)\n", encoding="utf-8")
 
     idx = wiki_dir / "INDEX.md"
     idx.write_text(

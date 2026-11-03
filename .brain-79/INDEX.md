@@ -32,6 +32,8 @@ last_updated: 2026-11-03
 - [ADR-008 — Architecture — Pure Automated Routing Table for INDEX.md](decisions/adr-008-pure-index-routing-table.md) — Pure automated routing table architecture for INDEX.md and automated timestamp synchronization
 - [ADR-009 — Declarative Schema Loading & Dual Built-In Ontologies (Mechanism vs. Policy)](decisions/adr-009-declarative-schema-and-dual-ontologies.md) — Decoupling validation mechanism from ontology policy with dual built-in profiles and custom folder support
 - [ADR-010 — Two-Call Session Protocol: 1-Call Cold Start Orient and Deterministic 3-Signal Context Ranking](decisions/adr-010-orient-and-3-signal-context-ranking.md) — 1-Call cold start orientation and deterministic 3-signal context ranking
+- [ADR-011 — Two-Call Session Protocol: 1-Call Atomic Session Commit & Section-Projected Batch Reading](decisions/adr-011-session-commit-and-batch-reading.md) — 1-Call atomic session finalization and section-projected batch reading
+- [ADR-012 — Structural Article Quality, Auto-Injected Backlinks, and Deterministic Drift Detection](decisions/adr-012-structural-quality-and-drift-detection.md) — Section-level structural skeletons, auto-injected backlinks, and deterministic code-to-wiki drift detection
 
 ### Features
 - [Feature — FastMCP Integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication

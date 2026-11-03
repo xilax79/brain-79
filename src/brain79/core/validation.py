@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import re
 import sys
+from typing import Any
 
 from brain79.core.frontmatter import (
     FrontmatterError,
@@ -11,6 +12,7 @@ from brain79.core.frontmatter import (
     dump_frontmatter,
     generate_frontmatter_template,
     infer_type_for_path,
+    normalize_backlink_footer,
     parse_frontmatter,
     validate_frontmatter,
     validate_location_consistency,
@@ -186,8 +188,84 @@ def validate_article_content(
         active_s = None
 
     meta = autofill_deterministic_fields(meta, rel_path, body=body, schema=active_s)
+    body = normalize_backlink_footer(body, rel_path)
     content = dump_frontmatter(meta, body)
     validate_frontmatter(meta, rel_path, schema=active_s)
     validate_location_consistency(meta, rel_path, schema=active_s)
 
     return content
+
+
+def extract_h2_headers(content: str) -> list[str]:
+    """Extract all ## H2 heading titles from markdown content, masking code blocks."""
+    masked = _mask_code_fences(content)
+    headers: list[str] = []
+    for line in masked.splitlines():
+        if line.startswith("## "):
+            headers.append(line[3:].strip())
+    return headers
+
+
+def check_missing_sections(
+    content: str,
+    target_type: str,
+    schema: Any | None = None,
+) -> list[str]:
+    """Check if content is missing any required H2 sections for the target type.
+
+    Supports synonyms/alternatives when a required section is defined as a list of acceptable titles.
+    Decisions strictly require standard ADR sections.
+    Inactive articles (superseded, deprecated, rejected, archived, legacy) are exempted.
+    Matches headings using exact match or boundary phrases (avoiding partial substring accidents).
+    """
+    from brain79.core.frontmatter import load_active_schema, parse_frontmatter
+
+    # Exemption for inactive statuses
+    try:
+        meta, _ = parse_frontmatter(content)
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        if status in ("superseded", "deprecated", "rejected", "archived", "legacy") or stability == "legacy":
+            return []
+    except Exception:
+        pass
+
+    active = schema or load_active_schema()
+    type_cfg = active.types.get(target_type, {})
+    req_sections = type_cfg.get("required_sections", [])
+    if not req_sections:
+        return []
+
+    present_headers = extract_h2_headers(content)
+    normalized_headers = [h.strip().lower() for h in present_headers]
+
+    missing: list[str] = []
+    for req in req_sections:
+        if isinstance(req, str):
+            req_name = req
+            candidates = [req.lower()]
+        else:
+            req_name = req[0]
+            candidates = [c.lower() for c in req]
+
+        matched = False
+        for c in candidates:
+            for nh in normalized_headers:
+                # 1. Exact match (e.g. "status" == "status", "overview" == "overview")
+                if nh == c:
+                    matched = True
+                    break
+                # 2. Strict prefix/suffix match (e.g. "adr status", "decision consequences", "system overview")
+                if nh.startswith(c + " ") or nh.endswith(" " + c):
+                    matched = True
+                    break
+                # 3. Word boundary regex match for multi-word phrases (e.g. "general description", "executive summary")
+                if " " in c and re.search(rf"\b{re.escape(c)}\b", nh):
+                    matched = True
+                    break
+            if matched:
+                break
+        if not matched:
+            missing.append(req_name)
+
+    return missing

@@ -133,6 +133,7 @@ def test_write_article_with_frontmatter_summary_indexes_into_quick_nav(
         "last_updated: 2026-10-29\n"
         "---\n\n"
         "# Audio Streaming\n\n"
+        "## Overview\n"
         "Implementation details here.\n\n"
         "---\n\n"
         "[← Volver al Índice](../INDEX.md)\n"

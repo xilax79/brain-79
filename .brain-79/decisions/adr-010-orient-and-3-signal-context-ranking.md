@@ -6,13 +6,13 @@ date: 2026-11-02
 deciders:
   - xilax
 applies_to:
-  - "src/brain79/core/orient.py"
-  - "src/brain79/core/context.py"
-  - "src/brain79/core/navigation.py"
+  - src/brain79/core/orient.py
+  - src/brain79/core/context.py
+  - src/brain79/core/navigation.py
 related:
-  - "decisions/adr-008-pure-index-routing-table.md"
-  - "architecture/roadmap-industrial-scale.md"
-last_updated: 2026-11-02
+  - decisions/adr-008-pure-index-routing-table.md
+  - architecture/roadmap-industrial-scale.md
+last_updated: 2026-11-03
 ---
 
 # ADR-010 — Two-Call Session Protocol: 1-Call Cold Start Orient and Deterministic 3-Signal Context Ranking
