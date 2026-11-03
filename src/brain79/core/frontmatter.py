@@ -1,5 +1,5 @@
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -68,6 +68,7 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "required": ["type", "summary", "last_updated"],
         "optional": ["supersedes", "related", "owner", "applies_to"],
         "enum": {},
+        "required_sections": [["Overview", "Problem", "Executive Summary", "Vision"]],
     },
     "architecture": {
         "required": ["type", "summary", "stability", "last_updated"],
@@ -75,6 +76,7 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "enum": {
             "stability": ["experimental", "stable", "legacy"],
         },
+        "required_sections": [["Overview", "General Description", "State"]],
     },
     "feature": {
         "required": ["type", "summary", "status", "version", "last_updated"],
@@ -82,6 +84,7 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "enum": {
             "status": ["planned", "in_progress", "shipped", "deprecated", "legacy"],
         },
+        "required_sections": ["Overview"],
     },
     "decision": {
         "required": ["type", "summary", "status", "date", "deciders", "last_updated"],
@@ -89,11 +92,13 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "enum": {
             "status": ["proposed", "accepted", "superseded", "rejected", "legacy"],
         },
+        "required_sections": ["Status", "Context", "Decision", "Consequences"],
     },
     "changelog": {
         "required": ["type", "summary", "version", "date", "last_updated"],
         "optional": ["supersedes", "related", "owner", "applies_to"],
         "enum": {},
+        "required_sections": [],
     },
     "raw_session": {
         "required": ["type", "session_id", "session_type", "last_updated"],
@@ -138,6 +143,7 @@ GENERAL_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "required": ["type", "summary", "last_updated"],
         "optional": ["supersedes", "related", "owner", "scope", "applies_to"],
         "enum": {},
+        "required_sections": ["Overview"],
     },
     "topic": {
         "required": ["type", "summary", "last_updated"],
@@ -145,6 +151,7 @@ GENERAL_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "enum": {
             "status": ["draft", "active", "archived", "legacy"],
         },
+        "required_sections": ["Overview"],
     },
     "decision": {
         "required": ["type", "summary", "status", "date", "last_updated"],
@@ -152,11 +159,13 @@ GENERAL_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "enum": {
             "status": ["proposed", "accepted", "superseded", "rejected", "legacy"],
         },
+        "required_sections": ["Status", "Context", "Decision", "Consequences"],
     },
     "log": {
         "required": ["type", "summary", "date", "last_updated"],
         "optional": ["version", "supersedes", "related", "owner", "applies_to"],
         "enum": {},
+        "required_sections": [],
     },
     "raw_session": {
         "required": ["type", "session_id", "session_type", "last_updated"],
@@ -196,6 +205,14 @@ class ActiveSchema:
     types: dict[str, dict[str, Any]]
     location_to_type: dict[str, str]
     supports_technical_debt_leakage: bool = True
+    required_sections: dict[str, list[Any]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.required_sections:
+            self.required_sections = {
+                t: list(cfg.get("required_sections", []))
+                for t, cfg in self.types.items()
+            }
 
 
 # In-memory schema cache: (resolved_wiki_root_str, schema_mtime_ns) -> ActiveSchema
@@ -273,11 +290,13 @@ def load_active_schema(wiki_root: Path | None = None) -> ActiveSchema:
         opt = custom_cfg.get("optional", ["supersedes", "related", "owner"])
         enums = custom_cfg.get("enum", {})
         dir_name = custom_cfg.get("directory", custom_name)
+        req_sections = custom_cfg.get("required_sections", ["Overview"])
 
         base_types[custom_name] = {
             "required": req,
             "optional": opt,
             "enum": enums,
+            "required_sections": req_sections,
         }
         base_loc[dir_name] = custom_name
 
@@ -447,6 +466,83 @@ def autofill_deterministic_fields(
     return meta
 
 
+def generate_document_skeleton(target_type: str, schema: ActiveSchema | None = None) -> str:
+    """Generate a full markdown document skeleton (frontmatter + H1 + H2 sections + backlink)."""
+    active = schema or load_active_schema()
+    fm_template = generate_frontmatter_template(target_type, schema=active)
+
+    type_title = target_type.replace("_", " ").title()
+    lines = [
+        fm_template,
+        "",
+        f"# {type_title} Title",
+        "",
+    ]
+
+    type_cfg = active.types.get(target_type, {})
+    req_sections = type_cfg.get("required_sections", [])
+    for sec in req_sections:
+        sec_name = sec if isinstance(sec, str) else sec[0]
+        lines.append(f"## {sec_name}")
+        lines.append("")
+        lines.append(f"<!-- Detail {sec_name.lower()} here -->")
+        lines.append("")
+
+    # If it's a subfolder type, include the backlink footer
+    is_subfolder = False
+    for folder, t in active.location_to_type.items():
+        if t == target_type and folder != "INDEX.md" and not folder.startswith("_raw") and folder != "handoffs":
+            is_subfolder = True
+            break
+
+    if is_subfolder:
+        lines.append("---")
+        lines.append("")
+        lines.append("[← Volver al Índice](../INDEX.md)")
+        lines.append("")
+
+    return "\n".join(lines).strip() + "\n"
+
+
+def normalize_backlink_footer(body: str, rel_path: str) -> str:
+    """Ensure standard backlink navigation footer exists in subfolder articles.
+
+    Articles in root (INDEX.md, SCHEMA.md), _raw/, and handoffs/ are excluded.
+    Empty bodies or stub articles with only an H1 header are excluded.
+    """
+    clean_rel = rel_path.strip().lstrip("/")
+    parts = Path(clean_rel).parts
+    if len(parts) <= 1 or parts[0] in ("_raw", "handoffs") or clean_rel in ("INDEX.md", "SCHEMA.md"):
+        return body
+
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    if len(lines) <= 1:
+        return body
+
+    # Calculate relative path back to INDEX.md
+    depth = len(parts) - 1
+    rel_to_index = ("../" * depth) + "INDEX.md"
+
+    # Check if backlink already present
+    lower_body = body.lower()
+    if (
+        "[← volver al índice]" in lower_body
+        or "[← return to index]" in lower_body
+        or "[← back to index]" in lower_body
+        or "[volver al índice]" in lower_body
+    ):
+        return body
+
+    stripped_body = body.rstrip()
+    if not stripped_body:
+        return body
+
+    if stripped_body.endswith("---"):
+        return f"{stripped_body}\n\n[← Volver al Índice]({rel_to_index})\n"
+    else:
+        return f"{stripped_body}\n\n---\n\n[← Volver al Índice]({rel_to_index})\n"
+
+
 def get_schema_documentation(
     target_type: str | None = None, schema: ActiveSchema | None = None
 ) -> str:
@@ -467,9 +563,17 @@ def get_schema_documentation(
         if cfg["enum"]:
             for field, vals in cfg["enum"].items():
                 lines.append(f"- **Enum `{field}`**: {', '.join(vals)}")
+        req_sec = cfg.get("required_sections", [])
+        if req_sec:
+            sec_display = [s if isinstance(s, str) else " / ".join(s) for s in req_sec]
+            lines.append(f"- **Required sections**: {', '.join(sec_display)}")
         lines.append("\nTemplate:")
         lines.append("```yaml")
         lines.append(generate_frontmatter_template(t, schema=active))
+        lines.append("```")
+        lines.append("\nDocument Skeleton:")
+        lines.append("```markdown")
+        lines.append(generate_document_skeleton(t, schema=active))
         lines.append("```\n")
 
     return "\n".join(lines).rstrip()

@@ -81,6 +81,28 @@ def orient(
         if not ranked:
             sections.append("No specific governing articles matched the task or paths.")
         else:
+            # Check documentation drift for inlined governing articles
+            from brain79.core.drift import check_article_drift
+
+            seen_drifts: set[tuple[str, str]] = set()
+            for _, article_p, _ in ranked:
+                try:
+                    drifts = check_article_drift(article_p, wiki_root=w_root)
+                    for d in drifts:
+                        key = (d["article_path"], d["workspace_file"])
+                        if key not in seen_drifts:
+                            seen_drifts.add(key)
+                            sections.append(
+                                f"> ⚠️ **Documentation Drift Suspected**: Article '{d['article_path']}' "
+                                f"governs '{d['workspace_file']}' (modified {d['file_date']}), but article was "
+                                f"last updated {d['article_date']}. Verify accuracy before proceeding."
+                            )
+                except Exception:
+                    pass
+
+            if seen_drifts:
+                sections.append("")
+
             inlined_count = 0
             # Inline top candidates AND expanded 1-hop ADRs without truncation
             for score, article_p, reasons in ranked:

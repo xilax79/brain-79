@@ -2,7 +2,7 @@
 type: architecture
 summary: High-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-11-02
+last_updated: 2026-11-03
 ---
 
 # Architecture — System Current State
@@ -26,6 +26,7 @@ This document maintains a high-level summary of the repository's current archite
 - **Phase 14 – Phase 1: Declarative Schema & Dual Ontology**: Decoupled validation engine (mechanism) from ontology policy via `load_active_schema` with nanosecond mtime caching. Added support for dual built-in profiles (`software` and `general`) via `brain79 init --profile [software|general]`, allowing non-code directories to manage knowledge seamlessly (`context/`, `topics/`, `decisions/`, `log/`) without semver or tech debt leakage friction. Added arbitrary custom folder declarations via `.brain-79/SCHEMA.md` frontmatter.
 - **Phase 15 – Phase 2: Deterministic Pre-Work Context & Graph-Augmented Cold Start**: Collapsed cold-start orientation into a 1-call tool (`brain79_orient` / `brain79 orient`) powered by a 3-signal deterministic ranker (exact/glob path matches via `applies_to`, field-weighted TF-IDF with H1/H2 weighting, and 1-hop active ADR graph expansion). Documented in [ADR-010](../decisions/adr-010-orient-and-3-signal-context-ranking.md).
 - **Phase 16 – Phase 3: Zero-Turn Session Execution**: Completed the Two-Call Session Protocol with 1-call atomic session finalization (`brain79_session_commit` / `brain79 session-commit`) guaranteeing all-or-nothing rollback across writes, in-memory simulated edits, and handoffs, and section-projected batch reading (`brain79_read_batch`, `brain79_read` with `sections`). Documented in [ADR-011](../decisions/adr-011-session-commit-and-batch-reading.md).
+- **Phase 17 – Phase 4: Structural Article Quality & Deterministic Drift Detection**: Enforced document structural integrity with section skeletons per document type, automatic idempotent backlink footer normalization on write (`[← Volver al Índice](../INDEX.md)`), and deterministic code-to-wiki drift detection via `applies_to` frontmatter against git commit timestamps and filesystem mtimes, surfacing alerts in `brain79 lint` and `brain79_orient`. Documented in [ADR-012](../decisions/adr-012-structural-quality-and-drift-detection.md).
 - **Self-Wiki Dogfooding (Phase A-D)**: Fully populated self-documenting `.brain-79/` wiki verified by `brain79 lint --strict`.
 
 ## System Invariants & Invariant Guards

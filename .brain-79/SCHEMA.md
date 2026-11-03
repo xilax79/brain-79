@@ -65,13 +65,27 @@ last_updated: YYYY-MM-DD
 
 ### Back-Navigation Links
 
-Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions/`, `changelog/`) should conclude with a back-navigation link at the bottom of the article to facilitate reading in editors (VS Code, Obsidian, GitHub):
+Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions/`, `changelog/`) automatically conclude with a back-navigation link to facilitate reading in editors (VS Code, Obsidian, GitHub). This is enforced and auto-injected during write normalization:
 
 ```markdown
 ---
 
 [← Volver al Índice](../INDEX.md)
 ```
+
+### Document Structural Skeletons & Required Sections
+
+Articles must include standard structural sections per document type:
+- `decision`: Requires `## Status`, `## Context`, `## Decision`, `## Consequences`.
+- `feature`: Requires `## Overview`.
+- `architecture`: Requires `## Overview`, `## General Description`, or `## State`.
+- `product`: Requires `## Overview`, `## Problem`, or `## Executive Summary`.
+
+Inspect complete document skeletons via `brain79_schema(type)`.
+
+### Deterministic Drift Detection (`applies_to`)
+
+Articles declaring `applies_to` paths or globs in frontmatter are continuously checked against git commit timestamps and filesystem modification dates. Stale articles surface as `documentation_drift_suspected` warnings in `brain79 lint` and `brain79_orient`.
 
 ---
 

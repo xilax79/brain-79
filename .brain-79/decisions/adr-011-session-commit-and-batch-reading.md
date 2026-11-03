@@ -6,15 +6,15 @@ date: 2026-11-02
 deciders:
   - xilax
 applies_to:
-  - "src/brain79/core/session_commit.py"
-  - "src/brain79/core/wiki.py"
-  - "src/brain79/server.py"
-  - "src/brain79/cli/dispatch.py"
+  - src/brain79/core/session_commit.py
+  - src/brain79/core/wiki.py
+  - src/brain79/server.py
+  - src/brain79/cli/dispatch.py
 related:
-  - "decisions/adr-010-orient-and-3-signal-context-ranking.md"
-  - "decisions/adr-006-auto-navigation-and-batch-operations.md"
-  - "architecture/roadmap-industrial-scale.md"
-last_updated: 2026-11-02
+  - decisions/adr-010-orient-and-3-signal-context-ranking.md
+  - decisions/adr-006-auto-navigation-and-batch-operations.md
+  - architecture/roadmap-industrial-scale.md
+last_updated: 2026-11-03
 ---
 
 # ADR-011 — Two-Call Session Protocol: 1-Call Atomic Session Commit & Section-Projected Batch Reading

@@ -458,6 +458,121 @@ def check_unfilled_placeholders(wiki_root: Path) -> list[OrganizationalIssue]:
     return issues
 
 
+def check_article_structural_sections(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
+    """Verify that articles contain required structural H2 sections for their type."""
+    from brain79.core.validation import check_missing_sections
+
+    schema = load_active_schema(wiki_root)
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    issues: list[OrganizationalIssue] = []
+
+    for md_file in files:
+        rel = md_file.relative_to(wiki_root)
+        rel_str = str(rel)
+        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
+            continue
+
+        try:
+            content = md_file.read_text(encoding="utf-8")
+            meta, _ = parse_frontmatter(content)
+            if meta.get("status") == "legacy" or meta.get("stability") == "legacy":
+                continue
+            doc_type = meta.get("type")
+            if not doc_type:
+                continue
+            missing = check_missing_sections(content, doc_type, schema=schema)
+            if missing:
+                missing_str = ", ".join(f"'## {s}'" for s in missing)
+                issues.append(
+                    OrganizationalIssue(
+                        rule="article_missing_required_sections",
+                        path=rel_str,
+                        line=None,
+                        severity="warning",
+                        message=f"Article '{rel_str}' is missing required sections for type '{doc_type}': {missing_str}.",
+                        actionable=f"Add missing sections ({missing_str}) to '{rel_str}'.",
+                    )
+                )
+        except Exception:
+            pass
+    return issues
+
+
+def check_article_backlinks(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
+    """Verify that all articles in subfolders have a backlink navigation footer to INDEX.md."""
+    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    issues: list[OrganizationalIssue] = []
+
+    for md_file in files:
+        rel = md_file.relative_to(wiki_root)
+        rel_str = str(rel)
+        if len(rel.parts) <= 1 or rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
+            continue
+
+        try:
+            content = md_file.read_text(encoding="utf-8")
+            meta, body = parse_frontmatter(content)
+            if meta.get("status") == "legacy" or meta.get("stability") == "legacy":
+                continue
+            lines = [line.strip() for line in body.splitlines() if line.strip()]
+            if len(lines) <= 2:
+                continue
+
+            lower = content.lower()
+            if (
+                "[← volver al índice]" not in lower
+                and "[← return to index]" not in lower
+                and "[← back to index]" not in lower
+                and "[volver al índice]" not in lower
+            ):
+                issues.append(
+                    OrganizationalIssue(
+                        rule="article_missing_backlink",
+                        path=rel_str,
+                        line=None,
+                        severity="warning",
+                        message=f"Article '{rel_str}' is missing backlink navigation footer to INDEX.md.",
+                        actionable="Add `[← Volver al Índice](../INDEX.md)` at the end of the article, or rewrite via brain79 to auto-inject it.",
+                    )
+                )
+        except Exception:
+            pass
+    return issues
+
+
+def check_documentation_drift(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
+    """Verify that articles with `applies_to` frontmatter have not fallen behind workspace code changes."""
+    from brain79.core.drift import detect_all_drift
+
+    drifts = detect_all_drift(wiki_root=wiki_root, md_files=md_files)
+    issues: list[OrganizationalIssue] = []
+
+    for d in drifts:
+        issues.append(
+            OrganizationalIssue(
+                rule="documentation_drift_suspected",
+                path=d["article_path"],
+                line=None,
+                severity="warning",
+                message=(
+                    f"Article '{d['article_path']}' governs '{d['workspace_file']}' "
+                    f"(modified {d['file_date']}), but article was last updated {d['article_date']}."
+                ),
+                actionable=(
+                    f"Verify accuracy of '{d['article_path']}' against recent changes in "
+                    f"'{d['workspace_file']}' and update frontmatter `last_updated`."
+                ),
+            )
+        )
+    return issues
+
+
 def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     """Run all organizational health checks on the wiki."""
     md_files = [f for f in sorted(wiki_root.rglob("*.md")) if "_raw" not in f.parts]
@@ -473,6 +588,9 @@ def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     issues.extend(check_legacy_articles(wiki_root, md_files=md_files))
     issues.extend(check_force_skipped_articles(wiki_root, md_files=md_files))
     issues.extend(check_unfilled_placeholders(wiki_root))
+    issues.extend(check_article_structural_sections(wiki_root, md_files=md_files))
+    issues.extend(check_article_backlinks(wiki_root, md_files=md_files))
+    issues.extend(check_documentation_drift(wiki_root, md_files=md_files))
     return issues
 
 

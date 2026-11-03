@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import re
 import sys
+from typing import Any
 
 from brain79.core.frontmatter import (
     FrontmatterError,
@@ -11,6 +12,7 @@ from brain79.core.frontmatter import (
     dump_frontmatter,
     generate_frontmatter_template,
     infer_type_for_path,
+    normalize_backlink_footer,
     parse_frontmatter,
     validate_frontmatter,
     validate_location_consistency,
@@ -186,8 +188,73 @@ def validate_article_content(
         active_s = None
 
     meta = autofill_deterministic_fields(meta, rel_path, body=body, schema=active_s)
+    body = normalize_backlink_footer(body, rel_path)
     content = dump_frontmatter(meta, body)
     validate_frontmatter(meta, rel_path, schema=active_s)
     validate_location_consistency(meta, rel_path, schema=active_s)
 
     return content
+
+
+def extract_h2_headers(content: str) -> list[str]:
+    """Extract all ## H2 heading titles from markdown content, masking code blocks."""
+    masked = _mask_code_fences(content)
+    headers: list[str] = []
+    for line in masked.splitlines():
+        if line.startswith("## "):
+            headers.append(line[3:].strip())
+    return headers
+
+
+def check_missing_sections(
+    content: str,
+    target_type: str,
+    schema: Any | None = None,
+) -> list[str]:
+    """Check if content is missing any required H2 sections for the target type.
+
+    Supports synonyms/alternatives when a required section is defined as a list of acceptable titles.
+    Decisions strictly require standard ADR sections. For other types, checks if the document
+    has section headings or substantial unstructured body (>200 characters).
+    """
+    from brain79.core.frontmatter import load_active_schema, parse_frontmatter
+
+    active = schema or load_active_schema()
+    type_cfg = active.types.get(target_type, {})
+    req_sections = type_cfg.get("required_sections", [])
+    if not req_sections:
+        return []
+
+    present_headers = extract_h2_headers(content)
+    present_lower = [h.lower() for h in present_headers]
+
+    # For non-decision types, short stubs (single paragraph <=200 chars and no other H2s)
+    # are concise summaries and not unstructured walls of text
+    if target_type != "decision":
+        try:
+            _, body = parse_frontmatter(content)
+            body_stripped = body.strip()
+            # If no H2 headers at all and body is short stub (<=200 chars or <=2 non-empty lines)
+            if not present_headers and (len(body_stripped) <= 200 or len([l for l in body_stripped.splitlines() if l.strip()]) <= 2):
+                return []
+        except Exception:
+            pass
+
+    missing: list[str] = []
+    for req in req_sections:
+        if isinstance(req, str):
+            req_name = req
+            candidates = [req.lower()]
+        else:
+            req_name = req[0]
+            candidates = [c.lower() for c in req]
+
+        matched = False
+        for c in candidates:
+            if any(c == h or c in h for h in present_lower):
+                matched = True
+                break
+        if not matched:
+            missing.append(req_name)
+
+    return missing

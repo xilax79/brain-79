@@ -422,6 +422,24 @@ def check_file_health(wiki_root: Path, rel_path: str, content: str) -> list[str]
         except ValueError:
             warnings.append(f"Link points outside wiki: '{raw_target}'.")
 
+    # 4. Required structural sections check
+    if rel_path != "INDEX.md":
+        from brain79.core.frontmatter import infer_type_for_path, load_active_schema, parse_frontmatter
+        from brain79.core.validation import check_missing_sections
+
+        try:
+            active_schema = load_active_schema(wiki_root)
+            meta, _ = parse_frontmatter(content)
+            doc_type = meta.get("type") or infer_type_for_path(rel_path, schema=active_schema)
+            if doc_type:
+                missing_secs = check_missing_sections(content, doc_type, schema=active_schema)
+                for sec in missing_secs:
+                    warnings.append(
+                        f"Missing required section '## {sec}' in '{rel_path}' for type '{doc_type}'."
+                    )
+        except Exception:
+            pass
+
     return warnings
 
 
