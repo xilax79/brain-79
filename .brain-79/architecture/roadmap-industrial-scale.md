@@ -13,6 +13,7 @@ related:
   - decisions/adr-012-structural-quality-and-drift-detection.md
   - decisions/adr-013-versioning-and-release-governance.md
   - features/version-governance.md
+  - features/cross-platform-and-lock-isolation.md
 last_updated: 2026-11-03
 ---
 
@@ -39,7 +40,7 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 6: Cross-Platform OS Portability & CI Matrix (Win/Linux/Mac)  | [ ] Planned |
+| Phase 6: Centralized .locks/ Isolation & Cross-Platform OS I/O      | [ ] Planned |
 +-----------------------------------------------------------------------------------+
 | Phase 7: Multi-Harness Zero-Config & Doctor Diagnostics             | [ ] Planned |
 +-----------------------------------------------------------------------------------+
@@ -47,12 +48,9 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 +-----------------------------------------------------------------------------------+
 ```
 
-### Phase 6: Cross-Platform OS Portability & CI Matrix (Windows, Linux, macOS)
-- **Problem:** Development and dogfooding have occurred primarily on macOS. Windows and Linux environments have distinct behaviors for path separators (`\` vs `/`), line endings (`CRLF` vs `LF`), file locks (`NTFS` vs `POSIX`), and `.git/hooks/pre-commit` shell execution.
-- **Deliverables:**
-  1. **POSIX Path & Line-Ending Normalization:** Guarantee `.as_posix()` path normalization across registry keys and `applies_to` globs, and normalize `\r\n` on read/write boundaries.
-  2. **Cross-Platform Git Hook Wrapper:** Ensure `.git/hooks/pre-commit` resolves `brain79` reliably across macOS, Linux, and Git for Windows (`%USERPROFILE%\.local\bin` / `~/.local/bin`).
-  3. **Multi-OS GitHub Actions Matrix:** Automated test execution across `ubuntu-latest`, `macos-latest`, and `windows-latest`.
+### Phase 6: Centralized `.locks/` Isolation & Cross-Platform OS Portability
+- **Specification:** [Feature — Cross-Platform Portability & Centralized Lock Isolation](../features/cross-platform-and-lock-isolation.md)
+- **Scope:** Isolate all `filelock` mutex files into `.brain-79/.locks/` (eliminating `.md.lock` clutter in content directories), enforce `.as_posix()` path normalization and strict `LF` (`\n`) I/O across Windows/Linux/macOS, add NTFS retry resilience on atomic file replacement, harden `.git/hooks/pre-commit` PATH resolution, and verify via a local cross-platform simulation test suite (no external CI required).
 
 ### Phase 7: Multi-Harness Zero-Config & Environment Diagnostics (`brain79 doctor`)
 - **Problem:** Different AI harnesses (Pi, Claude Code, Claude Desktop, Cursor, Windsurf, OpenCode, VS Code) expect MCP configurations in different paths, and desktop GUI apps do not inherit terminal `$PATH`, causing `spawn brain79 ENOENT` failures.

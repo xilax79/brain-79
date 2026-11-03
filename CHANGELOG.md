@@ -4,6 +4,14 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-03
+
+### Removed
+- **Obsolete Truco Arena Snapshot Fixture (`tests/test_truco_arena_integration.py` & `tests/fixtures/`)**:
+  - Removed outdated 40+ file fixture snapshot dating from prototype v0.1 (August 2026) that required artificial test-time patching to pass modern linter rules.
+  - Eliminated `refresh_truco_arena.sh` containing hardcoded absolute machine paths.
+  - Full migration and strict linter coverage preserved in `tests/test_migrate_frontmatter.py` and `tests/test_lint_organizational.py`.
+
 ## [2.0.0] - 2026-11-03
 
 ### Added

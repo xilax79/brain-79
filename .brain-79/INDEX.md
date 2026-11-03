@@ -21,6 +21,7 @@ last_updated: 2026-11-03
 - [Changelog — Version 1.0.0](changelog/v1.md) — Initial production release of brain-79 with mechanical organizational enforcement and handoff continuity
 - [Changelog — Version 1.1.0 — Performance & Session Workflow Optimization](changelog/v1-1.md) — Performance and session workflow optimizations, partial edits, batch writes, and schema inspection
 - [Changelog — Version 2.0.0 — Two-Call Protocol & Release Governance](changelog/v2-0.md) — Major release 2.0.0 introducing Two-Call Session Protocol, declarative ontologies, deterministic drift detection, and release governance
+- [Changelog — Version 2.0.1 — Purge Obsolete Integration Fixture](changelog/v2-0-1.md) — Remove obsolete legacy Truco Arena test fixture and decouple local development paths
 
 ### Decisions
 - [ADR-001 — Architecture — Dual-Mode Hybrid CLI & MCP Server Interface](decisions/adr-001-hybrid-cli.md) — Dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server
@@ -38,6 +39,7 @@ last_updated: 2026-11-03
 - [ADR-013 — Architecture — Single-Source Semantic Versioning and Mechanical Release Governance](decisions/adr-013-versioning-and-release-governance.md) — Single-source semantic versioning via Hatchling, FastMCP version handshake exposure, and automated release parity testing
 
 ### Features
+- [Feature — Cross-Platform Portability & Centralized Lock Isolation (Phase 6 Specification)](features/cross-platform-and-lock-isolation.md) — Centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
 - [Feature — FastMCP Integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
 - [Feature — Handoff Purge Operations](features/handoff-purge.md) — Safe batch deletion of short-term handoffs with dry-run default guard and navigation registry cleanup
 - [Feature — Short-Term Handoff Continuity](features/handoff-continuity.md) — Tactical session transitions, immutable state snapshots, and anti-hallucination work tracking
