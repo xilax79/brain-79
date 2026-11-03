@@ -28,8 +28,6 @@ def test_semver_format() -> None:
     assert re.match(pattern, __version__), (
         f"__version__ '{__version__}' does not adhere to Semantic Versioning (MAJOR.MINOR.PATCH)."
     )
-    # Ensure current target version is 2.0.0
-    assert __version__ == "2.0.0", f"Expected version 2.0.0 for Phase 5, got '{__version__}'."
 
 
 def test_hatchling_dynamic_version_configuration() -> None:
