@@ -15,13 +15,6 @@
       "registered_at": "2026-10-29T23:04:51.279191+00:00"
     },
     {
-      "path": "architecture/dispatcher.md",
-      "title": "Architecture \u2014 CLI Dispatcher",
-      "summary": "CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings",
-      "section": "architecture",
-      "registered_at": "2026-10-29T23:10:51.640040+00:00"
-    },
-    {
       "path": "architecture/mcp-server.md",
       "title": "Architecture \u2014 MCP Server",
       "summary": "FastMCP server architecture, logging suppression, tool definitions, and lifecycle management",
@@ -205,16 +198,6 @@
       ]
     },
     {
-      "path": "architecture/roadmap-industrial-scale.md",
-      "title": "Architecture \u2014 Industrial-Scale Roadmap & Performance Evolution",
-      "summary": "Industrial-scale roadmap focused on the Two-Call Session Protocol, graph-verified context loading, lightweight dual ontology (software + general), and invariant alignment",
-      "section": "architecture",
-      "registered_at": "2026-11-03T00:49:09.664982+00:00",
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
       "path": "architecture/current-state.md",
       "title": "Architecture \u2014 System Current State",
       "summary": "High-level overview of system architecture, active milestones, runtime invariants, and roadmap",
@@ -224,6 +207,89 @@
         "decisions/adr-010-orient-and-3-signal-context-ranking.md",
         "decisions/adr-011-session-commit-and-batch-reading.md",
         "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/dispatcher.md",
+      "title": "Architecture \u2014 CLI Dispatcher",
+      "summary": "CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings",
+      "section": "architecture",
+      "registered_at": "2026-11-03T17:47:10.838545+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/version-governance.md",
+      "title": "Feature \u2014 Versioning & Release Governance (Phase 5 Specification)",
+      "summary": "Single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks",
+      "section": "features",
+      "registered_at": "2026-11-03T17:53:42.932867+00:00",
+      "applies_to": [
+        "src/brain79/__init__.py",
+        "src/brain79/server.py",
+        "pyproject.toml",
+        "README.md"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-Scale Roadmap & Adoption Evolution",
+      "summary": "Industrial-scale roadmap covering completed core protocol phases (0-4) and next-stage adoption, portability, and release governance (5-8)",
+      "section": "architecture",
+      "registered_at": "2026-11-03T17:53:53.533452+00:00",
+      "applies_to": [
+        "src/brain79/__init__.py",
+        "src/brain79/__main__.py",
+        "pyproject.toml"
+      ],
+      "related": [
+        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "features/version-governance.md"
+      ],
+      "outgoing_links": [
+        "features/version-governance.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "changelog/v2-0.md",
+      "title": "Changelog \u2014 Version 2.0.0 \u2014 Two-Call Protocol & Release Governance",
+      "summary": "Major release 2.0.0 introducing Two-Call Session Protocol, declarative ontologies, deterministic drift detection, and release governance",
+      "section": "changelog",
+      "registered_at": "2026-11-03T18:05:05.422265+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "decisions/adr-013-versioning-and-release-governance.md",
+      "title": "ADR-013 \u2014 Architecture \u2014 Single-Source Semantic Versioning and Mechanical Release Governance",
+      "summary": "Single-source semantic versioning via Hatchling, FastMCP version handshake exposure, and automated release parity testing",
+      "section": "decisions",
+      "registered_at": "2026-11-03T18:05:20.969302+00:00",
+      "applies_to": [
+        "src/brain79/__init__.py",
+        "src/brain79/server.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/test_version_governance.py"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "features/version-governance.md"
+      ],
+      "outgoing_links": [
         "INDEX.md"
       ]
     }

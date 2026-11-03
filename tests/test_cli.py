@@ -6,7 +6,7 @@ from unittest import mock
 
 import pytest
 
-from brain79.__main__ import parse_global_flags
+from brain79.__main__ import main, parse_global_flags
 from brain79.cli.dispatch import map_exception_to_exit_code, run_cli
 from brain79.config import get_wiki_root, set_project_root
 from brain79.core.init_project import init_project
@@ -415,5 +415,109 @@ def test_mcp_handoff_purge_default_dry_run(setup_cli_project: Path) -> None:
     result = brain79_handoff_purge()  # no args = apply=False default
     assert "DRY RUN" in result
     assert (handoffs_dir / "handoff-X.md").exists()  # not deleted
+
+
+def test_main_help_flags(capsys: pytest.CaptureFixture[str]) -> None:
+    for flag in ["--help", "-h", "help"]:
+        with pytest.raises(SystemExit) as exc_info:
+            main([flag])
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        assert "usage: brain79" in captured.out
+        assert "Session & workflow:" in captured.out
+        assert "orient" in captured.out
+        assert "session-commit" in captured.out
+        assert "Server mode:" in captured.out
+
+
+def test_main_help_specific_command(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["help", "read"])
+    assert exc_info.value.code == 0
+    captured = capsys.readouterr()
+    assert "usage: brain79 read" in captured.out
+
+
+def test_main_help_unknown_command(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["help", "foobar"])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Error: Unknown command 'foobar'" in captured.err
+
+
+def test_main_version_flags(capsys: pytest.CaptureFixture[str]) -> None:
+    for flag in ["--version", "-v"]:
+        with pytest.raises(SystemExit) as exc_info:
+            main([flag])
+        assert exc_info.value.code == 0
+        captured = capsys.readouterr()
+        assert captured.out.startswith("brain79 ")
+
+
+def test_main_unknown_command(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["unknown_subcmd"])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Error: Unknown command or flag 'unknown_subcmd'" in captured.err
+
+
+def test_main_unknown_flag(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--unknown-flag"])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Error: Unknown command or flag '--unknown-flag'" in captured.err
+
+
+def test_main_empty_args_delegates_to_serve(tmp_path: Path) -> None:
+    with mock.patch("brain79.__main__._cmd_serve") as mock_serve:
+        main([])
+        mock_serve.assert_called_once_with(None)
+
+    with mock.patch("brain79.__main__._cmd_serve") as mock_serve:
+        main(["--project-root", str(tmp_path)])
+        mock_serve.assert_called_once_with(tmp_path.resolve())
+
+
+def test_subprocess_main_help_and_version() -> None:
+    res_help = subprocess.run(
+        [sys.executable, "-m", "brain79", "--help"],
+        capture_output=True,
+        text=True,
+    )
+    assert res_help.returncode == 0
+    assert "usage: brain79" in res_help.stdout
+
+    res_v = subprocess.run(
+        [sys.executable, "-m", "brain79", "-v"],
+        capture_output=True,
+        text=True,
+    )
+    assert res_v.returncode == 0
+    assert "brain79 " in res_v.stdout
+
+    res_err = subprocess.run(
+        [sys.executable, "-m", "brain79", "notacommand"],
+        capture_output=True,
+        text=True,
+    )
+    assert res_err.returncode == 2
+    assert "Error: Unknown command or flag 'notacommand'" in res_err.stderr
+
+
+def test_all_subcommands_have_help_descriptions(capsys: pytest.CaptureFixture[str]) -> None:
+    from brain79.cli import WHITELIST
+
+    for cmd in sorted(WHITELIST):
+        code = run_cli(cmd, ["--help"])
+        assert code == 0, f"Command {cmd} --help failed with code {code}"
+        captured = capsys.readouterr()
+        assert f"usage: brain79 {cmd}" in captured.out, f"Usage missing for {cmd}"
+        # Verify non-trivial description exists in output
+        lines = [line.strip() for line in captured.out.splitlines() if line.strip()]
+        assert len(lines) >= 3, f"Help output too short for {cmd}: {lines}"
+
 
 

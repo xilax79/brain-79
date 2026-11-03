@@ -56,7 +56,10 @@ def _write_stdout(text: str) -> None:
 def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
     """Parse arguments and execute a specific sub-command."""
     if cmd == "init":
-        parser = argparse.ArgumentParser(prog="brain79 init")
+        parser = argparse.ArgumentParser(
+            prog="brain79 init",
+            description="Initialize a brain-79 memory wiki in the target project.",
+        )
         parser.add_argument(
             "--project-root",
             default=None,
@@ -80,7 +83,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             "--profile",
             choices=["software", "general"],
             default="software",
-            help="Ontology profile to initialize ('software' or 'general', default: software)",
+            help="Knowledge profile ('software' or 'general', default: software)",
         )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
@@ -101,11 +104,14 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
 
 
     elif cmd == "update":
-        parser = argparse.ArgumentParser(prog="brain79 update")
+        parser = argparse.ArgumentParser(
+            prog="brain79 update",
+            description="Update project templates and schema to match the current brain-79 version.",
+        )
         parser.add_argument(
             "--branch",
             default=None,
-            help="Default branch (auto-detected or manually overridden)",
+            help="Template branch override (auto-detected by default)",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.core.update import update_project
@@ -113,7 +119,10 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return update_project(branch_override=parsed.branch)
 
     elif cmd == "index":
-        parser = argparse.ArgumentParser(prog="brain79 index")
+        parser = argparse.ArgumentParser(
+            prog="brain79 index",
+            description="Display the project documentation index (INDEX.md).",
+        )
         parser.parse_args(sub_args)
         from brain79.core.wiki import get_index
 
@@ -121,13 +130,16 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "read":
-        parser = argparse.ArgumentParser(prog="brain79 read")
+        parser = argparse.ArgumentParser(
+            prog="brain79 read",
+            description="Read an article from the wiki, optionally extracting specific sections.",
+        )
         parser.add_argument("path", help="Relative path within .brain-79/")
         parser.add_argument(
             "--sections",
             nargs="*",
             default=None,
-            help="Optional list of ## H2 section names to extract",
+            help="Optional list of ## H2 section titles to extract",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.core.wiki import read_article
@@ -136,10 +148,13 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "read-batch":
-        parser = argparse.ArgumentParser(prog="brain79 read-batch")
+        parser = argparse.ArgumentParser(
+            prog="brain79 read-batch",
+            description="Read multiple wiki articles in a single call, optionally projecting sections.",
+        )
         group = parser.add_mutually_exclusive_group(required=True)
-        group.add_argument("--file", help="Path to JSON file containing list of requests")
-        group.add_argument("--stdin", action="store_true", help="Read JSON requests from stdin")
+        group.add_argument("--file", help="Path to JSON file containing list of read requests")
+        group.add_argument("--stdin", action="store_true", help="Read JSON read requests from stdin")
         parsed = parser.parse_args(sub_args)
 
         from brain79.core.wiki import read_batch_articles
@@ -164,20 +179,23 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "write":
-        parser = argparse.ArgumentParser(prog="brain79 write")
+        parser = argparse.ArgumentParser(
+            prog="brain79 write",
+            description="Create or overwrite a wiki article with schema and frontmatter validation.",
+        )
         parser.add_argument("path", help="Relative path within .brain-79/")
         group = parser.add_mutually_exclusive_group(required=True)
-        group.add_argument("--content-file", help="Path to file containing content")
+        group.add_argument("--content-file", help="Path to file containing article markdown content")
         group.add_argument(
             "--content-stdin",
             action="store_true",
-            help="Read content from stdin",
+            help="Read article markdown content from stdin",
         )
         parser.add_argument(
             "--force-validation-skip",
             "--force-skip",
             action="store_true",
-            help="Bypass organizational validation and inject force_validation_skipped metadata",
+            help="Bypass schema validation and tag article with force_validation_skipped",
         )
         parsed = parser.parse_args(sub_args)
         content = read_input_field(parsed.content_file, parsed.content_stdin, "content")
@@ -188,8 +206,16 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "schema":
-        parser = argparse.ArgumentParser(prog="brain79 schema")
-        parser.add_argument("--type", default=None, dest="target_type", help="Optional type to inspect")
+        parser = argparse.ArgumentParser(
+            prog="brain79 schema",
+            description="Inspect active schema rules, required frontmatter fields, and document skeletons.",
+        )
+        parser.add_argument(
+            "--type",
+            default=None,
+            dest="target_type",
+            help="Optional document type to inspect (e.g., decision, topic, feature, architecture)",
+        )
         parsed = parser.parse_args(sub_args)
         from brain79.config import get_wiki_root
         from brain79.core.frontmatter import get_schema_documentation, load_active_schema
@@ -203,19 +229,22 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "edit":
-        parser = argparse.ArgumentParser(prog="brain79 edit")
+        parser = argparse.ArgumentParser(
+            prog="brain79 edit",
+            description="Apply targeted text replacements to an existing wiki article.",
+        )
         parser.add_argument("path", help="Relative path within .brain-79/")
-        parser.add_argument("--old-text", help="Exact text to replace")
-        parser.add_argument("--new-text", help="Replacement text")
+        parser.add_argument("--old-text", help="Exact text snippet to replace")
+        parser.add_argument("--new-text", help="Replacement text snippet")
         parser.add_argument(
             "--edits-file",
-            help="Path to JSON file containing list of edits [{old_text, new_text}]",
+            help="Path to JSON file containing list of replacements [{old_text, new_text}]",
         )
         parser.add_argument(
             "--force-validation-skip",
             "--force-skip",
             action="store_true",
-            help="Bypass organizational validation and inject force_validation_skipped metadata",
+            help="Bypass schema validation on resulting content",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.core.wiki import edit_article
@@ -237,7 +266,10 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "write-many":
-        parser = argparse.ArgumentParser(prog="brain79 write-many")
+        parser = argparse.ArgumentParser(
+            prog="brain79 write-many",
+            description="Write multiple wiki articles in an atomic batch with pre-flight validation.",
+        )
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument(
             "--file",
@@ -252,7 +284,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             "--force-validation-skip",
             "--force-skip",
             action="store_true",
-            help="Bypass organizational validation and inject force_validation_skipped metadata",
+            help="Bypass schema validation and tag articles with force_validation_skipped",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.core.wiki import write_many_articles
@@ -270,8 +302,11 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "list":
-        parser = argparse.ArgumentParser(prog="brain79 list")
-        parser.add_argument("--section", default=None, help="Optional section filter")
+        parser = argparse.ArgumentParser(
+            prog="brain79 list",
+            description="List wiki articles, optionally filtered by directory section.",
+        )
+        parser.add_argument("--section", default=None, help="Optional section folder (e.g. decisions, topics, features)")
         parsed = parser.parse_args(sub_args)
         from brain79.core.wiki import list_articles
 
@@ -284,8 +319,11 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "search":
-        parser = argparse.ArgumentParser(prog="brain79 search")
-        parser.add_argument("query", help="Search query")
+        parser = argparse.ArgumentParser(
+            prog="brain79 search",
+            description="Search documentation articles by text keywords.",
+        )
+        parser.add_argument("query", help="Search terms or keywords")
         parsed = parser.parse_args(sub_args)
         from brain79.core.wiki import search_articles
 
@@ -302,29 +340,32 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "ingest":
-        parser = argparse.ArgumentParser(prog="brain79 ingest")
+        parser = argparse.ArgumentParser(
+            prog="brain79 ingest",
+            description="Save raw notes, transcripts, or logs from a session into _raw/sessions/.",
+        )
         sum_group = parser.add_mutually_exclusive_group(required=True)
         sum_group.add_argument(
             "--session-summary-file",
             "--summary-file",
             dest="summary_file",
-            help="Path to session summary file",
+            help="Path to session summary or transcript file",
         )
         sum_group.add_argument(
             "--session-summary-stdin",
             "--summary-stdin",
             dest="summary_stdin",
             action="store_true",
-            help="Read session summary from stdin",
+            help="Read session summary or transcript from stdin",
         )
         inst_group = parser.add_mutually_exclusive_group(required=False)
         inst_group.add_argument(
-            "--instructions-file", help="Path to instructions file"
+            "--instructions-file", help="Path to optional instructions file"
         )
         inst_group.add_argument(
             "--instructions-stdin",
             action="store_true",
-            help="Read instructions from stdin",
+            help="Read optional instructions from stdin",
         )
         parsed = parser.parse_args(sub_args)
         session_summary = read_input_field(
@@ -343,7 +384,10 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "handoff-write":
-        parser = argparse.ArgumentParser(prog="brain79 handoff-write")
+        parser = argparse.ArgumentParser(
+            prog="brain79 handoff-write",
+            description="Write an immutable session handoff record to preserve context for the next session.",
+        )
         parser.add_argument(
             "--session-type",
             required=True,
@@ -352,61 +396,61 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser.add_argument(
             "--previous-handoff-ref",
             default="none",
-            help="Previous handoff reference",
+            help="Reference or filename of previous handoff (default: none)",
         )
         sum_group = parser.add_mutually_exclusive_group(required=True)
-        sum_group.add_argument("--summary-file", help="Path to summary file")
+        sum_group.add_argument("--summary-file", help="Path to handoff summary file")
         sum_group.add_argument(
-            "--summary-stdin", action="store_true", help="Read summary from stdin"
+            "--summary-stdin", action="store_true", help="Read handoff summary from stdin"
         )
         parser.add_argument(
             "--completed-work",
             nargs="*",
             action="extend",
             default=[],
-            help="Completed work items",
+            help="List of completed work items",
         )
         parser.add_argument(
             "--pending-work",
             nargs="*",
             action="extend",
             default=[],
-            help="Pending work items",
+            help="List of pending work items",
         )
         parser.add_argument(
             "--knowledge-pending-promotion",
             nargs="*",
             action="extend",
             default=[],
-            help="Knowledge pending promotion",
+            help="List of knowledge insights to promote to permanent articles",
         )
         parser.add_argument(
             "--resources",
             nargs="*",
             action="extend",
             default=[],
-            help="Resource items",
+            help="Relevant file paths or references",
         )
         parser.add_argument(
             "--gotchas",
             nargs="*",
             action="extend",
             default=[],
-            help="Gotcha items",
+            help="Known caveats, warnings, or constraints discovered during the session",
         )
         boot_group = parser.add_mutually_exclusive_group(required=True)
         boot_group.add_argument(
-            "--boot-instruction-file", help="Path to boot instruction file"
+            "--boot-instruction-file", help="Path to startup instruction file for next session"
         )
         boot_group.add_argument(
             "--boot-instruction-stdin",
             action="store_true",
-            help="Read boot instruction from stdin",
+            help="Read startup instruction from stdin",
         )
         dev_group = parser.add_mutually_exclusive_group(required=False)
         dev_group.add_argument(
             "--wiki-deviation-justification-file",
-            help="Path to wiki deviation justification file",
+            help="Optional justification file if wiki updates deviated from convention",
         )
         dev_group.add_argument(
             "--wiki-deviation-justification-stdin",
@@ -447,12 +491,15 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "handoff-read":
-        parser = argparse.ArgumentParser(prog="brain79 handoff-read")
+        parser = argparse.ArgumentParser(
+            prog="brain79 handoff-read",
+            description="Read a session handoff record to resume context.",
+        )
         parser.add_argument(
             "handoff_ref",
             nargs="?",
             default="latest",
-            help="Handoff reference (default: latest)",
+            help="Handoff identifier or 'latest' (default: latest)",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.core.handoff import read_handoff
@@ -462,22 +509,25 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "lint":
-        parser = argparse.ArgumentParser(prog="brain79 lint")
+        parser = argparse.ArgumentParser(
+            prog="brain79 lint",
+            description="Check wiki health: detect broken links, missing metadata, and structure violations.",
+        )
         parser.add_argument(
             "--suggest-extract",
             action="store_true",
-            help="Show actionable extraction suggestions for INDEX.md",
+            help="Suggest content from INDEX.md that should be extracted into dedicated articles",
         )
         parser.add_argument(
             "--strict",
             action="store_true",
-            help="Exit with non-zero code if any errors or warnings exist",
+            help="Exit with non-zero code if any critical errors or warnings exist",
         )
         parser.add_argument(
             "--format",
             choices=["text", "json"],
             default="text",
-            help="Output format (text or json)",
+            help="Output format ('text' for human reading or 'json' for machine parsing)",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.config import get_wiki_root
@@ -518,10 +568,13 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "context":
-        parser = argparse.ArgumentParser(prog="brain79 context")
-        parser.add_argument("task", help="Task description")
+        parser = argparse.ArgumentParser(
+            prog="brain79 context",
+            description="Search for knowledge articles and decisions relevant to a specific task and paths.",
+        )
+        parser.add_argument("task", help="Task or topic description")
         parser.add_argument(
-            "--top-n", type=int, default=3, help="Maximum number of articles to return"
+            "--top-n", type=int, default=3, help="Maximum number of relevant articles to return (default: 3)"
         )
         parser.add_argument(
             "--paths",
@@ -542,12 +595,15 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "bootstrap":
-        parser = argparse.ArgumentParser(prog="brain79 bootstrap")
-        parser.add_argument(
-            "--scope", default=None, help="Optional comma-separated relative paths"
+        parser = argparse.ArgumentParser(
+            prog="brain79 bootstrap",
+            description="Analyze an existing project and generate a scan manifest with seed templates.",
         )
         parser.add_argument(
-            "--force", action="store_true", help="Force re-run bootstrap"
+            "--scope", default=None, help="Optional comma-separated relative paths to analyze"
+        )
+        parser.add_argument(
+            "--force", action="store_true", help="Force re-run bootstrap even if already initialized"
         )
         parsed = parser.parse_args(sub_args)
         from brain79.core.bootstrap import run_bootstrap
@@ -560,11 +616,14 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "navigate":
-        parser = argparse.ArgumentParser(prog="brain79 navigate")
+        parser = argparse.ArgumentParser(
+            prog="brain79 navigate",
+            description="Display or regenerate the automated table of contents in INDEX.md.",
+        )
         parser.add_argument(
             "--regenerate",
             action="store_true",
-            help="Regenerate INDEX.md Quick navigation from registry",
+            help="Regenerate Quick navigation table in INDEX.md from registry",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.config import get_wiki_root
@@ -583,7 +642,10 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             return 0
 
     elif cmd == "migrate":
-        parser = argparse.ArgumentParser(prog="brain79 migrate")
+        parser = argparse.ArgumentParser(
+            prog="brain79 migrate",
+            description="Upgrade older documentation files to comply with the active schema.",
+        )
         parser.add_argument(
             "--dry-run",
             action="store_true",
@@ -599,7 +661,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser.add_argument(
             "--suggest-relocations",
             action="store_true",
-            help="Suggest where files should be moved based on type inference",
+            help="Suggest recommended folder locations based on inferred document type",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.config import get_wiki_root
@@ -614,11 +676,14 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "orient":
-        parser = argparse.ArgumentParser(prog="brain79 orient")
+        parser = argparse.ArgumentParser(
+            prog="brain79 orient",
+            description="Provide orientation for a task: loads index, latest handoff, and relevant articles.",
+        )
         parser.add_argument(
             "--task",
             default=None,
-            help="High-level goal or task description",
+            help="Goal, question, or task description",
         )
         parser.add_argument(
             "--paths",
@@ -644,12 +709,15 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "handoff-purge":
-        parser = argparse.ArgumentParser(prog="brain79 handoff-purge")
+        parser = argparse.ArgumentParser(
+            prog="brain79 handoff-purge",
+            description="Remove temporary session handoffs while preserving permanent wiki articles.",
+        )
         parser.add_argument(
             "--dry-run",
             action="store_true",
             default=True,
-            help="Preview what would be deleted (default: True)",
+            help="Preview handoffs that would be deleted without modifying files (default: True)",
         )
         parser.add_argument(
             "--apply",
@@ -666,7 +734,10 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         return 0
 
     elif cmd == "session-commit":
-        parser = argparse.ArgumentParser(prog="brain79 session-commit")
+        parser = argparse.ArgumentParser(
+            prog="brain79 session-commit",
+            description="Finalize a session: commit raw logs, article updates, and handoff in one step.",
+        )
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument("--file", help="Path to JSON file containing session commit payload")
         group.add_argument("--stdin", action="store_true", help="Read JSON session commit payload from stdin")
