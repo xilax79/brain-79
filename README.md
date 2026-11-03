@@ -5,7 +5,7 @@
 [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-brightgreen.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-433%20passed-success.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-434%20passed-success.svg)](tests/)
 
 ---
 

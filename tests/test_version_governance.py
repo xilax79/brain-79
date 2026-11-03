@@ -20,6 +20,7 @@ PYPROJECT_PATH = REPO_ROOT / "pyproject.toml"
 README_PATH = REPO_ROOT / "README.md"
 INIT_PATH = REPO_ROOT / "src" / "brain79" / "__init__.py"
 CHANGELOG_DIR = REPO_ROOT / ".brain-79" / "changelog"
+ROOT_CHANGELOG_PATH = REPO_ROOT / "CHANGELOG.md"
 
 
 def test_semver_format() -> None:
@@ -94,6 +95,26 @@ def test_changelog_entry_parity() -> None:
 
     assert matching_changelogs, (
         f"No changelog entry in {CHANGELOG_DIR} matches version '{__version__}'."
+    )
+
+
+def test_root_changelog_entry_parity() -> None:
+    """Verify root CHANGELOG.md contains a section for the active __version__ and an Unreleased section."""
+    assert ROOT_CHANGELOG_PATH.exists(), f"Missing root CHANGELOG.md at {ROOT_CHANGELOG_PATH}"
+    content = ROOT_CHANGELOG_PATH.read_text(encoding="utf-8")
+
+    version_header = f"## [{__version__}]"
+    assert version_header in content, (
+        f"Root CHANGELOG.md is missing entry header '{version_header}'."
+    )
+    assert "## [Unreleased]" in content, (
+        "Root CHANGELOG.md is missing '## [Unreleased]' section header."
+    )
+
+    unreleased_idx = content.index("## [Unreleased]")
+    version_idx = content.index(version_header)
+    assert unreleased_idx < version_idx, (
+        "Root CHANGELOG.md must position '## [Unreleased]' before released versions."
     )
 
 
