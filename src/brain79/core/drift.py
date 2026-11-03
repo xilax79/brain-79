@@ -2,12 +2,13 @@
 Deterministic Code-to-Wiki Drift Detection (Phase 4).
 
 Monitors source code files governed by wiki articles via the `applies_to` frontmatter field.
-If workspace files matching `applies_to` globs/paths have been modified in commits (or filesystem mtime)
+If workspace files matching `applies_to` globs/paths have been modified in commits (or uncommitted working tree changes)
 after the article's `last_updated` date, flags suspected documentation drift.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
+import re
 import subprocess
 from typing import Any
 
@@ -28,13 +29,24 @@ _IGNORED_DIRS = frozenset({
     ".mypy_cache",
 })
 
+INACTIVE_STATUSES = frozenset({
+    "superseded",
+    "deprecated",
+    "rejected",
+    "archived",
+    "legacy",
+})
+
 
 def get_file_last_modified_date(file_path: Path, project_root: Path) -> str | None:
     """
     Get the last modification date (YYYY-MM-DD) for a workspace file.
 
-    Prioritizes git commit date (`git log -1 --format=%cs`), falling back
-    to filesystem mtime if git is unavailable or the file is untracked/uncommitted.
+    Prioritizes git commit date (`git log -1 --format=%cs`).
+    Only falls back to filesystem mtime if:
+    1. Git is unavailable or file is untracked, OR
+    2. The file is actively modified in the working tree/index (git status --porcelain is non-empty).
+    This prevents false positives when git clone or git checkout updates mtimes on clean files.
     """
     if not file_path.exists() or not file_path.is_file():
         return None
@@ -58,19 +70,29 @@ def get_file_last_modified_date(file_path: Path, project_root: Path) -> str | No
             commit_date = res.stdout.strip()
             # Verify format YYYY-MM-DD
             if len(commit_date) == 10 and commit_date.count("-") == 2:
-                # Also check if working tree has uncommitted modifications with newer mtime
+                # Check whether working tree has uncommitted local modifications
                 try:
-                    mtime = file_path.stat().st_mtime
-                    fs_date = datetime.fromtimestamp(mtime, tz=UTC).strftime("%Y-%m-%d")
-                    if fs_date > commit_date:
-                        return fs_date
+                    status_res = subprocess.run(
+                        ["git", "status", "--porcelain", "--", rel_str],
+                        cwd=str(project_root),
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                        check=False,
+                    )
+                    # Only if the file is genuinely dirty in Git do we check newer fs mtime
+                    if status_res.returncode == 0 and status_res.stdout.strip():
+                        mtime = file_path.stat().st_mtime
+                        fs_date = datetime.fromtimestamp(mtime, tz=UTC).strftime("%Y-%m-%d")
+                        if fs_date > commit_date:
+                            return fs_date
                 except OSError:
                     pass
                 return commit_date
     except (subprocess.TimeoutExpired, OSError, ValueError):
         pass
 
-    # 2. Fallback to filesystem mtime
+    # 2. Fallback to filesystem mtime (for non-git repos or uncommitted/untracked files)
     try:
         mtime = file_path.stat().st_mtime
         return datetime.fromtimestamp(mtime, tz=UTC).strftime("%Y-%m-%d")
@@ -89,30 +111,42 @@ def _is_ignored(path: Path, project_root: Path) -> bool:
 def find_matching_workspace_files(patterns: list[str], project_root: Path) -> list[Path]:
     """Find all existing files in project_root that match the given applies_to patterns."""
     matched: set[Path] = set()
+    p_root = project_root.resolve()
 
     for pattern in patterns:
         pat = pattern.strip().lstrip("/")
+        if pat.startswith("./"):
+            pat = pat[2:]
         if not pat:
             continue
 
-        target = (project_root / pat).resolve()
+        target = (p_root / pat).resolve()
+        # Prevent traversal outside project root
+        if not target.is_relative_to(p_root):
+            continue
+
         # Direct exact file check
-        if target.is_file() and not _is_ignored(target, project_root):
+        if target.is_file() and not _is_ignored(target, p_root):
             matched.add(target)
             continue
 
-        # Direct directory check
-        if target.is_dir() and not _is_ignored(target, project_root):
+        # Direct directory check (matches all children inside directory)
+        if target.is_dir() and not _is_ignored(target, p_root):
             for child in target.rglob("*"):
-                if child.is_file() and not _is_ignored(child, project_root):
+                if child.is_file() and not _is_ignored(child, p_root):
                     matched.add(child)
             continue
 
         # Glob pattern match
         try:
-            for child in project_root.glob(pat):
-                if child.is_file() and not _is_ignored(child, project_root):
-                    matched.add(child)
+            for child in p_root.glob(pat):
+                if child.is_file() and not _is_ignored(child, p_root):
+                    try:
+                        rel_str = str(child.relative_to(p_root))
+                        if _match_applies_to(pat, rel_str):
+                            matched.add(child)
+                    except ValueError:
+                        pass
         except Exception:
             pass
 
@@ -127,6 +161,7 @@ def check_article_drift(
     """
     Check if a single wiki article has suspected drift against workspace files it governs.
 
+    Exempts articles that are inactive (superseded, deprecated, rejected, archived, legacy).
     Returns a list of drift records:
         [{"article_path": "...", "workspace_file": "...", "file_date": "...", "article_date": "..."}]
     """
@@ -142,8 +177,23 @@ def check_article_drift(
     except Exception:
         return []
 
-    last_updated = meta.get("last_updated")
-    if not last_updated or not isinstance(last_updated, str):
+    # Inactive articles (superseded ADRs, deprecated features, etc.) do not report drift
+    status = str(meta.get("status", "")).lower()
+    stability = str(meta.get("stability", "")).lower()
+    if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
+        return []
+
+    # Normalize last_updated (handles date, datetime, or string)
+    last_updated_raw = meta.get("last_updated")
+    if not last_updated_raw:
+        return []
+
+    if isinstance(last_updated_raw, (date, datetime)):
+        last_updated = last_updated_raw.strftime("%Y-%m-%d")
+    else:
+        last_updated = str(last_updated_raw).strip()[:10]
+
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", last_updated):
         return []
 
     applies_to_val = meta.get("applies_to")

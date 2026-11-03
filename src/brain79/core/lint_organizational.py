@@ -477,7 +477,9 @@ def check_article_structural_sections(
         try:
             content = md_file.read_text(encoding="utf-8")
             meta, _ = parse_frontmatter(content)
-            if meta.get("status") == "legacy" or meta.get("stability") == "legacy":
+            status = str(meta.get("status", "")).lower()
+            stability = str(meta.get("stability", "")).lower()
+            if status in ("superseded", "deprecated", "rejected", "archived", "legacy") or stability == "legacy":
                 continue
             doc_type = meta.get("type")
             if not doc_type:
@@ -507,6 +509,13 @@ def check_article_backlinks(
     files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
     issues: list[OrganizationalIssue] = []
 
+    backlink_markers = (
+        "[← volver al índice]",
+        "[← return to index]",
+        "[← back to index]",
+        "[volver al índice]",
+    )
+
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
         rel_str = str(rel)
@@ -516,19 +525,25 @@ def check_article_backlinks(
         try:
             content = md_file.read_text(encoding="utf-8")
             meta, body = parse_frontmatter(content)
-            if meta.get("status") == "legacy" or meta.get("stability") == "legacy":
-                continue
-            lines = [line.strip() for line in body.splitlines() if line.strip()]
-            if len(lines) <= 2:
+            status = str(meta.get("status", "")).lower()
+            stability = str(meta.get("stability", "")).lower()
+            if status in ("superseded", "deprecated", "rejected", "archived", "legacy") or stability == "legacy":
                 continue
 
-            lower = content.lower()
-            if (
-                "[← volver al índice]" not in lower
-                and "[← return to index]" not in lower
-                and "[← back to index]" not in lower
-                and "[volver al índice]" not in lower
-            ):
+            stripped_body = body.strip()
+            if not stripped_body:
+                continue
+
+            masked = _mask_code_fences(body)
+            non_empty_masked = [line.strip().lower() for line in masked.splitlines() if line.strip()]
+            tail_lines = non_empty_masked[-5:] if non_empty_masked else []
+
+            has_backlink = any(
+                any(marker in line for marker in backlink_markers)
+                for line in tail_lines
+            )
+
+            if not has_backlink:
                 issues.append(
                     OrganizationalIssue(
                         rule="article_missing_backlink",

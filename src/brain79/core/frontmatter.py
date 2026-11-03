@@ -504,43 +504,73 @@ def generate_document_skeleton(target_type: str, schema: ActiveSchema | None = N
     return "\n".join(lines).strip() + "\n"
 
 
+def _mask_code_fences_text(content: str) -> str:
+    """Mask text inside fenced code blocks with spaces to avoid false positive pattern matches."""
+    lines = content.split("\n")
+    in_fence = False
+    fence_char: str | None = None
+    masked: list[str] = []
+    for line in lines:
+        stripped = line.lstrip()
+        if not in_fence:
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                fence_char = stripped[:3]
+                in_fence = True
+            masked.append(line)
+        else:
+            if fence_char and stripped.startswith(fence_char):
+                fence_char = None
+                in_fence = False
+                masked.append(line)
+            else:
+                masked.append(" " * len(line))
+    return "\n".join(masked)
+
+
 def normalize_backlink_footer(body: str, rel_path: str) -> str:
-    """Ensure standard backlink navigation footer exists in subfolder articles.
+    """Ensure standard backlink navigation footer exists at the tail of subfolder articles.
 
     Articles in root (INDEX.md, SCHEMA.md), _raw/, and handoffs/ are excluded.
-    Empty bodies or stub articles with only an H1 header are excluded.
+    Empty bodies are excluded.
+    Verifies that the backlink is located in the final non-empty lines outside code fences.
     """
     clean_rel = rel_path.strip().lstrip("/")
     parts = Path(clean_rel).parts
     if len(parts) <= 1 or parts[0] in ("_raw", "handoffs") or clean_rel in ("INDEX.md", "SCHEMA.md"):
         return body
 
-    lines = [line.strip() for line in body.splitlines() if line.strip()]
-    if len(lines) <= 1:
+    stripped_body = body.strip()
+    if not stripped_body:
         return body
 
     # Calculate relative path back to INDEX.md
     depth = len(parts) - 1
     rel_to_index = ("../" * depth) + "INDEX.md"
 
-    # Check if backlink already present
-    lower_body = body.lower()
-    if (
-        "[← volver al índice]" in lower_body
-        or "[← return to index]" in lower_body
-        or "[← back to index]" in lower_body
-        or "[volver al índice]" in lower_body
-    ):
+    # Check if backlink is already present at the tail of the document outside code fences
+    masked = _mask_code_fences_text(body)
+    non_empty_masked_lines = [line.strip().lower() for line in masked.splitlines() if line.strip()]
+    tail_lines = non_empty_masked_lines[-5:] if non_empty_masked_lines else []
+
+    backlink_markers = (
+        "[← volver al índice]",
+        "[← return to index]",
+        "[← back to index]",
+        "[volver al índice]",
+    )
+
+    has_tail_backlink = any(
+        any(marker in line for marker in backlink_markers)
+        for line in tail_lines
+    )
+    if has_tail_backlink:
         return body
 
-    stripped_body = body.rstrip()
-    if not stripped_body:
-        return body
-
-    if stripped_body.endswith("---"):
-        return f"{stripped_body}\n\n[← Volver al Índice]({rel_to_index})\n"
+    body_rstrip = body.rstrip()
+    if body_rstrip.endswith("---"):
+        return f"{body_rstrip}\n\n[← Volver al Índice]({rel_to_index})\n"
     else:
-        return f"{stripped_body}\n\n---\n\n[← Volver al Índice]({rel_to_index})\n"
+        return f"{body_rstrip}\n\n---\n\n[← Volver al Índice]({rel_to_index})\n"
 
 
 def get_schema_documentation(

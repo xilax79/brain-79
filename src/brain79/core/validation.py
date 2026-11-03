@@ -214,10 +214,21 @@ def check_missing_sections(
     """Check if content is missing any required H2 sections for the target type.
 
     Supports synonyms/alternatives when a required section is defined as a list of acceptable titles.
-    Decisions strictly require standard ADR sections. For other types, checks if the document
-    has section headings or substantial unstructured body (>200 characters).
+    Decisions strictly require standard ADR sections.
+    Inactive articles (superseded, deprecated, rejected, archived, legacy) are exempted.
+    Matches headings using exact match or boundary phrases (avoiding partial substring accidents).
     """
     from brain79.core.frontmatter import load_active_schema, parse_frontmatter
+
+    # Exemption for inactive statuses
+    try:
+        meta, _ = parse_frontmatter(content)
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        if status in ("superseded", "deprecated", "rejected", "archived", "legacy") or stability == "legacy":
+            return []
+    except Exception:
+        pass
 
     active = schema or load_active_schema()
     type_cfg = active.types.get(target_type, {})
@@ -226,19 +237,7 @@ def check_missing_sections(
         return []
 
     present_headers = extract_h2_headers(content)
-    present_lower = [h.lower() for h in present_headers]
-
-    # For non-decision types, short stubs (single paragraph <=200 chars and no other H2s)
-    # are concise summaries and not unstructured walls of text
-    if target_type != "decision":
-        try:
-            _, body = parse_frontmatter(content)
-            body_stripped = body.strip()
-            # If no H2 headers at all and body is short stub (<=200 chars or <=2 non-empty lines)
-            if not present_headers and (len(body_stripped) <= 200 or len([l for l in body_stripped.splitlines() if l.strip()]) <= 2):
-                return []
-        except Exception:
-            pass
+    normalized_headers = [h.strip().lower() for h in present_headers]
 
     missing: list[str] = []
     for req in req_sections:
@@ -251,8 +250,20 @@ def check_missing_sections(
 
         matched = False
         for c in candidates:
-            if any(c == h or c in h for h in present_lower):
-                matched = True
+            for nh in normalized_headers:
+                # 1. Exact match (e.g. "status" == "status", "overview" == "overview")
+                if nh == c:
+                    matched = True
+                    break
+                # 2. Strict prefix/suffix match (e.g. "adr status", "decision consequences", "system overview")
+                if nh.startswith(c + " ") or nh.endswith(" " + c):
+                    matched = True
+                    break
+                # 3. Word boundary regex match for multi-word phrases (e.g. "general description", "executive summary")
+                if " " in c and re.search(rf"\b{re.escape(c)}\b", nh):
+                    matched = True
+                    break
+            if matched:
                 break
         if not matched:
             missing.append(req_name)

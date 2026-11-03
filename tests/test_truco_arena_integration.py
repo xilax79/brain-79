@@ -80,7 +80,7 @@ def test_truco_arena_full_remediation_passes_lint_strict(truco_arena_workdir: Pa
     game_table = wiki_root / "architecture" / "game-table.md"
     if game_table.exists():
         game_table.write_text(
-            "---\ntype: architecture\nsummary: Game table architecture and state machines\nstability: stable\nlast_updated: 2026-08-11\n---\n\n# Game Table Architecture\n",
+            "---\ntype: architecture\nsummary: Game table architecture and state machines\nstability: stable\nlast_updated: 2026-08-11\n---\n\n# Game Table Architecture\n\n## Overview\nGame table overview.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n",
             encoding="utf-8",
         )
 
