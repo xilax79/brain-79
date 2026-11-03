@@ -92,9 +92,9 @@ This automatically sets up:
 When integrated with tools like **Pi**, **Claude Code**, **Cursor**, or **Devin**, the agent uses dedicated MCP tools:
 
 1. **Instant Orientation (1-Call Cold Start):** The agent calls `brain79_orient(task=..., paths=[...])` to ingest the routing table (`INDEX.md`), latest handoff state, and the full text of governing architecture articles and ADRs in a single round-trip.
-2. **Focused Reading:** Calls `brain79_read("features/auth.md")` or searches via `brain79_search("JWT")`.
+2. **Focused & Projected Reading:** Calls `brain79_read("features/auth.md", sections=["Endpoints"])` or `brain79_read_batch(requests)`.
 3. **Surgical Updates:** Modifies sections cleanly using `brain79_edit` or writes new specs using `brain79_write`.
-4. **Session Handoff:** At the end of the session, the agent calls `brain79_handoff_write(...)` to store an immutable snapshot of what was finished and what remains to be done.
+4. **Atomic Session Wrap-Up:** Calls `brain79_session_commit(...)` to archive raw logs, apply article writes/edits, and generate the immutable handoff in a single all-or-nothing transaction.
 
 ### For Developers (via CLI)
 Everything available to the agent is equally accessible to you in the terminal with 100% feature symmetry:

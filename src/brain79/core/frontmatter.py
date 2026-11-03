@@ -1,6 +1,6 @@
 import csv
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -408,7 +408,7 @@ def autofill_deterministic_fields(
     schema: ActiveSchema | None = None,
 ) -> dict[str, Any]:
     """Auto-fill deterministic frontmatter fields and strip hallucinated keys."""
-    today = date.today().isoformat()
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
     active = schema or load_active_schema()
     active_types = active.types
 

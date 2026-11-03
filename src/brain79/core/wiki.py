@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 import shutil
 import subprocess
+from typing import Any
 
 import filelock
 
@@ -32,14 +33,176 @@ def resolve_wiki_path(path: str, wiki_root: Path | None = None) -> Path:
     return _safe_resolve(path, wiki_root=wiki_root)
 
 
-def read_article(path: str, wiki_root: Path | None = None) -> str:
-    """Read an article by its relative path within the wiki."""
-    target = _safe_resolve(path, wiki_root=wiki_root)
+def extract_sections_from_markdown(content: str, requested_sections: list[str]) -> str:
+    """
+    Extract specific ## H2 sections from markdown content while preserving frontmatter and # H1.
+
+    Args:
+        content: Raw markdown text (optionally with YAML frontmatter).
+        requested_sections: List of section names to extract (case-insensitive substring/equality).
+
+    Returns:
+        Projected markdown content containing frontmatter, # H1, and the matched ## H2 sections.
+    """
+    from brain79.core.frontmatter import parse_frontmatter
+
+    try:
+        meta, body = parse_frontmatter(content)
+    except Exception:
+        meta, body = {}, content
+    lines = (body or content).splitlines()
+
+    h1_lines: list[str] = []
+    # Key: normalized section title -> list of lines in section (including ## header)
+    sections: list[tuple[str, list[str]]] = []
+    current_title: str | None = None
+    current_lines: list[str] = []
+
+    for line in lines:
+        if line.startswith("# ") and not current_title:
+            h1_lines.append(line)
+        elif line.startswith("## "):
+            if current_title is not None:
+                sections.append((current_title, current_lines))
+            current_title = line[3:].strip()
+            current_lines = [line]
+        else:
+            if current_title is not None:
+                current_lines.append(line)
+            elif not sections and not line.startswith("# "):
+                # Lead preamble text before any H2
+                h1_lines.append(line)
+
+    if current_title is not None:
+        sections.append((current_title, current_lines))
+
+    # Match requested sections
+    matched_sections: list[list[str]] = []
+
+    for orig_req in requested_sections:
+        req = orig_req.strip().lower()
+        if not req:
+            continue
+        found = False
+        for sec_title, sec_lines in sections:
+            if req == sec_title.lower() or req in sec_title.lower():
+                if sec_lines not in matched_sections:
+                    matched_sections.append(sec_lines)
+                found = True
+        if not found:
+            matched_sections.append([f"(No matching sections found for: {orig_req.strip()})"])
+
+    output_parts: list[str] = []
+
+    # Frontmatter
+    if meta:
+        import yaml
+
+        # Clean YAML serialization
+        fm_str = yaml.safe_dump(meta, sort_keys=False).strip()
+        output_parts.append(f"---\n{fm_str}\n---")
+
+    # Preamble + H1
+    lead_block = "\n".join(h1_lines).strip()
+    if lead_block:
+        output_parts.append(lead_block)
+
+    # Matched sections
+    for sec in matched_sections:
+        output_parts.append("\n".join(sec).strip())
+
+    return "\n\n".join(output_parts).strip() + "\n"
+
+
+def _extract_linked_adrs_hint(wiki_root: Path, content: str, rel_path: str) -> str | None:
+    """Extract active governing ADR references from frontmatter and markdown links."""
+    # Never append ADR hint to INDEX.md itself
+    if rel_path == "INDEX.md":
+        return None
+
+    try:
+        from brain79.core.navigation import extract_graph_metadata
+
+        graph_meta = extract_graph_metadata(content, rel_path=rel_path)
+    except Exception:
+        return None
+    linked_adrs: list[str] = []
+
+    for ref in graph_meta.get("related", []) + graph_meta.get("outgoing_links", []):
+        ref_norm = ref.replace("\\", "/").strip().lstrip("/")
+        if ref_norm.startswith("decisions/") and ref_norm.endswith(".md"):
+            if ref_norm not in linked_adrs:
+                linked_adrs.append(ref_norm)
+
+    if not linked_adrs:
+        return None
+
+    adr_list_str = ", ".join(linked_adrs)
+    return f"\n\n---\n💡 Linked ADRs: {adr_list_str}"
+
+
+def read_article(
+    path: str,
+    wiki_root: Path | None = None,
+    sections: list[str] | None = None,
+) -> str:
+    """
+    Read an article by its relative path within the wiki, optionally projecting specific sections.
+    """
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    target = _safe_resolve(path, wiki_root=w_root)
     if not target.exists():
         raise FileNotFoundError(f"Article not found: {path}")
     if not target.is_file():
         raise ValueError(f"Path is not a file: {path}")
-    return target.read_text(encoding="utf-8")
+
+    raw_content = target.read_text(encoding="utf-8")
+    rel_path_str = str(target.relative_to(w_root))
+
+    if sections:
+        content = extract_sections_from_markdown(raw_content, sections)
+    else:
+        content = raw_content
+
+    # Append ADR hint if any
+    adr_hint = _extract_linked_adrs_hint(w_root, raw_content, rel_path_str)
+    if adr_hint and adr_hint not in content:
+        content = content.rstrip() + adr_hint
+
+    return content
+
+
+def read_batch_articles(
+    requests: list[dict[str, Any]],
+    wiki_root: Path | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Read multiple articles in a single call with optional section projections.
+
+    Args:
+        requests: List of dicts, e.g. [{"path": "features/auth.md", "sections": ["Endpoints"]}]
+        wiki_root: Optional wiki root Path override.
+
+    Returns:
+        List of dicts: [{"path": str, "content": str | None, "error": str | None}]
+    """
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    results: list[dict[str, Any]] = []
+
+    for req in requests:
+        path = req.get("path")
+        if not path:
+            results.append({"path": "", "content": None, "error": "Missing 'path' in request."})
+            continue
+
+        secs = req.get("sections")
+        try:
+            content = read_article(path, wiki_root=w_root, sections=secs)
+            results.append({"path": path, "content": content, "error": None})
+        except Exception as exc:
+            results.append({"path": path, "content": None, "error": str(exc)})
+
+    return results
 
 
 def write_article(

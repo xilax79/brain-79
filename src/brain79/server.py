@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from fastmcp import FastMCP
 
@@ -58,17 +59,49 @@ def brain79_index() -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_read(path: str) -> str:
+def brain79_read(path: str, sections: list[str] | None = None) -> str:
     """
-    Read a wiki article by its relative path.
+    Read a wiki article by its relative path, optionally projecting specific sections.
 
     Args:
         path: Relative path within .brain-79/ (e.g., "architecture/overview.md")
+        sections: Optional list of ## H2 section names to extract (e.g., ["Components", "Data Flow"]).
+                  If provided, extracts frontmatter, # H1, and the requested sections.
     """
     try:
-        return wiki_ops.read_article(path)
+        return wiki_ops.read_article(path, sections=sections)
     except (FileNotFoundError, ValueError) as exc:
         return f"Error: {exc}"
+
+
+@mcp.tool(output_schema=None)
+def brain79_read_batch(requests: list[dict[str, Any]]) -> str:
+    """
+    Read multiple wiki articles in a single call with optional section projections.
+
+    Args:
+        requests: List of request dicts, each with:
+                  - "path": Relative path within .brain-79/ (required)
+                  - "sections": Optional list of ## H2 section names to project
+
+    Returns:
+        Formatted markdown output containing the read articles and linked ADR notices.
+    """
+    try:
+        results = wiki_ops.read_batch_articles(requests)
+        rendered_parts: list[str] = []
+        for item in results:
+            p = item["path"]
+            err = item.get("error")
+            content = item.get("content")
+            rendered_parts.append(f"## === Article: {p} ===")
+            if err:
+                rendered_parts.append(f"> ❌ Error: {err}")
+            else:
+                rendered_parts.append(content or "(empty)")
+        return "\n\n".join(rendered_parts)
+    except Exception as exc:
+        return f"Error reading batch: {exc}"
 
 
 @mcp.tool(output_schema=None)
@@ -389,6 +422,75 @@ def brain79_navigate(regenerate: bool = False) -> str:
             return generate_quick_navigation(wiki_root)
     except (OSError, ValueError, FileNotFoundError) as exc:
         return f"Navigation Error: {exc}"
+
+
+@mcp.tool(output_schema=None)
+def brain79_session_commit(
+    writes: list[dict[str, str]] | None = None,
+    edits: list[dict[str, Any]] | None = None,
+    handoff: dict[str, Any] | None = None,
+    session_summary: str | None = None,
+    instructions: str | None = None,
+    force_validation_skip: bool = False,
+) -> str:
+    """
+    1-call atomic end-of-session finalization transaction.
+
+    Executes the entire end-of-session wrap-up in a single all-or-nothing call:
+    1. Pre-flight validation of all writes, in-memory simulated edits, and handoff rules.
+       If ANY validation check fails, zero files on disk are modified.
+    2. Atomic execution: saves raw session log (if session_summary provided), writes articles,
+       applies edits, saves immutable handoff, and syncs navigation registry and INDEX.md once.
+    3. Runs inline health checks on all touched articles and returns a unified receipt.
+
+    Args:
+        writes: Optional list of articles to create/overwrite [{"path": "...", "content": "..."}]
+        edits: Optional list of targeted text replacements [{"path": "...", "edits": [{"old_text": "...", "new_text": "..."}]}]
+        handoff: Optional dict matching brain79_handoff_write parameters (session_type, summary, completed_work, pending_work, boot_instruction)
+        session_summary: Optional high-level summary for raw session archiving (_raw/sessions/)
+        instructions: Optional user prompt instructions for raw session archiving
+        force_validation_skip: Whether to bypass frontmatter schema validation
+
+    Returns:
+        Structured markdown receipt summarizing the committed transaction.
+    """
+    from brain79.config import get_wiki_root
+    from brain79.core.session_commit import commit_session
+
+    payload: dict[str, Any] = {
+        "writes": writes or [],
+        "edits": edits or [],
+        "handoff": handoff,
+        "session_summary": session_summary,
+        "instructions": instructions,
+    }
+
+    try:
+        receipt = commit_session(
+            payload,
+            wiki_root=get_wiki_root(),
+            force_validation_skip=force_validation_skip,
+        )
+        lines = ["# Brain-79 — Session Commit Receipt", ""]
+        lines.append("- **Status**: ✅ Transaction Committed Successfully")
+        if receipt.get("session_raw_path"):
+            lines.append(f"- **Raw Session Log**: `{receipt['session_raw_path']}`")
+        if receipt.get("written_articles"):
+            lines.append(f"- **Written Articles ({len(receipt['written_articles'])})**: {', '.join(f'`{a}`' for a in receipt['written_articles'])}")
+        if receipt.get("edited_articles"):
+            lines.append(f"- **Edited Articles ({len(receipt['edited_articles'])})**: {', '.join(f'`{a}`' for a in receipt['edited_articles'])}")
+        if receipt.get("handoff_path"):
+            lines.append(f"- **Session Handoff**: `{receipt['handoff_path']}`")
+        lines.append(f"- **Inline Health**: `{receipt.get('health_status', 'ok')}`")
+        if receipt.get("warnings"):
+            lines.append("\n### Warnings:")
+            for w in receipt["warnings"]:
+                lines.append(f"- ⚠️ {w}")
+        return "\n".join(lines)
+    except ValidationError as exc:
+        return f"Commit Validation Failed:\n{exc.format_user_message()}"
+    except Exception as exc:
+        return f"Commit Aborted: {exc}"
 
 
 @mcp.tool(output_schema=None)

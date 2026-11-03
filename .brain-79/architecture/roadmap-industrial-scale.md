@@ -51,9 +51,9 @@ A technical audit of the v1.1.0 codebase and real-world agent sessions identifie
 +-----------------------------------------------------------------------------------+
 | Phase 2: Deterministic Pre-Work Context & Graph-Augmented Cold Start | [x] Completed (2026-11-02) |
 +-----------------------------------------------------------------------------------+
-| Phase 3: Zero-Turn Session Execution (Session Commit & Section-Projected Reads) | [ ] Planned |
+| Phase 3: Zero-Turn Session Execution (Session Commit & Section-Projected Reads) | [x] Completed (2026-11-02) |
 +-----------------------------------------------------------------------------------+
-| Phase 4: Structural Article Quality & Deterministic Drift Detection | [ ] Planned |
+| Phase 4: Structural Article Quality & Deterministic Drift Detection | [ ] Next |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -217,8 +217,8 @@ Upgrade `src/brain79/core/context.py` from pure keyword TF-IDF to a **3-signal d
 | **Phase 0** | Fix `bootstrap.py`, full frontmatter check in `lint_organizational.py`, strict ADR-008 `INDEX_ALLOWED_H2`, required `summary`, `_raw` frontmatter | **0 internal bugs / 100% validator-linter parity** | Low | **Completed** |
 | **Phase 1** | Declarative `SCHEMA.md` loader + `software` & `general` profiles + custom folder support | **100% domain flexibility with zero bloat** | Low–Medium | **Completed** |
 | **Phase 2** | `applies_to` / `related` graph indexing + `brain79_orient(task, paths)` | **Cold-start turns: 5 $\rightarrow$ 1 · Pre-work recall: near 100%** | Medium | **Completed** |
-| **Phase 3** | `brain79_session_commit` + `brain79_read_batch` (with section projection) | **End-of-session turns: 3–4 $\rightarrow$ 1 · Context tokens: -50%** | Medium | Next |
-| **Phase 4** | Auto-injected backlinks, H2 section templates/validation, and `applies_to` Git drift detection | **Article structural quality & zero silent doc decay** | Low–Medium | Planned |
+| **Phase 3** | `brain79_session_commit` + `brain79_read_batch` (with section projection) | **End-of-session turns: 3–4 $\rightarrow$ 1 · Context tokens: -50%** | Medium | **Completed** |
+| **Phase 4** | Auto-injected backlinks, H2 section templates/validation, and `applies_to` Git drift detection | **Article structural quality & zero silent doc decay** | Low–Medium | Next |
 
 ---
 

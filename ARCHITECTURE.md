@@ -118,27 +118,33 @@ The system is organized into four clean, isolated layers:
 
 ---
 
-## 5. Typical Lifecycle: An Agent Session
+## 5. Typical Lifecycle: The Two-Call Session Protocol
 
 ```
-1. COLD START (Single Turn)
+1. COLD START (Turn 1)
    AI Agent awakens
    │
-   └─► Calls brain79_orient(task, paths) ─► Ingests INDEX, handoff state,
+   └─► Calls brain79_orient(task, paths) ─► Ingests INDEX.md routing table,
+                                             latest handoff state & promotion alerts,
                                              and inlined governing articles & ADRs
 
-2. EXECUTION
-   AI Agent designs or modifies features
+2. EXECUTION (Mid-Session)
+   AI Agent implements features or fixes bugs in codebase
    │
    ├─► Calls brain79_search(query) ──────► Instant ripgrep lookup across wiki
-   ├─► Calls brain79_read(path) ─────────► Retrieves specific article
-   └─► Calls brain79_edit(path, ...) ─────► Applies targeted changes (saves tokens)
+   ├─► Calls brain79_read(path, sections)► Retrieves specific sections (saves tokens)
+   └─► Calls brain79_read_batch(reqs) ───► Reads multiple articles in 1 turn
 
-3. FINALIZATION
-   AI Agent concludes work
+3. FINALIZATION (Turn 2 — The Two-Call Protocol)
+   AI Agent concludes session atomically
    │
-   ├─► Calls brain79_handoff_write() ────► Records what was completed & next steps
-   └─► brain-79 auto-regenerates ───────► Updates navigation index & runs linter
+   └─► Calls brain79_session_commit(...) ─► All-or-nothing transaction:
+                                             - Pre-flight in-memory validation
+                                             - Saves raw session log
+                                             - Applies article writes & edits
+                                             - Writes immutable handoff
+                                             - Syncs navigation registry & INDEX.md
+                                             - Returns unified health receipt
 ```
 
 ---

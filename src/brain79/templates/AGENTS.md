@@ -33,10 +33,12 @@
 | 3-signal context search | `brain79_context(task, top_n?, paths?)` | `brain79 context <task> [--paths ...]` |
 | Inspect schema & templates | `brain79_schema(type?)` | `brain79 schema [--type <type>]` |
 | Find articles | `brain79_search(query)` | `brain79 search <query>` |
-| Read article | `brain79_read(path)` | `brain79 read <path>` |
+| Read article | `brain79_read(path, sections?)` | `brain79 read <path> [--sections ...]` |
+| Batch read articles | `brain79_read_batch(requests)` | `brain79 read-batch --file <path>` |
 | Write/update article | `brain79_write(path, content)` | `brain79 write <path> --content-file /dev/stdin` |
 | Partial edit | `brain79_edit(path, edits)` | `brain79 edit <path> --old-text ... --new-text ...` |
 | Batch write | `brain79_write_many(articles)` | `brain79 write-many --file <path>` |
+| 1-call atomic session commit | `brain79_session_commit(...)` | `brain79 session-commit --file <path>` |
 | Browse sections | `brain79_list(section?)` | `brain79 list [--section <name>]` |
 | Save raw session | `brain79_ingest(summary, instructions?)` | `brain79 ingest --summary-file /dev/stdin` |
 | Session handoff (write) | `brain79_handoff_write(...)` | `brain79 handoff-write --session-type feature --summary-file /dev/stdin --boot-instruction-file /dev/stdin` |
@@ -62,7 +64,13 @@ degradation. Always run these checks before declaring wiki work complete.
 | **Purge all handoffs (preview)** | `brain79_handoff_purge()` (dry-run) | `brain79 handoff-purge` |
 | **Purge all handoffs (destructive)** | `brain79_handoff_purge(apply=True)` | `brain79 handoff-purge --apply` |
 
-### Fast End-of-Session Recipe (Target: 2-3 calls)
+### The Two-Call Session Protocol (Industrial Recipe: 2 Calls)
+
+1. **Cold Start**: `brain79_orient(task?, paths?)` — Returns routing table (`INDEX.md`), latest handoff state with promotion warnings, and inlines top governing articles and ADRs.
+2. **Work Phase**: Edit codebase, optionally inspect specific sections via `brain79_read(path, sections=[...])` or `brain79_read_batch(requests)`.
+3. **Session Finalization**: `brain79_session_commit(writes?, edits?, handoff?, session_summary?)` — Executes the entire wrap-up in a single atomic all-or-nothing transaction.
+
+### Fallback Multi-Call End-of-Session Recipe (3 calls)
 
 1. `brain79_ingest(summary)` — Records raw session notes and outputs curation guide.
 2. `brain79_write(path, content)` / `brain79_edit(path, edits)` / `brain79_write_many(articles)` — Writes automatically sync navigation and run inline health checks.

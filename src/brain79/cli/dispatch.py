@@ -13,6 +13,7 @@ WHITELIST = {
     "update",
     "index",
     "read",
+    "read-batch",
     "write",
     "edit",
     "write-many",
@@ -29,6 +30,7 @@ WHITELIST = {
     "migrate",
     "handoff-purge",
     "orient",
+    "session-commit",
 }
 
 
@@ -121,10 +123,44 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
     elif cmd == "read":
         parser = argparse.ArgumentParser(prog="brain79 read")
         parser.add_argument("path", help="Relative path within .brain-79/")
+        parser.add_argument(
+            "--sections",
+            nargs="*",
+            default=None,
+            help="Optional list of ## H2 section names to extract",
+        )
         parsed = parser.parse_args(sub_args)
         from brain79.core.wiki import read_article
 
-        _write_stdout(read_article(parsed.path))
+        _write_stdout(read_article(parsed.path, sections=parsed.sections))
+        return 0
+
+    elif cmd == "read-batch":
+        parser = argparse.ArgumentParser(prog="brain79 read-batch")
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument("--file", help="Path to JSON file containing list of requests")
+        group.add_argument("--stdin", action="store_true", help="Read JSON requests from stdin")
+        parsed = parser.parse_args(sub_args)
+
+        from brain79.core.wiki import read_batch_articles
+
+        raw_json = read_input_field(parsed.file, parsed.stdin, "requests")
+        requests_data = json.loads(raw_json)
+        if not isinstance(requests_data, list):
+            raise ValueError("read-batch input must be a JSON array of request objects.")
+
+        results = read_batch_articles(requests_data)
+        rendered_parts: list[str] = []
+        for item in results:
+            p = item["path"]
+            err = item.get("error")
+            content = item.get("content")
+            rendered_parts.append(f"## === Article: {p} ===")
+            if err:
+                rendered_parts.append(f"> ❌ Error: {err}")
+            else:
+                rendered_parts.append(content or "(empty)")
+        _write_stdout("\n\n".join(rendered_parts))
         return 0
 
     elif cmd == "write":
@@ -627,6 +663,49 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
 
         wiki_root = get_wiki_root()
         _write_stdout(purge_handoffs(wiki_root, apply=not parsed.dry_run))
+        return 0
+
+    elif cmd == "session-commit":
+        parser = argparse.ArgumentParser(prog="brain79 session-commit")
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument("--file", help="Path to JSON file containing session commit payload")
+        group.add_argument("--stdin", action="store_true", help="Read JSON session commit payload from stdin")
+        parser.add_argument(
+            "--force-validation-skip",
+            action="store_true",
+            help="Bypass frontmatter validation during writes/edits",
+        )
+        parsed = parser.parse_args(sub_args)
+
+        from brain79.config import get_wiki_root
+        from brain79.core.session_commit import commit_session
+
+        raw_json = read_input_field(parsed.file, parsed.stdin, "session_commit_payload")
+        payload_data = json.loads(raw_json)
+        if not isinstance(payload_data, dict):
+            raise ValueError("session-commit input must be a JSON object.")
+
+        receipt = commit_session(
+            payload_data,
+            wiki_root=get_wiki_root(),
+            force_validation_skip=parsed.force_validation_skip,
+        )
+        lines = ["# Brain-79 — Session Commit Receipt", ""]
+        lines.append("- **Status**: ✅ Transaction Committed Successfully")
+        if receipt.get("session_raw_path"):
+            lines.append(f"- **Raw Session Log**: `{receipt['session_raw_path']}`")
+        if receipt.get("written_articles"):
+            lines.append(f"- **Written Articles ({len(receipt['written_articles'])})**: {', '.join(f'`{a}`' for a in receipt['written_articles'])}")
+        if receipt.get("edited_articles"):
+            lines.append(f"- **Edited Articles ({len(receipt['edited_articles'])})**: {', '.join(f'`{a}`' for a in receipt['edited_articles'])}")
+        if receipt.get("handoff_path"):
+            lines.append(f"- **Session Handoff**: `{receipt['handoff_path']}`")
+        lines.append(f"- **Inline Health**: `{receipt.get('health_status', 'ok')}`")
+        if receipt.get("warnings"):
+            lines.append("\n### Warnings:")
+            for w in receipt["warnings"]:
+                lines.append(f"- ⚠️ {w}")
+        _write_stdout("\n".join(lines))
         return 0
 
     raise ValueError(f"Unknown command: {cmd}")

@@ -3,10 +3,13 @@ from pathlib import Path
 _project_root: Path | None = None
 
 
-def set_project_root(path: Path) -> None:
-    """Set the project root at server startup."""
+def set_project_root(path: Path | None) -> None:
+    """Set the project root at server startup or reset with None."""
     global _project_root
-    _project_root = path.resolve()
+    if path is None:
+        _project_root = None
+    else:
+        _project_root = path.resolve()
 
 
 def get_project_root() -> Path:

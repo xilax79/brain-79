@@ -5,6 +5,14 @@ All notable changes to `brain-79` will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Phase 3: Zero-Turn Session Execution (The Two-Call Session Protocol)**:
+  - Introduced `brain79_session_commit` (FastMCP) and `brain79 session-commit` (CLI) providing 1-call atomic end-of-session finalization:
+    - Pre-flight in-memory simulation and validation of writes, edits, and handoff anti-hallucination constraints with an all-or-nothing rollback guarantee (zero files hit disk on error).
+    - Synchronous execution of raw session archiving (`_raw/sessions/`), article writes, partial edits, and immutable handoffs.
+    - Single consolidated navigation registry update and index regeneration under lock.
+    - Whole-transaction inline health diagnostics receipt (`check_file_health`).
+  - Added section-projected reading via `sections` parameter in `brain79_read` / `brain79 read` and batch reading via `brain79_read_batch` / `brain79 read-batch`, eliminating turn tax and reducing context window token consumption.
+  - Automatically append governing ADR reference hints (`💡 Linked ADRs: ...`) to article reads.
 - **Phase 2: Deterministic Pre-Work Context & Graph-Augmented Cold Start**:
   - Introduced `brain79 orient` (CLI) and `brain79_orient(task?, paths?, max_articles?)` (MCP), consolidating routing table, latest handoff state, promotion alerts, and inlined governing documents into a single tool call.
   - Upgraded context ranking (`rank_context_articles`) to a 3-signal deterministic engine:
