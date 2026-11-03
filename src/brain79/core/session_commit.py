@@ -2,9 +2,9 @@
 
 Executes the entire end-of-session finalization workflow in a single all-or-nothing transaction:
 1. Pre-flight validation (writes, edits, and handoff).
-2. All-or-nothing rollback on validation failure.
+2. All-or-nothing rollback on validation failure (zero files hit disk).
 3. Raw session ingestion (if session_summary provided).
-4. Synchronous file writes and edits.
+4. Synchronous file writes and edits via unified virtual filesystem state.
 5. Immutable handoff generation.
 6. Unified navigation synchronization and inline health diagnostics.
 """
@@ -14,7 +14,7 @@ from typing import Any
 
 from brain79.config import get_wiki_root
 from brain79.core.frontmatter import ValidationError
-from brain79.core.handoff import write_handoff
+from brain79.core.handoff import validate_handoff_params, write_handoff
 from brain79.core.navigation import regenerate_index_navigation
 from brain79.core.validation import validate_article_content
 from brain79.core.wiki import (
@@ -63,13 +63,22 @@ def commit_session(
     session_summary = payload.get("session_summary")
     instructions = payload.get("instructions")
 
+    # Guard: Reject completely empty session commits (Defect 6)
+    if not writes_in and not edits_in and not handoff_in and not session_summary:
+        raise ValueError("Cannot commit an empty session: specify at least one write, edit, handoff, or session_summary.")
+
     # =========================================================================
-    # Step 1: Pre-flight validation (in-memory simulations)
+    # Step 1: Pre-flight validation (Virtual FS simulation)
     # =========================================================================
     validation_errors: list[str] = []
-    validated_writes: list[tuple[str, str]] = []
 
-    # 1.1 Validate writes upfront
+    # Virtual FS tracks relative path -> simulated content across writes and edits (Defect 4)
+    # virtual_fs maps normalized rel_str -> content string
+    virtual_fs: dict[str, str] = {}
+    written_article_keys: list[str] = []
+    edited_article_keys: list[str] = []
+
+    # 1.1 Simulate writes in virtual_fs
     for idx, write_item in enumerate(writes_in):
         p = write_item.get("path")
         c = write_item.get("content")
@@ -83,15 +92,18 @@ def commit_session(
                 validation_errors.append(f"Write #{idx + 1}: Path must end with .md, got '{p}'.")
                 continue
             rel_str = str(target.relative_to(w_root))
-            val_c = validate_article_content(rel_str, c, force_skip=force_validation_skip)
-            validated_writes.append((p, val_c))
+            val_c = validate_article_content(
+                rel_str, c, force_skip=force_validation_skip, wiki_root=w_root
+            )
+            virtual_fs[rel_str] = val_c
+            if rel_str not in written_article_keys:
+                written_article_keys.append(rel_str)
         except ValidationError as exc:
             validation_errors.append(f"[{p}]\n{exc.format_user_message()}")
         except Exception as exc:
             validation_errors.append(f"[{p}] {exc}")
 
-    # 1.2 Validate edits upfront (simulate text replacement in memory)
-    simulated_edits: list[tuple[str, str]] = []
+    # 1.2 Simulate edits in virtual_fs
     for idx, edit_item in enumerate(edits_in):
         p = edit_item.get("path")
         edits_list = edit_item.get("edits")
@@ -101,12 +113,17 @@ def commit_session(
 
         try:
             target = _safe_resolve(p, wiki_root=w_root)
-            if not target.exists() or not target.is_file():
+            rel_str = str(target.relative_to(w_root))
+
+            # Base text: virtual_fs first (if created/modified by an earlier write/edit), else disk
+            if rel_str in virtual_fs:
+                current_text = virtual_fs[rel_str]
+            elif target.exists() and target.is_file():
+                current_text = target.read_text(encoding="utf-8")
+            else:
                 validation_errors.append(f"Edit #{idx + 1}: File not found '{p}'.")
                 continue
 
-            current_text = target.read_text(encoding="utf-8")
-            # Apply edits in sequence in memory
             for edit_idx, sub_edit in enumerate(edits_list):
                 old_text = sub_edit.get("old_text")
                 new_text = sub_edit.get("new_text")
@@ -129,29 +146,37 @@ def commit_session(
 
                 current_text = current_text.replace(old_text, new_text, 1)
 
-            rel_str = str(target.relative_to(w_root))
-            val_edited_content = validate_article_content(rel_str, current_text, force_skip=force_validation_skip)
-            simulated_edits.append((p, val_edited_content))
+            val_edited_content = validate_article_content(
+                rel_str, current_text, force_skip=force_validation_skip, wiki_root=w_root
+            )
+            virtual_fs[rel_str] = val_edited_content
+            if rel_str not in written_article_keys and rel_str not in edited_article_keys:
+                edited_article_keys.append(rel_str)
         except ValidationError as exc:
             validation_errors.append(f"[{p}]\n{exc.format_user_message()}")
         except Exception as exc:
             validation_errors.append(f"[{p}] {exc}")
 
-    # 1.3 Validate handoff upfront
+    # 1.3 Validate handoff completely upfront (Defect 1 & Defect 5)
+    normalized_handoff_params: dict[str, Any] | None = None
     if handoff_in:
-        from brain79.core.handoff import get_valid_session_types
-
-        s_type = (handoff_in.get("session_type") or "").strip().lower()
-        valid_types = get_valid_session_types()
-        if not s_type:
-            validation_errors.append("Handoff: 'session_type' is required.")
-        elif s_type not in valid_types:
-            # Raise ValueError directly to match handoff contract
-            raise ValueError(f"Invalid session_type '{s_type}'. Must be one of: {sorted(valid_types)}")
-
-        h_summary = (handoff_in.get("summary") or "").strip()
-        if not h_summary:
-            validation_errors.append("Handoff: 'summary' cannot be empty.")
+        try:
+            normalized_handoff_params = validate_handoff_params(
+                session_type=handoff_in.get("session_type", ""),
+                previous_handoff_ref=handoff_in.get("previous_handoff_ref", "latest"),
+                summary=handoff_in.get("summary", ""),
+                completed_work=handoff_in.get("completed_work"),
+                pending_work=handoff_in.get("pending_work"),
+                knowledge_pending_promotion=handoff_in.get("knowledge_pending_promotion"),
+                resources=handoff_in.get("resources"),
+                gotchas=handoff_in.get("gotchas"),
+                boot_instruction=handoff_in.get("boot_instruction", ""),
+                wiki_deviation_justification=handoff_in.get("wiki_deviation_justification", ""),
+                wiki_root=w_root,
+            )
+        except (ValueError, FileNotFoundError):
+            # Raise ValueError / FileNotFoundError directly to preserve handoff contract
+            raise
 
     if validation_errors:
         raise ValidationError(
@@ -163,81 +188,68 @@ def commit_session(
         )
 
     # =========================================================================
-    # Step 2: Execution Pass (all pre-flight checks passed)
+    # Step 2: Execution Pass (all pre-flight checks passed, mutate disk)
     # =========================================================================
     raw_path: str | None = None
     if session_summary:
-        raw_msg = save_raw_session(session_summary, instructions=instructions or "")
-        # Extract relative path from "Saved raw session to .brain-79/_raw/sessions/..."
+        raw_msg = save_raw_session(session_summary, instructions=instructions or "", wiki_root=w_root)
         if "_raw/sessions/" in raw_msg:
             raw_path = "_raw/sessions/" + raw_msg.split("_raw/sessions/")[-1].strip()
 
-    written_paths: list[str] = []
-    for p, val_c in validated_writes:
+    # Write each touched article once from virtual_fs
+    for rel_str, content in virtual_fs.items():
         write_article(
-            p,
-            val_c,
+            rel_str,
+            content,
             timeout=timeout,
             force_validation_skip=force_validation_skip,
             _skip_nav_regen=True,
+            wiki_root=w_root,
         )
-        written_paths.append(p)
-
-    edited_paths: list[str] = []
-    for p, val_edited in simulated_edits:
-        write_article(
-            p,
-            val_edited,
-            timeout=timeout,
-            force_validation_skip=force_validation_skip,
-            _skip_nav_regen=True,
-        )
-        edited_paths.append(p)
 
     handoff_path: str | None = None
-    if handoff_in:
+    if normalized_handoff_params:
         handoff_msg = write_handoff(
-            session_type=handoff_in["session_type"],
-            previous_handoff_ref=handoff_in.get("previous_handoff_ref", "latest"),
-            summary=handoff_in["summary"],
-            completed_work=handoff_in.get("completed_work"),
-            pending_work=handoff_in.get("pending_work"),
-            knowledge_pending_promotion=handoff_in.get("knowledge_pending_promotion"),
-            resources=handoff_in.get("resources"),
-            gotchas=handoff_in.get("gotchas"),
-            boot_instruction=handoff_in.get("boot_instruction", ""),
-            wiki_deviation_justification=handoff_in.get("wiki_deviation_justification", ""),
+            session_type=normalized_handoff_params["session_type"],
+            previous_handoff_ref=normalized_handoff_params["previous_handoff_ref"],
+            summary=normalized_handoff_params["summary"],
+            completed_work=normalized_handoff_params["completed_work"],
+            pending_work=normalized_handoff_params["pending_work"],
+            knowledge_pending_promotion=normalized_handoff_params["knowledge_pending_promotion"],
+            resources=normalized_handoff_params["resources"],
+            gotchas=normalized_handoff_params["gotchas"],
+            boot_instruction=normalized_handoff_params["boot_instruction"],
+            wiki_deviation_justification=normalized_handoff_params["wiki_deviation_justification"],
+            wiki_root=w_root,
         )
         if "handoffs/" in handoff_msg:
             handoff_path = "handoffs/" + handoff_msg.split("handoffs/")[-1].strip()
 
-    # Regenerate index navigation once for all touched articles
-    try:
-        regenerate_index_navigation(w_root)
-    except Exception:
-        pass
-
-    # Collect health diagnostics
-    all_warnings: list[str] = []
-    for p in written_paths:
+    # Regenerate index navigation ONLY if indexable articles were touched (Defect 6)
+    has_indexable_changes = any(
+        not p.startswith("_raw/") and not p.startswith("handoffs/") and p not in ("SCHEMA.md", "INDEX.md")
+        for p in virtual_fs
+    )
+    if has_indexable_changes:
         try:
-            content = (w_root / p).read_text(encoding="utf-8")
-            all_warnings.extend(check_file_health(w_root, p, content))
+            regenerate_index_navigation(w_root)
         except Exception:
             pass
 
-    for p in edited_paths:
+    # Collect health diagnostics
+    all_warnings: list[str] = []
+    for rel_str in virtual_fs:
         try:
-            content = (w_root / p).read_text(encoding="utf-8")
-            all_warnings.extend(check_file_health(w_root, p, content))
+            content = (w_root / rel_str).read_text(encoding="utf-8")
+            all_warnings.extend(check_file_health(w_root, rel_str, content))
         except Exception:
             pass
 
     return {
         "success": True,
         "session_raw_path": raw_path,
-        "written_articles": written_paths,
-        "edited_articles": edited_paths,
+        "written_articles": written_article_keys,
+        "edited_articles": edited_article_keys,
         "handoff_path": handoff_path,
         "health_status": "warnings" if all_warnings else "ok",
         "warnings": all_warnings,

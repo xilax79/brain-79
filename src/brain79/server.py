@@ -69,7 +69,7 @@ def brain79_read(path: str, sections: list[str] | None = None) -> str:
                   If provided, extracts frontmatter, # H1, and the requested sections.
     """
     try:
-        return wiki_ops.read_article(path, sections=sections)
+        return wiki_ops.read_article(path, sections=sections, include_adr_hints=True)
     except (FileNotFoundError, ValueError) as exc:
         return f"Error: {exc}"
 

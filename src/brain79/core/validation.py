@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import re
 import sys
 
@@ -75,7 +76,12 @@ def _mask_code_fences(content: str) -> str:
     return "\n".join(masked)
 
 
-def validate_article_content(path: str, content: str, force_skip: bool = False) -> str:
+def validate_article_content(
+    path: str,
+    content: str,
+    force_skip: bool = False,
+    wiki_root: Path | None = None,
+) -> str:
     """Validate article content before writing to disk.
 
     If validation passes, returns content (potentially with injected metadata if force_skip is True).
@@ -174,7 +180,8 @@ def validate_article_content(path: str, content: str, force_skip: bool = False) 
     from brain79.core.frontmatter import load_active_schema
 
     try:
-        active_s = load_active_schema(get_wiki_root())
+        w_root = (wiki_root or get_wiki_root()).resolve()
+        active_s = load_active_schema(w_root)
     except Exception:
         active_s = None
 

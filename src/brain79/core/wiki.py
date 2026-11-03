@@ -58,19 +58,44 @@ def extract_sections_from_markdown(content: str, requested_sections: list[str]) 
     current_title: str | None = None
     current_lines: list[str] = []
 
+    in_fence = False
+    fence_char: str | None = None
+
     for line in lines:
-        if line.startswith("# ") and not current_title:
-            h1_lines.append(line)
-        elif line.startswith("## "):
-            if current_title is not None:
-                sections.append((current_title, current_lines))
-            current_title = line[3:].strip()
-            current_lines = [line]
+        stripped = line.lstrip()
+        # Track code fences to avoid splitting on '#' comments or '##' code inside blocks
+        if not in_fence:
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                in_fence = True
+                fence_char = stripped[:3]
+                if current_title is not None:
+                    current_lines.append(line)
+                elif not sections:
+                    h1_lines.append(line)
+                continue
+
+            # Outside code fences, inspect headings
+            if line.startswith("# ") and not current_title:
+                h1_lines.append(line)
+            elif line.startswith("## "):
+                if current_title is not None:
+                    sections.append((current_title, current_lines))
+                current_title = line[3:].strip()
+                current_lines = [line]
+            else:
+                if current_title is not None:
+                    current_lines.append(line)
+                elif not sections:
+                    h1_lines.append(line)
         else:
+            # Inside code fence
+            if fence_char and stripped.startswith(fence_char):
+                in_fence = False
+                fence_char = None
+
             if current_title is not None:
                 current_lines.append(line)
-            elif not sections and not line.startswith("# "):
-                # Lead preamble text before any H2
+            elif not sections:
                 h1_lines.append(line)
 
     if current_title is not None:
@@ -115,7 +140,12 @@ def extract_sections_from_markdown(content: str, requested_sections: list[str]) 
 
 
 def _extract_linked_adrs_hint(wiki_root: Path, content: str, rel_path: str) -> str | None:
-    """Extract active governing ADR references from frontmatter and markdown links."""
+    """Extract active governing ADR references from frontmatter and markdown links.
+
+    Filters out:
+    - Self-references (if rel_path itself is an ADR).
+    - Superseded, rejected, or legacy ADRs.
+    """
     # Never append ADR hint to INDEX.md itself
     if rel_path == "INDEX.md":
         return None
@@ -126,11 +156,30 @@ def _extract_linked_adrs_hint(wiki_root: Path, content: str, rel_path: str) -> s
         graph_meta = extract_graph_metadata(content, rel_path=rel_path)
     except Exception:
         return None
+
+    from brain79.core.frontmatter import parse_frontmatter
+
     linked_adrs: list[str] = []
+    norm_current = rel_path.replace("\\", "/").strip().lstrip("/")
 
     for ref in graph_meta.get("related", []) + graph_meta.get("outgoing_links", []):
         ref_norm = ref.replace("\\", "/").strip().lstrip("/")
         if ref_norm.startswith("decisions/") and ref_norm.endswith(".md"):
+            # Don't self-link if reading the ADR itself
+            if ref_norm == norm_current:
+                continue
+
+            # Verify ADR is active (not superseded, rejected, or legacy)
+            adr_file = wiki_root / ref_norm
+            if adr_file.exists() and adr_file.is_file():
+                try:
+                    adr_meta, _ = parse_frontmatter(adr_file.read_text(encoding="utf-8"))
+                    adr_status = adr_meta.get("status", "").lower()
+                    if adr_status in ("superseded", "rejected", "legacy", "deprecated"):
+                        continue
+                except Exception:
+                    pass
+
             if ref_norm not in linked_adrs:
                 linked_adrs.append(ref_norm)
 
@@ -145,9 +194,16 @@ def read_article(
     path: str,
     wiki_root: Path | None = None,
     sections: list[str] | None = None,
+    include_adr_hints: bool = False,
 ) -> str:
     """
-    Read an article by its relative path within the wiki, optionally projecting specific sections.
+    Read an article by its relative path within the wiki.
+
+    Args:
+        path: Relative path within wiki root.
+        wiki_root: Optional wiki root Path override.
+        sections: Optional list of ## H2 section names to project.
+        include_adr_hints: If True, appends governing active ADR notice footer.
     """
     w_root = (wiki_root or get_wiki_root()).resolve()
     target = _safe_resolve(path, wiki_root=w_root)
@@ -164,10 +220,11 @@ def read_article(
     else:
         content = raw_content
 
-    # Append ADR hint if any
-    adr_hint = _extract_linked_adrs_hint(w_root, raw_content, rel_path_str)
-    if adr_hint and adr_hint not in content:
-        content = content.rstrip() + adr_hint
+    # Append ADR hint ONLY if explicitly requested
+    if include_adr_hints:
+        adr_hint = _extract_linked_adrs_hint(w_root, raw_content, rel_path_str)
+        if adr_hint and adr_hint not in content:
+            content = content.rstrip() + adr_hint
 
     return content
 
@@ -175,6 +232,7 @@ def read_article(
 def read_batch_articles(
     requests: list[dict[str, Any]],
     wiki_root: Path | None = None,
+    include_adr_hints: bool = True,
 ) -> list[dict[str, Any]]:
     """
     Read multiple articles in a single call with optional section projections.
@@ -182,6 +240,7 @@ def read_batch_articles(
     Args:
         requests: List of dicts, e.g. [{"path": "features/auth.md", "sections": ["Endpoints"]}]
         wiki_root: Optional wiki root Path override.
+        include_adr_hints: Whether to append governing ADR footer hints (default: True for batch presentation).
 
     Returns:
         List of dicts: [{"path": str, "content": str | None, "error": str | None}]
@@ -197,7 +256,12 @@ def read_batch_articles(
 
         secs = req.get("sections")
         try:
-            content = read_article(path, wiki_root=w_root, sections=secs)
+            content = read_article(
+                path,
+                wiki_root=w_root,
+                sections=secs,
+                include_adr_hints=include_adr_hints,
+            )
             results.append({"path": path, "content": content, "error": None})
         except Exception as exc:
             results.append({"path": path, "content": None, "error": str(exc)})
@@ -211,6 +275,7 @@ def write_article(
     timeout: float = 5.0,
     force_validation_skip: bool = False,
     _skip_nav_regen: bool = False,
+    wiki_root: Path | None = None,
 ) -> str:
     """
     Write or update an article atomically with file locking. Creates parent directories as needed.
@@ -219,15 +284,15 @@ def write_article(
     It is excluded by .gitignore and article search patterns (*.md).
     For manual cleanup: find .brain-79 -name '*.lock' -delete.
     """
-    target = _safe_resolve(path)
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    target = _safe_resolve(path, wiki_root=w_root)
 
     if target.suffix != ".md":
         raise ValueError(f"write_article requires .md paths, got {path}")
 
-    wiki_root = get_wiki_root().resolve()
-    rel_path_str = str(target.relative_to(wiki_root))
+    rel_path_str = str(target.relative_to(w_root))
     content = validate_article_content(
-        rel_path_str, content, force_skip=force_validation_skip
+        rel_path_str, content, force_skip=force_validation_skip, wiki_root=w_root
     )
 
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -264,12 +329,12 @@ def write_article(
                 register_article,
             )
 
-            rel_p = target.relative_to(wiki_root)
+            rel_p = target.relative_to(w_root)
             title, summary = extract_title_and_summary(content)
             graph_meta = extract_graph_metadata(content, rel_path=str(rel_p))
             section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
             register_article(
-                wiki_root,
+                w_root,
                 str(rel_p),
                 title,
                 summary,
@@ -278,7 +343,7 @@ def write_article(
             )
             if not _skip_nav_regen:
                 try:
-                    regenerate_index_navigation(wiki_root)
+                    regenerate_index_navigation(w_root)
                 except Exception:
                     pass
         elif rel_path_str == "INDEX.md" and "## Quick navigation" in content:
@@ -286,7 +351,7 @@ def write_article(
                 from brain79.core.navigation import regenerate_index_navigation
 
                 try:
-                    regenerate_index_navigation(wiki_root)
+                    regenerate_index_navigation(w_root)
                 except Exception:
                     pass
     except Exception:
@@ -605,7 +670,11 @@ def search_articles(query: str) -> list[dict[str, str]]:
     return _search_python(query)
 
 
-def save_raw_session(session_summary: str, instructions: str | None = None) -> str:
+def save_raw_session(
+    session_summary: str,
+    instructions: str | None = None,
+    wiki_root: Path | None = None,
+) -> str:
     """Save a raw session summary to _raw/sessions/ and return the saved path."""
     now = datetime.now(UTC)
     timestamp = now.strftime("%Y-%m-%d-%H%M%S-%f")[:-3]
@@ -628,5 +697,5 @@ def save_raw_session(session_summary: str, instructions: str | None = None) -> s
         frontmatter_lines.append(f"> **Curation instructions:** {instructions}\n")
     frontmatter_lines.append(session_summary)
 
-    write_article(rel_path, "\n".join(frontmatter_lines))
+    write_article(rel_path, "\n".join(frontmatter_lines), wiki_root=wiki_root)
     return rel_path

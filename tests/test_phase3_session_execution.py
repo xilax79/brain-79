@@ -132,7 +132,7 @@ Content of section two.
     write_article("architecture/test-arch.md", arch_content)
 
     # Read with sections
-    res = read_article("architecture/test-arch.md", sections=["Section One"])
+    res = read_article("architecture/test-arch.md", sections=["Section One"], include_adr_hints=True)
     assert "## Section One" in res
     assert "## Section Two" not in res
     assert "💡 Linked ADRs:" in res
@@ -373,7 +373,7 @@ version: 1.0.0
             "summary": "Attempt handoff",
             "completed_work": ["Nothing"],
             "pending_work": [],
-            "boot_instruction": "No work",
+            "boot_instruction": "No pending tasks.",
         },
     }
 

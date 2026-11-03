@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from brain79.config import get_wiki_root
 from brain79.core import wiki as wiki_ops
@@ -93,7 +94,7 @@ def _resolve_handoff_path(ref: str, wiki_root: Path | None = None) -> Path:
     raise HandoffNotFoundError(f"The handoff reference '{ref}' does not exist.")
 
 
-def write_handoff(
+def validate_handoff_params(
     session_type: str,
     previous_handoff_ref: str = "latest",
     summary: str = "",
@@ -104,54 +105,55 @@ def write_handoff(
     gotchas: list[str] | None = None,
     boot_instruction: str = "",
     wiki_deviation_justification: str = "",
-) -> str:
-    """Generate and save an immutable handoff file validating design rules."""
-    # Validation: session_type strip & case-insensitivity
+    wiki_root: Path | None = None,
+) -> dict[str, Any]:
+    """Validate and normalize handoff parameters without modifying disk.
+
+    Returns:
+        Normalized dict of parameters ready for write_handoff.
+    Raises:
+        ValueError or FileNotFoundError if any parameter violates validation rules.
+    """
     session_type = session_type.strip().lower()
-    valid_types = get_valid_session_types()
+    valid_types = get_valid_session_types(wiki_root=wiki_root)
     if session_type not in valid_types:
         raise ValueError(
             f"Invalid session_type '{session_type}'. Must be one of: {sorted(valid_types)}"
         )
 
-    # Validation: summary non-empty
     summary = summary.strip()
     if not summary:
         raise ValueError("summary cannot be empty.")
 
-    # Validation: lineage reference
     raw_ref = (previous_handoff_ref or "").strip()
     if not raw_ref or raw_ref.lower() in ("none", "initial"):
-        previous_handoff_ref = "none"
+        normalized_ref = "none"
     elif raw_ref.lower() == "latest":
         try:
-            _resolve_handoff_path("latest")
-            previous_handoff_ref = "latest"
+            _resolve_handoff_path("latest", wiki_root=wiki_root)
+            normalized_ref = "latest"
         except (HandoffNotFoundError, NoHandoffsExistError):
-            previous_handoff_ref = "none"
+            normalized_ref = "none"
     else:
         try:
-            _resolve_handoff_path(raw_ref)
-            previous_handoff_ref = raw_ref
+            _resolve_handoff_path(raw_ref, wiki_root=wiki_root)
+            normalized_ref = raw_ref
         except (HandoffNotFoundError, NoHandoffsExistError):
             raise FileNotFoundError(
                 f"The previous_handoff_ref '{raw_ref}' does not exist."
             )
 
-    # Normalization
-    completed_work = _normalize_list(completed_work or [])
-    pending_work = _normalize_list(pending_work or [])
-    knowledge_pending_promotion = _normalize_list(knowledge_pending_promotion or [])
-    resources = _normalize_list(resources or [])
-    gotchas = _normalize_list(gotchas or [])
+    norm_completed = _normalize_list(completed_work or [])
+    norm_pending = _normalize_list(pending_work or [])
+    norm_promotion = _normalize_list(knowledge_pending_promotion or [])
+    norm_resources = _normalize_list(resources or [])
+    norm_gotchas = _normalize_list(gotchas or [])
 
-    # Validation: boot_instruction anti-hallucination
-    # NOTE: boot_instruction is rendered as plain markdown; not sanitized for HTML.
     boot_instruction = boot_instruction.strip()
     if not boot_instruction:
         raise ValueError("boot_instruction cannot be empty.")
 
-    if not pending_work:
+    if not norm_pending:
         anti_hallucination_keywords = [
             "no hay tareas",
             "nada pendiente",
@@ -170,6 +172,59 @@ def write_handoff(
             raise ValueError(
                 "No pending_work provided, but boot_instruction hallucinates next steps. You must explicitly indicate that there are no pending tasks."
             )
+
+    return {
+        "session_type": session_type,
+        "previous_handoff_ref": normalized_ref,
+        "summary": summary,
+        "completed_work": norm_completed,
+        "pending_work": norm_pending,
+        "knowledge_pending_promotion": norm_promotion,
+        "resources": norm_resources,
+        "gotchas": norm_gotchas,
+        "boot_instruction": boot_instruction,
+        "wiki_deviation_justification": wiki_deviation_justification,
+    }
+
+
+def write_handoff(
+    session_type: str,
+    previous_handoff_ref: str = "latest",
+    summary: str = "",
+    completed_work: list[str] | None = None,
+    pending_work: list[str] | None = None,
+    knowledge_pending_promotion: list[str] | None = None,
+    resources: list[str] | None = None,
+    gotchas: list[str] | None = None,
+    boot_instruction: str = "",
+    wiki_deviation_justification: str = "",
+    wiki_root: Path | None = None,
+) -> str:
+    """Generate and save an immutable handoff file validating design rules."""
+    params = validate_handoff_params(
+        session_type=session_type,
+        previous_handoff_ref=previous_handoff_ref,
+        summary=summary,
+        completed_work=completed_work,
+        pending_work=pending_work,
+        knowledge_pending_promotion=knowledge_pending_promotion,
+        resources=resources,
+        gotchas=gotchas,
+        boot_instruction=boot_instruction,
+        wiki_deviation_justification=wiki_deviation_justification,
+        wiki_root=wiki_root,
+    )
+
+    session_type = params["session_type"]
+    previous_handoff_ref = params["previous_handoff_ref"]
+    summary = params["summary"]
+    completed_work = params["completed_work"]
+    pending_work = params["pending_work"]
+    knowledge_pending_promotion = params["knowledge_pending_promotion"]
+    resources = params["resources"]
+    gotchas = params["gotchas"]
+    boot_instruction = params["boot_instruction"]
+    wiki_deviation_justification = params["wiki_deviation_justification"]
 
     timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S-%f")[:-3]
     rel_path = f"handoffs/handoff-{timestamp}.md"
@@ -219,7 +274,7 @@ def write_handoff(
     lines.append(boot_instruction)
 
     content = "\n".join(lines)
-    wiki_ops.write_article(rel_path, content)
+    wiki_ops.write_article(rel_path, content, wiki_root=wiki_root)
 
     return rel_path
 
