@@ -50,10 +50,6 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 +-----------------------------------------------------------------------------------+
 ```
 
-### Phase 5.5: Defect Backlog & Agent Protocol Polish
-- **Specification:** [Architecture — Defect Backlog & Agent Efficiency Deep Dive](defect-backlog.md)
-- **Scope:** Fix `SCHEMA_GENERAL.md` broken root link (`BUG-001`), refine H2 atomicity heuristics & code-fence masking (`BUG-002`), include active schema summary in `orient()`, make `write`/`edit` receipts self-documenting (`INDEX.md auto-synced`), and enforce the **On-Demand Handoff Policy** (handoffs written only on explicit user request or autonomous sub-agent termination, never per turn).
-
 ### Phase 6: Centralized `.locks/` Isolation & Cross-Platform OS Portability
 - **Specification:** [Feature — Cross-Platform Portability & Centralized Lock Isolation](../features/cross-platform-and-lock-isolation.md)
 - **Scope:** Isolate all `filelock` mutex files into `.brain-79/.locks/` (eliminating `.md.lock` clutter in content directories), enforce `.as_posix()` path normalization and strict `LF` (`\n`) I/O across Windows/Linux/macOS, add NTFS retry resilience on atomic file replacement, harden `.git/hooks/pre-commit` PATH resolution, and verify via a local cross-platform simulation test suite (no external CI required).

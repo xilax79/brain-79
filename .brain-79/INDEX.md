@@ -23,6 +23,7 @@ last_updated: 2026-11-04
 - [Changelog — Version 1.1.0 — Performance & Session Workflow Optimization](changelog/v1-1.md) — Performance and session workflow optimizations, partial edits, batch writes, and schema inspection
 - [Changelog — Version 2.0.0 — Two-Call Protocol & Release Governance](changelog/v2-0.md) — Major release 2.0.0 introducing Two-Call Session Protocol, declarative ontologies, deterministic drift detection, and release governance
 - [Changelog — Version 2.0.1 — Purge Obsolete Integration Fixture](changelog/v2-0-1.md) — Remove obsolete legacy Truco Arena test fixture and decouple local development paths
+- [Changelog — Version 2.0.2 — Defect Backlog & Agent Protocol Polish](changelog/v2-0-2.md) — Defect backlog remediations, composite H2 atomicity thresholds, root backlink normalization, and agent protocol efficiency
 
 ### Decisions
 - [ADR-001 — Architecture — Dual-Mode Hybrid CLI & MCP Server Interface](decisions/adr-001-hybrid-cli.md) — Dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server

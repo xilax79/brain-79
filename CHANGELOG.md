@@ -4,7 +4,19 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
-## [2.0.1] - 2026-11-03
+## [2.0.2] - 2026-11-04
+
+### Fixed
+- **Root Backlink Normalization & General Profile Template (BUG-001)**:
+  - Replaced invalid upward traversal `[← Volver al Índice](../INDEX.md)` with `[← Volver al Índice](INDEX.md)` in `src/brain79/templates/SCHEMA_GENERAL.md`.
+  - Normalized root-level backlink traversals in `normalize_backlink_footer` strictly within unmasked tail lines outside code fences, preserving documentation examples inside code blocks.
+- **Composite H2 Atomicity Heuristics & Code-Fence Masking (BUG-002)**:
+  - Masked code fences in `check_article_atomicity` to avoid falsely counting markdown example headings.
+  - Applied composite H2 thresholds: up to 15 for checklists/roadmaps, up to 12 for compact articles (<= 150 lines), and up to 10 for standard prose articles (> 150 lines).
+- **Self-Documenting Tool Receipts & Agent Protocols (INEF-001, INEF-002, INEF-003)**:
+  - Added `· INDEX.md auto-synced` to `brain79_write`, `brain79_edit`, and `brain79_write_many` receipts.
+  - Added compact `## 📐 Active Schema Summary` header to `brain79_orient` cold-start output.
+  - Formalized On-Demand Handoff Policy across server docstrings and AGENTS.md manifests.
 
 ### Removed
 - **Obsolete Truco Arena Snapshot Fixture (`tests/test_truco_arena_integration.py` & `tests/fixtures/`)**:

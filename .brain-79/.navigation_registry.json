@@ -353,6 +353,16 @@
         "features/cross-platform-and-lock-isolation.md",
         "INDEX.md"
       ]
+    },
+    {
+      "path": "changelog/v2-0-2.md",
+      "title": "Changelog \u2014 Version 2.0.2 \u2014 Defect Backlog & Agent Protocol Polish",
+      "summary": "Defect backlog remediations, composite H2 atomicity thresholds, root backlink normalization, and agent protocol efficiency",
+      "section": "changelog",
+      "registered_at": "2026-11-04T16:50:51.996535+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
     }
   ]
 }
