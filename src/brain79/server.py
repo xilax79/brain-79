@@ -445,11 +445,16 @@ def brain79_session_commit(
     """
     1-call atomic end-of-session finalization transaction.
 
+    ON-DEMAND HANDOFF POLICY:
+    Pass the `handoff` argument ONLY when explicitly requested by the user (e.g. 'wrap up session', 'save handoff',
+    'haz handoff') or when terminating an autonomous headless sub-agent process. During normal interactive
+    turns, omit `handoff` and commit only writes/edits/raw logs.
+
     Executes the entire end-of-session wrap-up in a single all-or-nothing call:
     1. Pre-flight validation of all writes, in-memory simulated edits, and handoff rules.
        If ANY validation check fails, zero files on disk are modified.
     2. Atomic execution: saves raw session log (if session_summary provided), writes articles,
-       applies edits, saves immutable handoff, and syncs navigation registry and INDEX.md once.
+       applies edits, saves immutable handoff (if handoff provided), and syncs navigation registry and INDEX.md once.
     3. Runs inline health checks on all touched articles and returns a unified receipt.
 
     Args:

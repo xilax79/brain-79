@@ -264,7 +264,9 @@ def check_article_atomicity(
             )
 
         # Composite heuristic for maximum allowed H2 sections:
-        # Checklists, roadmaps, backlogs, glossaries, or outlines have higher structural dimension
+        # 1. Checklists, roadmaps, backlogs, glossaries, or outlines: up to 15 H2s
+        # 2. Compact articles (<= 150 lines): up to 12 H2s
+        # 3. Standard prose articles (> 150 lines): up to 10 H2s
         lower_name = md_file.name.lower()
         is_structured_list = any(
             term in lower_name for term in ("checklist", "roadmap", "backlog", "glossary", "outline")
@@ -286,7 +288,12 @@ def check_article_atomicity(
                         is_structured_list = True
                         break
 
-        max_h2 = 15 if is_structured_list else 7
+        if is_structured_list:
+            max_h2 = 15
+        elif len(lines) <= 150:
+            max_h2 = 12
+        else:
+            max_h2 = 10
 
         if h2_count > max_h2:
             issues.append(

@@ -15,7 +15,7 @@ related:
   - features/version-governance.md
   - features/cross-platform-and-lock-isolation.md
   - architecture/defect-backlog.md
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 ---
 
 # Architecture — Industrial-Scale Roadmap & Adoption Evolution
@@ -34,14 +34,13 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 - **[x] Phase 3 — Zero-Turn Session Execution (ADR-011):** Introduced `brain79_session_commit` (all-or-nothing pre-flight transaction for raw logs, writes, edits, and handoffs) and section-projected batch reads (`brain79_read_batch`).
 - **[x] Phase 4 — Structural Quality & Drift Detection (ADR-012):** Added per-type `## H2` structural skeleton enforcement, auto-injected backlink footers, and git-backed code-to-wiki drift detection (`documentation_drift_suspected`).
 - **[x] Phase 5 — Versioning & Release Governance (ADR-013):** Single-source dynamic versioning via Hatchling (`__version__ = "2.0.0"`), FastMCP server version reporting, and automated release parity tests (SemVer, badges, changelog, CLI/MCP).
+- **[x] Phase 5.5 — Defect Backlog & Agent Protocol Polish:** Resolved `SCHEMA_GENERAL.md` broken root link (BUG-001) with code-fence safe footer normalizer, refined composite H2 atomicity heuristics (BUG-002), exposed Active Schema Summary in `orient()` (INEF-002), made write receipts self-documenting (`INDEX.md auto-synced`) (INEF-001), and formalized the On-Demand Handoff Policy across engine and manifests (INEF-003).
 
 ---
 
 ## Upcoming Execution Roadmap (Ordered by Dependency & Impact)
 
 ```
-+-----------------------------------------------------------------------------------+
-| Phase 5.5: Defect Backlog & Agent Protocol Polish (Pre-Phase 6)     | [ ] Planned |
 +-----------------------------------------------------------------------------------+
 | Phase 6: Centralized .locks/ Isolation & Cross-Platform OS I/O      | [ ] Planned |
 +-----------------------------------------------------------------------------------+

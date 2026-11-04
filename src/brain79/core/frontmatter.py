@@ -530,15 +530,37 @@ def _mask_code_fences_text(content: str) -> str:
 def normalize_backlink_footer(body: str, rel_path: str) -> str:
     """Ensure standard backlink navigation footer exists at the tail of subfolder articles.
 
-    Articles in root (INDEX.md, SCHEMA.md), _raw/, and handoffs/ are excluded.
+    Articles in root (INDEX.md, SCHEMA.md), _raw/, and handoffs/ are excluded from backlink injection.
+    Root files with a trailing unmasked backlink referencing ../INDEX.md are normalized to INDEX.md.
     Empty bodies are excluded.
     Verifies that the backlink is located in the final non-empty lines outside code fences.
     """
     clean_rel = rel_path.strip().lstrip("/")
     parts = Path(clean_rel).parts
-    if len(parts) <= 1 or parts[0] in ("_raw", "handoffs") or clean_rel in ("INDEX.md", "SCHEMA.md"):
-        if (len(parts) <= 1 or clean_rel in ("INDEX.md", "SCHEMA.md")) and "](../INDEX.md)" in body:
-            return body.replace("](../INDEX.md)", "](INDEX.md)")
+    is_root_file = len(parts) <= 1 or clean_rel in ("INDEX.md", "SCHEMA.md")
+    if is_root_file or parts[0] in ("_raw", "handoffs"):
+        if is_root_file and body.strip():
+            masked = _mask_code_fences_text(body)
+            masked_lines = masked.splitlines()
+            body_lines = body.splitlines()
+
+            non_empty_indices = [
+                i for i, line in enumerate(masked_lines) if line.strip()
+            ]
+            tail_indices = non_empty_indices[-5:] if non_empty_indices else []
+
+            backlink_markers = (
+                "[← volver al índice]",
+                "[← return to index]",
+                "[← back to index]",
+                "[volver al índice]",
+            )
+            for idx in tail_indices:
+                m_line = masked_lines[idx].lower()
+                if any(marker in m_line for marker in backlink_markers) and "](../index.md)" in m_line:
+                    if "](../INDEX.md)" in body_lines[idx]:
+                        body_lines[idx] = body_lines[idx].replace("](../INDEX.md)", "](INDEX.md)")
+                        return "\n".join(body_lines) + ("\n" if body.endswith("\n") else "")
         return body
 
     stripped_body = body.strip()

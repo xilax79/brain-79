@@ -46,6 +46,24 @@ def test_normalize_backlink_footer_rewrites_root_level_traversal() -> None:
     assert "../INDEX.md" not in normalized
 
 
+def test_normalize_backlink_footer_preserves_code_fences_in_root_files() -> None:
+    """normalize_backlink_footer must NOT corrupt example backlinks inside code blocks in root files (e.g. SCHEMA.md)."""
+    schema_body = (
+        "# Schema Documentation\n\n"
+        "### Back-Navigation Links\n\n"
+        "Subdirectory articles conclude with:\n\n"
+        "```markdown\n"
+        "---\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
+        "```\n\n"
+        "### Next Section\n\n"
+        "More text.\n"
+    )
+    normalized = normalize_backlink_footer(schema_body, "SCHEMA.md")
+    assert "[← Volver al Índice](../INDEX.md)" in normalized, "Example backlink inside code fence must remain intact"
+    assert normalized == schema_body
+
+
 # ==============================================================================
 # BUG-002: Linter H2 atomicity, code-fence masking, and composite thresholds
 # ==============================================================================
@@ -120,8 +138,37 @@ def test_atomicity_checklist_exemption(tmp_path: Path) -> None:
     assert len(atomicity_issues) == 0, f"Checklist document with 9 H2s should be permitted, got: {atomicity_issues}"
 
 
-def test_atomicity_short_compact_outline_exemption(tmp_path: Path) -> None:
-    """Structured outline or compact checklist articles allow up to 15 concise H2 sections without warning."""
+def test_atomicity_compact_article_exempt_up_to_12_h2(tmp_path: Path) -> None:
+    """Compact articles (<= 150 lines) with normal names/tags are exempt up to 12 H2 sections."""
+    wiki_root = tmp_path / ".brain-79"
+    wiki_root.mkdir()
+    feat_dir = wiki_root / "features"
+    feat_dir.mkdir()
+
+    # Normal article with no checklist tags or keywords in name
+    sections = [
+        "---\n"
+        "type: feature\n"
+        "summary: Short compact feature documentation\n"
+        "status: planned\n"
+        "---\n\n"
+        "# Standard Compact Feature\n"
+    ]
+    for i in range(1, 12):  # 11 H2 sections
+        sections.append(f"## Point {i}\nShort description.\n")
+
+    content = "\n".join(sections)
+    assert len(content.splitlines()) <= 150
+
+    (feat_dir / "user-guide.md").write_text(content, encoding="utf-8")
+
+    issues = check_article_atomicity(wiki_root)
+    atomicity_issues = [i for i in issues if i.rule == "article_not_atomic"]
+    assert len(atomicity_issues) == 0, f"Compact article with 11 H2s (<= 12) must pass, got: {atomicity_issues}"
+
+
+def test_atomicity_compact_article_flags_over_12_h2(tmp_path: Path) -> None:
+    """Compact articles (<= 150 lines) exceeding 12 H2 sections are flagged."""
     wiki_root = tmp_path / ".brain-79"
     wiki_root.mkdir()
     feat_dir = wiki_root / "features"
@@ -130,24 +177,55 @@ def test_atomicity_short_compact_outline_exemption(tmp_path: Path) -> None:
     sections = [
         "---\n"
         "type: feature\n"
-        "summary: Short compact outline\n"
+        "summary: Compact article with excessive sections\n"
         "status: planned\n"
-        "tags:\n"
-        "  - outline\n"
         "---\n\n"
-        "# Compact Feature Outline\n"
+        "# Compact Excess\n"
     ]
-    for i in range(1, 10):
-        sections.append(f"## Quick Point {i}\nShort description.\n")
+    for i in range(1, 14):  # 13 H2 sections
+        sections.append(f"## Point {i}\nShort description.\n")
 
     content = "\n".join(sections)
-    assert len(content.splitlines()) < 150
+    assert len(content.splitlines()) <= 150
 
-    (feat_dir / "compact-outline.md").write_text(content, encoding="utf-8")
+    (feat_dir / "excess-sections.md").write_text(content, encoding="utf-8")
 
     issues = check_article_atomicity(wiki_root)
     atomicity_issues = [i for i in issues if i.rule == "article_not_atomic"]
-    assert len(atomicity_issues) == 0, f"Compact outline with 9 H2s should be permitted, got: {atomicity_issues}"
+    assert len(atomicity_issues) == 1
+    assert "excess-sections.md" in atomicity_issues[0].path
+
+
+def test_atomicity_long_prose_passes_up_to_10_h2(tmp_path: Path) -> None:
+    """Long prose articles (> 150 lines) pass when having up to 10 H2 sections."""
+    wiki_root = tmp_path / ".brain-79"
+    wiki_root.mkdir()
+    feat_dir = wiki_root / "features"
+    feat_dir.mkdir()
+
+    sections = [
+        "---\n"
+        "type: feature\n"
+        "summary: Long feature article within limits\n"
+        "status: planned\n"
+        "---\n\n"
+        "# Detailed Feature\n"
+    ]
+    # Exactly 10 H2 sections with extensive prose totaling > 150 lines
+    for i in range(1, 11):
+        sections.append(
+            f"## Deep Dive Section {i}\n"
+            + ("This is a long paragraph detailing architectural considerations and nuances.\n" * 15)
+        )
+
+    content = "\n".join(sections)
+    assert len(content.splitlines()) > 150
+
+    (feat_dir / "detailed.md").write_text(content, encoding="utf-8")
+
+    issues = check_article_atomicity(wiki_root)
+    atomicity_issues = [i for i in issues if i.rule == "article_not_atomic"]
+    assert len(atomicity_issues) == 0, f"Prose article with 10 H2s (<= 10) must pass, got: {atomicity_issues}"
 
 
 def test_atomicity_long_prose_flags_over_10_h2(tmp_path: Path) -> None:
@@ -181,6 +259,37 @@ def test_atomicity_long_prose_flags_over_10_h2(tmp_path: Path) -> None:
     atomicity_issues = [i for i in issues if i.rule == "article_not_atomic"]
     assert len(atomicity_issues) == 1
     assert "monolith.md" in atomicity_issues[0].path
+
+
+def test_atomicity_checklist_flags_over_15_h2(tmp_path: Path) -> None:
+    """Checklist articles exceeding 15 H2 sections are flagged."""
+    wiki_root = tmp_path / ".brain-79"
+    wiki_root.mkdir()
+    topics_dir = wiki_root / "topics"
+    topics_dir.mkdir()
+
+    sections = [
+        "---\n"
+        "type: topic\n"
+        "summary: Sprawling checklist exceeding 15 H2 sections\n"
+        "status: active\n"
+        "tags:\n"
+        "  - checklist\n"
+        "---\n\n"
+        "# Sprawling Checklist\n\n"
+        "## Overview\n\n"
+        "Checklist overview.\n"
+    ]
+    for i in range(1, 16):  # 1 + 15 = 16 H2 sections
+        sections.append(f"## Task Section {i}\n- [ ] Task {i}.1\n- [ ] Task {i}.2\n")
+
+    content = "\n".join(sections)
+    (topics_dir / "sprawling-checklist.md").write_text(content, encoding="utf-8")
+
+    issues = check_article_atomicity(wiki_root)
+    atomicity_issues = [i for i in issues if i.rule == "article_not_atomic"]
+    assert len(atomicity_issues) == 1
+    assert "sprawling-checklist.md" in atomicity_issues[0].path
 
 
 # ==============================================================================

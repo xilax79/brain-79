@@ -82,7 +82,7 @@ def test_check_decision_leakage(setup_wiki_root: Path) -> None:
 def test_check_article_atomicity(setup_wiki_root: Path) -> None:
     wiki_root = setup_wiki_root / ".brain-79"
     large_file = wiki_root / "features" / "large.md"
-    headers = [f"## Section {i}\nContent {i}\n" for i in range(10)]
+    headers = [f"## Section {i}\nContent {i}\n" for i in range(14)]
     large_file.write_text(
         "---\ntype: feature\nlast_updated: 2026-08-11\n---\n\n# Large\n\n" + "".join(headers),
         encoding="utf-8",
@@ -255,7 +255,7 @@ last_updated: 2026-08-11
 
 # Feature
 
-""" + "\n\n".join(f"## Section {i}\n" for i in range(10))
+""" + "\n\n".join(f"## Section {i}\n" for i in range(14))
 
     (feat_dir / "f.md").write_text(feat_content, encoding="utf-8")
 
