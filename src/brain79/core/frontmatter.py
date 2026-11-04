@@ -537,6 +537,8 @@ def normalize_backlink_footer(body: str, rel_path: str) -> str:
     clean_rel = rel_path.strip().lstrip("/")
     parts = Path(clean_rel).parts
     if len(parts) <= 1 or parts[0] in ("_raw", "handoffs") or clean_rel in ("INDEX.md", "SCHEMA.md"):
+        if (len(parts) <= 1 or clean_rel in ("INDEX.md", "SCHEMA.md")) and "](../INDEX.md)" in body:
+            return body.replace("](../INDEX.md)", "](INDEX.md)")
         return body
 
     stripped_body = body.strip()

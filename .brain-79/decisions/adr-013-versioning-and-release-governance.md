@@ -14,7 +14,7 @@ applies_to:
 related:
   - architecture/roadmap-industrial-scale.md
   - features/version-governance.md
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 ---
 
 # ADR-013 — Architecture — Single-Source Semantic Versioning and Mechanical Release Governance

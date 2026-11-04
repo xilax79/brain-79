@@ -48,9 +48,24 @@ def orient(
     except Exception as exc:
         sections.append(f"*Could not read INDEX.md: {exc}*")
 
+    # 2. Active Schema Summary
+    sections.extend(["", "---", "", "## 📐 Active Schema Summary"])
+    try:
+        from brain79.core.frontmatter import load_active_schema
+
+        active_schema = load_active_schema(w_root)
+        sections.append(f"- **Profile:** `{active_schema.profile}`")
+        sections.append("- **Managed Directories:**")
+        for loc, tname in sorted(active_schema.location_to_type.items()):
+            tcfg = active_schema.types.get(tname, {})
+            req_fields = ", ".join(f"`{f}`" for f in tcfg.get("required", []))
+            sections.append(f"  - `{loc}/` → type: `{tname}` (required: {req_fields})")
+    except Exception as exc:
+        sections.append(f"*Could not load active schema: {exc}*")
+
     sections.extend(["", "---", "", "## ⏱️ Active Handoff State"])
 
-    # 2. Latest Handoff
+    # 3. Latest Handoff
     try:
         handoff_content, has_promotion_pending = read_handoff("latest", wiki_root=w_root)
         if has_promotion_pending:

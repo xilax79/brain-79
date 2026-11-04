@@ -54,8 +54,8 @@ def brain79_orient(
 @mcp.tool(output_schema=None)
 def brain79_index() -> str:
     """
-    Return INDEX.md — the project wiki's entry point.
-    Always call this first at the start of a session.
+    Return the complete INDEX.md routing table only.
+    For session cold start, prefer `brain79_orient` which loads index, active schema summary, latest handoff, and governing articles in a single call.
     """
     return wiki_ops.get_index()
 
@@ -146,8 +146,8 @@ def brain79_write(
         )
         health = wiki_ops.check_file_health(get_wiki_root(), path, content)
         if health:
-            return f"{msg}\nLint warnings:\n" + "\n".join(f"- {w}" for w in health)
-        return f"{msg} · lint OK"
+            return f"{msg} · INDEX.md auto-synced\nLint warnings:\n" + "\n".join(f"- {w}" for w in health)
+        return f"{msg} · INDEX.md auto-synced · lint OK"
     except ValidationError as exc:
         return f"Error: {exc.format_user_message()}"
     except (ValueError, OSError) as exc:
@@ -175,8 +175,8 @@ def brain79_edit(
         updated_content = wiki_ops.read_article(path)
         health = wiki_ops.check_file_health(get_wiki_root(), path, updated_content)
         if health:
-            return f"{msg}\nLint warnings:\n" + "\n".join(f"- {w}" for w in health)
-        return f"{msg} · lint OK"
+            return f"{msg} · INDEX.md auto-synced\nLint warnings:\n" + "\n".join(f"- {w}" for w in health)
+        return f"{msg} · INDEX.md auto-synced · lint OK"
     except ValidationError as exc:
         return f"Error: {exc.format_user_message()}"
     except (FileNotFoundError, ValueError, OSError) as exc:
@@ -278,6 +278,10 @@ def brain79_handoff_write(
 ) -> str:
     """
     Write an immutable handoff document for the next session.
+
+    ON-DEMAND POLICY:
+    Call this ONLY when explicitly requested by the user (e.g. 'save handoff', 'wrap up session', 'haz handoff')
+    or when terminating an autonomous headless sub-agent process. Do NOT call automatically after every conversational turn.
 
     SYSTEM INSTRUCTION:
     1. The wiki ALWAYS wins. If you contradict the wiki, you MUST use wiki_deviation_justification.
@@ -407,6 +411,9 @@ def brain79_bootstrap(
 def brain79_navigate(regenerate: bool = False) -> str:
     """
     Manage INDEX.md navigation.
+
+    Note: brain79_write, brain79_edit, brain79_write_many, and brain79_session_commit automatically
+    sync INDEX.md. Only call brain79_navigate(regenerate=True) after manual filesystem edits outside MCP.
 
     Args:
         regenerate: If True, regenerates INDEX.md Quick navigation section from registry.

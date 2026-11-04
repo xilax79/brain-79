@@ -17,7 +17,7 @@ related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-011-session-commit-and-batch-reading.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 ---
 
 # ADR-012 — Structural Article Quality, Auto-Injected Backlinks, and Deterministic Drift Detection

@@ -544,7 +544,7 @@ def write_many_articles(
     except Exception:
         pass
 
-    return f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · lint OK"
+    return f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced · lint OK"
 
 
 def list_articles(section: str | None = None) -> list[str]:

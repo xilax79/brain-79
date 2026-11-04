@@ -11,7 +11,7 @@ applies_to:
 related:
   - architecture/roadmap-industrial-scale.md
   - decisions/adr-013-versioning-and-release-governance.md
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 ---
 
 # Feature — Versioning & Release Governance (Phase 5 Specification)

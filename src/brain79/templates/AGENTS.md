@@ -14,7 +14,7 @@
 3. The `.brain-79/` directory contains the ultimate source of truth.
 
 ## Mid-Session and Handoffs (End of task)
-- Before concluding a session, use `brain79_handoff_write` to store progress.
+- **On-Demand Handoff Policy**: In interactive human-in-the-loop sessions, write a handoff (`brain79_handoff_write` or `brain79_session_commit(handoff=...)`) **only when explicitly requested by the user** (e.g. "save handoff", "wrap up", "haz handoff"). In autonomous headless sub-agent sessions, write a handoff upon terminating the process. Do NOT write handoffs after every interactive conversational turn.
 - To resume a task, `brain79_orient` automatically provides the latest handoff state (or use `brain79_handoff_read` directly).
 
 ## Available tools
@@ -95,7 +95,7 @@ When creating or updating wiki articles via `brain79_write`, `brain79_edit`, or 
 2. **Group**: pipe through `jq '.issues | group_by(.rule) | map({rule: .[0].rule, count: length})'` to plan batch fixes.
 3. **Per rule**: each issue has an `actionable` field with the remediation hint.
 4. **Bulk legacy**: use `brain79 migrate --apply` to add missing frontmatter to legacy articles (assigns `status: legacy` for human review).
-5. **Sync nav**: after writing articles, run `brain79 navigate --regenerate` to update INDEX.md.
+5. **Sync nav**: when performing manual filesystem edits outside MCP, run `brain79 navigate --regenerate` to update INDEX.md. (Note: `brain79_write`, `brain79_edit`, `brain79_write_many`, and `brain79_session_commit` sync INDEX.md automatically).
 6. **Verify**: re-run lint and confirm issue count went down.
 
 ### Migration safety notes

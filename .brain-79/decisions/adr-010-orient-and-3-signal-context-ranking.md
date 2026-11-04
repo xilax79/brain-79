@@ -12,7 +12,7 @@ applies_to:
 related:
   - decisions/adr-008-pure-index-routing-table.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 ---
 
 # ADR-010 — Two-Call Session Protocol: 1-Call Cold Start Orient and Deterministic 3-Signal Context Ranking

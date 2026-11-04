@@ -61,4 +61,4 @@ last_updated: YYYY-MM-DD
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Volver al Índice](INDEX.md)

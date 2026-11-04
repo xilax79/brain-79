@@ -183,7 +183,9 @@ last_updated: 2026-10-29
 Description.
 """
     res = brain79_write("features/valid.md", valid_content)
-    assert "Written: features/valid.md · lint OK" in res
+    assert "Written: features/valid.md" in res
+    assert "lint OK" in res
+    assert "INDEX.md auto-synced" in res
 
     # Write article with decision leakage
     leaking_content = """---

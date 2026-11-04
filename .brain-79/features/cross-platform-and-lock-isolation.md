@@ -13,7 +13,7 @@ applies_to:
   - src/brain79/core/migration.py
 related:
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 ---
 
 # Feature — Cross-Platform Portability & Centralized Lock Isolation (Phase 6 Specification)

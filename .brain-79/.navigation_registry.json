@@ -293,11 +293,46 @@
       ]
     },
     {
+      "path": "changelog/v2-0-1.md",
+      "title": "Changelog \u2014 Version 2.0.1 \u2014 Purge Obsolete Integration Fixture",
+      "summary": "Remove obsolete legacy Truco Arena test fixture and decouple local development paths",
+      "section": "changelog",
+      "registered_at": "2026-11-03T19:42:45.256062+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/defect-backlog.md",
+      "title": "Architecture \u2014 Defect Backlog & Agent Efficiency Deep Dive",
+      "summary": "Master defect backlog, forensic root-cause analysis, and specification for bug fixes, agent efficiency, and on-demand handoff policy",
+      "section": "architecture",
+      "registered_at": "2026-11-04T00:06:21.371873+00:00",
+      "applies_to": [
+        "src/brain79/templates/SCHEMA.md",
+        "src/brain79/templates/SCHEMA_GENERAL.md",
+        "src/brain79/templates/AGENTS.md",
+        "src/brain79/core/frontmatter.py",
+        "src/brain79/core/lint_organizational.py",
+        "src/brain79/core/orient.py",
+        "src/brain79/server.py",
+        "AGENTS.md"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "architecture/current-state.md",
+        "features/cross-platform-and-lock-isolation.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
       "path": "architecture/roadmap-industrial-scale.md",
       "title": "Architecture \u2014 Industrial-Scale Roadmap & Adoption Evolution",
       "summary": "Industrial-scale roadmap covering completed core protocol phases (0-4) and next-stage adoption, portability, and release governance (5-8)",
       "section": "architecture",
-      "registered_at": "2026-11-03T19:04:16.976308+00:00",
+      "registered_at": "2026-11-04T00:06:35.749051+00:00",
       "applies_to": [
         "src/brain79/__init__.py",
         "src/brain79/__main__.py",
@@ -310,20 +345,12 @@
         "decisions/adr-012-structural-quality-and-drift-detection.md",
         "decisions/adr-013-versioning-and-release-governance.md",
         "features/version-governance.md",
-        "features/cross-platform-and-lock-isolation.md"
+        "features/cross-platform-and-lock-isolation.md",
+        "architecture/defect-backlog.md"
       ],
       "outgoing_links": [
+        "architecture/defect-backlog.md",
         "features/cross-platform-and-lock-isolation.md",
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "changelog/v2-0-1.md",
-      "title": "Changelog \u2014 Version 2.0.1 \u2014 Purge Obsolete Integration Fixture",
-      "summary": "Remove obsolete legacy Truco Arena test fixture and decouple local development paths",
-      "section": "changelog",
-      "registered_at": "2026-11-03T19:42:45.256062+00:00",
-      "outgoing_links": [
         "INDEX.md"
       ]
     }

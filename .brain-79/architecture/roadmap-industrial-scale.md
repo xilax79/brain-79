@@ -14,6 +14,7 @@ related:
   - decisions/adr-013-versioning-and-release-governance.md
   - features/version-governance.md
   - features/cross-platform-and-lock-isolation.md
+  - architecture/defect-backlog.md
 last_updated: 2026-11-03
 ---
 
@@ -40,6 +41,8 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 
 ```
 +-----------------------------------------------------------------------------------+
+| Phase 5.5: Defect Backlog & Agent Protocol Polish (Pre-Phase 6)     | [ ] Planned |
++-----------------------------------------------------------------------------------+
 | Phase 6: Centralized .locks/ Isolation & Cross-Platform OS I/O      | [ ] Planned |
 +-----------------------------------------------------------------------------------+
 | Phase 7: Multi-Harness Zero-Config & Doctor Diagnostics             | [ ] Planned |
@@ -47,6 +50,10 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 | Phase 8: Zero-Clone Distribution & Context Budget Guardrails        | [ ] Planned |
 +-----------------------------------------------------------------------------------+
 ```
+
+### Phase 5.5: Defect Backlog & Agent Protocol Polish
+- **Specification:** [Architecture — Defect Backlog & Agent Efficiency Deep Dive](defect-backlog.md)
+- **Scope:** Fix `SCHEMA_GENERAL.md` broken root link (`BUG-001`), refine H2 atomicity heuristics & code-fence masking (`BUG-002`), include active schema summary in `orient()`, make `write`/`edit` receipts self-documenting (`INDEX.md auto-synced`), and enforce the **On-Demand Handoff Policy** (handoffs written only on explicit user request or autonomous sub-agent termination, never per turn).
 
 ### Phase 6: Centralized `.locks/` Isolation & Cross-Platform OS Portability
 - **Specification:** [Feature — Cross-Platform Portability & Centralized Lock Isolation](../features/cross-platform-and-lock-isolation.md)

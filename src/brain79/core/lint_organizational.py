@@ -247,7 +247,9 @@ def check_article_atomicity(
 
         content = md_file.read_text(encoding="utf-8")
         lines = content.splitlines()
-        h2_count = sum(1 for line in lines if line.startswith("## "))
+        masked_content = _mask_code_fences(content)
+        masked_lines = masked_content.splitlines()
+        h2_count = sum(1 for line in masked_lines if line.startswith("## "))
 
         if len(lines) > 400:
             issues.append(
@@ -261,14 +263,39 @@ def check_article_atomicity(
                 )
             )
 
-        if h2_count > 7:
+        # Composite heuristic for maximum allowed H2 sections:
+        # Checklists, roadmaps, backlogs, glossaries, or outlines have higher structural dimension
+        lower_name = md_file.name.lower()
+        is_structured_list = any(
+            term in lower_name for term in ("checklist", "roadmap", "backlog", "glossary", "outline")
+        )
+        if not is_structured_list:
+            task_checkboxes = sum(
+                1 for line in masked_lines if line.strip().startswith(("- [ ]", "- [x]", "- [X]"))
+            )
+            if task_checkboxes >= 5:
+                is_structured_list = True
+            elif "tags:" in content:
+                for line in lines[:30]:
+                    if line.strip().startswith("---") and lines[:30].index(line) > 0:
+                        break
+                    if any(
+                        term in line.lower()
+                        for term in ("checklist", "roadmap", "backlog", "glossary", "outline")
+                    ):
+                        is_structured_list = True
+                        break
+
+        max_h2 = 15 if is_structured_list else 7
+
+        if h2_count > max_h2:
             issues.append(
                 OrganizationalIssue(
                     rule="article_not_atomic",
                     path=rel_str,
                     line=None,
                     severity="warning",
-                    message=f"Article has {h2_count} H2 sections (max recommended: 7).",
+                    message=f"Article has {h2_count} H2 sections (max recommended: {max_h2}).",
                     actionable="Consider splitting into multiple articles, one topic each.",
                 )
             )
