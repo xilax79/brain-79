@@ -209,6 +209,14 @@ def validate_handoff_params(
     open_issues: list[str] | None = None,
     resolved_issues: list[str] | None = None,
     files_modified: list[str] | None = None,
+    open_loops: list[str] | None = None,
+    action_items: list[str] | None = None,
+    todo: list[str] | None = None,
+    risks_and_blockers: list[str] | None = None,
+    blockers: list[str] | None = None,
+    risks: list[str] | None = None,
+    key_decisions: list[str] | None = None,
+    findings: list[str] | None = None,
     _has_session_writes: bool = False,
     wiki_root: Path | None = None,
 ) -> dict[str, Any]:
@@ -248,7 +256,12 @@ def validate_handoff_params(
                 f"The previous_handoff_ref '{raw_ref}' does not exist."
             )
 
-    decisions_in = list(decisions or []) + list(decisions_made or [])
+    decisions_in = (
+        list(decisions or [])
+        + list(decisions_made or [])
+        + list(key_decisions or [])
+        + list(findings or [])
+    )
     raw_completed = list(completed_work or []) + decisions_in + list(resolved_issues or [])
     norm_completed = [x for x in _normalize_list(raw_completed) if not _is_noop_placeholder(x)]
 
@@ -256,10 +269,20 @@ def validate_handoff_params(
         list(pending_work or [])
         + list(next_steps or [])
         + list(pending_tasks or [])
+        + list(open_loops or [])
+        + list(action_items or [])
+        + list(todo or [])
     )
     norm_pending = [x for x in _normalize_list(raw_pending) if not _is_noop_placeholder(x)]
 
-    raw_gotchas = list(gotchas or []) + list(open_questions or []) + list(open_issues or [])
+    raw_gotchas = (
+        list(gotchas or [])
+        + list(open_questions or [])
+        + list(open_issues or [])
+        + list(risks_and_blockers or [])
+        + list(blockers or [])
+        + list(risks or [])
+    )
     norm_gotchas = [x for x in _normalize_list(raw_gotchas) if not _is_noop_placeholder(x)]
 
     norm_promotion = _normalize_list(knowledge_pending_promotion or [])
@@ -287,10 +310,8 @@ def validate_handoff_params(
     knowledge_session_types = frozenset({"research", "brainstorming", "analysis", "writing"})
     if (w_root / "SCHEMA.md").exists() and session_type in knowledge_session_types:
         has_writes = _has_session_writes or _has_recent_wiki_writes(w_root)
-        has_promotion = bool(norm_promotion)
-        has_justification = bool(wiki_deviation_justification.strip())
 
-        if not (has_writes or has_promotion or has_justification):
+        if not has_writes:
             try:
                 schema = load_active_schema(w_root)
                 valid_dirs = ", ".join(
@@ -301,14 +322,13 @@ def validate_handoff_params(
             except Exception:
                 valid_dirs = "`topics/`, `decisions/`, `features/`, `architecture/`"
             raise ValueError(
-                f"Unpersisted '{session_type}' session detected: no permanent wiki articles were created or updated "
-                f"in this session, and 'knowledge_pending_promotion' is empty. "
-                f"Handoffs are temporary transition snapshots, NOT long-term wiki memory. "
-                f"If this session produced research findings, analyses, forecasts, or decisions, you MUST first persist "
-                f"them as structured wiki articles in {valid_dirs} (preferably in a single atomic call via "
-                f"`brain79_session_commit(writes=[...], handoff={{...}})`). "
-                f"If this session was purely trivial chat with zero durable findings to save, provide an explicit reason "
-                f"in `wiki_deviation_justification`."
+                f"Unpersisted '{session_type}' session blocked: no permanent wiki articles were created or updated "
+                f"in this session. A '{session_type}' session MUST persist its findings, "
+                f"analysis, or conclusions as a permanent wiki article BEFORE or DURING session closure (use "
+                f"`brain79_session_commit(writes=[{{'path': '...', 'content': '...'}}], handoff={{...}})`). "
+                f"You cannot bypass this with wiki_deviation_justification. Even if the research topic is external, "
+                f"domain-general, or non-code, the wiki IS the knowledge base where the user expects this research to be saved. "
+                f"Valid target directories: {valid_dirs}."
             )
 
     return {
@@ -346,6 +366,14 @@ def write_handoff(
     open_issues: list[str] | None = None,
     resolved_issues: list[str] | None = None,
     files_modified: list[str] | None = None,
+    open_loops: list[str] | None = None,
+    action_items: list[str] | None = None,
+    todo: list[str] | None = None,
+    risks_and_blockers: list[str] | None = None,
+    blockers: list[str] | None = None,
+    risks: list[str] | None = None,
+    key_decisions: list[str] | None = None,
+    findings: list[str] | None = None,
     _has_session_writes: bool = False,
     wiki_root: Path | None = None,
 ) -> str:
@@ -371,6 +399,14 @@ def write_handoff(
         open_issues=open_issues,
         resolved_issues=resolved_issues,
         files_modified=files_modified,
+        open_loops=open_loops,
+        action_items=action_items,
+        todo=todo,
+        risks_and_blockers=risks_and_blockers,
+        blockers=blockers,
+        risks=risks,
+        key_decisions=key_decisions,
+        findings=findings,
         _has_session_writes=_has_session_writes,
         wiki_root=wiki_root,
     )

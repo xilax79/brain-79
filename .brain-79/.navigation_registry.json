@@ -264,9 +264,9 @@
     {
       "path": "architecture/roadmap-industrial-scale.md",
       "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
-      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6) and next-stage session triage, adoption, and context guardrails (6.5-8)",
+      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.5) and next-stage handoff freshness, adoption, and context guardrails (6.6-8)",
       "section": "architecture",
-      "registered_at": "2026-11-05T15:37:04.296067+00:00",
+      "registered_at": "2026-11-05T21:06:34.141743+00:00",
       "applies_to": [
         "src/brain79/__init__.py",
         "src/brain79/__main__.py",

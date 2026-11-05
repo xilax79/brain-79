@@ -28,12 +28,23 @@ mcp = FastMCP(
 )
 
 
+def _unpack_nested_args(args: dict[str, Any] | None) -> dict[str, Any]:
+    """Recursively unpack nested {"args": {...}} dictionaries from proxy callers."""
+    if not args or not isinstance(args, dict):
+        return {}
+    if "args" in args and isinstance(args["args"], dict):
+        nested = _unpack_nested_args(args["args"])
+        return {**args, **nested}
+    return dict(args)
+
+
 @mcp.tool(output_schema=None)
 def brain79_orient(
     task: str | None = None,
     paths: list[str] | None = None,
     max_articles: int = 4,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     1-call complete cold start orientation.
@@ -49,11 +60,20 @@ def brain79_orient(
     """
     from brain79.core.orient import orient
 
+    if args:
+        unpacked = _unpack_nested_args(args)
+        task = task or unpacked.get("task")
+        paths = paths if paths is not None else unpacked.get("paths")
+        max_articles = unpacked.get("max_articles", max_articles)
+
     return orient(task=task, paths=paths, max_articles=max_articles)
 
 
 @mcp.tool(output_schema=None)
-def brain79_index(tool: str | None = None) -> str:
+def brain79_index(
+    tool: str | None = None,
+    args: dict[str, Any] | None = None,
+) -> str:
     """
     Return the complete INDEX.md routing table only.
     For session cold start, prefer `brain79_orient` which loads index, active schema summary, latest handoff, and governing articles in a single call.
@@ -63,9 +83,10 @@ def brain79_index(tool: str | None = None) -> str:
 
 @mcp.tool(output_schema=None)
 def brain79_read(
-    path: str,
+    path: str = "",
     sections: list[str] | None = None,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Read a wiki article by its relative path, optionally projecting specific sections.
@@ -75,6 +96,11 @@ def brain79_read(
         sections: Optional list of ## H2 section names to extract (e.g., ["Components", "Data Flow"]).
                   If provided, extracts frontmatter, # H1, and the requested sections.
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        path = path or unpacked.get("path", "")
+        sections = sections if sections is not None else unpacked.get("sections")
+
     try:
         return wiki_ops.read_article(path, sections=sections, include_adr_hints=True)
     except (FileNotFoundError, ValueError) as exc:
@@ -83,8 +109,9 @@ def brain79_read(
 
 @mcp.tool(output_schema=None)
 def brain79_read_batch(
-    requests: list[dict[str, Any]],
+    requests: list[dict[str, Any]] | None = None,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Read multiple wiki articles in a single call with optional section projections.
@@ -97,8 +124,13 @@ def brain79_read_batch(
     Returns:
         Formatted markdown output containing the read articles and linked ADR notices.
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        requests = requests if requests is not None else unpacked.get("requests")
+    effective_requests = requests or []
+
     try:
-        results = wiki_ops.read_batch_articles(requests)
+        results = wiki_ops.read_batch_articles(effective_requests)
         rendered_parts: list[str] = []
         for item in results:
             p = item["path"]
@@ -119,6 +151,7 @@ def brain79_schema(
     target_type: str | None = None,
     type: str | None = None,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Inspect frontmatter schema requirements and copy-paste templates.
@@ -133,6 +166,11 @@ def brain79_schema(
     from brain79.config import get_wiki_root
     from brain79.core.frontmatter import get_schema_documentation, load_active_schema
 
+    if args:
+        unpacked = _unpack_nested_args(args)
+        target_type = target_type or unpacked.get("target_type")
+        type = type or unpacked.get("type")
+
     try:
         active_schema = load_active_schema(get_wiki_root())
     except Exception:
@@ -144,10 +182,11 @@ def brain79_schema(
 
 @mcp.tool(output_schema=None)
 def brain79_write(
-    path: str,
-    content: str,
+    path: str = "",
+    content: str = "",
     force_validation_skip: bool = False,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Write or update a wiki article. Creates the file and parent directories if needed.
@@ -157,6 +196,12 @@ def brain79_write(
         content: Full markdown content for the article
         force_validation_skip: If True, bypasses organizational validation
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        path = path or unpacked.get("path", "")
+        content = content or unpacked.get("content", "")
+        force_validation_skip = force_validation_skip or unpacked.get("force_validation_skip", False)
+
     try:
         clean_path = wiki_ops.normalize_wiki_rel_path(path)
         msg = wiki_ops.write_article(
@@ -174,10 +219,11 @@ def brain79_write(
 
 @mcp.tool(output_schema=None)
 def brain79_edit(
-    path: str,
-    edits: list[dict[str, str]],
+    path: str = "",
+    edits: list[dict[str, str]] | None = None,
     force_validation_skip: bool = False,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Apply targeted text replacements to an existing wiki article and validate atomically.
@@ -187,6 +233,13 @@ def brain79_edit(
         edits: List of replacements, each with {"old_text": "...", "new_text": "..."}
         force_validation_skip: If True, bypasses organizational validation
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        path = path or unpacked.get("path", "")
+        edits = edits if edits is not None else unpacked.get("edits")
+        force_validation_skip = force_validation_skip or unpacked.get("force_validation_skip", False)
+    edits = edits or []
+
     try:
         clean_path = wiki_ops.normalize_wiki_rel_path(path)
         msg = wiki_ops.edit_article(
@@ -205,9 +258,10 @@ def brain79_edit(
 
 @mcp.tool(output_schema=None)
 def brain79_write_many(
-    articles: list[dict[str, str]],
+    articles: list[dict[str, str]] | None = None,
     force_validation_skip: bool = False,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Validate and atomically write multiple wiki articles in a single batch call.
@@ -218,6 +272,12 @@ def brain79_write_many(
         articles: List of articles, each with {"path": "...", "content": "..."}
         force_validation_skip: If True, bypasses organizational validation
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        articles = articles if articles is not None else unpacked.get("articles")
+        force_validation_skip = force_validation_skip or unpacked.get("force_validation_skip", False)
+    articles = articles or []
+
     try:
         return wiki_ops.write_many_articles(
             articles, force_validation_skip=force_validation_skip
@@ -232,6 +292,7 @@ def brain79_write_many(
 def brain79_list(
     section: str | None = None,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     List all wiki articles, optionally filtered by section directory.
@@ -239,6 +300,10 @@ def brain79_list(
     Args:
         section: Optional section to filter by (e.g., "architecture", "features")
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        section = section or unpacked.get("section")
+
     articles = wiki_ops.list_articles(section)
     if not articles:
         label = f"in '{section}'" if section else "in the wiki"
@@ -248,8 +313,9 @@ def brain79_list(
 
 @mcp.tool(output_schema=None)
 def brain79_search(
-    query: str,
+    query: str = "",
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Search wiki articles by keyword (case-insensitive).
@@ -257,6 +323,10 @@ def brain79_search(
     Args:
         query: Search term
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        query = query or unpacked.get("query", "")
+
     results = wiki_ops.search_articles(query)
     if not results:
         return f"No articles found matching '{query}'."
@@ -271,9 +341,10 @@ def brain79_search(
 
 @mcp.tool(output_schema=None)
 def brain79_ingest(
-    session_summary: str,
+    session_summary: str = "",
     instructions: str | None = None,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Save a session summary to raw sources and return state-aware curation guide.
@@ -287,6 +358,11 @@ def brain79_ingest(
         instructions: Optional curation hints from the developer
                       (e.g., "focus on architecture changes, ignore debugging")
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        session_summary = session_summary or unpacked.get("session_summary", "")
+        instructions = instructions or unpacked.get("instructions")
+
     saved_path = wiki_ops.save_raw_session(session_summary, instructions)
     from brain79.core.curate import prepare_curation_guide
 
@@ -296,7 +372,7 @@ def brain79_ingest(
 
 @mcp.tool(output_schema=None)
 def brain79_handoff_write(
-    session_type: str,
+    session_type: str = "",
     previous_handoff_ref: str = "latest",
     summary: str = "",
     completed_work: list[str] | None = None,
@@ -316,7 +392,16 @@ def brain79_handoff_write(
     open_issues: list[str] | None = None,
     resolved_issues: list[str] | None = None,
     files_modified: list[str] | None = None,
+    open_loops: list[str] | None = None,
+    action_items: list[str] | None = None,
+    todo: list[str] | None = None,
+    risks_and_blockers: list[str] | None = None,
+    blockers: list[str] | None = None,
+    risks: list[str] | None = None,
+    key_decisions: list[str] | None = None,
+    findings: list[str] | None = None,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Write an immutable handoff document for the next session.
@@ -330,9 +415,9 @@ def brain79_handoff_write(
     `brain79_session_commit(writes=[...], handoff={...})` in a single atomic transaction.
 
     PARAMETER ALIASES:
-    - `decisions` / `decisions_made`: automatically merged into `completed_work`.
-    - `next_steps` / `pending_tasks`: automatically merged into `pending_work` (generic filler like 'wait for user' is filtered out).
-    - `open_questions`: automatically merged into `gotchas` (placeholders like 'None' or 'Ninguna' are filtered out).
+    - `decisions` / `decisions_made` / `key_decisions` / `findings`: automatically merged into `completed_work`.
+    - `next_steps` / `pending_tasks` / `open_loops` / `action_items` / `todo`: automatically merged into `pending_work` (generic filler like 'wait for user' is filtered out).
+    - `open_questions` / `open_issues` / `risks_and_blockers` / `blockers` / `risks`: automatically merged into `gotchas` (placeholders like 'None' or 'Ninguna' are filtered out).
     - `session_summary`: accepted as fallback for `summary`.
     - `boot_instructions`: accepted as alias for `boot_instruction`.
 
@@ -342,6 +427,45 @@ def brain79_handoff_write(
     3. boot_instruction must provide clear orientation for resuming work in the next session (cannot be empty).
     4. Unpersisted research sessions will be blocked unless wiki articles are persisted or wiki_deviation_justification is provided.
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        session_type = session_type or unpacked.get("session_type", "")
+        previous_handoff_ref = unpacked.get("previous_handoff_ref", previous_handoff_ref)
+        summary = summary or unpacked.get("summary", "")
+        completed_work = completed_work if completed_work is not None else unpacked.get("completed_work")
+        pending_work = pending_work if pending_work is not None else unpacked.get("pending_work")
+        knowledge_pending_promotion = (
+            knowledge_pending_promotion
+            if knowledge_pending_promotion is not None
+            else unpacked.get("knowledge_pending_promotion")
+        )
+        resources = resources if resources is not None else unpacked.get("resources")
+        gotchas = gotchas if gotchas is not None else unpacked.get("gotchas")
+        boot_instruction = boot_instruction or unpacked.get("boot_instruction", "")
+        wiki_deviation_justification = (
+            wiki_deviation_justification or unpacked.get("wiki_deviation_justification", "")
+        )
+        decisions = decisions if decisions is not None else unpacked.get("decisions")
+        next_steps = next_steps if next_steps is not None else unpacked.get("next_steps")
+        open_questions = open_questions if open_questions is not None else unpacked.get("open_questions")
+        boot_instructions = boot_instructions or unpacked.get("boot_instructions", "")
+        decisions_made = decisions_made if decisions_made is not None else unpacked.get("decisions_made")
+        session_summary = session_summary or unpacked.get("session_summary", "")
+        pending_tasks = pending_tasks if pending_tasks is not None else unpacked.get("pending_tasks")
+        open_issues = open_issues if open_issues is not None else unpacked.get("open_issues")
+        resolved_issues = resolved_issues if resolved_issues is not None else unpacked.get("resolved_issues")
+        files_modified = files_modified if files_modified is not None else unpacked.get("files_modified")
+        open_loops = open_loops if open_loops is not None else unpacked.get("open_loops")
+        action_items = action_items if action_items is not None else unpacked.get("action_items")
+        todo = todo if todo is not None else unpacked.get("todo")
+        risks_and_blockers = (
+            risks_and_blockers if risks_and_blockers is not None else unpacked.get("risks_and_blockers")
+        )
+        blockers = blockers if blockers is not None else unpacked.get("blockers")
+        risks = risks if risks is not None else unpacked.get("risks")
+        key_decisions = key_decisions if key_decisions is not None else unpacked.get("key_decisions")
+        findings = findings if findings is not None else unpacked.get("findings")
+
     try:
         rel_path = handoff_ops.write_handoff(
             session_type=session_type,
@@ -364,6 +488,14 @@ def brain79_handoff_write(
             open_issues=open_issues,
             resolved_issues=resolved_issues,
             files_modified=files_modified,
+            open_loops=open_loops,
+            action_items=action_items,
+            todo=todo,
+            risks_and_blockers=risks_and_blockers,
+            blockers=blockers,
+            risks=risks,
+            key_decisions=key_decisions,
+            findings=findings,
         )
         return f"Handoff successfully saved at: {rel_path}"
     except (ValueError, FileNotFoundError, OSError) as exc:
@@ -374,6 +506,7 @@ def brain79_handoff_write(
 def brain79_handoff_read(
     handoff_ref: str = "latest",
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Read a handoff document.
@@ -387,6 +520,9 @@ def brain79_handoff_read(
     If the handoff contains "knowledge_pending_promotion", the response will
     include a warning instructing you to call brain79_ingest immediately.
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        handoff_ref = unpacked.get("handoff_ref", handoff_ref)
     try:
         content, has_promotion = handoff_ops.read_handoff(handoff_ref)
         if has_promotion:
@@ -406,6 +542,7 @@ def brain79_handoff_read(
 def brain79_handoff_purge(
     apply: bool = False,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Wipe all handoff files and unregister them from the navigation registry.
@@ -421,6 +558,9 @@ def brain79_handoff_purge(
     Returns:
         Markdown-formatted report listing files affected.
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        apply = unpacked.get("apply", apply)
     try:
         from brain79.core.handoff import purge_handoffs
 
@@ -430,7 +570,10 @@ def brain79_handoff_purge(
 
 
 @mcp.tool(output_schema=None)
-def brain79_lint(tool: str | None = None) -> str:
+def brain79_lint(
+    tool: str | None = None,
+    args: dict[str, Any] | None = None,
+) -> str:
     """
     Run a deterministic health check scan on the project wiki (.brain-79/).
 
@@ -442,10 +585,11 @@ def brain79_lint(tool: str | None = None) -> str:
 
 @mcp.tool(output_schema=None)
 def brain79_context(
-    task: str,
+    task: str = "",
     top_n: int = 3,
     paths: list[str] | None = None,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Retrieve top relevant wiki articles for a task using 3-signal context ranking.
@@ -455,6 +599,12 @@ def brain79_context(
         top_n: Maximum number of articles to return (default 3)
         paths: Optional list of workspace file paths being inspected/modified
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        task = task or unpacked.get("task", "")
+        top_n = unpacked.get("top_n", top_n)
+        paths = paths if paths is not None else unpacked.get("paths")
+
     return context_ops.get_context(task=task, top_n=top_n, paths=paths)
 
 
@@ -463,6 +613,7 @@ def brain79_bootstrap(
     scope: str | None = None,
     force: bool = False,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Scan the project and return a structured manifest for wiki bootstrapping.
@@ -471,6 +622,10 @@ def brain79_bootstrap(
         scope: Optional comma-separated list of relative paths to focus on.
         force: If True, re-runs even if bootstrap was already executed.
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        scope = unpacked.get("scope", scope)
+        force = unpacked.get("force", force)
     try:
         from brain79.core.bootstrap import run_bootstrap
 
@@ -483,6 +638,7 @@ def brain79_bootstrap(
 def brain79_navigate(
     regenerate: bool = False,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Manage INDEX.md navigation.
@@ -493,6 +649,9 @@ def brain79_navigate(
     Args:
         regenerate: If True, regenerates INDEX.md Quick navigation section from registry.
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        regenerate = unpacked.get("regenerate", regenerate)
     try:
         from brain79.core.navigation import (
             generate_quick_navigation,
@@ -517,6 +676,7 @@ def brain79_session_commit(
     instructions: str | None = None,
     force_validation_skip: bool = False,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     1-call atomic end-of-session finalization transaction.
@@ -546,6 +706,15 @@ def brain79_session_commit(
     """
     from brain79.config import get_wiki_root
     from brain79.core.session_commit import commit_session
+
+    if args:
+        unpacked = _unpack_nested_args(args)
+        writes = writes if writes is not None else unpacked.get("writes")
+        edits = edits if edits is not None else unpacked.get("edits")
+        handoff = handoff if handoff is not None else unpacked.get("handoff")
+        session_summary = session_summary or unpacked.get("session_summary")
+        instructions = instructions or unpacked.get("instructions")
+        force_validation_skip = force_validation_skip or unpacked.get("force_validation_skip", False)
 
     payload: dict[str, Any] = {
         "writes": writes or [],
@@ -587,6 +756,7 @@ def brain79_session_commit(
 def brain79_migrate(
     dry_run: bool = True,
     tool: str | None = None,
+    args: dict[str, Any] | None = None,
 ) -> str:
     """
     Add frontmatter to legacy wiki articles.
@@ -594,6 +764,9 @@ def brain79_migrate(
     Args:
         dry_run: If True, only preview changes without modifying files. Default True for safety.
     """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        dry_run = unpacked.get("dry_run", dry_run)
     try:
         from brain79.core.migration import migrate_wiki
 

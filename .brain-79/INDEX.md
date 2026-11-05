@@ -14,7 +14,7 @@ last_updated: 2026-11-05
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 - [Architecture — Defect backlog and agent efficiency deep dive](architecture/defect-backlog.md) — master defect backlog, forensic root-cause analysis, and specification for bug fixes, agent efficiency, and on-demand handoff policy
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — industrial-scale roadmap covering completed core protocol phases (0-6) and next-stage session triage, adoption, and context guardrails (6.5-8)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — industrial-scale roadmap covering completed core protocol phases (0-6.5) and next-stage handoff freshness, adoption, and context guardrails (6.6-8)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 

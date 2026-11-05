@@ -20,6 +20,7 @@ Violations will be rejected at write time and reported by the linter.
 | `features/` | `feature` | `type`, `summary`, `status`, `version`, `last_updated` | `status`: planned, in_progress, shipped, deprecated, legacy | Feature documentation |
 | `decisions/` | `decision` | `type`, `summary`, `status`, `date`, `deciders`, `last_updated` | `status`: proposed, accepted, superseded, rejected, legacy | Architectural Decision Records |
 | `changelog/` | `changelog` | `type`, `summary`, `version`, `date`, `last_updated` | — | Versioned changes |
+| `topics/` | `topic` | `type`, `summary`, `last_updated` | `status`: active, archived, draft, legacy | Research, benchmarks, domain analysis |
 | `_raw/sessions/` | `raw_session` | `type`, `session_id`, `session_type`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming, architecture, refactor, maintenance, work, general, writing, analysis | Immutable session summaries |
 | `_raw/commits/` | `raw_commit` | `type`, `commit_sha`, `last_updated` | — | Commit metadata |
 
@@ -61,11 +62,19 @@ type: product
 summary: one-line summary of domain or vision
 last_updated: YYYY-MM-DD
 ---
+
+# Topic (topics/*.md)
+---
+type: topic
+summary: one-line summary of research, benchmark, or domain topic
+status: active  # active | archived | draft | legacy
+last_updated: YYYY-MM-DD
+---
 ```
 
 ### Back-navigation links
 
-Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions/`, `changelog/`) automatically conclude with a back-navigation link to facilitate reading in editors (VS Code, Obsidian, GitHub). This is enforced and auto-injected during write normalization:
+Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions/`, `changelog/`, `topics/`) automatically conclude with a back-navigation link to facilitate reading in editors (VS Code, Obsidian, GitHub). This is enforced and auto-injected during write normalization:
 
 ```markdown
 ---
@@ -91,7 +100,7 @@ Articles declaring `applies_to` paths or globs in frontmatter are continuously c
 
 ## Operational invariants
 
-- **Zero-Modification Idempotence**: Do not mutate wiki files unless concrete repository changes (code, tests, architecture decisions) occurred in the session.
+- **The Amnesia Test & Zero-Modification Idempotence (Session Knowledge Triage)**: Do not invent wiki files on ephemeral chat (Type A no-op). For zero-code research, benchmarks, or decisions (Type B), you MUST persist findings into `topics/<slug>.md` or `decisions/<slug>.md`. For code mutations (Type C), sync governing articles.
 - **Pure Routing Table**: `INDEX.md` is strictly an automated index; freeform prose blocks are forbidden.
 
 ---

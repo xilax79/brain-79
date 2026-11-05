@@ -30,12 +30,23 @@ def find_latest_session_for_dir(target_dir: Path) -> Path | None:
     if not sessions_root.is_dir():
         return None
 
-    matching_dirs = [d for d in sessions_root.iterdir() if target_dir.name in d.name]
+    matching_dirs = sorted(
+        [d for d in sessions_root.iterdir() if target_dir.name in d.name and d.is_dir()],
+        key=lambda d: d.stat().st_mtime,
+        reverse=True,
+    )
     if not matching_dirs:
         return None
 
-    session_files = sorted(matching_dirs[0].glob("*.jsonl"), key=lambda p: p.stat().st_mtime)
-    return session_files[-1] if session_files else None
+    all_session_files: list[Path] = []
+    for d in matching_dirs:
+        all_session_files.extend(d.glob("*.jsonl"))
+
+    if not all_session_files:
+        return None
+
+    all_session_files.sort(key=lambda p: p.stat().st_mtime)
+    return all_session_files[-1]
 
 
 def check_mcp_zero_retry(session_file: Path) -> list[str]:

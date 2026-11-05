@@ -35,7 +35,7 @@ def test_init_project_fresh(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
     agents_manifest = tmp_path / "AGENTS.md"
     assert agents_manifest.exists()
     manifest_content = agents_manifest.read_text(encoding="utf-8")
-    assert "# Brain-79 AI Memory Protocol" in manifest_content
+    assert "# Brain-79 AI memory protocol" in manifest_content
     assert "pi-mcp-adapter" in manifest_content
     assert "brain79_index" in manifest_content
 
@@ -76,7 +76,7 @@ def test_init_project_existing_agents_manifest(tmp_path: Path) -> None:
 
     content = agents_manifest.read_text(encoding="utf-8")
     assert "# Pre-existing Instructions" in content
-    assert "# Brain-79 AI Memory Protocol" in content
+    assert "# Brain-79 AI memory protocol" in content
 
     # Second run should not append again if already present
     wiki_root = tmp_path / ".brain-79"
@@ -84,7 +84,7 @@ def test_init_project_existing_agents_manifest(tmp_path: Path) -> None:
 
     init_project(tmp_path)
     content2 = agents_manifest.read_text(encoding="utf-8")
-    assert content2.count("# Brain-79 AI Memory Protocol") == 1
+    assert content2.count("# Brain-79 AI memory protocol") == 1
 
 
 def test_init_project_existing_mcp_json(tmp_path: Path) -> None:

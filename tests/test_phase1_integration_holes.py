@@ -49,6 +49,14 @@ def test_handoff_supports_general_profile_session_types(tmp_path: Path, monkeypa
     )
     assert path.startswith("handoffs/")
 
+    # Write topic article for the writing session
+    from brain79.core.wiki import write_article
+    write_article(
+        "topics/executive-summary.md",
+        "---\ntype: topic\nsummary: Executive summary draft\n---\n# Executive summary\n\n## Overview\nDraft content.",
+        wiki_root=tmp_path / ".brain-79",
+    )
+
     # Server tool brain79_handoff_write should also succeed
     result = brain79_handoff_write(
         session_type="writing",
@@ -56,8 +64,7 @@ def test_handoff_supports_general_profile_session_types(tmp_path: Path, monkeypa
         previous_handoff_ref=path,
         completed_work=["First draft written"],
         pending_work=["Grammar pass"],
-        boot_instruction="Review draft",
-        wiki_deviation_justification="Drafting phase exploratory writing",
+        boot_instruction="Review draft in topics/",
     )
     assert "Handoff successfully saved" in result
 

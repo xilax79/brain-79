@@ -488,6 +488,62 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             default=[],
             help="List of modified files (alias merged into resources)",
         )
+        parser.add_argument(
+            "--open-loops",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of open loops (alias merged into pending_work)",
+        )
+        parser.add_argument(
+            "--action-items",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of action items (alias merged into pending_work)",
+        )
+        parser.add_argument(
+            "--todo",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of todo items (alias merged into pending_work)",
+        )
+        parser.add_argument(
+            "--risks-and-blockers",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of risks and blockers (alias merged into gotchas)",
+        )
+        parser.add_argument(
+            "--blockers",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of blockers (alias merged into gotchas)",
+        )
+        parser.add_argument(
+            "--risks",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of risks (alias merged into gotchas)",
+        )
+        parser.add_argument(
+            "--key-decisions",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of key decisions (alias merged into completed_work)",
+        )
+        parser.add_argument(
+            "--findings",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of research findings (alias merged into completed_work)",
+        )
         boot_group = parser.add_mutually_exclusive_group(required=True)
         boot_group.add_argument(
             "--boot-instruction-file",
@@ -546,6 +602,14 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             open_issues=parsed.open_issues,
             resolved_issues=parsed.resolved_issues,
             files_modified=parsed.files_modified,
+            open_loops=parsed.open_loops,
+            action_items=parsed.action_items,
+            todo=parsed.todo,
+            risks_and_blockers=parsed.risks_and_blockers,
+            blockers=parsed.blockers,
+            risks=parsed.risks,
+            key_decisions=parsed.key_decisions,
+            findings=parsed.findings,
         )
         _write_stdout(rel_path)
         return 0

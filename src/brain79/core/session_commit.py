@@ -143,8 +143,8 @@ def commit_session(
                 continue
 
             for edit_idx, sub_edit in enumerate(edits_list):
-                old_text = sub_edit.get("old_text")
-                new_text = sub_edit.get("new_text")
+                old_text = sub_edit.get("old_text") if sub_edit.get("old_text") is not None else sub_edit.get("oldText")
+                new_text = sub_edit.get("new_text") if sub_edit.get("new_text") is not None else sub_edit.get("newText")
                 if old_text is None or new_text is None:
                     validation_errors.append(f"Edit on '{p}' sub-edit #{edit_idx + 1}: Must contain 'old_text' and 'new_text'.")
                     continue
@@ -189,17 +189,25 @@ def commit_session(
                 pending_work=handoff_in.get("pending_work"),
                 next_steps=handoff_in.get("next_steps"),
                 pending_tasks=handoff_in.get("pending_tasks"),
+                open_loops=handoff_in.get("open_loops"),
+                action_items=handoff_in.get("action_items"),
+                todo=handoff_in.get("todo"),
                 knowledge_pending_promotion=handoff_in.get("knowledge_pending_promotion"),
                 resources=handoff_in.get("resources"),
                 gotchas=handoff_in.get("gotchas"),
                 open_questions=handoff_in.get("open_questions"),
                 open_issues=handoff_in.get("open_issues"),
+                risks_and_blockers=handoff_in.get("risks_and_blockers"),
+                blockers=handoff_in.get("blockers"),
+                risks=handoff_in.get("risks"),
                 resolved_issues=handoff_in.get("resolved_issues"),
                 files_modified=handoff_in.get("files_modified"),
                 boot_instruction=handoff_in.get("boot_instruction", ""),
                 boot_instructions=handoff_in.get("boot_instructions", ""),
                 decisions=handoff_in.get("decisions"),
                 decisions_made=handoff_in.get("decisions_made"),
+                key_decisions=handoff_in.get("key_decisions"),
+                findings=handoff_in.get("findings"),
                 wiki_deviation_justification=handoff_in.get("wiki_deviation_justification", ""),
                 _has_session_writes=has_writes_in_commit,
                 wiki_root=w_root,

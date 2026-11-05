@@ -2,6 +2,7 @@ import csv
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
+import re
 from typing import Any
 
 
@@ -112,6 +113,14 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "enum": {},
         "required_sections": [],
     },
+    "topic": {
+        "required": ["type", "summary", "last_updated"],
+        "optional": ["tags", "status", "supersedes", "related", "owner", "applies_to"],
+        "enum": {
+            "status": ["active", "archived", "draft", "legacy"],
+        },
+        "required_sections": ["Overview"],
+    },
     "raw_session": {
         "required": ["type", "session_id", "session_type", "last_updated"],
         "optional": ["instructions"],
@@ -129,6 +138,7 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
 SOFTWARE_LOCATION_TO_TYPE: dict[str, str] = {
     "INDEX.md": "navigation",
     "handoffs": "handoff",
+    "topics": "topic",
     "product": "product",
     "architecture": "architecture",
     "features": "feature",
@@ -619,6 +629,87 @@ def normalize_backlink_footer(body: str, rel_path: str) -> str:
         return f"{body_rstrip}\n\n[← Volver al Índice]({rel_to_index})\n"
     else:
         return f"{body_rstrip}\n\n---\n\n[← Volver al Índice]({rel_to_index})\n"
+_BULLET_COLON_RE = re.compile(
+    r"^(\s*(?:[-*+]|\d+\.)\s+)\*\*([^*:\n]+?)(:?)\*\*(:?)\s+(.*)$"
+)
+_WORD_RE = re.compile(r"^([A-ZÁÉÍÓÚÑa-záéíóúñ]+)(.*)$")
+
+_SAFE_LOWERCASE_AFTER_COLON: frozenset[str] = frozenset({
+    # Spanish common verbs
+    "es", "son", "fue", "fueron", "era", "eran", "ha", "han", "hay",
+    "tiene", "tienen", "tuvo", "tuvieron", "llega", "llegan", "llegó", "llego",
+    "logra", "logran", "logró", "logro", "incluye", "incluyen", "permite", "permiten",
+    "provee", "proveen", "proporciona", "requiere", "requieren", "representa",
+    "consiste", "comenzó", "comenzo", "terminó", "termino", "empató", "empato",
+    "ganó", "gano", "perdió", "perdio", "supera", "superó", "supero", "utiliza",
+    "usa", "debe", "pueden", "puede", "establece", "adopta", "define",
+    "presenta", "muestra", "ofrece", "cuenta", "cumple", "destaca", "combina",
+    "sirve", "actúa", "actua", "facilita", "garantiza", "asegura",
+    # Spanish prepositions, articles, adjectives, adverbs & conjunctions
+    "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "en",
+    "con", "por", "para", "sobre", "tras", "según", "segun", "hacia", "desde", "hasta",
+    "y", "o", "pero", "sino", "aunque", "porque", "ya", "que", "como", "cuando", "donde",
+    "mayor", "menor", "mejor", "peor", "principal", "gran", "grande",
+    "nuevo", "nueva", "primer", "primera", "segundo", "segunda", "tercer", "tercera",
+    "este", "esta", "estos", "estas", "todo", "toda", "todos", "todas", "cada",
+    "más", "mas", "menos", "muy", "tan", "tanto", "así", "asi", "bien", "mal",
+    # English common verbs
+    "is", "are", "was", "were", "has", "have", "had", "includes", "including",
+    "provides", "providing", "allows", "allowing", "requires", "requiring",
+    "represents", "consists", "starts", "finishes", "uses", "using", "should",
+    "can", "could", "will", "would", "must", "ensures", "ensure", "edits", "edit",
+    "writes", "write", "reads", "read", "inspects", "inspect", "verifies", "verify",
+    "checks", "check", "evaluates", "evaluate", "adds", "add", "creates", "create",
+    "updates", "update", "deletes", "delete", "runs", "run", "scans", "scan",
+    "built", "build", "designed", "implemented", "defined", "adopted", "achieved",
+    "serves", "combines", "generates", "delivers", "maintains",
+    # English prepositions, articles, adjectives, adverbs & conjunctions
+    "the", "a", "an", "at", "in", "on", "of", "for", "with", "by", "from",
+    "about", "under", "over", "into", "through", "during", "before", "after",
+    "and", "or", "but", "so", "yet", "because", "although", "while", "since",
+    "greater", "lesser", "major", "minor", "main", "primary", "secondary",
+    "new", "high", "low", "first", "second", "third", "each", "every", "all",
+    "this", "that", "these", "those", "how", "when", "where", "why", "which",
+    "more", "less", "most", "least", "well", "very", "also",
+})
+
+
+def normalize_bullet_colons(content: str) -> str:
+    """Normalize bullet point colons: place colon outside bold tags and lowercase
+    common grammatical verbs/adjectives/prepositions following colons (ADR-015),
+    preserving proper nouns, acronyms, and code formatting."""
+    lines = content.split("\n")
+    in_fence = False
+    fence_char: str | None = None
+    res: list[str] = []
+
+    for line in lines:
+        stripped = line.lstrip()
+        if not in_fence:
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                fence_char = stripped[:3]
+                in_fence = True
+                res.append(line)
+                continue
+
+            m = _BULLET_COLON_RE.match(line)
+            if m and (m.group(3) == ":" or m.group(4) == ":"):
+                prefix = m.group(1)
+                label = m.group(2).strip().rstrip(":")
+                rest = m.group(5)
+                m_word = _WORD_RE.match(rest)
+                if m_word and m_word.group(1).lower() in _SAFE_LOWERCASE_AFTER_COLON:
+                    rest = m_word.group(1).lower() + m_word.group(2)
+                res.append(f"{prefix}**{label}**: {rest}")
+            else:
+                res.append(line)
+        else:
+            if fence_char and stripped.startswith(fence_char):
+                fence_char = None
+                in_fence = False
+            res.append(line)
+
+    return "\n".join(res)
 
 
 def get_schema_documentation(

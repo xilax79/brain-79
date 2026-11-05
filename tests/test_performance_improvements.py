@@ -370,11 +370,10 @@ def test_handoff_flexible_previous_ref(setup_wiki: Path) -> None:
 
     # Session with 'initial'
     path3 = write_handoff(
-        session_type="research",
+        session_type="feature",
         previous_handoff_ref="initial",
         summary="Third session",
         boot_instruction="Ninguna tarea pendiente.",
-        wiki_deviation_justification="Test initial ref without articles",
     )
     assert path3.startswith("handoffs/handoff-")
 

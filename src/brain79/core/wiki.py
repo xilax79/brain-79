@@ -483,8 +483,8 @@ def edit_article(
     content = target.read_text(encoding="utf-8").replace("\r\n", "\n")
 
     for idx, edit in enumerate(edits):
-        old_text = edit.get("old_text")
-        new_text = edit.get("new_text")
+        old_text = edit.get("old_text") if edit.get("old_text") is not None else edit.get("oldText")
+        new_text = edit.get("new_text") if edit.get("new_text") is not None else edit.get("newText")
         if old_text is None or new_text is None:
             raise ValueError(f"Edit #{idx + 1} must contain 'old_text' and 'new_text'.")
         if not old_text:

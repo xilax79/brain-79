@@ -163,7 +163,7 @@ def test_read_handoff_none_aliases_to_latest() -> None:
 
 def test_read_handoff_with_full_and_partial_timestamp() -> None:
     save_msg = write_handoff(
-        session_type="research",
+        session_type="feature",
         previous_handoff_ref="",
         summary="Partial timestamp test",
         completed_work=["Task A"],
@@ -172,7 +172,6 @@ def test_read_handoff_with_full_and_partial_timestamp() -> None:
         resources=[],
         gotchas=[],
         boot_instruction="Execute step",
-        wiki_deviation_justification="Test timestamp parsing without articles",
     )
     # save_msg is relative path e.g. "handoffs/handoff-2024-01-01-120000-123.md"
     rel_path = save_msg.split("handoffs/")[1]  # "handoff-2024-01-01-120000-123.md"
@@ -221,7 +220,7 @@ def test_knowledge_promotion_trigger() -> None:
     from brain79.server import brain79_handoff_read
 
     write_handoff(
-        session_type="research",
+        session_type="feature",
         previous_handoff_ref="",
         summary="Research notes",
         completed_work=[],

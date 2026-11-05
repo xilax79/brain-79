@@ -13,6 +13,7 @@ from brain79.core.frontmatter import (
     generate_frontmatter_template,
     infer_type_for_path,
     normalize_backlink_footer,
+    normalize_bullet_colons,
     parse_frontmatter,
     validate_frontmatter,
     validate_location_consistency,
@@ -189,6 +190,7 @@ def validate_article_content(
 
     meta = autofill_deterministic_fields(meta, rel_path, body=body, schema=active_s)
     body = normalize_backlink_footer(body, rel_path)
+    body = normalize_bullet_colons(body)
     content = dump_frontmatter(meta, body)
     validate_frontmatter(meta, rel_path, schema=active_s)
     validate_location_consistency(meta, rel_path, schema=active_s)
@@ -239,8 +241,8 @@ def check_missing_sections(
     present_headers = extract_h2_headers(content)
     normalized_headers = [h.strip().lower() for h in present_headers]
 
-    # In general profile, any valid H2 section is structurally sound for topic and context
-    if getattr(active, "profile", "") == "general" and target_type in ("topic", "context"):
+    # Any valid H2 section is structurally sound for topic and context across profiles
+    if target_type in ("topic", "context"):
         if present_headers:
             return []
 

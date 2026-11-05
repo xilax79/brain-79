@@ -123,38 +123,77 @@ def test_unpersisted_research_guard_blocks_closing_without_articles(tmp_path: Pa
         )
 
     err_msg = str(excinfo.value)
-    assert "Unpersisted 'research' session detected" in err_msg
+    assert "Unpersisted 'research' session blocked" in err_msg
     assert "no permanent wiki articles were created or updated" in err_msg
     assert "`topics/`" in err_msg
     assert "`decisions/`" in err_msg
     assert "brain79_session_commit" in err_msg
 
 
-def test_unpersisted_research_guard_bypassed_with_justification(tmp_path: Path) -> None:
-    """Explicit wiki_deviation_justification allows closing a research session without articles."""
+def test_unpersisted_research_guard_blocks_justification_bypass(tmp_path: Path) -> None:
+    """Explicit wiki_deviation_justification MUST NOT bypass the unpersisted research guard."""
     init_project(tmp_path, profile="general", install_git_hooks_flag=False)
     wiki_root = tmp_path / ".brain-79"
 
-    rel_path = write_handoff(
-        session_type="research",
-        summary="Exploración preliminar sin hallazgos.",
-        boot_instruction="Sesión consultiva finalizada sin tareas pendientes.",
-        wiki_deviation_justification="La investigación fue inconclusa por falta de fuentes y no produjo conocimiento duradero.",
-        wiki_root=wiki_root,
+    with pytest.raises(ValueError) as excinfo:
+        write_handoff(
+            session_type="research",
+            summary="Exploración preliminar sin hallazgos.",
+            boot_instruction="Sesión consultiva finalizada sin tareas pendientes.",
+            wiki_deviation_justification="La investigación fue inconclusa por falta de fuentes y no produjo conocimiento duradero.",
+            wiki_root=wiki_root,
+        )
+    err = str(excinfo.value)
+    assert "Unpersisted 'research' session blocked" in err
+    assert "You cannot bypass this with wiki_deviation_justification" in err
+
+
+def test_unpersisted_research_guard_blocks_pending_promotion_bypass(tmp_path: Path) -> None:
+    """knowledge_pending_promotion alone MUST NOT bypass the unpersisted research guard."""
+    init_project(tmp_path, profile="general", install_git_hooks_flag=False)
+    wiki_root = tmp_path / ".brain-79"
+
+    with pytest.raises(ValueError) as excinfo:
+        write_handoff(
+            session_type="research",
+            summary="Research preliminar con notas para promover luego.",
+            knowledge_pending_promotion=["Notas de fixture 2026 pendientes de estructurar."],
+            boot_instruction="Sesión finalizada. Continuar con la siguiente solicitud.",
+            wiki_root=wiki_root,
+        )
+    err = str(excinfo.value)
+    assert "Unpersisted 'research' session blocked" in err
+    assert "A 'research' session MUST persist its findings" in err
+
+
+def test_software_profile_supports_topics_and_flexible_h2(tmp_path: Path) -> None:
+    """Software profile must support topics/ (type: topic) and accept flexible H2 headers."""
+    init_project(tmp_path, profile="software", install_git_hooks_flag=False)
+    wiki_root = tmp_path / ".brain-79"
+
+    topic_content = (
+        "---\n"
+        "type: topic\n"
+        "summary: Comparative benchmark of serialization formats\n"
+        "status: active\n"
+        "last_updated: 2026-11-05\n"
+        "---\n\n"
+        "# Serialization benchmark\n\n"
+        "## Benchmark results\n\n"
+        "Protobuf is faster than JSON for high-throughput messaging.\n\n"
+        "---\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
     )
-    assert rel_path.startswith("handoffs/handoff-")
 
+    write_article("topics/serialization-benchmark.md", topic_content, wiki_root=wiki_root)
+    assert (wiki_root / "topics" / "serialization-benchmark.md").exists()
 
-def test_unpersisted_research_guard_bypassed_with_pending_promotion(tmp_path: Path) -> None:
-    """Non-empty knowledge_pending_promotion allows closing a research session."""
-    init_project(tmp_path, profile="general", install_git_hooks_flag=False)
-    wiki_root = tmp_path / ".brain-79"
-
+    # Now a research handoff must succeed because a topic was written
     rel_path = write_handoff(
         session_type="research",
-        summary="Research preliminar con notas para promover luego.",
-        knowledge_pending_promotion=["Notas de fixture 2026 pendientes de estructurar."],
-        boot_instruction="Sesión finalizada. Continuar con la siguiente solicitud.",
+        summary="Researched serialization formats in software project.",
+        boot_instruction="Review topics/serialization-benchmark.md before choosing protocol.",
+        completed_work=["Benchmarked JSON vs Protobuf"],
         wiki_root=wiki_root,
     )
     assert rel_path.startswith("handoffs/handoff-")
@@ -190,7 +229,7 @@ def test_zero_code_research_persistence_and_handoff_ergonomics(tmp_path: Path) -
     # Step 1: Must be rejected because research article has not been written
     with pytest.raises(ValueError) as excinfo:
         write_handoff(wiki_root=wiki_root, **handoff_params)
-    assert "Unpersisted 'research' session detected" in str(excinfo.value)
+    assert "Unpersisted 'research' session blocked" in str(excinfo.value)
 
     # Step 2: Agent writes the research article into topics/
     topic_content = (
@@ -350,7 +389,7 @@ def test_has_recent_wiki_writes_respects_previous_handoff_session_boundary(tmp_p
             boot_instruction="Sesión finalizada.",
             wiki_root=wiki_root,
         )
-    assert "Unpersisted 'research' session detected" in str(excinfo.value)
+    assert "Unpersisted 'research' session blocked" in str(excinfo.value)
 
     # Now Session 2 writes a new article
     time.sleep(0.05)
@@ -423,3 +462,130 @@ def test_prepare_curation_guide_profile_aware_software(tmp_path: Path) -> None:
     assert "`architecture/`" in guide
     assert "`decisions/`" in guide
     assert "`product/`" in guide
+    assert "`topics/`" in guide  # Software profile now supports topics!
+
+
+def test_server_tools_unpack_nested_proxy_args(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """FastMCP server tools unpack nested args dictionary passed by LLM proxy wrappers."""
+    from brain79.config import set_project_root
+    from brain79.server import brain79_read, brain79_session_commit, brain79_write
+
+    init_project(tmp_path, profile="general", install_git_hooks_flag=False)
+    monkeypatch.chdir(tmp_path)
+    set_project_root(tmp_path)
+
+    # 1. brain79_write with args wrapper
+    write_res = brain79_write(
+        args={
+            "path": "topics/proxy-test.md",
+            "content": "---\ntype: topic\nsummary: proxy test topic\nstatus: active\nlast_updated: 2026-11-05\n---\n# Proxy test\n\n## Overview\nTest.",
+        }
+    )
+    assert "INDEX.md auto-synced" in write_res
+
+    # 2. brain79_read with args wrapper
+    read_res = brain79_read(args={"path": "topics/proxy-test.md"})
+    assert "Proxy test" in read_res
+
+    # 3. brain79_session_commit with double-nested proxy wrapper {"tool": "...", "args": {...}}
+    nested_call = {
+        "tool": "brain79_session_commit",
+        "args": {
+            "writes": [
+                {
+                    "path": "topics/nested-commit.md",
+                    "content": "---\ntype: topic\nsummary: nested commit test\nstatus: active\nlast_updated: 2026-11-05\n---\n# Nested commit\n\n## Overview\nCommit payload.",
+                }
+            ],
+            "handoff": {
+                "session_type": "research",
+                "summary": "Nested proxy call test.",
+                "completed_work": ["Validated nested args unwrapping"],
+                "boot_instruction": "Session completed.",
+            },
+        },
+    }
+    commit_res = brain79_session_commit(args=nested_call)
+    assert "✅ Transaction Committed Successfully" in commit_res
+
+
+def test_extended_handoff_aliases_merged_without_loss(tmp_path: Path) -> None:
+    """open_loops/action_items/todo merge into pending_work, blockers/risks into gotchas, findings/key_decisions into completed_work."""
+    init_project(tmp_path, profile="general", install_git_hooks_flag=False)
+    wiki_root = tmp_path / ".brain-79"
+
+    # Write a topic first to satisfy unpersisted research guard
+    write_article(
+        "topics/market-findings.md",
+        "---\ntype: topic\nsummary: market findings\nstatus: active\nlast_updated: 2026-11-05\n---\n# Findings\n\n## Overview\nMarket analysis.",
+        wiki_root=wiki_root,
+    )
+
+    handoff_dict = {
+        "session_type": "research",
+        "summary": "Market research session.",
+        "findings": ["Finding 1: High customer demand"],
+        "key_decisions": ["Decision 1: Focus on enterprise"],
+        "open_loops": ["Loop 1: Follow up on survey"],
+        "action_items": ["Action 1: Prepare report"],
+        "todo": ["Todo 1: Share slides"],
+        "risks_and_blockers": ["Risk 1: Survey fatigue"],
+        "blockers": ["Blocker 1: Data access pending"],
+        "risks": ["Risk 2: Timeline slippage"],
+        "boot_instruction": "Review topics/market-findings.md before planning launch.",
+    }
+
+    from brain79.core.session_commit import commit_session
+    receipt = commit_session(
+        {"handoff": handoff_dict},
+        wiki_root=wiki_root,
+    )
+    assert receipt["handoff_path"] is not None
+
+    handoff_file = wiki_root / receipt["handoff_path"]
+    content = handoff_file.read_text(encoding="utf-8")
+
+    # Completed work contains findings and key decisions
+    assert "Finding 1: High customer demand" in content
+    assert "Decision 1: Focus on enterprise" in content
+
+    # Pending work contains open loops, action items, todo
+    assert "Loop 1: Follow up on survey" in content
+    assert "Action 1: Prepare report" in content
+    assert "Todo 1: Share slides" in content
+
+    # Gotchas contains risks and blockers
+    assert "Risk 1: Survey fatigue" in content
+    assert "Blocker 1: Data access pending" in content
+    assert "Risk 2: Timeline slippage" in content
+
+
+def test_normalize_bullet_colons_sentence_case() -> None:
+    """normalize_bullet_colons places colons outside bold and lowercases common verbs/adjectives while preserving proper nouns."""
+    from brain79.core.frontmatter import normalize_bullet_colons
+
+    raw = (
+        "- **Palmeiras:** Llego a la final tras empatar 2-2\n"
+        "- **Estudiantes de La Plata:** Logro romper la hegemonia\n"
+        "- **Fundamento:** Mayor profundidad de plantel\n"
+        "- **Finalistas:** Palmeiras y Boca Juniors\n"
+        "- **Campeon proyectado:** Boca Juniors\n"
+        "- **Plataforma:** Linux o macOS\n"
+        "- **Standard:** ADR-015 compliant\n"
+        "1. **Cold Start**: At the start of a session\n"
+        "```markdown\n"
+        "- **Inside Code:** Preserved\n"
+        "```\n"
+    )
+
+    norm = normalize_bullet_colons(raw)
+
+    assert "- **Palmeiras**: llego a la final tras empatar 2-2\n" in norm
+    assert "- **Estudiantes de La Plata**: logro romper la hegemonia\n" in norm
+    assert "- **Fundamento**: mayor profundidad de plantel\n" in norm
+    assert "- **Finalistas**: Palmeiras y Boca Juniors\n" in norm
+    assert "- **Campeon proyectado**: Boca Juniors\n" in norm
+    assert "- **Plataforma**: Linux o macOS\n" in norm
+    assert "- **Standard**: ADR-015 compliant\n" in norm
+    assert "1. **Cold Start**: at the start of a session\n" in norm
+    assert "- **Inside Code:** Preserved\n" in norm
