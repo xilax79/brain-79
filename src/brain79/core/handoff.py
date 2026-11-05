@@ -1,13 +1,26 @@
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+import time
+from typing import Any, Final
 
 from brain79.config import get_wiki_root
 from brain79.core import wiki as wiki_ops
 from brain79.core.frontmatter import load_active_schema
 
 SessionType = str
-VALID_SESSION_TYPES = {"feature", "bugfix", "research", "brainstorming"}
+VALID_SESSION_TYPES = {
+    "feature",
+    "bugfix",
+    "research",
+    "brainstorming",
+    "architecture",
+    "refactor",
+    "maintenance",
+    "work",
+    "general",
+    "writing",
+    "analysis",
+}
 
 
 def get_valid_session_types(wiki_root: Path | None = None) -> set[str]:
@@ -46,6 +59,87 @@ def _normalize_list(items: list[str]) -> list[str]:
         return []
     cleaned = [i.strip() for i in items if i.strip() and i.strip().lower() != "none"]
     return cleaned
+
+
+_NOOP_EXACT_VALUES: Final[frozenset[str]] = frozenset({
+    "ninguna",
+    "ninguno",
+    "nada",
+    "none",
+    "n/a",
+    "na",
+    "null",
+    "sin pendientes",
+    "sin tareas",
+    "sin tareas pendientes",
+    "no pending tasks",
+    "no pending work",
+    "no open questions",
+    "sin preguntas abiertas",
+})
+
+_NOOP_SUBSTRING_PATTERNS: Final[tuple[str, ...]] = (
+    "atender la próxima tarea",
+    "atender la proxima tarea",
+    "atender la siguiente solicitud",
+    "continuar según la siguiente",
+    "continuar segun la siguiente",
+    "esperar la siguiente instrucción",
+    "esperar la siguiente instruccion",
+    "await next user",
+    "awaiting next user",
+    "wait for next user",
+    "wait for user",
+    "respond to the next user",
+)
+
+
+def _is_noop_placeholder(text: str) -> bool:
+    """Return True if the list item is an empty placeholder or generic 'wait for user' filler."""
+    cleaned = text.strip().rstrip(".!").strip().lower()
+    if not cleaned or cleaned in _NOOP_EXACT_VALUES:
+        return True
+    return any(pat in cleaned for pat in _NOOP_SUBSTRING_PATTERNS)
+
+
+def _has_recent_wiki_writes(wiki_root: Path, window_seconds: float = 1800.0) -> bool:
+    """Return True if at least one permanent content article was modified within the current session.
+
+    Session boundary:
+    If a previous handoff exists in handoffs/, only articles modified strictly after the latest handoff's
+    mtime (and within window_seconds) count as current-session modifications.
+    If no previous handoff exists, articles modified within window_seconds count.
+
+    Excludes INDEX.md, SCHEMA.md, _raw/, handoffs/, and .locks/.
+    """
+    if not wiki_root.is_dir():
+        return False
+
+    handoffs_dir = wiki_root / "handoffs"
+    cutoff_mtime: float = 0.0
+    if handoffs_dir.is_dir():
+        handoff_files = sorted(handoffs_dir.glob("handoff-*.md"))
+        if handoff_files:
+            try:
+                cutoff_mtime = handoff_files[-1].stat().st_mtime
+            except OSError:
+                cutoff_mtime = 0.0
+
+    now = time.time()
+    for p in wiki_root.rglob("*.md"):
+        parts = p.parts
+        if "_raw" in parts or "handoffs" in parts or ".locks" in parts:
+            continue
+        rel = p.relative_to(wiki_root).as_posix()
+        if rel in ("INDEX.md", "SCHEMA.md"):
+            continue
+        try:
+            mtime = p.stat().st_mtime
+            if mtime > cutoff_mtime and (now - mtime <= window_seconds):
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def _resolve_handoff_path(ref: str, wiki_root: Path | None = None) -> Path:
@@ -105,6 +199,17 @@ def validate_handoff_params(
     gotchas: list[str] | None = None,
     boot_instruction: str = "",
     wiki_deviation_justification: str = "",
+    decisions: list[str] | None = None,
+    next_steps: list[str] | None = None,
+    open_questions: list[str] | None = None,
+    boot_instructions: str = "",
+    decisions_made: list[str] | None = None,
+    session_summary: str = "",
+    pending_tasks: list[str] | None = None,
+    open_issues: list[str] | None = None,
+    resolved_issues: list[str] | None = None,
+    files_modified: list[str] | None = None,
+    _has_session_writes: bool = False,
     wiki_root: Path | None = None,
 ) -> dict[str, Any]:
     """Validate and normalize handoff parameters without modifying disk.
@@ -121,7 +226,7 @@ def validate_handoff_params(
             f"Invalid session_type '{session_type}'. Must be one of: {sorted(valid_types)}"
         )
 
-    summary = summary.strip()
+    summary = (summary or session_summary or "").strip()
     if not summary:
         raise ValueError("summary cannot be empty.")
 
@@ -143,34 +248,67 @@ def validate_handoff_params(
                 f"The previous_handoff_ref '{raw_ref}' does not exist."
             )
 
-    norm_completed = _normalize_list(completed_work or [])
-    norm_pending = _normalize_list(pending_work or [])
-    norm_promotion = _normalize_list(knowledge_pending_promotion or [])
-    norm_resources = _normalize_list(resources or [])
-    norm_gotchas = _normalize_list(gotchas or [])
+    decisions_in = list(decisions or []) + list(decisions_made or [])
+    raw_completed = list(completed_work or []) + decisions_in + list(resolved_issues or [])
+    norm_completed = [x for x in _normalize_list(raw_completed) if not _is_noop_placeholder(x)]
 
-    boot_instruction = boot_instruction.strip()
+    raw_pending = (
+        list(pending_work or [])
+        + list(next_steps or [])
+        + list(pending_tasks or [])
+    )
+    norm_pending = [x for x in _normalize_list(raw_pending) if not _is_noop_placeholder(x)]
+
+    raw_gotchas = list(gotchas or []) + list(open_questions or []) + list(open_issues or [])
+    norm_gotchas = [x for x in _normalize_list(raw_gotchas) if not _is_noop_placeholder(x)]
+
+    norm_promotion = _normalize_list(knowledge_pending_promotion or [])
+    norm_resources = _normalize_list(list(resources or []) + list(files_modified or []))
+
+    boot_instruction = (boot_instruction or boot_instructions or "").strip()
     if not boot_instruction:
         raise ValueError("boot_instruction cannot be empty.")
 
-    if not norm_pending:
-        anti_hallucination_keywords = [
-            "no hay tareas",
-            "nada pendiente",
-            "no hay pendientes",
-            "no hay trabajo",
-            "no pending",
-            "no pending tasks",
-            "no remaining tasks",
-            "no remaining work",
-            "none",
-            "all done",
-            "all complete",
-            "ninguna",
-        ]
-        if not any(k in boot_instruction.lower() for k in anti_hallucination_keywords):
+    if not norm_pending and session_type in ("feature", "bugfix"):
+        unlisted_work_patterns = (
+            "continue implementing",
+            "continuar implementando",
+            "finish implementing",
+            "terminar de implementar",
+            "implementing the",
+            "implementar el",
+        )
+        if any(pat in boot_instruction.lower() for pat in unlisted_work_patterns):
             raise ValueError(
                 "No pending_work provided, but boot_instruction hallucinates next steps. You must explicitly indicate that there are no pending tasks."
+            )
+
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    knowledge_session_types = frozenset({"research", "brainstorming", "analysis", "writing"})
+    if (w_root / "SCHEMA.md").exists() and session_type in knowledge_session_types:
+        has_writes = _has_session_writes or _has_recent_wiki_writes(w_root)
+        has_promotion = bool(norm_promotion)
+        has_justification = bool(wiki_deviation_justification.strip())
+
+        if not (has_writes or has_promotion or has_justification):
+            try:
+                schema = load_active_schema(w_root)
+                valid_dirs = ", ".join(
+                    f"`{d}/`"
+                    for d in sorted(schema.location_to_type.keys())
+                    if d != "handoffs" and not d.startswith("_raw") and not d.endswith(".md")
+                )
+            except Exception:
+                valid_dirs = "`topics/`, `decisions/`, `features/`, `architecture/`"
+            raise ValueError(
+                f"Unpersisted '{session_type}' session detected: no permanent wiki articles were created or updated "
+                f"in this session, and 'knowledge_pending_promotion' is empty. "
+                f"Handoffs are temporary transition snapshots, NOT long-term wiki memory. "
+                f"If this session produced research findings, analyses, forecasts, or decisions, you MUST first persist "
+                f"them as structured wiki articles in {valid_dirs} (preferably in a single atomic call via "
+                f"`brain79_session_commit(writes=[...], handoff={{...}})`). "
+                f"If this session was purely trivial chat with zero durable findings to save, provide an explicit reason "
+                f"in `wiki_deviation_justification`."
             )
 
     return {
@@ -198,6 +336,17 @@ def write_handoff(
     gotchas: list[str] | None = None,
     boot_instruction: str = "",
     wiki_deviation_justification: str = "",
+    decisions: list[str] | None = None,
+    next_steps: list[str] | None = None,
+    open_questions: list[str] | None = None,
+    boot_instructions: str = "",
+    decisions_made: list[str] | None = None,
+    session_summary: str = "",
+    pending_tasks: list[str] | None = None,
+    open_issues: list[str] | None = None,
+    resolved_issues: list[str] | None = None,
+    files_modified: list[str] | None = None,
+    _has_session_writes: bool = False,
     wiki_root: Path | None = None,
 ) -> str:
     """Generate and save an immutable handoff file validating design rules."""
@@ -212,6 +361,17 @@ def write_handoff(
         gotchas=gotchas,
         boot_instruction=boot_instruction,
         wiki_deviation_justification=wiki_deviation_justification,
+        decisions=decisions,
+        next_steps=next_steps,
+        open_questions=open_questions,
+        boot_instructions=boot_instructions,
+        decisions_made=decisions_made,
+        session_summary=session_summary,
+        pending_tasks=pending_tasks,
+        open_issues=open_issues,
+        resolved_issues=resolved_issues,
+        files_modified=files_modified,
+        _has_session_writes=_has_session_writes,
         wiki_root=wiki_root,
     )
 

@@ -26,24 +26,29 @@ from brain79.core.wiki import (
 
 
 def commit_session(
-    payload: dict[str, Any],
+    payload: dict[str, Any] | None = None,
     wiki_root: Path | None = None,
     timeout: float = 5.0,
     force_validation_skip: bool = False,
+    writes: list[dict[str, Any]] | None = None,
+    edits: list[dict[str, Any]] | None = None,
+    handoff: dict[str, Any] | None = None,
+    session_summary: str | None = None,
+    instructions: str | None = None,
 ) -> dict[str, Any]:
     """
     Execute an atomic session commit transaction.
 
     Args:
-        payload: Dict containing:
-            - session_summary: Optional string with high-level session summary for _raw/sessions/.
-            - instructions: Optional string with user instructions for _raw/sessions/.
-            - writes: Optional list of dicts [{"path": str, "content": str}].
-            - edits: Optional list of dicts [{"path": str, "edits": [{"old_text": str, "new_text": str}]}].
-            - handoff: Optional dict with arguments for write_handoff(...).
+        payload: Optional dict containing writes, edits, handoff, session_summary, instructions.
         wiki_root: Optional Path override for wiki root.
         timeout: Timeout in seconds for file locks.
         force_validation_skip: Whether to skip frontmatter schema validation.
+        writes: Optional list of dicts [{"path": str, "content": str}].
+        edits: Optional list of dicts [{"path": str, "edits": [{"old_text": str, "new_text": str}]}].
+        handoff: Optional dict with arguments for write_handoff(...).
+        session_summary: Optional string with high-level session summary for _raw/sessions/.
+        instructions: Optional string with user instructions for _raw/sessions/.
 
     Returns:
         Dict receipt:
@@ -56,6 +61,19 @@ def commit_session(
             - warnings: list[str]
     """
     w_root = (wiki_root or get_wiki_root()).resolve()
+
+    if payload is None:
+        payload = {}
+    if writes is not None and "writes" not in payload:
+        payload["writes"] = writes
+    if edits is not None and "edits" not in payload:
+        payload["edits"] = edits
+    if handoff is not None and "handoff" not in payload:
+        payload["handoff"] = handoff
+    if session_summary is not None and "session_summary" not in payload:
+        payload["session_summary"] = session_summary
+    if instructions is not None and "instructions" not in payload:
+        payload["instructions"] = instructions
 
     writes_in = payload.get("writes") or []
     edits_in = payload.get("edits") or []
@@ -161,17 +179,29 @@ def commit_session(
     normalized_handoff_params: dict[str, Any] | None = None
     if handoff_in:
         try:
+            has_writes_in_commit = bool(written_article_keys or edited_article_keys)
             normalized_handoff_params = validate_handoff_params(
                 session_type=handoff_in.get("session_type", ""),
                 previous_handoff_ref=handoff_in.get("previous_handoff_ref", "latest"),
-                summary=handoff_in.get("summary", ""),
+                summary=handoff_in.get("summary") or session_summary or "",
+                session_summary=handoff_in.get("session_summary", ""),
                 completed_work=handoff_in.get("completed_work"),
                 pending_work=handoff_in.get("pending_work"),
+                next_steps=handoff_in.get("next_steps"),
+                pending_tasks=handoff_in.get("pending_tasks"),
                 knowledge_pending_promotion=handoff_in.get("knowledge_pending_promotion"),
                 resources=handoff_in.get("resources"),
                 gotchas=handoff_in.get("gotchas"),
+                open_questions=handoff_in.get("open_questions"),
+                open_issues=handoff_in.get("open_issues"),
+                resolved_issues=handoff_in.get("resolved_issues"),
+                files_modified=handoff_in.get("files_modified"),
                 boot_instruction=handoff_in.get("boot_instruction", ""),
+                boot_instructions=handoff_in.get("boot_instructions", ""),
+                decisions=handoff_in.get("decisions"),
+                decisions_made=handoff_in.get("decisions_made"),
                 wiki_deviation_justification=handoff_in.get("wiki_deviation_justification", ""),
+                _has_session_writes=has_writes_in_commit,
                 wiki_root=w_root,
             )
         except (ValueError, FileNotFoundError):
@@ -220,6 +250,7 @@ def commit_session(
             gotchas=normalized_handoff_params["gotchas"],
             boot_instruction=normalized_handoff_params["boot_instruction"],
             wiki_deviation_justification=normalized_handoff_params["wiki_deviation_justification"],
+            _has_session_writes=True,
             wiki_root=w_root,
         )
         if "handoffs/" in handoff_msg:

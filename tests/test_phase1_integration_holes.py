@@ -57,6 +57,7 @@ def test_handoff_supports_general_profile_session_types(tmp_path: Path, monkeypa
         completed_work=["First draft written"],
         pending_work=["Grammar pass"],
         boot_instruction="Review draft",
+        wiki_deviation_justification="Drafting phase exploratory writing",
     )
     assert "Handoff successfully saved" in result
 

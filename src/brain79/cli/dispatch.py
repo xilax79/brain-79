@@ -212,6 +212,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         )
         parser.add_argument(
             "--type",
+            "--target-type",
             default=None,
             dest="target_type",
             help="Optional document type to inspect (e.g., decision, topic, feature, architecture)",
@@ -438,12 +439,64 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             default=[],
             help="Known caveats, warnings, or constraints discovered during the session",
         )
+        parser.add_argument(
+            "--decisions",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of decisions made (alias merged into completed_work)",
+        )
+        parser.add_argument(
+            "--next-steps",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of next steps (alias merged into pending_work)",
+        )
+        parser.add_argument(
+            "--open-questions",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of open questions (alias merged into gotchas)",
+        )
+        parser.add_argument(
+            "--decisions-made",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of decisions made (alias merged into completed_work)",
+        )
+        parser.add_argument(
+            "--open-issues",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of open issues (alias merged into gotchas)",
+        )
+        parser.add_argument(
+            "--resolved-issues",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of resolved issues (alias merged into completed_work)",
+        )
+        parser.add_argument(
+            "--files-modified",
+            nargs="*",
+            action="extend",
+            default=[],
+            help="List of modified files (alias merged into resources)",
+        )
         boot_group = parser.add_mutually_exclusive_group(required=True)
         boot_group.add_argument(
-            "--boot-instruction-file", help="Path to startup instruction file for next session"
+            "--boot-instruction-file",
+            "--boot-instructions-file",
+            help="Path to startup instruction file for next session",
         )
         boot_group.add_argument(
             "--boot-instruction-stdin",
+            "--boot-instructions-stdin",
             action="store_true",
             help="Read startup instruction from stdin",
         )
@@ -486,6 +539,13 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             gotchas=parsed.gotchas,
             boot_instruction=boot_instruction,
             wiki_deviation_justification=wiki_dev,
+            decisions=parsed.decisions,
+            next_steps=parsed.next_steps,
+            open_questions=parsed.open_questions,
+            decisions_made=parsed.decisions_made,
+            open_issues=parsed.open_issues,
+            resolved_issues=parsed.resolved_issues,
+            files_modified=parsed.files_modified,
         )
         _write_stdout(rel_path)
         return 0

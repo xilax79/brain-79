@@ -33,6 +33,7 @@ def brain79_orient(
     task: str | None = None,
     paths: list[str] | None = None,
     max_articles: int = 4,
+    tool: str | None = None,
 ) -> str:
     """
     1-call complete cold start orientation.
@@ -52,7 +53,7 @@ def brain79_orient(
 
 
 @mcp.tool(output_schema=None)
-def brain79_index() -> str:
+def brain79_index(tool: str | None = None) -> str:
     """
     Return the complete INDEX.md routing table only.
     For session cold start, prefer `brain79_orient` which loads index, active schema summary, latest handoff, and governing articles in a single call.
@@ -61,7 +62,11 @@ def brain79_index() -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_read(path: str, sections: list[str] | None = None) -> str:
+def brain79_read(
+    path: str,
+    sections: list[str] | None = None,
+    tool: str | None = None,
+) -> str:
     """
     Read a wiki article by its relative path, optionally projecting specific sections.
 
@@ -77,7 +82,10 @@ def brain79_read(path: str, sections: list[str] | None = None) -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_read_batch(requests: list[dict[str, Any]]) -> str:
+def brain79_read_batch(
+    requests: list[dict[str, Any]],
+    tool: str | None = None,
+) -> str:
     """
     Read multiple wiki articles in a single call with optional section projections.
 
@@ -107,7 +115,11 @@ def brain79_read_batch(requests: list[dict[str, Any]]) -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_schema(target_type: str | None = None) -> str:
+def brain79_schema(
+    target_type: str | None = None,
+    type: str | None = None,
+    tool: str | None = None,
+) -> str:
     """
     Inspect frontmatter schema requirements and copy-paste templates.
 
@@ -116,6 +128,7 @@ def brain79_schema(target_type: str | None = None) -> str:
     Args:
         target_type: Optional type to inspect (e.g., "feature", "decision", "topic", "context").
                      If omitted, returns the complete schema reference for the active profile.
+        type: Alias for target_type.
     """
     from brain79.config import get_wiki_root
     from brain79.core.frontmatter import get_schema_documentation, load_active_schema
@@ -125,12 +138,16 @@ def brain79_schema(target_type: str | None = None) -> str:
     except Exception:
         active_schema = None
 
-    return get_schema_documentation(target_type, schema=active_schema)
+    effective_type = type or target_type
+    return get_schema_documentation(effective_type, schema=active_schema)
 
 
 @mcp.tool(output_schema=None)
 def brain79_write(
-    path: str, content: str, force_validation_skip: bool = False
+    path: str,
+    content: str,
+    force_validation_skip: bool = False,
+    tool: str | None = None,
 ) -> str:
     """
     Write or update a wiki article. Creates the file and parent directories if needed.
@@ -141,10 +158,11 @@ def brain79_write(
         force_validation_skip: If True, bypasses organizational validation
     """
     try:
+        clean_path = wiki_ops.normalize_wiki_rel_path(path)
         msg = wiki_ops.write_article(
-            path, content, force_validation_skip=force_validation_skip
+            clean_path, content, force_validation_skip=force_validation_skip
         )
-        health = wiki_ops.check_file_health(get_wiki_root(), path, content)
+        health = wiki_ops.check_file_health(get_wiki_root(), clean_path, content)
         if health:
             return f"{msg} · INDEX.md auto-synced\nLint warnings:\n" + "\n".join(f"- {w}" for w in health)
         return f"{msg} · INDEX.md auto-synced · lint OK"
@@ -159,6 +177,7 @@ def brain79_edit(
     path: str,
     edits: list[dict[str, str]],
     force_validation_skip: bool = False,
+    tool: str | None = None,
 ) -> str:
     """
     Apply targeted text replacements to an existing wiki article and validate atomically.
@@ -169,11 +188,12 @@ def brain79_edit(
         force_validation_skip: If True, bypasses organizational validation
     """
     try:
+        clean_path = wiki_ops.normalize_wiki_rel_path(path)
         msg = wiki_ops.edit_article(
-            path, edits, force_validation_skip=force_validation_skip
+            clean_path, edits, force_validation_skip=force_validation_skip
         )
-        updated_content = wiki_ops.read_article(path)
-        health = wiki_ops.check_file_health(get_wiki_root(), path, updated_content)
+        updated_content = wiki_ops.read_article(clean_path)
+        health = wiki_ops.check_file_health(get_wiki_root(), clean_path, updated_content)
         if health:
             return f"{msg} · INDEX.md auto-synced\nLint warnings:\n" + "\n".join(f"- {w}" for w in health)
         return f"{msg} · INDEX.md auto-synced · lint OK"
@@ -187,6 +207,7 @@ def brain79_edit(
 def brain79_write_many(
     articles: list[dict[str, str]],
     force_validation_skip: bool = False,
+    tool: str | None = None,
 ) -> str:
     """
     Validate and atomically write multiple wiki articles in a single batch call.
@@ -208,7 +229,10 @@ def brain79_write_many(
 
 
 @mcp.tool(output_schema=None)
-def brain79_list(section: str | None = None) -> str:
+def brain79_list(
+    section: str | None = None,
+    tool: str | None = None,
+) -> str:
     """
     List all wiki articles, optionally filtered by section directory.
 
@@ -223,7 +247,10 @@ def brain79_list(section: str | None = None) -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_search(query: str) -> str:
+def brain79_search(
+    query: str,
+    tool: str | None = None,
+) -> str:
     """
     Search wiki articles by keyword (case-insensitive).
 
@@ -243,7 +270,11 @@ def brain79_search(query: str) -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_ingest(session_summary: str, instructions: str | None = None) -> str:
+def brain79_ingest(
+    session_summary: str,
+    instructions: str | None = None,
+    tool: str | None = None,
+) -> str:
     """
     Save a session summary to raw sources and return state-aware curation guide.
 
@@ -275,6 +306,17 @@ def brain79_handoff_write(
     gotchas: list[str] | None = None,
     boot_instruction: str = "",
     wiki_deviation_justification: str = "",
+    decisions: list[str] | None = None,
+    next_steps: list[str] | None = None,
+    open_questions: list[str] | None = None,
+    boot_instructions: str = "",
+    decisions_made: list[str] | None = None,
+    session_summary: str = "",
+    pending_tasks: list[str] | None = None,
+    open_issues: list[str] | None = None,
+    resolved_issues: list[str] | None = None,
+    files_modified: list[str] | None = None,
+    tool: str | None = None,
 ) -> str:
     """
     Write an immutable handoff document for the next session.
@@ -283,10 +325,22 @@ def brain79_handoff_write(
     Call this ONLY when explicitly requested by the user (e.g. 'save handoff', 'wrap up session', 'haz handoff')
     or when terminating an autonomous headless sub-agent process. Do NOT call automatically after every conversational turn.
 
+    RECOMMENDED 1-CALL SESSION WRAP-UP:
+    If this session produced research findings, analyses, or new wiki articles, prefer calling
+    `brain79_session_commit(writes=[...], handoff={...})` in a single atomic transaction.
+
+    PARAMETER ALIASES:
+    - `decisions` / `decisions_made`: automatically merged into `completed_work`.
+    - `next_steps` / `pending_tasks`: automatically merged into `pending_work` (generic filler like 'wait for user' is filtered out).
+    - `open_questions`: automatically merged into `gotchas` (placeholders like 'None' or 'Ninguna' are filtered out).
+    - `session_summary`: accepted as fallback for `summary`.
+    - `boot_instructions`: accepted as alias for `boot_instruction`.
+
     SYSTEM INSTRUCTION:
     1. The wiki ALWAYS wins. If you contradict the wiki, you MUST use wiki_deviation_justification.
-    2. Valid session types: "feature", "bugfix", "research", "brainstorming".
-    3. If there are no pending tasks (pending_work is empty), boot_instruction MUST explicitly indicate that there are no pending tasks (e.g. "no hay tareas pendientes" or "no pending tasks").
+    2. Valid session types: "feature", "bugfix", "research", "brainstorming", "writing", "analysis".
+    3. boot_instruction must provide clear orientation for resuming work in the next session (cannot be empty).
+    4. Unpersisted research sessions will be blocked unless wiki articles are persisted or wiki_deviation_justification is provided.
     """
     try:
         rel_path = handoff_ops.write_handoff(
@@ -300,6 +354,16 @@ def brain79_handoff_write(
             gotchas=gotchas or [],
             boot_instruction=boot_instruction,
             wiki_deviation_justification=wiki_deviation_justification,
+            decisions=decisions,
+            next_steps=next_steps,
+            open_questions=open_questions,
+            boot_instructions=boot_instructions,
+            decisions_made=decisions_made,
+            session_summary=session_summary,
+            pending_tasks=pending_tasks,
+            open_issues=open_issues,
+            resolved_issues=resolved_issues,
+            files_modified=files_modified,
         )
         return f"Handoff successfully saved at: {rel_path}"
     except (ValueError, FileNotFoundError, OSError) as exc:
@@ -307,7 +371,10 @@ def brain79_handoff_write(
 
 
 @mcp.tool(output_schema=None)
-def brain79_handoff_read(handoff_ref: str = "latest") -> str:
+def brain79_handoff_read(
+    handoff_ref: str = "latest",
+    tool: str | None = None,
+) -> str:
     """
     Read a handoff document.
 
@@ -336,7 +403,10 @@ def brain79_handoff_read(handoff_ref: str = "latest") -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_handoff_purge(apply: bool = False) -> str:
+def brain79_handoff_purge(
+    apply: bool = False,
+    tool: str | None = None,
+) -> str:
     """
     Wipe all handoff files and unregister them from the navigation registry.
 
@@ -360,7 +430,7 @@ def brain79_handoff_purge(apply: bool = False) -> str:
 
 
 @mcp.tool(output_schema=None)
-def brain79_lint() -> str:
+def brain79_lint(tool: str | None = None) -> str:
     """
     Run a deterministic health check scan on the project wiki (.brain-79/).
 
@@ -375,6 +445,7 @@ def brain79_context(
     task: str,
     top_n: int = 3,
     paths: list[str] | None = None,
+    tool: str | None = None,
 ) -> str:
     """
     Retrieve top relevant wiki articles for a task using 3-signal context ranking.
@@ -391,6 +462,7 @@ def brain79_context(
 def brain79_bootstrap(
     scope: str | None = None,
     force: bool = False,
+    tool: str | None = None,
 ) -> str:
     """
     Scan the project and return a structured manifest for wiki bootstrapping.
@@ -408,7 +480,10 @@ def brain79_bootstrap(
 
 
 @mcp.tool(output_schema=None)
-def brain79_navigate(regenerate: bool = False) -> str:
+def brain79_navigate(
+    regenerate: bool = False,
+    tool: str | None = None,
+) -> str:
     """
     Manage INDEX.md navigation.
 
@@ -441,6 +516,7 @@ def brain79_session_commit(
     session_summary: str | None = None,
     instructions: str | None = None,
     force_validation_skip: bool = False,
+    tool: str | None = None,
 ) -> str:
     """
     1-call atomic end-of-session finalization transaction.
@@ -508,7 +584,10 @@ def brain79_session_commit(
 
 
 @mcp.tool(output_schema=None)
-def brain79_migrate(dry_run: bool = True) -> str:
+def brain79_migrate(
+    dry_run: bool = True,
+    tool: str | None = None,
+) -> str:
     """
     Add frontmatter to legacy wiki articles.
 

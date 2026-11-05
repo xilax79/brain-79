@@ -124,11 +124,16 @@ To maintain consistent, high-quality documentation across all agent and human in
 5. **Summary & Navigation Invariants**:
    - Every wiki article must declare an explicit, one-line `summary:` in its frontmatter.
    - Every subfolder article must conclude with the standard back-navigation footer (`[← Volver al Índice](../INDEX.md)`).
-6. **No-Op Idempotence (Zero-Modification Rule)**:
-   - When asked to "update the wiki", "sync docs", or wrap up a session: first check `git status` and session history.
-   - If no code, features, architectural decisions, or tests were created, modified, or planned during the session, **DO NOT invent or artificially edit articles**.
-   - Simply verify wiki health with `brain79 lint --strict` and state clearly: *"The wiki is up-to-date with repository state. No modifications required."*
-   - Wiki changes must strictly mirror real repository mutations, never synthetic edits to satisfy an action bias.
+6. **Session knowledge triage & persistence protocol (the Amnesia Test & No-Op Idempotence / Zero-Modification Rule)**:
+   - When asked to "update the wiki", "sync docs", or wrap up/close a session, evaluate the conversation using **the Amnesia Test**:
+     *"If this session context were wiped right now, would the user lose valuable research findings, domain analysis, forecasts, decisions, or implementation context that took effort to produce?"*
+   - Classify the session into one of three categories:
+     - **Type A — Ephemeral / read-only consultation (No-Op Idempotence)**: casual chat, greetings, or answering a quick question by reading existing files without generating new domain knowledge or code changes.
+       -> **Action**: do NOT invent or artificially edit wiki articles. Verify health with `brain79_lint()` and state clearly: *"The wiki is up-to-date with repository state. No modifications required."*
+     - **Type B — Zero-code research, analysis & discovery (knowledge deliverable)**: domain research, web investigations, forecasts, benchmarks, trade-off analyses, or strategic decisions—**even when zero code files were modified and even in non-Git directories**.
+       -> **Action**: in these sessions, **the distilled knowledge IS the primary deliverable**. You MUST synthesize the findings into structured wiki articles (e.g., `topics/<slug>.md`, `decisions/<slug>.md`, `context/<slug>.md` in `general` profile; `architecture/`, `product/`, `features/`, or `decisions/` in `software` profile) and commit them atomically via `brain79_session_commit(writes=[...], handoff={...})`. Never dump raw chat transcripts; distill clean headings, tables, conclusions, and sources.
+     - **Type C — Code & workspace mutation**: source code, configuration, or tests were created or modified.
+       -> **Action**: update or create the corresponding governing articles (`features/`, `architecture/`, `decisions/`, `changelog/`) and commit via `brain79_session_commit(...)`.
 7. **Sentence Case First Policy (Mandatory)**:
    - Use sentence-style capitalization for all titles, headings (H1, H2, H3), bullet points, and table headers across documentation and wiki generation.
    - Capitalize ONLY the first letter of a title or sentence. The rest must be lowercase.

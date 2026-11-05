@@ -101,10 +101,11 @@ def get_file_last_modified_date(file_path: Path, project_root: Path) -> str | No
         return None
 
 
-def _is_ignored(path: Path, project_root: Path) -> bool:
+def _is_ignored(path: Path, project_root: Path, allow_brain79: bool = False) -> bool:
     try:
         rel = path.relative_to(project_root)
-        return any(part in _IGNORED_DIRS for part in rel.parts)
+        ignored = _IGNORED_DIRS if not allow_brain79 else (_IGNORED_DIRS - {".brain-79"})
+        return any(part in ignored for part in rel.parts)
     except ValueError:
         return True
 
@@ -127,17 +128,18 @@ def find_matching_workspace_files(patterns: list[str], project_root: Path) -> li
         if norm_pat.startswith("../") or norm_pat == "..":
             continue
 
+        allow_brain79 = norm_pat.startswith(".brain-79/") or norm_pat == ".brain-79"
         target = p_root / norm_pat
 
         # Direct exact file check (exact case check for Linux parity on macOS)
-        if target.is_file() and has_exact_case_path(p_root, norm_pat) and not _is_ignored(target, p_root):
+        if target.is_file() and has_exact_case_path(p_root, norm_pat) and not _is_ignored(target, p_root, allow_brain79=allow_brain79):
             matched.add(target)
             continue
 
         # Direct directory check (matches all children inside directory)
-        if target.is_dir() and has_exact_case_path(p_root, norm_pat) and not _is_ignored(target, p_root):
+        if target.is_dir() and has_exact_case_path(p_root, norm_pat) and not _is_ignored(target, p_root, allow_brain79=allow_brain79):
             for child in sorted(target.rglob("*")):
-                if child.is_file() and not _is_ignored(child, p_root):
+                if child.is_file() and not _is_ignored(child, p_root, allow_brain79=allow_brain79):
                     matched.add(child)
             continue
 
@@ -145,7 +147,7 @@ def find_matching_workspace_files(patterns: list[str], project_root: Path) -> li
         if any(char in pat for char in ("*", "?", "[")):
             try:
                 for child in sorted(p_root.glob(pat)):
-                    if child.is_file() and not _is_ignored(child, p_root):
+                    if child.is_file() and not _is_ignored(child, p_root, allow_brain79=allow_brain79):
                         try:
                             rel_str = child.relative_to(p_root).as_posix()
                             if _match_applies_to(pat, rel_str) and has_exact_case_path(p_root, rel_str):

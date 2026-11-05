@@ -14,7 +14,7 @@ last_updated: 2026-11-05
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 - [Architecture — Defect backlog and agent efficiency deep dive](architecture/defect-backlog.md) — master defect backlog, forensic root-cause analysis, and specification for bug fixes, agent efficiency, and on-demand handoff policy
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — industrial-scale roadmap covering completed core protocol phases (0-4) and next-stage adoption, portability, and release governance (5-8)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — industrial-scale roadmap covering completed core protocol phases (0-6) and next-stage session triage, adoption, and context guardrails (6.5-8)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
@@ -47,6 +47,7 @@ last_updated: 2026-11-05
 - [Feature — FastMCP integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
 - [Feature — Handoff purge operations](features/handoff-purge.md) — safe batch deletion of short-term handoffs with dry-run default guard and navigation registry cleanup
 - [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics (Phase 7 specification)](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
+- [Feature — Session knowledge triage, research persistence guard and handoff ergonomics (Phase 6.5)](features/session-triage-and-research-persistence.md) — specification for Phase 6.5 — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide,path prefix normalization, and handoff schema ergonomics
 - [Feature — Short-term handoff continuity](features/handoff-continuity.md) — tactical session transitions, immutable state snapshots, and anti-hallucination work tracking
 - [Feature — Standalone CLI interface](features/cli.md) — deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
 - [Feature — Versioning and release governance (Phase 5 specification)](features/version-governance.md) — single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks

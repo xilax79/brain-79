@@ -326,7 +326,8 @@ Content
             "path": "features/bad.md",
             "content": """---
 type: feature
-# missing status and version
+status: invalid_status_value
+version: 1.0.0
 last_updated: 2026-10-29
 ---
 
@@ -373,6 +374,7 @@ def test_handoff_flexible_previous_ref(setup_wiki: Path) -> None:
         previous_handoff_ref="initial",
         summary="Third session",
         boot_instruction="Ninguna tarea pendiente.",
+        wiki_deviation_justification="Test initial ref without articles",
     )
     assert path3.startswith("handoffs/handoff-")
 

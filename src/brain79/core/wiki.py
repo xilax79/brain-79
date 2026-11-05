@@ -13,6 +13,7 @@ from brain79.core.locks import (
     atomic_replace_with_retry,
     has_exact_case_path,
     normalize_posix_input,
+    normalize_wiki_rel_path,
     rel_posix,
 )
 from brain79.core.validation import validate_article_content
@@ -29,7 +30,7 @@ _RG_PATH: str | None = shutil.which("rg")
 def _safe_resolve(path: str, wiki_root: Path | None = None) -> Path:
     """Resolve a relative wiki path and verify it stays within the wiki root."""
     w_root = (wiki_root or get_wiki_root()).resolve()
-    clean_path = normalize_posix_input(path)
+    clean_path = normalize_wiki_rel_path(path)
     target = (w_root / clean_path).resolve()
     if not target.is_relative_to(w_root):
         raise ValueError(f"Path '{path}' resolves outside the wiki directory.")
@@ -365,12 +366,19 @@ def write_article(
     except Exception:
         pass
 
-    return f"Written: {path}"
+    return f"Written: {rel_path_str}"
 
 
 def check_file_health(wiki_root: Path, rel_path: str, content: str) -> list[str]:
     """Run lightweight per-file health checks returning warnings (if any)."""
     warnings: list[str] = []
+
+    # Normalize rel_path to be strictly relative to wiki_root without leading .brain-79/ prefixes
+    w_root = wiki_root.resolve()
+    try:
+        rel_path = _safe_resolve(rel_path, wiki_root=w_root).relative_to(w_root).as_posix()
+    except Exception:
+        rel_path = normalize_wiki_rel_path(rel_path)
 
     # Exempt paths
     if rel_path in ("SCHEMA.md",) or rel_path.startswith("_raw/") or rel_path.startswith("handoffs/"):
@@ -521,14 +529,16 @@ def write_many_articles(
         if not p or c is None:
             raise ValueError(f"Article #{idx + 1} must have 'path' and 'content'.")
 
-        target = _safe_resolve(p)
+        target = _safe_resolve(p, wiki_root=wiki_root)
         if target.suffix != ".md":
             raise ValueError(f"write_many_articles requires .md paths, got {p}")
 
         rel_path_str = target.relative_to(wiki_root).as_posix()
         try:
-            val_c = validate_article_content(rel_path_str, c, force_skip=force_validation_skip)
-            validated_contents.append((p, val_c))
+            val_c = validate_article_content(
+                rel_path_str, c, force_skip=force_validation_skip, wiki_root=wiki_root
+            )
+            validated_contents.append((rel_path_str, val_c))
         except ValidationError as exc:
             validation_errors.append(f"[{p}]\n{exc.format_user_message()}")
         except Exception as exc:
@@ -545,15 +555,16 @@ def write_many_articles(
 
     # 2. Write pass
     written: list[str] = []
-    for p, val_c in validated_contents:
+    for rel_p, val_c in validated_contents:
         write_article(
-            p,
+            rel_p,
             val_c,
             timeout=timeout,
             force_validation_skip=force_validation_skip,
             _skip_nav_regen=True,
+            wiki_root=wiki_root,
         )
-        written.append(p)
+        written.append(rel_p)
 
     # 3. Single navigation regeneration at the end of the batch
     try:

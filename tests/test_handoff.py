@@ -101,7 +101,7 @@ def test_missing_ref() -> None:
         )
 
 
-def test_empty_boot_instruction_hallucination() -> None:
+def test_empty_boot_instruction_validation() -> None:
     with pytest.raises(ValueError, match="boot_instruction cannot be empty"):
         write_handoff(
             session_type="feature",
@@ -115,20 +115,7 @@ def test_empty_boot_instruction_hallucination() -> None:
             boot_instruction="   ",
         )
 
-    with pytest.raises(ValueError, match="hallucinates next steps"):
-        write_handoff(
-            session_type="feature",
-            previous_handoff_ref="",
-            summary="Test summary",
-            completed_work=["Task 1"],
-            pending_work=[],
-            knowledge_pending_promotion=[],
-            resources=[],
-            gotchas=[],
-            boot_instruction="Do something next",
-        )
-
-    # Valid boot_instruction when pending_work is empty
+    # Valid non-empty boot_instruction when pending_work is empty
     msg = write_handoff(
         session_type="feature",
         previous_handoff_ref="",
@@ -138,7 +125,7 @@ def test_empty_boot_instruction_hallucination() -> None:
         knowledge_pending_promotion=[],
         resources=[],
         gotchas=[],
-        boot_instruction="No hay tareas pendientes por hacer.",
+        boot_instruction="Refer to docs/ when starting next phase.",
     )
     assert msg.startswith("handoffs/handoff-")
 
@@ -185,6 +172,7 @@ def test_read_handoff_with_full_and_partial_timestamp() -> None:
         resources=[],
         gotchas=[],
         boot_instruction="Execute step",
+        wiki_deviation_justification="Test timestamp parsing without articles",
     )
     # save_msg is relative path e.g. "handoffs/handoff-2024-01-01-120000-123.md"
     rel_path = save_msg.split("handoffs/")[1]  # "handoff-2024-01-01-120000-123.md"

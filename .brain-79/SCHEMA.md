@@ -14,13 +14,13 @@ Violations will be rejected at write time and reported by the linter.
 | Directory | Required `type` | Required Fields | Allowed Enums | Purpose |
 |-----------|-----------------|-----------------|---------------|---------|
 | `INDEX.md` | `navigation` | `type`, `last_updated` | — | Automated routing table only (no freeform prose) |
-| `handoffs/` | `handoff` | `type`, `session_type`, `previous_ref`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming | Immutable session handoffs |
+| `handoffs/` | `handoff` | `type`, `session_type`, `previous_ref`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming, architecture, refactor, maintenance, work, general, writing, analysis | Immutable session handoffs |
 | `product/` | `product` | `type`, `summary`, `last_updated` | — | Vision, domain, personas |
 | `architecture/` | `architecture` | `type`, `summary`, `stability`, `last_updated` | `stability`: experimental, stable, legacy | Stack, patterns, topology |
 | `features/` | `feature` | `type`, `summary`, `status`, `version`, `last_updated` | `status`: planned, in_progress, shipped, deprecated, legacy | Feature documentation |
 | `decisions/` | `decision` | `type`, `summary`, `status`, `date`, `deciders`, `last_updated` | `status`: proposed, accepted, superseded, rejected, legacy | Architectural Decision Records |
 | `changelog/` | `changelog` | `type`, `summary`, `version`, `date`, `last_updated` | — | Versioned changes |
-| `_raw/sessions/` | `raw_session` | `type`, `session_id`, `session_type`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming | Immutable session summaries |
+| `_raw/sessions/` | `raw_session` | `type`, `session_id`, `session_type`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming, architecture, refactor, maintenance, work, general, writing, analysis | Immutable session summaries |
 | `_raw/commits/` | `raw_commit` | `type`, `commit_sha`, `last_updated` | — | Commit metadata |
 
 ### Frontmatter templates

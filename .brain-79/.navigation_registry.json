@@ -29,13 +29,6 @@
       "registered_at": "2026-11-05T15:02:04.825994+00:00"
     },
     {
-      "path": "architecture/roadmap-industrial-scale.md",
-      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
-      "summary": "industrial-scale roadmap covering completed core protocol phases (0-4) and next-stage adoption, portability, and release governance (5-8)",
-      "section": "architecture",
-      "registered_at": "2026-11-05T15:02:04.827291+00:00"
-    },
-    {
       "path": "architecture/symmetry.md",
       "title": "Architecture \u2014 CLI and MCP symmetry",
       "summary": "enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools",
@@ -244,6 +237,60 @@
       "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
       "section": "product",
       "registered_at": "2026-11-05T15:02:04.855838+00:00"
+    },
+    {
+      "path": "features/session-triage-and-research-persistence.md",
+      "title": "Feature \u2014 Session knowledge triage, research persistence guard and handoff ergonomics (Phase 6.5)",
+      "summary": "specification for Phase 6.5 \u2014 session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide,path prefix normalization, and handoff schema ergonomics",
+      "section": "features",
+      "registered_at": "2026-11-05T15:36:23.868226+00:00",
+      "applies_to": [
+        "src/brain79/core/handoff.py",
+        "src/brain79/core/session_commit.py",
+        "src/brain79/core/curate.py",
+        "src/brain79/core/locks.py",
+        "src/brain79/server.py",
+        "src/brain79/templates/AGENTS.md"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "architecture/defect-backlog.md",
+        "features/handoff-continuity.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
+      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6) and next-stage session triage, adoption, and context guardrails (6.5-8)",
+      "section": "architecture",
+      "registered_at": "2026-11-05T15:37:04.296067+00:00",
+      "applies_to": [
+        "src/brain79/__init__.py",
+        "src/brain79/__main__.py",
+        "pyproject.toml"
+      ],
+      "related": [
+        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-013-versioning-and-release-governance.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
+        "decisions/adr-015-sentence-case-first-policy.md",
+        "features/version-governance.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "features/session-triage-and-research-persistence.md",
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "architecture/defect-backlog.md"
+      ],
+      "outgoing_links": [
+        "features/session-triage-and-research-persistence.md",
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "INDEX.md"
+      ]
     }
   ]
 }

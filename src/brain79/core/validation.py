@@ -239,6 +239,11 @@ def check_missing_sections(
     present_headers = extract_h2_headers(content)
     normalized_headers = [h.strip().lower() for h in present_headers]
 
+    # In general profile, any valid H2 section is structurally sound for topic and context
+    if getattr(active, "profile", "") == "general" and target_type in ("topic", "context"):
+        if present_headers:
+            return []
+
     missing: list[str] = []
     for req in req_sections:
         if isinstance(req, str):

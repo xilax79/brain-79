@@ -25,9 +25,28 @@ def rel_posix(path: Path, root: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
-def normalize_posix_input(raw_path: str) -> str:
+def normalize_posix_input(raw_path: str | Path) -> str:
     """Normalize user or API input path by replacing Windows backslashes with forward slashes."""
-    return raw_path.replace("\\", "/").strip()
+    return (raw_path.as_posix() if isinstance(raw_path, Path) else str(raw_path)).replace("\\", "/").strip()
+
+
+def normalize_wiki_rel_path(raw_path: str | Path) -> str:
+    """Normalize a path intended to be relative to the wiki root (.brain-79/).
+
+    Replaces Windows backslashes, strips redundant leading '.brain-79/' or './.brain-79/' or
+    '/.brain-79/', without stripping leading slashes from external absolute paths.
+    """
+    cleaned = normalize_posix_input(raw_path)
+    stripped = cleaned
+    if stripped.startswith("/.brain-79/"):
+        stripped = stripped[len("/.brain-79/"):]
+    elif stripped.startswith("./.brain-79/"):
+        stripped = stripped[len("./.brain-79/"):]
+    elif stripped.startswith(".brain-79/"):
+        stripped = stripped[len(".brain-79/"):]
+    elif stripped in ("/.brain-79", "./.brain-79", ".brain-79"):
+        stripped = ""
+    return stripped
 
 
 def has_exact_case_path(root: Path, rel_posix_path: str) -> bool:
@@ -68,7 +87,7 @@ def get_lock_path(wiki_root: Path, rel_posix_path: str) -> Path:
     - INDEX.md                  -> .locks/INDEX.md.lock
     - decisions/adr-001.md      -> .locks/decisions__adr-001.md.lock
     """
-    clean = normalize_posix_input(rel_posix_path).lstrip("/")
+    clean = normalize_wiki_rel_path(rel_posix_path)
     locks_dir = wiki_root / LOCKS_DIRNAME
 
     if clean == ".navigation_registry.json":

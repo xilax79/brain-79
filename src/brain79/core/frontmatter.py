@@ -61,7 +61,19 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
         "required": ["type", "session_type", "previous_ref", "last_updated"],
         "optional": ["summary", "supersedes", "related", "owner", "schema_version", "applies_to"],
         "enum": {
-            "session_type": ["feature", "bugfix", "research", "brainstorming"],
+            "session_type": [
+                "feature",
+                "bugfix",
+                "research",
+                "brainstorming",
+                "architecture",
+                "refactor",
+                "maintenance",
+                "work",
+                "general",
+                "writing",
+                "analysis",
+            ],
         },
     },
     "product": {
@@ -457,7 +469,19 @@ def autofill_deterministic_fields(
     if ("date" in type_cfg.get("required", []) or declared_type in ("decision", "changelog", "log")) and "date" not in meta:
         meta["date"] = today
 
-    # 5. Strip commonly hallucinated keys only if they are NOT allowed in the active type
+    # 5. Sensible defaults for status, version, stability
+    if declared_type == "topic" and "status" not in meta:
+        meta["status"] = "active"
+    elif declared_type == "feature":
+        if "status" not in meta:
+            meta["status"] = "planned"
+        if "version" not in meta:
+            meta["version"] = "0.1.0"
+    elif declared_type == "architecture":
+        if "stability" not in meta:
+            meta["stability"] = "experimental"
+
+    # 6. Strip commonly hallucinated keys only if they are NOT allowed in the active type
     allowed_keys = set(type_cfg.get("required", [])) | set(type_cfg.get("optional", []))
     for candidate in ("title", "tags", "created"):
         if candidate not in allowed_keys:
