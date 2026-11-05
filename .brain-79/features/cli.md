@@ -1,12 +1,12 @@
 ---
 type: feature
-summary: Deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
+summary: deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
 status: shipped
 version: 1.1.0
 last_updated: 2026-10-29
 ---
 
-# Feature — Standalone CLI Interface
+# Feature — Standalone CLI interface
 
 ## Overview
 
@@ -14,7 +14,7 @@ The Standalone CLI interface provides 16 deterministic command-line subcommands 
 
 It is designed for direct developer interaction in the terminal, shell scripts, CI/CD pipelines, and git hooks.
 
-## Subcommands & Options
+## Subcommands and options
 
 | Command | Description | Inputs / Flags | Exit Codes |
 |---|---|---|---|
@@ -37,7 +37,7 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 | `brain79 lint` | Run organizational linter | `[--strict]`, `[--suggest-extract]`, `[--format json]` | `0`, `1` |
 | `brain79 bootstrap` | Generate project scan manifest | `[--scope <scope>]`, `[--force]` | `0` |
 
-## Usage Examples
+## Usage examples
 
 ```bash
 # Read index
@@ -50,7 +50,7 @@ cat article.md | brain79 write architecture/overview.md --content-stdin
 brain79 lint --strict --format json
 ```
 
-## Known Edge Cases
+## Known edge cases
 
 - Global flags (`--project-root`, `--debug`) can be placed before or after the subcommand.
 - Terminal output for `read` and `index` outputs pure content without decorative headers to facilitate shell piping.

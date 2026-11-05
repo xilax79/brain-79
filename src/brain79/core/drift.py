@@ -15,6 +15,7 @@ from typing import Any
 from brain79.config import get_project_root, get_wiki_root
 from brain79.core.context import _match_applies_to
 from brain79.core.frontmatter import parse_frontmatter
+from brain79.core.locks import has_exact_case_path, normalize_posix_input
 
 _IGNORED_DIRS = frozenset({
     ".git",
@@ -52,9 +53,9 @@ def get_file_last_modified_date(file_path: Path, project_root: Path) -> str | No
         return None
 
     try:
-        rel_str = str(file_path.relative_to(project_root))
+        rel_str = file_path.relative_to(project_root).as_posix()
     except ValueError:
-        rel_str = str(file_path)
+        rel_str = file_path.as_posix()
 
     # 1. Try git commit author/committer date
     try:
@@ -113,42 +114,46 @@ def find_matching_workspace_files(patterns: list[str], project_root: Path) -> li
     matched: set[Path] = set()
     p_root = project_root.resolve()
 
+    import posixpath
+
     for pattern in patterns:
-        pat = pattern.strip().lstrip("/")
+        pat = normalize_posix_input(pattern).lstrip("/")
         if pat.startswith("./"):
             pat = pat[2:]
         if not pat:
             continue
 
-        target = (p_root / pat).resolve()
-        # Prevent traversal outside project root
-        if not target.is_relative_to(p_root):
+        norm_pat = posixpath.normpath(pat)
+        if norm_pat.startswith("../") or norm_pat == "..":
             continue
 
-        # Direct exact file check
-        if target.is_file() and not _is_ignored(target, p_root):
+        target = p_root / norm_pat
+
+        # Direct exact file check (exact case check for Linux parity on macOS)
+        if target.is_file() and has_exact_case_path(p_root, norm_pat) and not _is_ignored(target, p_root):
             matched.add(target)
             continue
 
         # Direct directory check (matches all children inside directory)
-        if target.is_dir() and not _is_ignored(target, p_root):
-            for child in target.rglob("*"):
+        if target.is_dir() and has_exact_case_path(p_root, norm_pat) and not _is_ignored(target, p_root):
+            for child in sorted(target.rglob("*")):
                 if child.is_file() and not _is_ignored(child, p_root):
                     matched.add(child)
             continue
 
-        # Glob pattern match
-        try:
-            for child in p_root.glob(pat):
-                if child.is_file() and not _is_ignored(child, p_root):
-                    try:
-                        rel_str = str(child.relative_to(p_root))
-                        if _match_applies_to(pat, rel_str):
-                            matched.add(child)
-                    except ValueError:
-                        pass
-        except Exception:
-            pass
+        # Glob pattern match (only if pattern contains wildcards * or ? or [)
+        if any(char in pat for char in ("*", "?", "[")):
+            try:
+                for child in sorted(p_root.glob(pat)):
+                    if child.is_file() and not _is_ignored(child, p_root):
+                        try:
+                            rel_str = child.relative_to(p_root).as_posix()
+                            if _match_applies_to(pat, rel_str) and has_exact_case_path(p_root, rel_str):
+                                matched.add(child)
+                        except ValueError:
+                            pass
+            except Exception:
+                pass
 
     return sorted(matched)
 
@@ -210,17 +215,17 @@ def check_article_drift(
     drifts: list[dict[str, str]] = []
 
     try:
-        rel_article = str(article_path.relative_to(w_root))
+        rel_article = article_path.relative_to(w_root).as_posix()
     except ValueError:
-        rel_article = str(article_path)
+        rel_article = article_path.as_posix()
 
     for ws_file in matching_files:
         file_date = get_file_last_modified_date(ws_file, p_root)
         if file_date and file_date > last_updated:
             try:
-                ws_rel = str(ws_file.relative_to(p_root))
+                ws_rel = ws_file.relative_to(p_root).as_posix()
             except ValueError:
-                ws_rel = str(ws_file)
+                ws_rel = ws_file.as_posix()
 
             drifts.append({
                 "article_path": rel_article,
@@ -251,8 +256,8 @@ def detect_all_drift(
     for md_file in files:
         try:
             rel = md_file.relative_to(w_root)
-            rel_str = str(rel)
-            if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
+            rel_str = rel.as_posix()
+            if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks", "handoffs"):
                 continue
         except ValueError:
             continue

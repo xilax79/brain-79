@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: Industrial-scale roadmap covering completed core protocol phases (0-4) and next-stage adoption, portability, and release governance (5-8)
+summary: industrial-scale roadmap covering completed core protocol phases (0-4) and next-stage adoption, portability, and release governance (5-8)
 stability: stable
 applies_to:
   - src/brain79/__init__.py
@@ -14,11 +14,12 @@ related:
   - decisions/adr-013-versioning-and-release-governance.md
   - features/version-governance.md
   - features/cross-platform-and-lock-isolation.md
+  - features/project-upgrade-and-multi-harness-doctor.md
   - architecture/defect-backlog.md
 last_updated: 2026-11-04
 ---
 
-# Architecture — Industrial-Scale Roadmap & Adoption Evolution
+# Architecture — Industrial-scale roadmap and adoption evolution
 
 ## Overview
 
@@ -26,7 +27,7 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 
 ---
 
-## Completed Foundation (Phases 0–4 — Condensed)
+## Completed foundation (Phases 0–4 — condensed)
 
 - **[x] Phase 0 — Core Invariant Alignment:** Unified write-time validation with organizational linting, enforced pure routing table rules on `INDEX.md` (ADR-008), fixed `bootstrap` templates, and standardized `_raw/sessions/` frontmatter.
 - **[x] Phase 1 — Declarative Schema & Dual Ontology (ADR-009):** Decoupled validation mechanism from ontology policy via `.brain-79/SCHEMA.md` with `<0.1ms` caching, built-in `software` and `general` profiles, and custom directory extensions.
@@ -35,14 +36,13 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 - **[x] Phase 4 — Structural Quality & Drift Detection (ADR-012):** Added per-type `## H2` structural skeleton enforcement, auto-injected backlink footers, and git-backed code-to-wiki drift detection (`documentation_drift_suspected`).
 - **[x] Phase 5 — Versioning & Release Governance (ADR-013):** Single-source dynamic versioning via Hatchling (`__version__ = "2.0.0"`), FastMCP server version reporting, and automated release parity tests (SemVer, badges, changelog, CLI/MCP).
 - **[x] Phase 5.5 — Defect Backlog & Agent Protocol Polish:** Resolved `SCHEMA_GENERAL.md` broken root link (BUG-001) with code-fence safe footer normalizer, refined composite H2 atomicity heuristics (BUG-002), exposed Active Schema Summary in `orient()` (INEF-002), made write receipts self-documenting (`INDEX.md auto-synced`) (INEF-001), and formalized the On-Demand Handoff Policy across engine and manifests (INEF-003).
+- **[x] Phase 6 — Centralized `.locks/` Isolation & Cross-Platform OS Portability (ADR-014):** Isolated all mutex locks into `.brain-79/.locks/` (eliminating adjacent `.md.lock` clutter), added automatic legacy lock purge, enforced segment-by-segment Linux case-sensitivity parity on macOS APFS, ensured POSIX path normalization across registries and engines, implemented atomic replace with retry on NTFS PermissionError, and guaranteed pure LF line endings on all I/O.
 
 ---
 
-## Upcoming Execution Roadmap (Ordered by Dependency & Impact)
+## Upcoming execution roadmap (ordered by dependency and impact)
 
 ```
-+-----------------------------------------------------------------------------------+
-| Phase 6: Centralized .locks/ Isolation & Cross-Platform OS I/O      | [ ] Planned |
 +-----------------------------------------------------------------------------------+
 | Phase 7: Multi-Harness Zero-Config & Doctor Diagnostics             | [ ] Planned |
 +-----------------------------------------------------------------------------------+
@@ -50,17 +50,11 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 4 e
 +-----------------------------------------------------------------------------------+
 ```
 
-### Phase 6: Centralized `.locks/` Isolation & Cross-Platform OS Portability
-- **Specification:** [Feature — Cross-Platform Portability & Centralized Lock Isolation](../features/cross-platform-and-lock-isolation.md)
-- **Scope:** Isolate all `filelock` mutex files into `.brain-79/.locks/` (eliminating `.md.lock` clutter in content directories), enforce `.as_posix()` path normalization and strict `LF` (`\n`) I/O across Windows/Linux/macOS, add NTFS retry resilience on atomic file replacement, harden `.git/hooks/pre-commit` PATH resolution, and verify via a local cross-platform simulation test suite (no external CI required).
+### Phase 7: Project protocol upgrade, legacy wiki reconditioning and doctor diagnostics (`brain79 doctor`)
+- **Specification:** [Feature — Project Upgrade, Legacy Wiki Conditioning, Multi-Harness Setup & Doctor Diagnostics](../features/project-upgrade-and-multi-harness-doctor.md)
+- **Scope:** Solve "Split-Brain" version skew across existing projects via delimited managed blocks in `AGENTS.md` (`<!-- brain79:start -->`), non-destructive `SCHEMA.md` upgrades (preserving `profile` and `custom_types`), two-tier legacy wiki reconditioning (`migrate_wiki` v2), GUI-safe absolute binary paths in MCP configs, and the `brain79 doctor [--fix]` diagnostic tool.
 
-### Phase 7: Multi-Harness Zero-Config & Environment Diagnostics (`brain79 doctor`)
-- **Problem:** Different AI harnesses (Pi, Claude Code, Claude Desktop, Cursor, Windsurf, OpenCode, VS Code) expect MCP configurations in different paths, and desktop GUI apps do not inherit terminal `$PATH`, causing `spawn brain79 ENOENT` failures.
-- **Deliverables:**
-  1. **Harness-Aware Setup (`brain79 init` / `setup`):** Auto-detect or target specific harnesses, resolving absolute executable paths where GUI clients require them.
-  2. **Diagnostic Command (`brain79 doctor`):** 1-second health check verifying binary PATH visibility, `.mcp.json` validity, `.brain-79/` permissions, lock acquisition, and git hook status.
-
-### Phase 8: Zero-Clone Distribution & Context Budget Guardrails
+### Phase 8: Zero-clone distribution and context budget guardrails
 - **Problem:** Installing or updating `brain-79` currently assumes a cloned repository (`scripts/install.py` and `git pull` inside `brain79 update`). Additionally, oversized articles can inflate `orient` payloads.
 - **Deliverables:**
   1. **Standalone Package Installation & Update:** Support `uv tool install` from Git/PyPI and `uvx brain79`, decoupling `brain79 update` from local git repository assumptions.

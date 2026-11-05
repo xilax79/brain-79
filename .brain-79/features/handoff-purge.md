@@ -1,12 +1,12 @@
 ---
 type: feature
-summary: Safe batch deletion of short-term handoffs with dry-run default guard and navigation registry cleanup
+summary: safe batch deletion of short-term handoffs with dry-run default guard and navigation registry cleanup
 status: shipped
 version: 1.0.0
 last_updated: 2026-10-29
 ---
 
-# Feature — Handoff Purge Operations
+# Feature — Handoff purge operations
 
 ## Overview
 
@@ -14,20 +14,20 @@ last_updated: 2026-10-29
 
 By default, the command operates in `--dry-run` preview mode to prevent accidental data loss.
 
-## Operations & Scope
+## Operations and scope
 
 - **What it purges**: All matching `handoffs/handoff-*.md` files.
 - **Registry cleanup**: Unregisters deleted handoff paths from `.navigation_registry.json`.
 - **What it leaves untouched**: Raw session logs (`_raw/sessions/`), commit logs (`_raw/commits/`), and long-term wiki articles (`product/`, `architecture/`, `features/`, `decisions/`, `changelog/`).
 
-## Commands & Tools
+## Commands and tools
 
 | Interface | Method | Flags / Parameters | Default Behavior |
 |---|---|---|---|
 | CLI | `brain79 handoff-purge` | `[--apply]` | Dry-run preview |
 | MCP | `brain79_handoff_purge(apply)` | `apply=False` | Dry-run preview |
 
-## Usage Examples
+## Usage examples
 
 ```bash
 # Preview handoffs to be purged
@@ -37,7 +37,7 @@ brain79 handoff-purge
 brain79 handoff-purge --apply
 ```
 
-## Known Edge Cases
+## Known edge cases
 
 - Purging handoffs does not automatically rewrite markdown links in other articles that reference purged handoff files.
 - Re-running `brain79 lint` after purge will flag any broken local links to deleted handoffs, allowing the agent or developer to clean them up via `brain79_write`.

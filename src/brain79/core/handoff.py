@@ -295,7 +295,7 @@ def read_handoff(ref: str = "latest", wiki_root: Path | None = None) -> tuple[st
     """
     target_path = _resolve_handoff_path(ref, wiki_root=wiki_root)
     w_root = (wiki_root or get_wiki_root()).resolve()
-    rel_path = str(target_path.relative_to(w_root))
+    rel_path = target_path.relative_to(w_root).as_posix()
     content = wiki_ops.read_article(rel_path, wiki_root=w_root)
 
     header = f"=== Handoff: {rel_path} ===\n\n"
@@ -348,7 +348,7 @@ def purge_handoffs(wiki_root: Path, apply: bool = False) -> str:
         ]
         for f in all_files:
             rel = f.relative_to(wiki_root)
-            lines.append(f"  - {rel}")
+            lines.append(f"  - {rel.as_posix()}")
         lines.append("")
         lines.append("Would unregister handoff entries from `.navigation_registry.json`.")
         lines.append("")
@@ -366,6 +366,15 @@ def purge_handoffs(wiki_root: Path, apply: bool = False) -> str:
             deleted_bytes += file_size
         except OSError:
             pass  # skip files we can't delete (permission, locked, etc.)
+
+    # Clean up corresponding centralized lock files in .locks/
+    locks_dir = wiki_root / ".locks"
+    if locks_dir.exists():
+        for lock_file in locks_dir.glob("handoffs__*.lock"):
+            try:
+                lock_file.unlink()
+            except OSError:
+                pass
 
     # Unregister from navigation registry
     unregistered_count = 0

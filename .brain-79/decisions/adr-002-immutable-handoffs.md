@@ -1,13 +1,13 @@
 ---
 type: decision
-summary: Tactical handoff immutability via unique timestamped files to maintain audit trail and prevent context loss
+summary: tactical handoff immutability via unique timestamped files to maintain audit trail and prevent context loss
 status: accepted
 date: 2026-08-11
 deciders: [xilax]
 last_updated: 2026-10-29
 ---
 
-# ADR-002 — Handoffs — Immutable Session Transition Records
+# ADR-002 — Handoffs — Immutable session transition records
 
 ## Status
 
@@ -30,7 +30,7 @@ We chose to enforce strict immutability for session handoffs:
 - **Positive**: Retains historical pending work items across multi-session tasks.
 - **Negative**: Handoff files accumulate over time until explicitly purged via `brain79 handoff-purge`.
 
-## Alternatives Considered
+## Alternatives considered
 
 - **Single mutable `handoff.md` file**: Rejected due to frequent context loss and accidental overwrites during multi-turn sessions.
 

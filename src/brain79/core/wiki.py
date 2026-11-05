@@ -8,11 +8,18 @@ import filelock
 
 from brain79.config import get_wiki_root
 from brain79.core.frontmatter import ValidationError
+from brain79.core.locks import (
+    acquire_wiki_lock,
+    atomic_replace_with_retry,
+    has_exact_case_path,
+    normalize_posix_input,
+    rel_posix,
+)
 from brain79.core.validation import validate_article_content
 
 
-# Directories excluded from article listings (raw sources are not wiki articles)
-_EXCLUDED_DIRS = {"_raw"}
+# Directories excluded from article listings (raw sources and locks are not wiki articles)
+_EXCLUDED_DIRS = {"_raw", ".locks"}
 
 
 
@@ -22,7 +29,8 @@ _RG_PATH: str | None = shutil.which("rg")
 def _safe_resolve(path: str, wiki_root: Path | None = None) -> Path:
     """Resolve a relative wiki path and verify it stays within the wiki root."""
     w_root = (wiki_root or get_wiki_root()).resolve()
-    target = (w_root / path).resolve()
+    clean_path = normalize_posix_input(path)
+    target = (w_root / clean_path).resolve()
     if not target.is_relative_to(w_root):
         raise ValueError(f"Path '{path}' resolves outside the wiki directory.")
     return target
@@ -212,8 +220,8 @@ def read_article(
     if not target.is_file():
         raise ValueError(f"Path is not a file: {path}")
 
-    raw_content = target.read_text(encoding="utf-8")
-    rel_path_str = str(target.relative_to(w_root))
+    raw_content = target.read_text(encoding="utf-8").replace("\r\n", "\n")
+    rel_path_str = target.relative_to(w_root).as_posix()
 
     if sections:
         content = extract_sections_from_markdown(raw_content, sections)
@@ -290,21 +298,20 @@ def write_article(
     if target.suffix != ".md":
         raise ValueError(f"write_article requires .md paths, got {path}")
 
-    rel_path_str = str(target.relative_to(w_root))
+    rel_path_str = target.relative_to(w_root).as_posix()
     content = validate_article_content(
         rel_path_str, content, force_skip=force_validation_skip, wiki_root=w_root
     )
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    lock_path = target.with_suffix(".md.lock")
-    lock = filelock.FileLock(str(lock_path), timeout=timeout)
+    lock = acquire_wiki_lock(w_root, rel_path_str, timeout=timeout)
 
     try:
         with lock:
             tmp_path = target.with_suffix(".md.tmp")
             try:
-                tmp_path.write_text(content, encoding="utf-8")
-                tmp_path.replace(target)
+                tmp_path.write_text(content, encoding="utf-8", newline="\n")
+                atomic_replace_with_retry(tmp_path, target)
             except Exception:
                 tmp_path.unlink(missing_ok=True)
                 raise
@@ -330,12 +337,13 @@ def write_article(
             )
 
             rel_p = target.relative_to(w_root)
+            rel_posix_str = rel_p.as_posix()
             title, summary = extract_title_and_summary(content)
-            graph_meta = extract_graph_metadata(content, rel_path=str(rel_p))
+            graph_meta = extract_graph_metadata(content, rel_path=rel_posix_str)
             section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
             register_article(
                 w_root,
-                str(rel_p),
+                rel_posix_str,
                 title,
                 summary,
                 section,
@@ -397,9 +405,10 @@ def check_file_health(wiki_root: Path, rel_path: str, content: str) -> list[str]
                 )
 
     # 3. Broken local links in this article
+    import posixpath
     from urllib.parse import unquote
     raw_targets = _extract_raw_link_targets(content)
-    article_path = wiki_root / rel_path
+    article_parent_rel = Path(rel_path).parent.as_posix()
     for raw_target in raw_targets:
         if (
             raw_target.startswith(
@@ -412,15 +421,20 @@ def check_file_health(wiki_root: Path, rel_path: str, content: str) -> list[str]
         if not path_part:
             continue
         if path_part.startswith("/"):
-            target_file = (wiki_root / path_part.lstrip("/")).resolve()
+            norm_target_rel = posixpath.normpath(path_part.lstrip("/"))
         else:
-            target_file = (article_path.parent / path_part).resolve()
-        try:
-            target_rel = target_file.relative_to(wiki_root)
-            if not target_file.exists():
-                warnings.append(f"Broken local link: '{raw_target}' -> '{target_rel}' does not exist.")
-        except ValueError:
+            if article_parent_rel == ".":
+                norm_target_rel = posixpath.normpath(path_part)
+            else:
+                norm_target_rel = posixpath.normpath(posixpath.join(article_parent_rel, path_part))
+
+        if norm_target_rel.startswith("../") or norm_target_rel == "..":
             warnings.append(f"Link points outside wiki: '{raw_target}'.")
+            continue
+
+        target_file = wiki_root / norm_target_rel
+        if not target_file.is_file() or not has_exact_case_path(wiki_root, norm_target_rel):
+            warnings.append(f"Broken local link: '{raw_target}' -> '{norm_target_rel}' does not exist.")
 
     # 4. Required structural sections check
     if rel_path != "INDEX.md":
@@ -448,16 +462,17 @@ def edit_article(
     edits: list[dict[str, str]],
     timeout: float = 5.0,
     force_validation_skip: bool = False,
+    wiki_root: Path | None = None,
 ) -> str:
     """Apply one or more text replacements to an article, validate, and write atomically."""
     if not edits:
         raise ValueError("edits list cannot be empty.")
 
-    target = _safe_resolve(path)
+    target = _safe_resolve(path, wiki_root=wiki_root)
     if not target.exists() or not target.is_file():
         raise FileNotFoundError(f"Article not found: {path}")
 
-    content = target.read_text(encoding="utf-8")
+    content = target.read_text(encoding="utf-8").replace("\r\n", "\n")
 
     for idx, edit in enumerate(edits):
         old_text = edit.get("old_text")
@@ -478,7 +493,11 @@ def edit_article(
         content = content.replace(old_text, new_text, 1)
 
     return write_article(
-        path, content, timeout=timeout, force_validation_skip=force_validation_skip
+        path,
+        content,
+        timeout=timeout,
+        force_validation_skip=force_validation_skip,
+        wiki_root=wiki_root,
     )
 
 
@@ -506,7 +525,7 @@ def write_many_articles(
         if target.suffix != ".md":
             raise ValueError(f"write_many_articles requires .md paths, got {p}")
 
-        rel_path_str = str(target.relative_to(wiki_root))
+        rel_path_str = target.relative_to(wiki_root).as_posix()
         try:
             val_c = validate_article_content(rel_path_str, c, force_skip=force_validation_skip)
             validated_contents.append((p, val_c))
@@ -547,10 +566,13 @@ def write_many_articles(
     return f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced · lint OK"
 
 
-def list_articles(section: str | None = None) -> list[str]:
+def list_articles(
+    section: str | None = None,
+    wiki_root: Path | None = None,
+) -> list[str]:
     """List all markdown articles (excluding _raw/) optionally filtered by section."""
-    wiki_root = get_wiki_root()
-    if not wiki_root.exists():
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    if not w_root.exists():
         return []
 
     if section and (
@@ -559,15 +581,15 @@ def list_articles(section: str | None = None) -> list[str]:
     ):
         return []
 
-    root = wiki_root / section if section else wiki_root
+    root = w_root / section if section else w_root
     if not root.exists():
         return []
 
     articles: list[str] = []
     for p in sorted(root.rglob("*.md")):
-        rel = p.relative_to(wiki_root)
+        rel = p.relative_to(w_root)
         if not any(part in _EXCLUDED_DIRS for part in rel.parts):
-            articles.append(str(rel))
+            articles.append(rel.as_posix())
 
     return articles
 
@@ -595,6 +617,8 @@ def _search_ripgrep(query: str) -> list[dict[str, str]]:
         "*.md",
         "-g",
         "!_raw/**",
+        "-g",
+        "!.locks/**",
         "--no-follow",
         query,
         str(wiki_root),
@@ -627,7 +651,7 @@ def _search_ripgrep(query: str) -> list[dict[str, str]]:
         if any(part in _EXCLUDED_DIRS for part in rel.parts):
             continue
 
-        rel_str = str(rel)
+        rel_str = rel.as_posix()
         if rel_str in seen_files:
             continue
         seen_files.add(rel_str)
@@ -665,7 +689,7 @@ def _search_python(query: str) -> list[dict[str, str]]:
             ),
             "",
         )
-        results.append({"path": str(rel), "excerpt": excerpt[:200]})
+        results.append({"path": rel.as_posix(), "excerpt": excerpt[:200]})
 
     return results
 

@@ -1,2 +1,3 @@
+.locks/
 *.lock
 *.tmp

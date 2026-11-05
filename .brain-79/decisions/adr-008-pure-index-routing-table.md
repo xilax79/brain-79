@@ -1,6 +1,6 @@
 ---
 type: decision
-summary: Pure automated routing table architecture for INDEX.md and automated timestamp synchronization
+summary: pure automated routing table architecture for INDEX.md and automated timestamp synchronization
 status: accepted
 date: 2026-10-30
 deciders:
@@ -8,7 +8,7 @@ deciders:
 last_updated: 2026-10-30
 ---
 
-# ADR-008 — Architecture — Pure Automated Routing Table for INDEX.md
+# ADR-008 — Architecture — Pure automated routing table for INDEX.md
 
 ## Status
 

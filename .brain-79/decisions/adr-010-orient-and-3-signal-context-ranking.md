@@ -1,6 +1,6 @@
 ---
 type: decision
-summary: 1-Call cold start orientation and deterministic 3-signal context ranking
+summary: 1-call cold start orientation and deterministic 3-signal context ranking
 status: accepted
 date: 2026-11-02
 deciders:
@@ -12,10 +12,10 @@ applies_to:
 related:
   - decisions/adr-008-pure-index-routing-table.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 ---
 
-# ADR-010 — Two-Call Session Protocol: 1-Call Cold Start Orient and Deterministic 3-Signal Context Ranking
+# ADR-010 — Two-call session protocol: 1-call cold start orient and deterministic 3-signal context ranking
 
 ## Status
 

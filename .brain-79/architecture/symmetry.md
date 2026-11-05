@@ -1,23 +1,23 @@
 ---
 type: architecture
-summary: Enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
+summary: enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 stability: stable
 last_updated: 2026-10-29
 ---
 
-# Architecture — CLI & MCP Symmetry
+# Architecture — CLI and MCP symmetry
 
-## General Description
+## General description
 
 `brain-79` enforces strict 1:1 symmetry between CLI subcommands and MCP server tools. Any capability available to a human user in the terminal via `brain79 <subcommand>` is equally accessible to an AI agent via `brain79_<tool>()`.
 
-## Symmetry Guarantee & Enforcement
+## Symmetry guarantee and enforcement
 
 Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite inspects:
 - Every subcommand in `WHITELIST` (`dispatch.py`) has a corresponding `@mcp.tool()` definition in `server.py` (with the exception of CLI-only setup commands `init` and `update`).
 - Parameter mappings, default values, and operational semantics match identically across interfaces.
 
-## Operational Mapping Table
+## Operational mapping table
 
 | Operational Purpose | CLI Subcommand | MCP Tool |
 |---|---|---|
@@ -41,7 +41,7 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 | Migrate legacy frontmatter | `brain79 migrate [--apply]` | `brain79_migrate(dry_run, apply)` |
 | Lint wiki organization | `brain79 lint [--strict]` | `brain79_lint()` |
 
-## Dry-Run Default Invariant
+## Dry-run default invariant
 
 To ensure safety across both interfaces, destructive actions default to dry-run preview:
 - `brain79 handoff-purge` defaults to preview (requires `--apply` or `apply=True` to execute deletions).

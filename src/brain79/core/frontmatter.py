@@ -834,10 +834,12 @@ def validate_location_consistency(
         return
 
     active = schema or load_active_schema()
-    rel = Path(path)
+    clean_path = path.replace("\\", "/").strip()
+    rel = Path(clean_path)
+    rel_posix_str = rel.as_posix()
     expected_type = None
     for location_prefix, expected in active.location_to_type.items():
-        if str(rel) == location_prefix or str(rel).startswith(location_prefix + "/"):
+        if rel_posix_str == location_prefix or rel_posix_str.startswith(location_prefix + "/"):
             expected_type = expected
             break
 

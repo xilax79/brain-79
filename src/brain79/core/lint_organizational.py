@@ -32,13 +32,18 @@ class OrganizationalIssue:
     actionable: str
 
 
+def _filter_md_files(wiki_root: Path) -> list[Path]:
+    """Return all markdown files excluding _raw/ and .locks/."""
+    return [f for f in sorted(wiki_root.rglob("*.md")) if "_raw" not in f.parts and ".locks" not in f.parts]
+
+
 def check_index_size(wiki_root: Path) -> list[OrganizationalIssue]:
     """Check if INDEX.md exceeds max line count limit."""
     index_path = wiki_root / "INDEX.md"
     if not index_path.exists():
         return []
 
-    content = index_path.read_text(encoding="utf-8")
+    content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     line_count = len(content.splitlines())
     max_lines = get_index_max_lines()
 
@@ -62,18 +67,18 @@ def check_frontmatter_consistency(
     """Every article (except INDEX.md, SCHEMA.md, and _raw/) MUST have valid frontmatter."""
     issues = []
     schema = load_active_schema(wiki_root)
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] == "_raw":
+        rel_str = rel.as_posix()
+        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks"):
             continue
 
         if md_file.stat().st_size == 0:
             continue
 
         try:
-            content = md_file.read_text(encoding="utf-8")
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
             if not content.startswith("---\n"):
                 issues.append(
                     OrganizationalIssue(
@@ -122,15 +127,15 @@ def check_type_location_mismatch(
     """Validate that article frontmatter type matches file location."""
     issues = []
     schema = load_active_schema(wiki_root)
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel_str in ("SCHEMA.md",) or rel.parts[0] == "_raw":
+        rel_str = rel.as_posix()
+        if rel_str in ("SCHEMA.md",) or rel.parts[0] in ("_raw", ".locks"):
             continue
 
         try:
-            content = md_file.read_text(encoding="utf-8")
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
             meta, _ = parse_frontmatter(content)
             if not meta or "type" not in meta:
                 continue
@@ -174,14 +179,14 @@ def check_decision_leakage(
 ) -> list[OrganizationalIssue]:
     """Detect structural decision declarations in non-decision directories."""
     issues = []
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel.parts[0] in ("decisions", "_raw", "handoffs") or rel_str in ("INDEX.md", "SCHEMA.md"):
+        rel_str = rel.as_posix()
+        if rel.parts[0] in ("decisions", "_raw", ".locks", "handoffs") or rel_str in ("INDEX.md", "SCHEMA.md"):
             continue
 
-        content = md_file.read_text(encoding="utf-8")
+        content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
         masked_content = _mask_code_fences(content)
 
         for line_no, line in enumerate(masked_content.splitlines(), start=1):
@@ -208,14 +213,14 @@ def check_technical_debt_leakage(
         return []
 
     issues = []
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel.parts[0] in ("features", "decisions", "_raw", "handoffs") or rel_str in ("INDEX.md", "SCHEMA.md"):
+        rel_str = rel.as_posix()
+        if rel.parts[0] in ("features", "decisions", "_raw", ".locks", "handoffs") or rel_str in ("INDEX.md", "SCHEMA.md"):
             continue
 
-        content = md_file.read_text(encoding="utf-8")
+        content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
         masked_content = _mask_code_fences(content)
 
         for line_no, line in enumerate(masked_content.splitlines(), start=1):
@@ -238,14 +243,14 @@ def check_article_atomicity(
 ) -> list[OrganizationalIssue]:
     """Detect non-atomic or overly large articles (>400 lines or >7 H2 headings)."""
     issues = []
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel.parts[0] in ("_raw", "handoffs", "decisions") or rel_str in ("INDEX.md", "SCHEMA.md"):
+        rel_str = rel.as_posix()
+        if rel.parts[0] in ("_raw", ".locks", "handoffs", "decisions") or rel_str in ("INDEX.md", "SCHEMA.md"):
             continue
 
-        content = md_file.read_text(encoding="utf-8")
+        content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
         lines = content.splitlines()
         masked_content = _mask_code_fences(content)
         masked_lines = masked_content.splitlines()
@@ -316,7 +321,7 @@ def check_prohibited_content(wiki_root: Path) -> list[OrganizationalIssue]:
         return []
 
     issues = []
-    content = index_path.read_text(encoding="utf-8")
+    content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     masked_content = _mask_code_fences(content)
 
     for line_no, line in enumerate(masked_content.splitlines(), start=1):
@@ -362,7 +367,7 @@ def check_navigation_freshness(wiki_root: Path) -> list[OrganizationalIssue]:
     if not index_path.exists():
         return []
 
-    index_content = index_path.read_text(encoding="utf-8")
+    index_content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     qn_match = re.search(r"## Quick navigation\n(.*?)(?=\n## |\Z)", index_content, re.DOTALL)
     qn_content = qn_match.group(1) if qn_match else ""
 
@@ -389,15 +394,15 @@ def check_legacy_articles(
 ) -> list[OrganizationalIssue]:
     """Report articles with status=legacy or stability=legacy."""
     issues = []
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
+        rel_str = rel.as_posix()
+        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks", "handoffs"):
             continue
 
         try:
-            content = md_file.read_text(encoding="utf-8")
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
             meta, _ = parse_frontmatter(content)
             if meta.get("status") == "legacy" or meta.get("stability") == "legacy":
                 issues.append(
@@ -420,15 +425,15 @@ def check_force_skipped_articles(
 ) -> list[OrganizationalIssue]:
     """Report articles created with validation=force_skip."""
     issues = []
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
+        rel_str = rel.as_posix()
+        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks", "handoffs"):
             continue
 
         try:
-            content = md_file.read_text(encoding="utf-8")
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
             meta, _ = parse_frontmatter(content)
             if (
                 meta.get("validation") == "force_skip"
@@ -470,7 +475,7 @@ def check_unfilled_placeholders(wiki_root: Path) -> list[OrganizationalIssue]:
     if not index_path.exists():
         return issues
 
-    content = index_path.read_text(encoding="utf-8")
+    content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     masked = _mask_code_fences(content)
 
     for line_no, line in enumerate(masked.splitlines(), start=1):
@@ -499,17 +504,17 @@ def check_article_structural_sections(
     from brain79.core.validation import check_missing_sections
 
     schema = load_active_schema(wiki_root)
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     issues: list[OrganizationalIssue] = []
 
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
+        rel_str = rel.as_posix()
+        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks", "handoffs"):
             continue
 
         try:
-            content = md_file.read_text(encoding="utf-8")
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
             meta, _ = parse_frontmatter(content)
             status = str(meta.get("status", "")).lower()
             stability = str(meta.get("stability", "")).lower()
@@ -540,7 +545,7 @@ def check_article_backlinks(
     wiki_root: Path, md_files: list[Path] | None = None
 ) -> list[OrganizationalIssue]:
     """Verify that all articles in subfolders have a backlink navigation footer to INDEX.md."""
-    files = md_files if md_files is not None else sorted(wiki_root.rglob("*.md"))
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
     issues: list[OrganizationalIssue] = []
 
     backlink_markers = (
@@ -552,12 +557,12 @@ def check_article_backlinks(
 
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if len(rel.parts) <= 1 or rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", "handoffs"):
+        rel_str = rel.as_posix()
+        if len(rel.parts) <= 1 or rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks", "handoffs"):
             continue
 
         try:
-            content = md_file.read_text(encoding="utf-8")
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
             meta, body = parse_frontmatter(content)
             status = str(meta.get("status", "")).lower()
             stability = str(meta.get("stability", "")).lower()
@@ -624,7 +629,7 @@ def check_documentation_drift(
 
 def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     """Run all organizational health checks on the wiki."""
-    md_files = [f for f in sorted(wiki_root.rglob("*.md")) if "_raw" not in f.parts]
+    md_files = _filter_md_files(wiki_root)
     issues: list[OrganizationalIssue] = []
     issues.extend(check_index_size(wiki_root))
     issues.extend(check_frontmatter_consistency(wiki_root, md_files=md_files))
@@ -649,7 +654,7 @@ def generate_extraction_suggestions(wiki_root: Path) -> str:
     if not index_path.exists():
         return "INDEX.md not found."
 
-    content = index_path.read_text(encoding="utf-8")
+    content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     lines = content.splitlines()
     suggestions: list[str] = ["## Suggested Extractions from INDEX.md", ""]
 

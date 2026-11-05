@@ -5,18 +5,18 @@ stability: stable
 last_updated: 2026-10-29
 ---
 
-# Architecture — MCP Server
+# Architecture — MCP server
 
-## General Description
+## General description
 
 The Model Context Protocol (MCP) server integration in `brain-79` enables AI assistants (such as Antigravity, Pi, OpenCode, Claude, Cursor) to interact with repository memory via standard JSON-RPC tools.
 
-## Components & Server Lifecycle
+## Components and server lifecycle
 
 1. **`src/brain79/server.py`**: Declares the `FastMCP("brain79")` instance and registers all `brain79_*` tools with `output_schema=None` to prevent redundant response payloads.
 2. **`src/brain79/__main__.py`**: Invokes `_cmd_serve()` when no subcommand is provided.
 
-## Startup Banner & Logging Suppression
+## Startup banner and logging suppression
 
 MCP client hosts (like `agy` or `pi`) interpret any standard error (`stderr`) output emitted during the handshake phase as an initialization failure.
 
@@ -24,7 +24,7 @@ To prevent connection drops:
 - `FASTMCP_SHOW_SERVER_BANNER=false` is set in `__main__.py` before importing `fastmcp`.
 - Loggers for `fastmcp` and `mcp` are configured to level `WARNING` in `server.py`.
 
-## Tool Definitions
+## Tool definitions
 
 All MCP tools are named with the `brain79_` prefix:
 - `brain79_index()`: Returns contents of `INDEX.md`.
@@ -45,7 +45,7 @@ All MCP tools are named with the `brain79_` prefix:
 - `brain79_context(...)`: Performs TF-IDF relevance scoring across articles.
 - `brain79_migrate(apply, dry_run)`: Migrates legacy articles to V3 frontmatter schema.
 
-## File Descriptor Teardown (`mcp.close()`)
+## File descriptor teardown (`mcp.close()`)
 
 During shutdown or client disconnection, `FastMCP` closes associated file descriptors cleanly to prevent socket or lock leaks.
 

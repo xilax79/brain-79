@@ -5,25 +5,25 @@ stability: stable
 last_updated: 2026-10-29
 ---
 
-# Architecture — CLI Dispatcher
+# Architecture — CLI dispatcher
 
-## General Description
+## General description
 
 The CLI dispatcher system in `brain-79` is responsible for parsing global command-line flags and routing user invocations to deterministic CLI subcommands or launching the MCP server fallback.
 
-## Components & Entry Points
+## Components and entry points
 
 1. **`src/brain79/__main__.py`**: Main entry point registered in `pyproject.toml` as `brain79 = "brain79.__main__:main"`.
 2. **`src/brain79/cli/dispatch.py`**: Implementation of argument parsing, subcommand dispatching, and POSIX exit code mappings.
 3. **`src/brain79/cli/io.py`**: Helper routines for standard input and file-based payload handling (`--content-file`, `--content-stdin`).
 
-## Dual-Position Flag Parsing (`parse_global_flags`)
+## Dual-position flag parsing (`parse_global_flags`)
 
 Global flags can appear before or after subcommands without breaking parsing:
 - `--project-root <PATH>` or `--project-root=<PATH>`: Sets target project root explicitly.
 - `--debug`: Enables full traceback emission on unhandled errors.
 
-## Whitelist Routing & Fallback Execution
+## Whitelist routing and fallback execution
 
 The dispatcher maintains a strict whitelist (`WHITELIST`) of 22 subcommands:
 `init`, `update`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
@@ -35,7 +35,7 @@ Routing order in `src/brain79/__main__.py`:
 4. **Whitelisted subcommands**: Routes to `run_cli(cmd, sub_args, debug)`.
 5. **Unknown commands or flags**: Emits an actionable error to `stderr` and exits with code `2` (never falling through to the MCP stdio loop).
 
-## Exit Code Mapping Policy
+## Exit code mapping policy
 
 Subcommand execution maps exceptions to deterministic POSIX exit codes:
 - `0`: Clean success.

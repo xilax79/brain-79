@@ -1,6 +1,6 @@
 ---
 type: decision
-summary: Single-source semantic versioning via Hatchling, FastMCP version handshake exposure, and automated release parity testing
+summary: single-source semantic versioning via Hatchling, FastMCP version handshake exposure, and automated release parity testing
 status: accepted
 date: 2026-11-03
 deciders:
@@ -14,10 +14,10 @@ applies_to:
 related:
   - architecture/roadmap-industrial-scale.md
   - features/version-governance.md
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 ---
 
-# ADR-013 — Architecture — Single-Source Semantic Versioning and Mechanical Release Governance
+# ADR-013 — Architecture — Single-source semantic versioning and mechanical release governance
 
 ## Status
 

@@ -1,13 +1,13 @@
 ---
 type: decision
-summary: Synchronous write-time schema validation with multi-error reporting and deterministic field auto-fill
+summary: synchronous write-time schema validation with multi-error reporting and deterministic field auto-fill
 status: accepted
 date: 2026-08-11
 deciders: [xilax]
 last_updated: 2026-10-29
 ---
 
-# ADR-004 — Curation — Synchronous Write-Time Frontmatter and Location Validation
+# ADR-004 — Curation — Synchronous write-time frontmatter and location validation
 
 ## Status
 
@@ -39,7 +39,7 @@ We chose to enforce synchronous, write-time validation in `brain79_write` / `bra
 - **Positive**: Immediate feedback loop to agents during writing steps with copy-paste templates.
 - **Neutral**: The server injects or normalizes frontmatter during writes.
 
-## Alternatives Considered
+## Alternatives considered
 
 - **Asynchronous linter checks only**: Rejected because malformed files accumulated in the repository prior to linting.
 - **Require LLM to guess all fields**: Rejected due to high token cost and multi-turn retry chains.

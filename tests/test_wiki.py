@@ -9,6 +9,7 @@ import pytest
 from brain79.config import set_project_root
 import brain79.core.wiki as wiki_ops
 from brain79.core.init_project import init_project
+from brain79.core.locks import get_lock_path
 
 
 @pytest.fixture(autouse=True)
@@ -119,7 +120,7 @@ def test_write_article_uses_atomic_replace(setup_wiki_root: Path) -> None:
 def test_write_article_lock_timeout(setup_wiki_root: Path) -> None:
     target = setup_wiki_root / ".brain-79" / "locked.md"
     target.parent.mkdir(parents=True, exist_ok=True)
-    lock_path = target.with_suffix(".md.lock")
+    lock_path = get_lock_path(setup_wiki_root / ".brain-79", "locked.md")
 
     lock = filelock.FileLock(str(lock_path))
     lock.acquire()
@@ -138,8 +139,7 @@ def test_write_article_lock_released_after_write(setup_wiki_root: Path) -> None:
     assert "Updated content" in wiki_ops.read_article("lock_release.md")
 
     # Confirm third-party lock acquisition succeeds immediately after write_article returns
-    target = setup_wiki_root / ".brain-79" / "lock_release.md"
-    lock_path = target.with_suffix(".md.lock")
+    lock_path = get_lock_path(setup_wiki_root / ".brain-79", "lock_release.md")
     lock = filelock.FileLock(str(lock_path))
     with lock.acquire(timeout=0.1):
         pass

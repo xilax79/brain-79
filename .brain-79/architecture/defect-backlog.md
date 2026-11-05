@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: Master defect backlog, forensic root-cause analysis, and specification for bug fixes, agent efficiency, and on-demand handoff policy
+summary: master defect backlog, forensic root-cause analysis, and specification for bug fixes, agent efficiency, and on-demand handoff policy
 stability: stable
 applies_to:
   - src/brain79/templates/SCHEMA.md
@@ -15,10 +15,10 @@ related:
   - architecture/roadmap-industrial-scale.md
   - architecture/current-state.md
   - features/cross-platform-and-lock-isolation.md
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 ---
 
-# Architecture — Defect Backlog & Agent Efficiency Deep Dive
+# Architecture — Defect backlog and agent efficiency deep dive
 
 ## Overview
 
@@ -26,9 +26,9 @@ This document consolidates the root-cause analysis and engineering specification
 
 ---
 
-## 1. Critical Technical Bugs (Engine & Templates)
+## 1. Critical technical bugs (engine and templates)
 
-### BUG-001: Broken Local Link in `SCHEMA_GENERAL.md` and Root Backlink Normalization
+### BUG-001: Broken local link in `SCHEMA_GENERAL.md` and root backlink normalization
 * **Severity:** Critical (`[CRITICAL] Broken Local Links`).
 * **Location:** `src/brain79/templates/SCHEMA_GENERAL.md:64` and `src/brain79/core/frontmatter.py:539`.
 * **Symptom:** Immediately after running `brain79 init --profile general`, running `brain79 lint --strict` fails with:
@@ -46,7 +46,7 @@ This document consolidates the root-cause analysis and engineering specification
 
 ---
 
-### BUG-002: Rigid `article_not_atomic` H2 Threshold & Missing Code-Fence Masking
+### BUG-002: Rigid `article_not_atomic` H2 threshold and missing code-fence masking
 * **Severity:** Moderate (`WARN: Article has X H2 sections (max recommended: 7)`).
 * **Location:** `src/brain79/core/lint_organizational.py:251` (`check_article_atomicity`).
 * **Symptom:** Structured reference documents, checklists, or topic outlines (e.g., `topics/checklist-investigacion-libro.md` with 9 short H2 sections) trigger `article_not_atomic` warnings despite being concise and well-organized.
@@ -62,9 +62,9 @@ This document consolidates the root-cause analysis and engineering specification
 
 ---
 
-## 2. Agent Behavioral Inefficiencies & Protocol Alignment
+## 2. Agent behavioral inefficiencies and protocol alignment
 
-### INEF-001: Redundant `brain79_write` $\rightarrow$ `brain79_navigate` $\rightarrow$ `brain79_index` Loop
+### INEF-001: Redundant `brain79_write` $\rightarrow$ `brain79_navigate` $\rightarrow$ `brain79_index` loop
 * **Observed Waste:** 8 redundant tool calls across 4 turns.
 * **Deep-Dive Root Cause:**
   1. `brain79_write`, `brain79_edit`, and `brain79_write_many` already execute `regenerate_index_navigation()` atomically under lock.
@@ -77,7 +77,7 @@ This document consolidates the root-cause analysis and engineering specification
 
 ---
 
-### INEF-002: Skipping `brain79_orient` in Favor of `brain79_index` + `brain79_read("SCHEMA.md")`
+### INEF-002: Skipping `brain79_orient` in favor of `brain79_index` + `brain79_read("SCHEMA.md")`
 * **Observed Waste:** Multiple sequential cold-start calls instead of 1 turn.
 * **Deep-Dive Root Cause:**
   1. **Contradictory Prompt & Tool Docstring:** The global `~/.pi/agent/AGENTS.md` (line 49) and the docstring of `brain79_index()` in `src/brain79/server.py` (line 55) both say: *"Always call this first at the start of a session"*, directly contradicting `brain79_orient()`.
@@ -89,7 +89,7 @@ This document consolidates the root-cause analysis and engineering specification
 
 ---
 
-### INEF-003 (Corrected): On-Demand Handoff Policy (Preventing Per-Turn Handoff Spam)
+### INEF-003 (corrected): On-demand handoff policy (preventing per-turn handoff spam)
 * **Initial Misdiagnosis in Forensics:** The prior forensic note flagged the absence of a `handoff_write` at the end of an interactive turn as an error.
 * **Architectural Policy Decision (User-Governed Handoffs):**
   Handoffs (`brain79_handoff_write` or the `handoff` field in `brain79_session_commit`) **MUST NOT** be executed automatically at the end of every conversational turn. In a 20-turn interactive session, writing a handoff after each turn would pollute `.brain-79/handoffs/` with 20 redundant snapshots and waste thousands of output tokens.
@@ -104,14 +104,14 @@ This document consolidates the root-cause analysis and engineering specification
 
 ---
 
-### INEF-004: Post-Mutation Broken Link Detection in Inline Health Checks
+### INEF-004: Post-mutation broken link detection in inline health checks
 * **Observed Issue:** Individual article writes reported `lint OK`, leaving a broken link in `SCHEMA.md` unnoticed until a full `brain79 lint` was run.
 * **Deep-Dive Root Cause:**
   `check_file_health()` in `src/brain79/core/wiki.py` checks H1 presence, leakage rules, and broken links *inside the written file*, which is fast and O(1). However, `SCHEMA.md` was broken at `init` time (`BUG-001`), not during `write`. Once `BUG-001` is fixed and `check_file_health` validates outgoing links from any written/edited file, inline health checks remain fast while catching broken links immediately on write.
 
 ---
 
-## 3. Implementation Checklist (Pre-Phase 6 Bugfix & Protocol Polish)
+## 3. Implementation checklist (pre-Phase 6 bugfix and protocol polish)
 
 1. **`src/brain79/templates/SCHEMA_GENERAL.md` & `SCHEMA.md`:** Fix root backlink to `[← Volver al Índice](INDEX.md)`.
 2. **`src/brain79/core/frontmatter.py`:** Ensure `normalize_backlink_footer` normalizes `](../INDEX.md)` to `](INDEX.md)` for root-level files (`len(parts) == 1`).

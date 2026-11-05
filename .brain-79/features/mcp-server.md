@@ -6,7 +6,7 @@ version: 1.1.0
 last_updated: 2026-10-29
 ---
 
-# Feature — FastMCP Integration
+# Feature — FastMCP integration
 
 ## Overview
 
@@ -14,7 +14,7 @@ The Model Context Protocol (MCP) server feature exposes `brain-79` operations as
 
 Built using `FastMCP 2.0+`, it suppresses standard error banners during initialization and configures `output_schema=None` across tools to prevent redundant response wrapping, saving token bandwidth in AI harnesses.
 
-## MCP Tools Reference
+## MCP tools reference
 
 | MCP Tool | CLI Equivalent | Purpose |
 |---|---|---|
@@ -36,14 +36,14 @@ Built using `FastMCP 2.0+`, it suppresses standard error banners during initiali
 | `brain79_context(query)` | `brain79 context` | Retrieve relevant articles via TF-IDF |
 | `brain79_migrate(apply, dry_run)` | `brain79 migrate` | Migrate legacy articles to frontmatter V3 |
 
-## Usage Examples
+## Usage examples
 
 In an AI assistant session:
 - Call `brain79_index()` at cold-start.
 - Call `brain79_read("architecture/mcp-server.md")` to inspect system design.
 - Call `brain79_write("decisions/adr-001.md", content)` to persist architectural decisions.
 
-## Known Edge Cases
+## Known edge cases
 
 - Stderr output during handshake drops connection on strict clients (`agy`, `pi`); suppressed via `FASTMCP_SHOW_SERVER_BANNER=false`.
 - Writes are guarded by inter-process `filelock` to ensure atomic mutations during concurrent execution.

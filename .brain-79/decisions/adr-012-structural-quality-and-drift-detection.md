@@ -1,6 +1,6 @@
 ---
 type: decision
-summary: Section-level structural skeletons, auto-injected backlinks, and deterministic code-to-wiki drift detection
+summary: section-level structural skeletons, auto-injected backlinks, and deterministic code-to-wiki drift detection
 status: accepted
 date: 2026-11-03
 deciders:
@@ -17,10 +17,10 @@ related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-011-session-commit-and-batch-reading.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 ---
 
-# ADR-012 — Structural Article Quality, Auto-Injected Backlinks, and Deterministic Drift Detection
+# ADR-012 — Structural article quality, auto-injected backlinks, and deterministic drift detection
 
 ## Status
 
@@ -38,7 +38,7 @@ Prior to Phase 4 of the Industrial-Scale Roadmap, three documentation degradatio
 We implemented **Phase 4: Structural Article Quality & Deterministic Drift Detection**:
 
 1. **Section-Level Structural Skeletons & Schema Validation**:
-   - `ActiveSchema` defines type-specific `required_sections` (e.g. `decision` requires `## Status`, `## Context`, `## Decision`, `## Consequences`; `feature` requires `## Overview`; `architecture` requires `## Overview` or `## General Description` or `## State`).
+   - `ActiveSchema` defines type-specific `required_sections` (e.g. `decision` requires `## Status`, `## Context`, `## Decision`, `## Consequences`; `feature` requires `## Overview`; `architecture` requires `## Overview` or `## General description` or `## State`).
    - Skeletons support alternatives and synonyms while masking fenced code blocks to prevent false positive heading matches.
    - `brain79_schema()` and `get_schema_documentation()` expose full markdown document skeletons (frontmatter, H1 title, H2 headings, and backlink footer).
    - `check_article_structural_sections` flags missing structural sections with rule `article_missing_required_sections` (severity `warning`).

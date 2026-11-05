@@ -1,12 +1,12 @@
 ---
 type: feature
-summary: Tactical session transitions, immutable state snapshots, and anti-hallucination work tracking
+summary: tactical session transitions, immutable state snapshots, and anti-hallucination work tracking
 status: shipped
 version: 1.0.0
 last_updated: 2026-10-29
 ---
 
-# Feature — Short-Term Handoff Continuity
+# Feature — Short-term handoff continuity
 
 ## Overview
 
@@ -14,7 +14,7 @@ The Short-Term Handoff feature provides tactical transition management between A
 
 They track completed tasks, pending work items, boot instructions, and knowledge pending promotion to the long-term wiki.
 
-## Tools & Commands
+## Tools and commands
 
 | Interface | Method | Description |
 |---|---|---|
@@ -23,14 +23,14 @@ They track completed tasks, pending work items, boot instructions, and knowledge
 | MCP | `brain79_handoff_write(...)` | Write structured session handoff |
 | MCP | `brain79_handoff_read(ref)` | Resolve and display handoff |
 
-## Invariants & Guardrails
+## Invariants and guardrails
 
 1. **Session Type Strictness**: `session_type` must be one of `{"feature", "bugfix", "research", "brainstorming"}`.
 2. **Anti-Hallucination Guard**: If `pending_work` is empty, `boot_instruction` must explicitly state that no pending tasks remain.
 3. **Lineage Reference**: `previous_handoff_ref` verifies existence of the preceding handoff.
 4. **Promotion Warning**: If `knowledge_pending_promotion` is non-empty, `brain79_handoff_read` injects a dynamic warning instructing the incoming agent to promote learnings to the wiki using `brain79_ingest`.
 
-## Usage Examples
+## Usage examples
 
 ```bash
 # Write handoff at end of session
@@ -44,7 +44,7 @@ brain79 handoff-write \
 brain79 handoff-read latest
 ```
 
-## Known Edge Cases
+## Known edge cases
 
 - Handoffs are strictly immutable. Updating state requires writing a new handoff that references the previous one.
 - To wipe handoffs operational cleanup (e.g. end of sprint), use `brain79 handoff-purge`.

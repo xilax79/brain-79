@@ -21,7 +21,7 @@ The rules are mechanically validated by `brain79_write` and `brain79_lint`.
 | `_raw/sessions/` | `raw_session` | `type`, `session_id`, `session_type`, `last_updated` | `session_type`: work, general, writing, analysis, research, feature, bugfix, brainstorming | Raw session summaries |
 | `_raw/commits/` | `raw_commit` | `type`, `commit_sha`, `last_updated` | — | Commit / revision metadata |
 
-### Frontmatter Templates
+### Frontmatter templates
 
 Optional fields accepted across types: `supersedes`, `related`, `owner` (plus `tags` on `topic`, `scope` on `context`).
 
@@ -29,7 +29,7 @@ Optional fields accepted across types: `supersedes`, `related`, `owner` (plus `t
 # Topic (topics/*.md)
 ---
 type: topic
-summary: One-line summary of this topic
+summary: one-line summary of this topic
 status: active  # draft | active | archived | legacy
 last_updated: YYYY-MM-DD
 ---
@@ -37,7 +37,7 @@ last_updated: YYYY-MM-DD
 # Decision (decisions/adr-*.md)
 ---
 type: decision
-summary: One-line summary of decision
+summary: one-line summary of decision
 status: proposed  # proposed | accepted | superseded | rejected | legacy
 date: YYYY-MM-DD
 last_updated: YYYY-MM-DD
@@ -46,14 +46,14 @@ last_updated: YYYY-MM-DD
 # Context (context/*.md)
 ---
 type: context
-summary: One-line summary of project context
+summary: one-line summary of project context
 last_updated: YYYY-MM-DD
 ---
 
 # Log (log/*.md)
 ---
 type: log
-summary: One-line summary of milestone
+summary: one-line summary of milestone
 date: YYYY-MM-DD
 last_updated: YYYY-MM-DD
 ---

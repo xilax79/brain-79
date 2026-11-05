@@ -1,6 +1,6 @@
 ---
 type: feature
-summary: Single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
+summary: single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
 status: shipped
 version: 2.0.0
 applies_to:
@@ -11,10 +11,10 @@ applies_to:
 related:
   - architecture/roadmap-industrial-scale.md
   - decisions/adr-013-versioning-and-release-governance.md
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 ---
 
-# Feature — Versioning & Release Governance (Phase 5 Specification)
+# Feature — Versioning and release governance (Phase 5 specification)
 
 ## Overview
 
@@ -22,7 +22,7 @@ This specification defines the mechanical versioning and release governance syst
 
 ---
 
-## Problem Statement
+## Problem statement
 
 1. **Manual Version Triplication:** Version strings are currently hardcoded separately in `src/brain79/__init__.py`, `pyproject.toml`, and `README.md` badges, creating drift risk during releases.
 2. **Missing MCP Server Version:** `FastMCP("brain79")` in `src/brain79/server.py` does not pass `version=__version__`, omitting the package version during the JSON-RPC `initialize` handshake.
@@ -31,9 +31,9 @@ This specification defines the mechanical versioning and release governance syst
 
 ---
 
-## Architecture & Design (4 Pillars)
+## Architecture and design (4 pillars)
 
-### 1. Single Source of Truth (Hatchling Dynamic Version)
+### 1. Single source of truth (Hatchling dynamic version)
 - **Canonical Source:** `src/brain79/__init__.py` (`__version__ = "2.0.0"`).
 - **Build Configuration (`pyproject.toml`):**
   Replace the static `version = "1.1.0"` entry with dynamic resolution:
@@ -46,16 +46,16 @@ This specification defines the mechanical versioning and release governance syst
   path = "src/brain79/__init__.py"
   ```
 
-### 2. Uniform CLI & FastMCP Exposure
+### 2. Uniform CLI and FastMCP exposure
 - **CLI (`src/brain79/__main__.py`):** `brain79 -v` and `brain79 --version` read `brain79.__version__`.
 - **FastMCP (`src/brain79/server.py`):** Pass `version=__version__` when instantiating `FastMCP("brain79", version=__version__)`.
 
-### 3. Semantic Versioning Policy (`MAJOR.MINOR.PATCH`)
+### 3. Semantic versioning policy (`MAJOR.MINOR.PATCH`)
 - **`MAJOR` (`X.0.0`):** Paradigm shifts in the session protocol, mandatory schema rules requiring `brain79 migrate --apply` on existing wikis, or removal/renaming of CLI/MCP tools.
 - **`MINOR` (`x.Y.0`):** New CLI subcommands / MCP tools (preserving 1:1 symmetry), new optional frontmatter fields, or non-breaking linter warnings.
 - **`PATCH` (`x.y.Z`):** Bug fixes, `--help` copy improvements, internal performance optimizations, or template refinements that do not alter validation contracts.
 
-### 4. Mechanical Release Parity Invariants (`tests/test_version_governance.py`)
+### 4. Mechanical release parity invariants (`tests/test_version_governance.py`)
 Every `pytest` run must mechanically verify:
 1. **Valid SemVer:** `brain79.__version__` matches `^\d+\.\d+\.\d+$`.
 2. **Hatchling Dynamic Configuration:** `pyproject.toml` declares `dynamic = ["version"]` and points `[tool.hatch.version]` to `src/brain79/__init__.py`.
@@ -65,7 +65,7 @@ Every `pytest` run must mechanically verify:
 
 ---
 
-## Implementation Checklist (Developer Agent)
+## Implementation checklist (developer agent)
 
 1. **`src/brain79/__init__.py`:** Bump `__version__ = "2.0.0"`.
 2. **`pyproject.toml`:** Switch to `dynamic = ["version"]` and add `[tool.hatch.version] path = "src/brain79/__init__.py"`.

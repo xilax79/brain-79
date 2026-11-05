@@ -11,6 +11,10 @@ from brain79.core.frontmatter import (
     parse_frontmatter,
     sanitize_summary,
 )
+from brain79.core.locks import (
+    atomic_replace_with_retry,
+    cleanup_legacy_inline_locks,
+)
 
 _TYPE_DEFAULTS: dict[str, dict[str, str]] = {
     "decision": {
@@ -66,11 +70,11 @@ def suggest_relocations(wiki_root: Path) -> str:
 
     for md_file in sorted(wiki_root.rglob("*.md")):
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
-        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] == "_raw":
+        rel_str = rel.as_posix()
+        if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks"):
             continue
 
-        content = md_file.read_text(encoding="utf-8")
+        content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
         if content.startswith("---\n"):
             try:
                 meta, _ = parse_frontmatter(content)
@@ -109,16 +113,16 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
 
     for md_file in sorted(wiki_root.rglob("*.md")):
         rel = md_file.relative_to(wiki_root)
-        rel_str = str(rel)
+        rel_str = rel.as_posix()
 
         if rel_str in ("INDEX.md", "SCHEMA.md"):
             skipped.append(f"{rel_str}: protected")
             continue
-        if rel.parts and rel.parts[0] == "_raw":
-            skipped.append(f"{rel_str}: in _raw/")
+        if rel.parts and rel.parts[0] in ("_raw", ".locks"):
+            skipped.append(f"{rel_str}: in _raw/ or .locks/")
             continue
 
-        content = md_file.read_text(encoding="utf-8")
+        content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
         today = datetime.now(UTC).strftime("%Y-%m-%d")
         file_mtime = datetime.fromtimestamp(md_file.stat().st_mtime, UTC).strftime("%Y-%m-%d")
         inferred_type = _infer_type_from_location(rel, schema=schema)
@@ -226,8 +230,8 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
         if not dry_run:
             tmp_path = md_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
             try:
-                tmp_path.write_text(new_content, encoding="utf-8")
-                tmp_path.replace(md_file)
+                tmp_path.write_text(new_content, encoding="utf-8", newline="\n")
+                atomic_replace_with_retry(tmp_path, md_file)
                 try:
                     from brain79.core.navigation import extract_title_and_summary
                     title, summary = extract_title_and_summary(new_content)
@@ -244,6 +248,9 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
                 raise
 
         changes.append(rel_str)
+
+    if not dry_run:
+        cleanup_legacy_inline_locks(wiki_root)
 
     report_lines = [
         f"# Migration Report ({'DRY RUN' if dry_run else 'APPLIED'})",

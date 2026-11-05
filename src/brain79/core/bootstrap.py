@@ -8,6 +8,7 @@ from pathlib import Path
 import filelock
 
 from brain79.config import get_project_root, get_wiki_root
+from brain79.core.locks import acquire_wiki_lock, atomic_replace_with_retry
 
 # Absolute maximum bytes of file content to include in the manifest
 _TOTAL_CONTENT_BUDGET_BYTES: int = 80_000
@@ -169,9 +170,9 @@ def _save_bootstrap_state(wiki_root: Path, state: dict) -> None:
 
     tmp_path = wiki_root / f".bootstrap_state.json.tmp.{uuid.uuid4().hex}"
     target_path = wiki_root / ".bootstrap_state.json"
-    tmp_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    tmp_path.write_text(json.dumps(state, indent=2), encoding="utf-8", newline="\n")
     try:
-        tmp_path.replace(target_path)
+        atomic_replace_with_retry(tmp_path, target_path)
     finally:
         if tmp_path.exists():
             try:
@@ -341,7 +342,7 @@ def _collect_root_signals(project_root: Path, warnings: list[str]) -> dict:
         try:
             wf_files = sorted([p for p in workflows_dir.iterdir() if p.is_file()])
             if wf_files:
-                rel_wf = str(wf_files[0].relative_to(project_root))
+                rel_wf = wf_files[0].relative_to(project_root).as_posix()
                 candidate_files.append(rel_wf)
         except OSError:
             pass
@@ -399,7 +400,7 @@ def _collect_scope_files(
     for scope_path in scope_paths:
         files: list[dict] = []
         try:
-            rel_key = str(scope_path.relative_to(project_root))
+            rel_key = scope_path.relative_to(project_root).as_posix()
         except ValueError:
             continue
 
@@ -421,7 +422,7 @@ def _collect_scope_files(
                         continue
                     files.append(
                         {
-                            "path": str(file_path.relative_to(project_root)),
+                            "path": file_path.relative_to(project_root).as_posix(),
                             "content": content,
                         }
                     )
@@ -441,7 +442,7 @@ def _count_wiki_articles(wiki_root: Path) -> int:
     try:
         for p in wiki_root.glob("**/*.md"):
             rel = p.relative_to(wiki_root)
-            if not str(rel).startswith("_raw"):
+            if not rel.as_posix().startswith("_raw") and not rel.as_posix().startswith(".locks"):
                 count += 1
     except OSError:
         return 0
@@ -570,11 +571,10 @@ def run_bootstrap(scope: str | None = None, force: bool = False) -> str:
         )
 
     project_root = get_project_root()
-    lock_path = wiki_root / ".bootstrap_state.json.lock"
 
     # Guard 2: idempotency check
     try:
-        with filelock.FileLock(str(lock_path), timeout=10):
+        with acquire_wiki_lock(wiki_root, ".bootstrap_state.json", timeout=10):
             state = _load_bootstrap_state(wiki_root)
             if state and not force:
                 return _format_idempotency_warning(state)
@@ -608,7 +608,7 @@ def run_bootstrap(scope: str | None = None, force: bool = False) -> str:
 
     existing_articles = _count_wiki_articles(wiki_root)
     try:
-        with filelock.FileLock(str(lock_path), timeout=10):
+        with acquire_wiki_lock(wiki_root, ".bootstrap_state.json", timeout=10):
             _save_bootstrap_state(
                 wiki_root,
                 {

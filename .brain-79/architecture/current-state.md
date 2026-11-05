@@ -1,17 +1,17 @@
 ---
 type: architecture
-summary: High-level overview of system architecture, active milestones, runtime invariants, and roadmap
+summary: high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 ---
 
-# Architecture — System Current State
+# Architecture — System current state
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 2.0.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 2.1.0.
 
-## Completed Milestones & Merged Features
+## Completed milestones and merged features
 
 - **Phase 1 – Core MVP & MCP Server**: FastMCP 2.0 integration, dual-mode CLI/MCP architecture, atomic POSIX file writes, and initial wiki IO primitives (`read`, `write`, `list`, `search`).
 - **Phase 1.5 & 1.7 – Handoff Continuity & Init**: Immutable short-term session handoffs (`handoff-write`, `handoff-read`), project protocol initializer (`init`), pre-commit hooks, and universal `AGENTS.md` manifest.
@@ -28,22 +28,23 @@ This document maintains a high-level summary of the repository's current archite
 - **Phase 16 – Phase 3: Zero-Turn Session Execution**: Completed the Two-Call Session Protocol with 1-call atomic session finalization (`brain79_session_commit` / `brain79 session-commit`) guaranteeing all-or-nothing rollback across writes, in-memory simulated edits, and handoffs, and section-projected batch reading (`brain79_read_batch`, `brain79_read` with `sections`). Documented in [ADR-011](../decisions/adr-011-session-commit-and-batch-reading.md).
 - **Phase 17 – Phase 4: Structural Article Quality & Deterministic Drift Detection**: Enforced document structural integrity with section skeletons per document type, automatic idempotent backlink footer normalization on write (`[← Volver al Índice](../INDEX.md)`), and deterministic code-to-wiki drift detection via `applies_to` frontmatter against git commit timestamps and filesystem mtimes, surfacing alerts in `brain79 lint` and `brain79_orient`. Documented in [ADR-012](../decisions/adr-012-structural-quality-and-drift-detection.md).
 - **Phase 18 – Phase 5: Versioning & Release Governance (v2.0.0)**: Single-source semantic versioning via Hatchling dynamic metadata resolution (`__version__ = "2.0.0"` in `src/brain79/__init__.py`), FastMCP server initialization version handshake exposure, and automated test-enforced release parity across SemVer syntax, Hatchling dynamic build settings, README badges, and changelog presence. Documented in [ADR-013](../decisions/adr-013-versioning-and-release-governance.md).
+- **Phase 19 – Phase 5.5: Defect Backlog Remediations & Agent Protocol Polish (v2.0.2)**: Resolved broken general profile root backlink (`BUG-001`), composite H2 atomicity thresholds (`BUG-002`), self-documenting write receipts with auto-synced navigation confirmation (`INEF-001`), active schema summary block in cold start (`INEF-002`), and formalized On-Demand Handoff Policy across engine and manifests (`INEF-003`). Documented in [Architecture — Defect Backlog](defect-backlog.md).
+- **Phase 20 – Phase 6: Centralized Lock Isolation & Cross-Platform OS Portability**: Isolated inter-process mutex locks into `.brain-79/.locks/` (eliminating `.md.lock` visual clutter), added automatic legacy lock purge, enforced Linux `ext4` segment-by-segment case sensitivity on macOS APFS (`has_exact_case_path`), enforced strict POSIX paths across all registries, added `atomic_replace_with_retry` for NTFS `PermissionError` resilience, and guaranteed strict LF (`\n`) I/O. Documented in [ADR-014](../decisions/adr-014-centralized-locks-and-cross-platform-io.md).
 - **Self-Wiki Dogfooding (Phase A-D)**: Fully populated self-documenting `.brain-79/` wiki verified by `brain79 lint --strict`.
 
-## System Invariants & Invariant Guards
+## System invariants and invariant guards
 
 - **Wiki Primacy**: Long-term wiki in `.brain-79/` is the absolute source of truth over tactical handoffs.
 - **Zero-Modification Idempotence**: Wiki updates strictly require real repository mutations (code, tests, decisions); synthetic documentation churn is rejected.
 - **Synchronous Write Validation**: Writes to `.brain-79/` are validated against schema rules prior to disk mutation.
 - **Code Fence Masking**: Regex linter rules mask code blocks before scanning to eliminate false positive leakage errors.
 - **1:1 CLI & MCP Symmetry**: Every operational subcommand has a matching `@mcp.tool()` equivalent in `server.py`.
-- **Atomic File Mutexes**: Mutations to articles and `INDEX.md` use interprocess `.lock` files to prevent write corruption.
+- **Centralized Lock Isolation**: File mutexes are strictly isolated into `.brain-79/.locks/`, maintaining 100% clean content directories.
+- **Cross-Platform Determinism**: Strict POSIX path serialization (`.as_posix()`), pure LF (`\n`) line endings, and segment-by-segment character casing parity across macOS, Linux, and Windows.
 
-## Immediate Focus & Maintenance
+## Immediate focus and maintenance
 
-- Maintenance of organizational linter rules and schema validation.
-- Preservation of 100% test coverage and static type safety (`mypy --strict`, `ruff`).
-- Preparation for PyPI packaging release (v2.0.0) and execution of Phase 6 (Cross-Platform OS Portability & CI Matrix).
+- Execution of Phase 7: Project Protocol Upgrade (`brain79 update-project`), Legacy Wiki Conditioning, Multi-Harness Setup, and `brain79 doctor` Diagnostics.
 
 ---
 

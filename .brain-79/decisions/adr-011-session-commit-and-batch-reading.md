@@ -1,6 +1,6 @@
 ---
 type: decision
-summary: 1-Call atomic session finalization and section-projected batch reading
+summary: 1-call atomic session finalization and section-projected batch reading
 status: accepted
 date: 2026-11-02
 deciders:
@@ -14,10 +14,10 @@ related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 ---
 
-# ADR-011 — Two-Call Session Protocol: 1-Call Atomic Session Commit & Section-Projected Batch Reading
+# ADR-011 — Two-call session protocol: 1-call atomic session commit and section-projected batch reading
 
 ## Status
 

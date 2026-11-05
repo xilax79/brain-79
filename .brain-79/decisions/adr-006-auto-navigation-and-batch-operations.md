@@ -1,6 +1,6 @@
 ---
 type: decision
-summary: Automatic thread-safe navigation synchronization, inline write diagnostics, and partial/batch write operations
+summary: automatic thread-safe navigation synchronization, inline write diagnostics, and partial/batch write operations
 status: accepted
 date: 2026-10-29
 deciders:
@@ -8,7 +8,7 @@ deciders:
 last_updated: 2026-10-29
 ---
 
-# ADR-006 — Architecture — Automatic Navigation Regeneration, Inline Health Checks, and Partial/Batch Operations
+# ADR-006 — Architecture — Automatic navigation regeneration, inline health checks, and partial/batch operations
 
 ## Status
 

@@ -136,7 +136,7 @@ def get_wiki_snapshot(wiki_root: Path | None = None) -> list[Path]:
         except OSError:
             continue
 
-    snapshot.sort(key=lambda x: str(x.relative_to(w_root)))
+    snapshot.sort(key=lambda x: x.relative_to(w_root).as_posix())
     return snapshot
 
 
@@ -251,12 +251,12 @@ def _safe_mtime_ns(p: Path) -> int:
 
 
 def _match_applies_to(path_pattern: str, target_path: str) -> bool:
-    """Check if target_path matches an applies_to glob pattern or prefix."""
+    """Check if target_path matches an applies_to glob pattern or prefix (case-sensitive)."""
     pat = path_pattern.strip().lstrip("/")
     tgt = target_path.strip().lstrip("/")
     if pat == tgt:
         return True
-    if fnmatch.fnmatch(tgt, pat):
+    if fnmatch.fnmatchcase(tgt, pat):
         return True
     # If pat is a directory without wildcard (e.g. "src/auth/"), match prefix
     if pat.endswith("/") and tgt.startswith(pat):
@@ -324,12 +324,12 @@ def rank_context_articles(
         if ep not in combined_paths:
             combined_paths.append(ep)
 
-    normalized_paths = [p.strip().lstrip("/") for p in combined_paths if p.strip()]
+    normalized_paths = [p.replace("\\", "/").strip().lstrip("/") for p in combined_paths if p.strip()]
 
     # SIGNAL 1: Deterministic Path Match via applies_to
     if normalized_paths:
         for p in snapshot:
-            rel_str = str(p.relative_to(w_root))
+            rel_str = p.relative_to(w_root).as_posix()
             entry = registry_by_path.get(rel_str)
             applies_patterns: list[str] = []
             if entry and entry.get("applies_to"):
@@ -367,8 +367,8 @@ def rank_context_articles(
 
         for p in snapshot:
             try:
-                c = p.read_text(encoding="utf-8")
-                rel_str = str(p.relative_to(w_root))
+                c = p.read_text(encoding="utf-8").replace("\r\n", "\n")
+                rel_str = p.relative_to(w_root).as_posix()
                 reg_entry = registry_by_path.get(rel_str)
 
                 # Extract H1 title and summary
@@ -438,7 +438,7 @@ def rank_context_articles(
         if score > 0.0
     ]
     candidates.sort(
-        key=lambda item: (-item[0], str(item[1].relative_to(w_root)))
+        key=lambda item: (-item[0], item[1].relative_to(w_root).as_posix())
     )
 
     # SIGNAL 3: 1-Hop ADR Reference Graph Expansion (Anti-Omission Guard)
@@ -447,7 +447,7 @@ def rank_context_articles(
     already_selected = {p for _, p, _ in top_candidates}
 
     for _, p, _ in top_candidates:
-        rel_str = str(p.relative_to(w_root))
+        rel_str = p.relative_to(w_root).as_posix()
         entry = registry_by_path.get(rel_str)
         linked_targets: list[str] = []
         if entry:
@@ -530,7 +530,7 @@ def get_context(
                 remaining.sort(
                     key=lambda x: (
                         -_safe_mtime_ns(x),
-                        str(x.relative_to(w_root)),
+                        x.relative_to(w_root).as_posix(),
                     )
                 )
                 fallback_items = [index_path] + remaining[: effective_top_n - 1]
@@ -539,7 +539,7 @@ def get_context(
                     snapshot,
                     key=lambda x: (
                         -_safe_mtime_ns(x),
-                        str(x.relative_to(w_root)),
+                        x.relative_to(w_root).as_posix(),
                     ),
                 )
                 fallback_items = sorted_snapshot[:effective_top_n]
@@ -553,7 +553,7 @@ def get_context(
                 "## Artículos recientes (Fallback de Supervivencia):",
             ]
             for idx, item in enumerate(fallback_items, 1):
-                rel = item.relative_to(w_root)
+                rel = item.relative_to(w_root).as_posix()
                 lines.append(f"{idx}. `{rel}` (Score: N/A)")
             return "\n".join(lines)
 
@@ -576,7 +576,7 @@ def get_context(
         )
     else:
         for idx, (score, p, hits) in enumerate(top_articles, 1):
-            rel = p.relative_to(w_root)
+            rel = p.relative_to(w_root).as_posix()
             hits_formatted = ", ".join(f"`{h}`" for h in hits)
             lines.append(
                 f"{idx}. `{rel}` (Score: {score:.2f}) - Hits: {hits_formatted}"

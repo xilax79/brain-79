@@ -1,10 +1,10 @@
 ---
 type: product
-summary: Deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
+summary: deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
 last_updated: 2026-10-29
 ---
 
-# Brain-79 — Product Vision
+# Brain-79 — Product vision
 
 Deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
 
@@ -26,7 +26,7 @@ LLMs maintain wikis that degrade organically:
 4. **Handoffs**: Continuity between sessions without losing operational context.
 5. **Organizational enforcement**: A linter that detects 9 types of knowledge degradation.
 
-## Target Users
+## Target users
 
 - Development projects where an AI agent works in recurring sessions.
 - Knowledge wikis with `INDEX.md` that grows uncontrollably or without structure.

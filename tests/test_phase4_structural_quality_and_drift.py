@@ -661,8 +661,8 @@ def test_adversarial_defect_7_template_schema_in_sync() -> None:
     template_schema = Path("src/brain79/templates/SCHEMA.md").read_text(encoding="utf-8")
     project_schema = Path(".brain-79/SCHEMA.md").read_text(encoding="utf-8")
 
-    assert "Document Structural Skeletons & Required Sections" in template_schema
-    assert "Deterministic Drift Detection (`applies_to`)" in template_schema
-    assert "Document Structural Skeletons & Required Sections" in project_schema
-    assert "Deterministic Drift Detection (`applies_to`)" in project_schema
+    assert "Document structural skeletons and required sections" in template_schema
+    assert "Deterministic drift detection (`applies_to`)" in template_schema
+    assert "Document structural skeletons and required sections" in project_schema
+    assert "Deterministic drift detection (`applies_to`)" in project_schema
 

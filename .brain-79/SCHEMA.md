@@ -1,7 +1,7 @@
 ---
 profile: software
 ---
-# Brain-79 — Wiki Schema (Normative)
+# Brain-79 — Wiki schema (normative)
 
 This file defines the **enforced rules** for maintaining this project's wiki.
 The rules in this file are mechanically validated by `brain79_write` and `brain79_lint`.
@@ -23,7 +23,7 @@ Violations will be rejected at write time and reported by the linter.
 | `_raw/sessions/` | `raw_session` | `type`, `session_id`, `session_type`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming | Immutable session summaries |
 | `_raw/commits/` | `raw_commit` | `type`, `commit_sha`, `last_updated` | — | Commit metadata |
 
-### Frontmatter Templates
+### Frontmatter templates
 
 Optional fields accepted across types: `supersedes`, `related`, `owner` (plus `summary` on `navigation` and `handoff`).
 
@@ -31,7 +31,7 @@ Optional fields accepted across types: `supersedes`, `related`, `owner` (plus `s
 # Feature (features/*.md)
 ---
 type: feature
-summary: One-line summary for INDEX.md entry
+summary: one-line summary for INDEX.md entry
 status: planned  # planned | in_progress | shipped | deprecated | legacy
 version: 1.0.0
 last_updated: YYYY-MM-DD
@@ -40,7 +40,7 @@ last_updated: YYYY-MM-DD
 # Decision (decisions/adr-*.md)
 ---
 type: decision
-summary: One-line summary of architectural decision
+summary: one-line summary of architectural decision
 status: proposed  # proposed | accepted | superseded | rejected | legacy
 date: YYYY-MM-DD
 deciders: [author]
@@ -50,7 +50,7 @@ last_updated: YYYY-MM-DD
 # Architecture (architecture/*.md)
 ---
 type: architecture
-summary: One-line summary of subsystem or pattern
+summary: one-line summary of subsystem or pattern
 stability: experimental  # experimental | stable | legacy
 last_updated: YYYY-MM-DD
 ---
@@ -58,12 +58,12 @@ last_updated: YYYY-MM-DD
 # Product (product/*.md)
 ---
 type: product
-summary: One-line summary of domain or vision
+summary: one-line summary of domain or vision
 last_updated: YYYY-MM-DD
 ---
 ```
 
-### Back-Navigation Links
+### Back-navigation links
 
 Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions/`, `changelog/`) automatically conclude with a back-navigation link to facilitate reading in editors (VS Code, Obsidian, GitHub). This is enforced and auto-injected during write normalization:
 
@@ -73,23 +73,23 @@ Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions
 [← Volver al Índice](../INDEX.md)
 ```
 
-### Document Structural Skeletons & Required Sections
+### Document structural skeletons and required sections
 
 Articles must include standard structural sections per document type:
 - `decision`: Requires `## Status`, `## Context`, `## Decision`, `## Consequences`.
 - `feature`: Requires `## Overview`.
-- `architecture`: Requires `## Overview`, `## General Description`, or `## State`.
+- `architecture`: Requires `## Overview`, `## General description`, or `## State`.
 - `product`: Requires `## Overview`, `## Problem`, or `## Executive Summary`.
 
 Inspect complete document skeletons via `brain79_schema(type)`.
 
-### Deterministic Drift Detection (`applies_to`)
+### Deterministic drift detection (`applies_to`)
 
 Articles declaring `applies_to` paths or globs in frontmatter are continuously checked against git commit timestamps and filesystem modification dates. Stale articles surface as `documentation_drift_suspected` warnings in `brain79 lint` and `brain79_orient`.
 
 ---
 
-## Writing & Documentation Guidelines (Clean B2)
+## Writing and documentation guidelines (clean B2)
 
 To ensure the wiki remains accessible to human engineers and easy for LLMs to reason over without high entropy:
 
@@ -106,7 +106,7 @@ To ensure the wiki remains accessible to human engineers and easy for LLMs to re
 
 ---
 
-## Operational Invariants
+## Operational invariants
 
 - **Zero-Modification Idempotence**: Do not mutate wiki files unless concrete repository changes (code, tests, architecture decisions) occurred in the session.
 - **Pure Routing Table**: `INDEX.md` is strictly an automated index; freeform prose blocks are forbidden.

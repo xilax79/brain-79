@@ -1,13 +1,13 @@
 ---
 type: decision
-summary: Dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server
+summary: dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server
 status: accepted
 date: 2026-08-11
 deciders: [xilax]
 last_updated: 2026-10-29
 ---
 
-# ADR-001 — Architecture — Dual-Mode Hybrid CLI & MCP Server Interface
+# ADR-001 — Architecture — Dual-mode hybrid CLI and MCP server interface
 
 ## Status
 
@@ -31,7 +31,7 @@ We chose to implement `brain-79` as a dual-mode hybrid tool:
 - **Positive**: Pre-commit hooks and CI scripts can execute `brain79 lint` directly.
 - **Negative**: Entry point `__main__.py` must parse flags carefully to suppress MCP startup banners (`FASTMCP_SHOW_SERVER_BANNER=false`) when serving.
 
-## Alternatives Considered
+## Alternatives considered
 
 - **Separate CLI binary (`brain79-cli`)**: Rejected to avoid binary clutter and separate package entry points.
 - **MCP-only interface**: Rejected because git hooks and terminal pipelines cannot interact with stdio JSON-RPC directly.

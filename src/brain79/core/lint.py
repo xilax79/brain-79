@@ -10,9 +10,14 @@ import filelock
 
 from brain79.config import get_wiki_root
 from brain79.core.lint_organizational import OrganizationalIssue
+from brain79.core.locks import (
+    get_lock_path,
+    has_exact_case_path,
+    rel_posix,
+)
 
-# Directories excluded from article listings (raw sources are not wiki articles)
-_EXCLUDED_DIRS = {"_raw"}
+# Directories excluded from article listings (raw sources and locks are not wiki articles)
+_EXCLUDED_DIRS = {"_raw", ".locks"}
 
 MAX_FILE_SIZE = 1 * 1024 * 1024  # 1 MB
 
@@ -73,14 +78,14 @@ def _extract_raw_link_targets(content: str) -> list[str]:
     return raw_targets
 
 
-def lint_wiki() -> str:
+def lint_wiki(wiki_root: Path | None = None) -> str:
     """
     Run a deterministic health check scan on the project wiki (.brain-79/).
 
     Returns a Markdown-formatted report listing broken local links, namespace violations,
     structural errors/warnings, and orphan articles.
     """
-    wiki_root = get_wiki_root().resolve()
+    w_root = (wiki_root or get_wiki_root()).resolve()
     start_time = time.time()
     timeout_reached = False
 
@@ -89,7 +94,7 @@ def lint_wiki() -> str:
     structural_errors: list[tuple[str, str]] = []
     file_graph: dict[str, set[str]] = collections.defaultdict(set)
 
-    if not wiki_root.exists() or not wiki_root.is_dir():
+    if not w_root.exists() or not w_root.is_dir():
         return _format_report(
             status="OK",
             timeout_reached=False,
@@ -101,8 +106,8 @@ def lint_wiki() -> str:
 
     # Gather all .md files excluding _EXCLUDED_DIRS (follow_symlinks=False)
     wiki_files: list[Path] = []
-    for root, dirs, files in os.walk(str(wiki_root), followlinks=False):
-        rel_root = Path(root).relative_to(wiki_root)
+    for root, dirs, files in os.walk(str(w_root), followlinks=False):
+        rel_root = Path(root).relative_to(w_root)
         if any(part in _EXCLUDED_DIRS for part in rel_root.parts):
             dirs.clear()
             continue
@@ -113,18 +118,18 @@ def lint_wiki() -> str:
                 wiki_files.append(Path(root) / f)
 
     index_roots: list[str] = []
-    existing_rel_files = {str(f.relative_to(wiki_root)): f for f in wiki_files}
+    existing_rel_files = {f.relative_to(w_root).as_posix(): f for f in wiki_files}
 
     for p in wiki_files:
         if time.time() - start_time > TIMEOUT_SECONDS:
             timeout_reached = True
             break
 
-        rel_path = str(p.relative_to(wiki_root))
+        rel_path = p.relative_to(w_root).as_posix()
         if p.name == "INDEX.md":
             index_roots.append(rel_path)
 
-        lock_path = p.with_suffix(".md.lock")
+        lock_path = get_lock_path(w_root, rel_path)
         if lock_path.exists():
             try:
                 lock = filelock.FileLock(str(lock_path), timeout=0)
@@ -151,7 +156,7 @@ def lint_wiki() -> str:
             continue
 
         try:
-            content = p.read_text(encoding="utf-8")
+            content = p.read_text(encoding="utf-8").replace("\r\n", "\n")
         except (UnicodeDecodeError, PermissionError, OSError):
             structural_errors.append(
                 (rel_path, "permission_denied or decode_error (skipped)")
@@ -194,7 +199,7 @@ def lint_wiki() -> str:
             if path_part.startswith("/"):
                 norm_rel = posixpath.normpath(path_part.lstrip("/"))
             else:
-                parent_rel = str(p.parent.relative_to(wiki_root))
+                parent_rel = p.parent.relative_to(w_root).as_posix()
                 combined = (parent_rel + "/" + path_part) if parent_rel != "." else path_part
                 norm_rel = posixpath.normpath(combined)
 
@@ -202,17 +207,24 @@ def lint_wiki() -> str:
                 broken_links.append((rel_path, raw_target))
                 continue
 
+            # Check Namespace Violation first
+            if any(part in _EXCLUDED_DIRS for part in Path(norm_rel).parts):
+                namespace_violations.append((rel_path, raw_target))
+                continue
+
             if norm_rel in existing_rel_files:
-                if any(part in _EXCLUDED_DIRS for part in Path(norm_rel).parts):
-                    namespace_violations.append((rel_path, raw_target))
-                else:
-                    file_graph[rel_path].add(norm_rel)
+                file_graph[rel_path].add(norm_rel)
+                continue
+
+            # Strict check for .md files: must exist in existing_rel_files with exact case
+            if norm_rel.endswith(".md"):
+                broken_links.append((rel_path, raw_target))
                 continue
 
             # Fallback to filesystem resolution for non-md files or special paths
-            target_abs = (wiki_root / norm_rel).resolve()
+            target_abs = (w_root / norm_rel).resolve()
             try:
-                target_rel = target_abs.relative_to(wiki_root)
+                target_rel = target_abs.relative_to(w_root)
             except ValueError:
                 broken_links.append((rel_path, raw_target))
                 continue
@@ -222,11 +234,12 @@ def lint_wiki() -> str:
                 namespace_violations.append((rel_path, raw_target))
                 continue
 
-            # 5. Check Existence & extension
-            if not target_abs.is_file():
+            # 5. Check Existence & exact case for non-md files
+            target_rel_posix = target_rel.as_posix()
+            if not target_abs.is_file() or not has_exact_case_path(w_root, target_rel_posix):
                 broken_links.append((rel_path, raw_target))
             else:
-                file_graph[rel_path].add(str(target_rel))
+                file_graph[rel_path].add(target_rel_posix)
 
     # BFS Multi-root from all INDEX.md
     visited: set[str] = set(index_roots)
@@ -243,15 +256,15 @@ def lint_wiki() -> str:
                 queue.append(neighbor)
 
     all_rel_files = set(
-        str(p.relative_to(wiki_root))
+        p.relative_to(w_root).as_posix()
         for p in wiki_files
-        if p.name != "SCHEMA.md" and not str(p.relative_to(wiki_root)).startswith("handoffs/")
+        if p.name != "SCHEMA.md" and not p.relative_to(w_root).as_posix().startswith("handoffs/")
     )
     orphans = sorted(list(all_rel_files - visited))
 
     # Run organizational checks
     from brain79.core.lint_organizational import lint_organizational
-    org_issues = lint_organizational(wiki_root)
+    org_issues = lint_organizational(w_root)
 
     org_errors = [i for i in org_issues if i.severity == "error"]
     org_warnings = [i for i in org_issues if i.severity == "warning"]

@@ -12,6 +12,7 @@ from pathlib import Path
 from brain79.config import get_wiki_root
 from brain79.core.context import rank_context_articles
 from brain79.core.handoff import read_handoff
+from brain79.core.locks import normalize_posix_input
 from brain79.core.wiki import get_index, read_article
 
 
@@ -86,9 +87,10 @@ def orient(
     if task or paths:
         sections.extend(["", "---", "", "## 📖 Governing Knowledge Articles"])
         effective_max = max(1, max_articles) if max_articles > 0 else 4
+        norm_paths = [normalize_posix_input(p).lstrip("/") for p in paths] if paths else None
         ranked = rank_context_articles(
             task=task,
-            paths=paths,
+            paths=norm_paths,
             top_n=effective_max,
             wiki_root=w_root,
         )
@@ -122,7 +124,7 @@ def orient(
             # Inline top candidates AND expanded 1-hop ADRs without truncation
             for score, article_p, reasons in ranked:
                 try:
-                    rel_p = str(article_p.relative_to(w_root))
+                    rel_p = article_p.relative_to(w_root).as_posix()
                     if rel_p == "INDEX.md":
                         continue
                     content = read_article(rel_p, wiki_root=w_root)

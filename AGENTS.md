@@ -129,6 +129,12 @@ To maintain consistent, high-quality documentation across all agent and human in
    - If no code, features, architectural decisions, or tests were created, modified, or planned during the session, **DO NOT invent or artificially edit articles**.
    - Simply verify wiki health with `brain79 lint --strict` and state clearly: *"The wiki is up-to-date with repository state. No modifications required."*
    - Wiki changes must strictly mirror real repository mutations, never synthetic edits to satisfy an action bias.
+7. **Sentence Case First Policy (Mandatory)**:
+   - Use sentence-style capitalization for all titles, headings (H1, H2, H3), bullet points, and table headers across documentation and wiki generation.
+   - Capitalize ONLY the first letter of a title or sentence. The rest must be lowercase.
+   - The only exceptions are proper nouns (e.g., Python, Stripe, Docker, Linux, macOS) and acronyms (e.g., ADR, MCP, API, CI, JSON, POSIX, LF, CRLF, TF-IDF, BFS).
+   - After a colon (`:`), the following word must start with a lowercase letter unless it is a proper noun or acronym (e.g., `- Item 1: description`, not `- Item 1: Description`).
+   - Never use Title Case (capitalizing every major word). Title Case is rejected across all documentation artifacts.
 
 ## Project notes
 

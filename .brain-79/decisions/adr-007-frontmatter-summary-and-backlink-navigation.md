@@ -1,6 +1,6 @@
 ---
 type: decision
-summary: Standardize explicit frontmatter summary field and footer backlink navigation convention
+summary: standardize explicit frontmatter summary field and footer backlink navigation convention
 status: accepted
 date: 2026-10-29
 deciders:
@@ -8,7 +8,7 @@ deciders:
 last_updated: 2026-10-29
 ---
 
-# ADR-007 — Navigation — Explicit Frontmatter Summary and Article Backlinks
+# ADR-007 — Navigation — Explicit frontmatter summary and article backlinks
 
 ## Status
 

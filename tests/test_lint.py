@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from brain79 import config
 from brain79.core.lint import lint_wiki
+from brain79.core.locks import get_lock_path
 
 
 
@@ -251,7 +252,8 @@ def test_lint_locked_file_skipped(tmp_path: Path) -> None:
 
     locked_file = wiki_dir / "locked.md"
     locked_file.write_text("# Locked Document\n", encoding="utf-8")
-    lock_file = wiki_dir / "locked.md.lock"
+    lock_file = get_lock_path(wiki_dir, "locked.md")
+    lock_file.parent.mkdir(parents=True, exist_ok=True)
 
     flock = filelock.FileLock(str(lock_file), timeout=0)
     flock.acquire()

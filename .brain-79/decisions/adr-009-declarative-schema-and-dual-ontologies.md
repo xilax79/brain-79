@@ -1,6 +1,6 @@
 ---
 type: decision
-summary: Decoupling validation mechanism from ontology policy with dual built-in profiles and custom folder support
+summary: decoupling validation mechanism from ontology policy with dual built-in profiles and custom folder support
 status: accepted
 date: 2026-11-02
 deciders:
@@ -8,7 +8,7 @@ deciders:
 last_updated: 2026-11-02
 ---
 
-# ADR-009 — Declarative Schema Loading & Dual Built-In Ontologies (Mechanism vs. Policy)
+# ADR-009 — Declarative schema loading and dual built-in ontologies (mechanism vs. policy)
 
 ## Status
 

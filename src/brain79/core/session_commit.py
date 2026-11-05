@@ -91,7 +91,7 @@ def commit_session(
             if target.suffix != ".md":
                 validation_errors.append(f"Write #{idx + 1}: Path must end with .md, got '{p}'.")
                 continue
-            rel_str = str(target.relative_to(w_root))
+            rel_str = target.relative_to(w_root).as_posix()
             val_c = validate_article_content(
                 rel_str, c, force_skip=force_validation_skip, wiki_root=w_root
             )
@@ -113,13 +113,13 @@ def commit_session(
 
         try:
             target = _safe_resolve(p, wiki_root=w_root)
-            rel_str = str(target.relative_to(w_root))
+            rel_str = target.relative_to(w_root).as_posix()
 
             # Base text: virtual_fs first (if created/modified by an earlier write/edit), else disk
             if rel_str in virtual_fs:
                 current_text = virtual_fs[rel_str]
             elif target.exists() and target.is_file():
-                current_text = target.read_text(encoding="utf-8")
+                current_text = target.read_text(encoding="utf-8").replace("\r\n", "\n")
             else:
                 validation_errors.append(f"Edit #{idx + 1}: File not found '{p}'.")
                 continue

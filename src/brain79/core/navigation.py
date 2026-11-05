@@ -7,13 +7,17 @@ import uuid
 
 import filelock
 
+from brain79.core.locks import (
+    acquire_wiki_lock,
+    atomic_replace_with_retry,
+    cleanup_legacy_inline_locks,
+)
+
 REGISTRY_FILENAME = ".navigation_registry.json"
 
 
 def _get_lock(wiki_root: Path) -> filelock.FileLock:
-    registry_path = wiki_root / REGISTRY_FILENAME
-    lock_path = registry_path.with_suffix(".lock")
-    return filelock.FileLock(str(lock_path), timeout=5.0)
+    return acquire_wiki_lock(wiki_root, REGISTRY_FILENAME, timeout=5.0)
 
 
 def load_registry(wiki_root: Path) -> dict[str, Any]:
@@ -35,8 +39,8 @@ def _save_registry_unlocked(wiki_root: Path, registry: dict[str, Any]) -> None:
     registry_path = wiki_root / REGISTRY_FILENAME
     tmp_path = registry_path.with_suffix(f".tmp.{uuid.uuid4().hex}")
     try:
-        tmp_path.write_text(json.dumps(registry, indent=2), encoding="utf-8")
-        tmp_path.replace(registry_path)
+        tmp_path.write_text(json.dumps(registry, indent=2), encoding="utf-8", newline="\n")
+        atomic_replace_with_retry(tmp_path, registry_path)
     finally:
         if tmp_path.exists():
             try:
@@ -345,12 +349,11 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
 
     new_section = generate_quick_navigation(wiki_root)
 
-    # Use INDEX.md.lock for synchronization with writes (P1.1)
-    index_lock_path = index_path.with_suffix(".md.lock")
-    index_lock = filelock.FileLock(str(index_lock_path), timeout=5.0)
+    # Use centralized INDEX.md.lock for synchronization with writes (P1.1, Phase 6)
+    index_lock = acquire_wiki_lock(wiki_root, "INDEX.md", timeout=5.0)
 
     with index_lock:
-        content = index_path.read_text(encoding="utf-8")
+        content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
         # Update last_updated date in frontmatter to today
         today = datetime.now(UTC).strftime("%Y-%m-%d")
@@ -375,8 +378,8 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
 
         tmp_path = index_path.with_suffix(f".tmp.{uuid.uuid4().hex}")
         try:
-            tmp_path.write_text(updated, encoding="utf-8")
-            tmp_path.replace(index_path)
+            tmp_path.write_text(updated, encoding="utf-8", newline="\n")
+            atomic_replace_with_retry(tmp_path, index_path)
         finally:
             if tmp_path.exists():
                 try:
@@ -384,4 +387,5 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
                 except OSError:
                     pass
 
+    cleanup_legacy_inline_locks(wiki_root)
     return "INDEX.md Quick navigation regenerated."

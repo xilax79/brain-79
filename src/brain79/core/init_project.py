@@ -28,11 +28,16 @@ WIKI_DIRS_GENERAL = [
     "log",
 ]
 
+from brain79.core.locks import cleanup_legacy_inline_locks
+
 TEMPLATE_FILES = ["SCHEMA.md", "INDEX.md"]
 
 PRE_COMMIT_HOOK_SCRIPT = """#!/usr/bin/env bash
 # brain-79 pre-commit hook: validate wiki changes via lint --strict
 set -e
+
+# Augment PATH so non-interactive shells and GUI clients locate brain79
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$XDG_BIN_HOME:$USERPROFILE/.local/bin:$PATH"
 
 # Find staged wiki files
 STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^\\.brain-79/.*\\.md$" || true)
@@ -55,7 +60,7 @@ def install_git_hooks(project_root: Path, install: bool = True) -> None:
     hooks_dir.mkdir(exist_ok=True)
     hook_path = hooks_dir / "pre-commit"
 
-    hook_path.write_text(PRE_COMMIT_HOOK_SCRIPT, encoding="utf-8")
+    hook_path.write_text(PRE_COMMIT_HOOK_SCRIPT, encoding="utf-8", newline="\n")
     mode = hook_path.stat().st_mode
     hook_path.chmod(mode | 0o111)
 
@@ -95,15 +100,16 @@ def init_project(
     schema_template_name = "SCHEMA_GENERAL.md" if profile_clean == "general" else "SCHEMA.md"
     schema_content = (pkg_templates / schema_template_name).read_text(encoding="utf-8")
     schema_content = schema_content.replace("YYYY-MM-DD", today)
-    (wiki_root / "SCHEMA.md").write_text(schema_content, encoding="utf-8")
+    (wiki_root / "SCHEMA.md").write_text(schema_content, encoding="utf-8", newline="\n")
 
     # INDEX template
     index_content = (pkg_templates / "INDEX.md").read_text(encoding="utf-8")
     index_content = index_content.replace("YYYY-MM-DD", today)
-    (wiki_root / "INDEX.md").write_text(index_content, encoding="utf-8")
+    (wiki_root / "INDEX.md").write_text(index_content, encoding="utf-8", newline="\n")
 
     # Ignore lock and temporary files in wiki_root
-    (wiki_root / ".gitignore").write_text("*.lock\n*.tmp\n", encoding="utf-8")
+    (wiki_root / ".gitignore").write_text(".locks/\n*.lock\n*.tmp\n", encoding="utf-8", newline="\n")
+    cleanup_legacy_inline_locks(wiki_root)
 
     binary_path = shutil.which("brain79") or "brain79"
 
@@ -117,6 +123,7 @@ def init_project(
             + binary_path
             + '",\n      "args": ["--project-root", "."]\n    }\n  }\n}\n',
             encoding="utf-8",
+            newline="\n",
         )
 
     # 1. Deploy AGENTS.md manifest (universal CLI standard) idempotently
@@ -128,9 +135,9 @@ def init_project(
             new_manifest = (
                 existing_manifest.rstrip() + "\n\n" + agents_manifest_template
             )
-            agents_manifest_path.write_text(new_manifest, encoding="utf-8")
+            agents_manifest_path.write_text(new_manifest, encoding="utf-8", newline="\n")
     else:
-        agents_manifest_path.write_text(agents_manifest_template, encoding="utf-8")
+        agents_manifest_path.write_text(agents_manifest_template, encoding="utf-8", newline="\n")
 
     # 2. Deploy or update .mcp.json (Pi / universal MCP server definition) idempotently
     mcp_path = project_root / ".mcp.json"
@@ -167,7 +174,7 @@ def init_project(
             "args": ["--project-root", "."],
             "toolPrefix": "none",
         }
-        mcp_path.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8")
+        mcp_path.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     install_git_hooks(project_root, install=install_git_hooks_flag)
 
