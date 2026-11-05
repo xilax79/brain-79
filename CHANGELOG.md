@@ -4,6 +4,13 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-05
+
+### Changed
+- **Pre-GA Semantic Versioning Calibration**: Recalibrated package versioning from `2.0.2` to `0.7.2` to strictly reflect pre-release maturation status according to SemVer 2.0.0 §4 prior to public PyPI distribution.
+- Preserves all architectural features from Phases 0 through 6.6 (Two-Call protocol, deterministic drift detection, FastMCP symmetry, and handoff authority decay).
+- Aligns release roadmap: Phase 7 will release `0.8.0`, Phase 8 will release `0.9.0`, leading to `1.0.0` General Availability (GA).
+
 ### Added
 - **Phase 6.6: Handoff freshness, provenance, and authority decay (ADR-016)**:
   - Deterministic provenance tracking in handoff frontmatter: `created_at`, `git_branch`, `git_head`, `wiki_digest`, and `code_digest`.

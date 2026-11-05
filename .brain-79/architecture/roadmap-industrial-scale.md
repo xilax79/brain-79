@@ -15,6 +15,7 @@ related:
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
   - decisions/adr-015-sentence-case-first-policy.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
+  - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
   - features/version-governance.md
   - features/cross-platform-and-lock-isolation.md
   - features/session-triage-and-research-persistence.md
@@ -51,9 +52,9 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.6
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 7 (TOP PRIORITY): Multi-harness zero-config & doctor diagnostics| [ ] Next   |
+| Phase 7 (TOP PRIORITY): Multi-harness zero-config & doctor diagnostics (v0.8.0) | [ ] Next   |
 +-----------------------------------------------------------------------------------+
-| Phase 8: Zero-clone distribution & context budget guardrails          | [ ] Planned|
+| Phase 8: Zero-clone distribution & context budget guardrails (v0.9.0)          | [ ] Planned|
 +-----------------------------------------------------------------------------------+
 ```
 

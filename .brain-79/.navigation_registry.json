@@ -294,11 +294,31 @@
       ]
     },
     {
+      "path": "changelog/v0-7-2.md",
+      "title": "Changelog \u2014 Version 0.7.2 \u2014 Pre-GA semantic calibration",
+      "summary": "semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release",
+      "section": "changelog",
+      "registered_at": "2026-11-05T23:18:14.814743+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+      "title": "ADR-017: Semantic versioning calibration for pre-GA maturation",
+      "summary": "semantic versioning calibration to 0.7.2 for pre-GA maturation prior to public release",
+      "section": "decisions",
+      "registered_at": "2026-11-05T23:18:45.279365+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
       "path": "architecture/roadmap-industrial-scale.md",
       "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
       "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.6) and next-stage adoption and context guardrails (7-8)",
       "section": "architecture",
-      "registered_at": "2026-11-05T21:27:05.016553+00:00",
+      "registered_at": "2026-11-05T23:19:18.487510+00:00",
       "applies_to": [
         "src/brain79/__init__.py",
         "src/brain79/__main__.py",
@@ -313,6 +333,7 @@
         "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
         "decisions/adr-015-sentence-case-first-policy.md",
         "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
         "features/version-governance.md",
         "features/cross-platform-and-lock-isolation.md",
         "features/session-triage-and-research-persistence.md",

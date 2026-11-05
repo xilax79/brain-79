@@ -138,7 +138,7 @@ def run_scenario_1() -> bool:
         session_file = find_latest_session_for_dir(tmp)
         if session_file:
             failures = check_mcp_zero_retry(session_file)
-            assert not failures, f"Zero-retry violation in brain79 MCP calls:\n" + "\n".join(failures)
+            assert not failures, "Zero-retry violation in brain79 MCP calls:\n" + "\n".join(failures)
             print("Zero-Retry MCP Metric: ✅ PASS (0 tool errors/retries)")
         else:
             print("Warning: Could not locate session file for zero-retry audit")
@@ -190,7 +190,7 @@ def run_scenario_2(tmp: Path) -> None:
     session_file = find_latest_session_for_dir(tmp)
     if session_file:
         failures = check_mcp_zero_retry(session_file)
-        assert not failures, f"Zero-retry violation in brain79 MCP calls:\n" + "\n".join(failures)
+        assert not failures, "Zero-retry violation in brain79 MCP calls:\n" + "\n".join(failures)
         print("Zero-Retry MCP Metric: ✅ PASS (0 tool errors/retries)")
 
 
@@ -244,7 +244,7 @@ def run_scenario_3() -> bool:
         session_file = find_latest_session_for_dir(tmp)
         if session_file:
             failures = check_mcp_zero_retry(session_file)
-            assert not failures, f"Zero-retry violation in brain79 MCP calls:\n" + "\n".join(failures)
+            assert not failures, "Zero-retry violation in brain79 MCP calls:\n" + "\n".join(failures)
             print("Zero-Retry MCP Metric: ✅ PASS (0 tool errors/retries)")
 
         return True

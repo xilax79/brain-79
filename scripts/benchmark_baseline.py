@@ -1,6 +1,5 @@
 """Benchmark script for brain-79 performance baseline and regression testing."""
 import json
-import os
 import shutil
 import tempfile
 import time
@@ -20,27 +19,27 @@ from brain79.server import mcp
 
 
 def benchmark_current_wiki() -> dict:
-    original_root = get_project_root()
+    _ = get_project_root()
     wiki_dir = get_wiki_root()
 
     # Index read time
     t0 = time.perf_counter()
-    index_content = read_article("INDEX.md")
+    _ = read_article("INDEX.md")
     t_index = (time.perf_counter() - t0) * 1000
 
     # Lint strict time
     t0 = time.perf_counter()
-    lint_report = lint_wiki()
+    _ = lint_wiki()
     t_lint = (time.perf_counter() - t0) * 1000
 
     # Lint organizational time
     t0 = time.perf_counter()
-    org_issues = lint_organizational(wiki_dir)
+    _ = lint_organizational(wiki_dir)
     t_lint_org = (time.perf_counter() - t0) * 1000
 
     # Ingest / Curation guide time
     t0 = time.perf_counter()
-    guide = prepare_curation_guide(wiki_dir, "Benchmarking session close performance.")
+    _ = prepare_curation_guide(wiki_dir, "Benchmarking session close performance.")
     t_ingest = (time.perf_counter() - t0) * 1000
 
     # Navigate regenerate time (on tmp copy to avoid mutating actual INDEX.md)

@@ -19,6 +19,7 @@ last_updated: 2026-11-05
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
 ### Changelog
+- [Changelog — Version 0.7.2 — Pre-GA semantic calibration](changelog/v0-7-2.md) — semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release
 - [Changelog — Version 1.0.0](changelog/v1.md) — initial production release of brain-79 with mechanical organizational enforcement and handoff continuity
 - [Changelog — Version 1.1.0 — Performance and session workflow optimization](changelog/v1-1.md) — performance and session workflow optimizations, partial edits, batch writes, and schema inspection
 - [Changelog — Version 2.0.0 — Two-call protocol and release governance](changelog/v2-0.md) — major release 2.0.0 introducing Two-Call Session Protocol, declarative ontologies, deterministic drift detection, and release governance
@@ -42,6 +43,7 @@ last_updated: 2026-11-05
 - [ADR-014: Centralized lock directory isolation and cross-platform I/O normalization](decisions/adr-014-centralized-locks-and-cross-platform-io.md) — centralize file locks in .brain-79/.locks/, enforce POSIX paths, strict LF I/O, and exact-case resolution
 - [ADR-015: Sentence case first policy for documentation and wiki generation](decisions/adr-015-sentence-case-first-policy.md) — enforce sentence case first across all documentation, headings, lists, and wiki generation
 - [ADR-016: Handoff freshness, provenance, and authority decay](decisions/adr-016-handoff-freshness-and-authority-decay.md) — treat handoffs as perishable transition notes with authority decaying based on deterministic workspace drift
+- [ADR-017: Semantic versioning calibration for pre-GA maturation](decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md) — semantic versioning calibration to 0.7.2 for pre-GA maturation prior to public release
 
 ### Features
 - [Feature — Cross-platform portability and centralized lock isolation (Phase 6 specification)](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
