@@ -60,7 +60,7 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.6
 
 ### Phase 7 (top priority): Project protocol upgrade, legacy wiki reconditioning and doctor diagnostics (`brain79 doctor`)
 - **Specification**: [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup & doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md)
-- **Scope**: solve "Split-Brain" version skew across existing projects via delimited managed blocks in `AGENTS.md` (`<!-- brain79:start -->`), non-destructive `SCHEMA.md` upgrades (preserving `profile` and `custom_types`), two-tier legacy wiki reconditioning (`migrate_wiki` v2), GUI-safe absolute binary paths in MCP configs, and the `brain79 doctor [--fix]` diagnostic tool.
+- **Scope**: solve "Split-Brain" version skew across existing projects via delimited managed blocks in `AGENTS.md` (`<!-- brain79:start -->`), non-destructive `SCHEMA.md` upgrades (preserving `profile`, `custom_types`, and extensions), two-tier legacy wiki reconditioning (`migrate_wiki` v2), portable 2-tier multi-harness MCP setup, and the `brain79 doctor [--fix]` diagnostic tool.
 
 ### Phase 8: Zero-clone distribution and context budget guardrails
 - **Problem**: installing or updating `brain-79` currently assumes a cloned repository (`scripts/install.py` and `git pull` inside `brain79 update`). Additionally, oversized articles can inflate `orient` payloads.
