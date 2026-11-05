@@ -1,7 +1,6 @@
 """Comprehensive tests for defect backlog remediations (BUG-001, BUG-002, INEF-001, INEF-002)."""
 
 from pathlib import Path
-import pytest
 
 from brain79.config import set_project_root
 from brain79.core.frontmatter import normalize_backlink_footer

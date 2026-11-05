@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import shutil
 
+from brain79.core.locks import cleanup_legacy_inline_locks
+
 WIKI_DIRS_SOFTWARE = [
     "_raw/sessions",
     "_raw/commits",
@@ -27,8 +29,6 @@ WIKI_DIRS_GENERAL = [
     "decisions",
     "log",
 ]
-
-from brain79.core.locks import cleanup_legacy_inline_locks
 
 TEMPLATE_FILES = ["SCHEMA.md", "INDEX.md"]
 

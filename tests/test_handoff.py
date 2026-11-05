@@ -54,7 +54,7 @@ def test_session_type_whitespace_and_case_tolerance() -> None:
         boot_instruction="Execute next step",
     )
     assert msg1.startswith("handoffs/handoff-")
-    assert "**Tipo de sesión:** feature" in read_handoff("latest")[0]
+    assert "**Session type**: feature" in read_handoff("latest")[0]
 
     msg2 = write_handoff(
         session_type="BugFix",
@@ -68,7 +68,7 @@ def test_session_type_whitespace_and_case_tolerance() -> None:
         boot_instruction="Execute next step",
     )
     assert msg2.startswith("handoffs/handoff-")
-    assert "**Tipo de sesión:** bugfix" in read_handoff("latest")[0]
+    assert "**Session type**: bugfix" in read_handoff("latest")[0]
 
 
 def test_empty_summary_raises_error() -> None:
@@ -155,9 +155,14 @@ def test_read_handoff_none_aliases_to_latest() -> None:
     none_content, none_promo = read_handoff("none")
     empty_content, empty_promo = read_handoff("")
 
+    import re
+    norm_latest = re.sub(r"written \d+s ago", "written Xs ago", latest_content)
+    norm_none = re.sub(r"written \d+s ago", "written Xs ago", none_content)
+    norm_empty = re.sub(r"written \d+s ago", "written Xs ago", empty_content)
+
     assert "First session" in latest_content
-    assert latest_content == none_content
-    assert latest_content == empty_content
+    assert norm_latest == norm_none
+    assert norm_latest == norm_empty
     assert latest_promo is False
 
 
@@ -204,8 +209,8 @@ def test_round_trip() -> None:
 
 
     content, has_promo = read_handoff("latest")
-    assert "=== Handoff: handoffs/handoff-" in content
-    assert "**Tipo de sesión:** feature" in content
+    assert "Active handoff state" in content or "=== Handoff:" in content
+    assert "**Session type**: feature" in content
     assert "Initial session summary" in content
     assert "Completed feature X" in content
     assert "Complete feature Y" in content
@@ -232,12 +237,12 @@ def test_knowledge_promotion_trigger() -> None:
     )
     content, has_promo = read_handoff("latest")
     assert has_promo is True
-    assert "ATENCIÓN:" not in content
+    assert "Warning" not in content
 
     # Check MCP tool injects the warning
     mcp_output = brain79_handoff_read("latest")
-    assert "ATENCIÓN:" in mcp_output
-    assert "brain79_ingest" in mcp_output
+    assert "Warning" in mcp_output
+    assert "Knowledge pending promotion" in mcp_output
 
 
 def test_wiki_deviation_section_renders() -> None:
@@ -254,7 +259,7 @@ def test_wiki_deviation_section_renders() -> None:
         wiki_deviation_justification="Deviating from schema due to hotfix requirements.",
     )
     content, _ = read_handoff("latest")
-    assert "## ⚠️ Desviación de la wiki (Temporal)" in content
+    assert "## ⚠️ Wiki deviation (temporary)" in content
     assert "Deviating from schema due to hotfix requirements." in content
 
 

@@ -10,7 +10,6 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 import re
 import subprocess
-from typing import Any
 
 from brain79.config import get_project_root, get_wiki_root
 from brain79.core.context import _match_applies_to

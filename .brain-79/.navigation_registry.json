@@ -262,11 +262,43 @@
       ]
     },
     {
+      "path": "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+      "title": "ADR-016: Handoff freshness, provenance, and authority decay",
+      "summary": "treat handoffs as perishable transition notes with authority decaying based on deterministic workspace drift",
+      "section": "decisions",
+      "registered_at": "2026-11-05T21:25:57.637865+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/handoff-freshness.md",
+      "title": "Feature \u2014 Handoff freshness, provenance, and authority decay (Phase 6.6)",
+      "summary": "specification for Phase 6.6 \u2014 handoff freshness, provenance digests, authority decay, branch-aware resolution, and aging escalation",
+      "section": "features",
+      "registered_at": "2026-11-05T21:26:23.065158+00:00",
+      "applies_to": [
+        "src/brain79/core/handoff_freshness.py",
+        "src/brain79/core/handoff.py",
+        "src/brain79/core/orient.py",
+        "src/brain79/core/session_commit.py",
+        "src/brain79/server.py"
+      ],
+      "related": [
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "features/handoff-continuity.md",
+        "architecture/roadmap-industrial-scale.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
       "path": "architecture/roadmap-industrial-scale.md",
       "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
-      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.5) and next-stage handoff freshness, adoption, and context guardrails (6.6-8)",
+      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.6) and next-stage adoption and context guardrails (7-8)",
       "section": "architecture",
-      "registered_at": "2026-11-05T21:06:34.141743+00:00",
+      "registered_at": "2026-11-05T21:27:05.016553+00:00",
       "applies_to": [
         "src/brain79/__init__.py",
         "src/brain79/__main__.py",
@@ -280,14 +312,15 @@
         "decisions/adr-013-versioning-and-release-governance.md",
         "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
         "decisions/adr-015-sentence-case-first-policy.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
         "features/version-governance.md",
         "features/cross-platform-and-lock-isolation.md",
         "features/session-triage-and-research-persistence.md",
+        "features/handoff-freshness.md",
         "features/project-upgrade-and-multi-harness-doctor.md",
         "architecture/defect-backlog.md"
       ],
       "outgoing_links": [
-        "features/session-triage-and-research-persistence.md",
         "features/project-upgrade-and-multi-harness-doctor.md",
         "INDEX.md"
       ]

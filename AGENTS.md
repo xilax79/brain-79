@@ -16,6 +16,7 @@
 ## Mid-session and handoffs (end of task)
 - **On-demand handoff policy**: in interactive human-in-the-loop sessions, write a handoff (`brain79_handoff_write` or `brain79_session_commit(handoff=...)`) **only when explicitly requested by the user** (e.g. "save handoff", "wrap up", "haz handoff"). In autonomous headless sub-agent sessions, write a handoff upon terminating the process. Do not write handoffs after every interactive conversational turn.
 - To resume a task, `brain79_orient` automatically provides the latest handoff state (or use `brain79_handoff_read` directly).
+- **Handoff freshness and authority decay**: a handoff is a perishable transition note, not a source of truth. If a handoff is marked as stale (due to subsequent wiki or code changes) or comes from another branch, treat its pending work and boot instruction as historical context; verify against current code and governing articles before executing instructions.
 
 ## Available tools
 

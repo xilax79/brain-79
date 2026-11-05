@@ -527,9 +527,9 @@ def brain79_handoff_read(
         content, has_promotion = handoff_ops.read_handoff(handoff_ref)
         if has_promotion:
             content += (
-                "\n\n> ⚠️ **ATENCIÓN:** Este handoff contiene elementos en "
-                "'Conocimiento pendiente de promoción'. Tu responsabilidad inmediata "
-                "es consolidarlos en la memoria a largo plazo usando `brain79_ingest`."
+                "\n\n> ⚠️ **Warning**: this handoff contains items in "
+                "'Knowledge pending promotion'. Your immediate responsibility "
+                "is to distill them into permanent wiki articles using brain79_session_commit or brain79_write."
             )
         return content
     except (handoff_ops.HandoffsDirNotFoundError, handoff_ops.NoHandoffsExistError) as exc:

@@ -4,6 +4,22 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Phase 6.6: Handoff freshness, provenance, and authority decay (ADR-016)**:
+  - Deterministic provenance tracking in handoff frontmatter: `created_at`, `git_branch`, `git_head`, `wiki_digest`, and `code_digest`.
+  - Content-based sha256 digests (`wiki_digest` over permanent wiki articles, `code_digest` over git working tree outside `.brain-79/`), immune to clone or checkout mtime modifications.
+  - State classification engine in `src/brain79/core/handoff_freshness.py` (`fresh`, `stale`, `foreign_branch`, `unverified`).
+  - Authority decay rendering in `orient()` and `read_handoff()`: warning banners for stale handoffs, relabeled historical boot instructions, and cross-branch task isolation.
+  - Branch-aware `latest` resolution preferring current git branch before global fallback.
+  - Advisory aging escalation banner when unpromoted pending tasks cross age or commit thresholds.
+  - Standardized English handoff template with colons outside bold formatting.
+- **Phase 6.5: Session knowledge triage, research persistence guard, and handoff ergonomics**:
+  - The Amnesia Test 3-way triage protocol (Type A ephemeral $\rightarrow$ no-op, Type B zero-code research $\rightarrow$ mandatory wiki persistence, Type C code mutation $\rightarrow$ sync governing articles).
+  - Unpersisted research engine guard in `write_handoff` and `commit_session` blocking premature session closure when knowledge was generated without permanent wiki writes.
+  - Tolerant recursive proxy argument unpacking (`_unpack_nested_args`) and FastMCP schema alias compatibility.
+  - Mechanical bullet colon normalizer (`normalize_bullet_colons`) enforcing sentence case formatting.
+  - Real-agent pre-merge E2E smoke test suite (`scripts/run_e2e_smoke.py`).
+
 ## [2.0.2] - 2026-11-04
 
 ### Fixed

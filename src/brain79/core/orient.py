@@ -11,7 +11,13 @@ from pathlib import Path
 
 from brain79.config import get_wiki_root
 from brain79.core.context import rank_context_articles
-from brain79.core.handoff import read_handoff
+from brain79.core.handoff import (
+    HANDOFF_ESCALATION_AGE_DAYS,
+    HANDOFF_ESCALATION_COMMITS,
+    _resolve_handoff_path,
+    read_handoff,
+)
+from brain79.core.handoff_freshness import compute_handoff_freshness
 from brain79.core.locks import normalize_posix_input
 from brain79.core.wiki import get_index, read_article
 
@@ -64,24 +70,51 @@ def orient(
     except Exception as exc:
         sections.append(f"*Could not load active schema: {exc}*")
 
-    sections.extend(["", "---", "", "## ⏱️ Active Handoff State"])
+    sections.extend(["", "---", ""])
 
     # 3. Latest Handoff
     try:
-        handoff_content, has_promotion_pending = read_handoff("latest", wiki_root=w_root)
+        target_handoff = _resolve_handoff_path("latest", wiki_root=w_root)
+        freshness = compute_handoff_freshness(target_handoff, wiki_root=w_root)
+        handoff_content, has_promotion_pending = read_handoff(
+            "latest",
+            wiki_root=w_root,
+            for_orient=True,
+            freshness=freshness,
+        )
         if has_promotion_pending:
             sections.append(
-                "> ⚠️ **Knowledge Pending Promotion**: The prior session noted critical insights "
-                "pending distillation into the permanent wiki. Review and promote when appropriate."
+                "> ⚠️ **Knowledge pending promotion**: the prior session noted critical insights "
+                "pending distillation into the permanent wiki. Review and promote when appropriate.\n"
             )
-            sections.append("")
         sections.append(handoff_content.strip())
-    except FileNotFoundError:
-        sections.append(
-            "No prior handoff found (`handoffs/` is empty). Ready for first session."
+
+        # Escalation of aging pending work (R5)
+        raw_handoff_text = target_handoff.read_text(encoding="utf-8")
+        has_pending_work = (
+            "## Pending work" in raw_handoff_text
+            or "## Trabajo pendiente" in raw_handoff_text
         )
+        age_exceeded = freshness.age_seconds >= 86400 * HANDOFF_ESCALATION_AGE_DAYS
+        commits_exceeded = (
+            freshness.commits_since is not None
+            and freshness.commits_since >= HANDOFF_ESCALATION_COMMITS
+        )
+        if has_pending_work and (age_exceeded or (commits_exceeded and freshness.state != "fresh")):
+            sections.append(
+                "\n> ⚠️ **Pending work in this handoff is aging**: promote long-lived items "
+                "to the roadmap or backlog (architecture/ or topics/), or run `brain79 handoff-purge`."
+            )
+    except FileNotFoundError:
+        sections.extend([
+            "## ⏱️ Active handoff state",
+            "No prior handoff found (`handoffs/` is empty). Ready for first session.",
+        ])
     except Exception as exc:
-        sections.append(f"*Could not load latest handoff: {exc}*")
+        sections.extend([
+            "## ⏱️ Active handoff state",
+            f"*Could not load latest handoff: {exc}*",
+        ])
 
     # 3. Governing Knowledge Articles (3-Signal Ranker)
     if task or paths:
@@ -142,3 +175,7 @@ def orient(
                 sections.append("No governing articles inlined.")
 
     return "\n".join(sections)
+
+
+orient_session = orient
+

@@ -8,9 +8,7 @@ import pytest
 
 from brain79.core.curate import analyze_wiki_state, prepare_curation_guide
 from brain79.core.handoff import (
-    _has_recent_wiki_writes,
     _is_noop_placeholder,
-    validate_handoff_params,
     write_handoff,
 )
 from brain79.core.drift import find_matching_workspace_files

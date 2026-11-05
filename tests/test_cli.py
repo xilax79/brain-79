@@ -199,7 +199,8 @@ def test_cli_handoff_write_and_read(
     code_r = run_cli("handoff-read", ["latest"])
     assert code_r == 0
     captured_r = capsys.readouterr()
-    assert "=== Handoff:" in captured_r.out
+    assert "Active handoff state" in captured_r.out or "=== Handoff:" in captured_r.out
+    assert "Completed hybrid CLI feature." in captured_r.out
     assert "Completed hybrid CLI feature." in captured_r.out
     assert "ATENCIÓN:" not in captured_r.out
 

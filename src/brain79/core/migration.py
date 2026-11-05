@@ -9,7 +9,6 @@ from brain79.core.frontmatter import (
     load_active_schema,
     normalize_backlink_footer,
     parse_frontmatter,
-    sanitize_summary,
 )
 from brain79.core.locks import (
     atomic_replace_with_retry,

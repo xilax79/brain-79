@@ -227,13 +227,13 @@ Token rotation policy and signing algorithms.
     assert "Quick navigation" in res
 
     # 2. Must include Handoff summary and boot instruction
-    assert "## ⏱️ Active Handoff State" in res
+    assert "## ⏱️ Active handoff state" in res or "## ⏱️ Last handoff" in res
     assert "Working on login infrastructure" in res
     assert "Implement JWT token generator" in res
     assert "Pick up JWT implementation in src/auth/jwt.py" in res
 
     # 3. Must warn about knowledge pending promotion
-    assert "Knowledge Pending Promotion" in res
+    assert "Knowledge pending promotion" in res or "Knowledge Pending Promotion" in res
     assert "JWT keys require rotation every 24h" in res
 
     # 4. Must inline the content of architecture/auth-security.md

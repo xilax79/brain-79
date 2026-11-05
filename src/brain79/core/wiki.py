@@ -12,9 +12,7 @@ from brain79.core.locks import (
     acquire_wiki_lock,
     atomic_replace_with_retry,
     has_exact_case_path,
-    normalize_posix_input,
     normalize_wiki_rel_path,
-    rel_posix,
 )
 from brain79.core.validation import validate_article_content
 

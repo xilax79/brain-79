@@ -11,13 +11,11 @@ Verifies:
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-import os
 import pytest
 
 from brain79 import config
 from brain79.core.drift import (
     check_article_drift,
-    detect_all_drift,
     find_matching_workspace_files,
     get_file_last_modified_date,
 )
@@ -29,10 +27,8 @@ from brain79.core.frontmatter import (
     normalize_backlink_footer,
 )
 from brain79.core.lint_organizational import (
-    check_article_backlinks,
     check_article_structural_sections,
     check_documentation_drift,
-    lint_organizational,
 )
 from brain79.core.orient import orient
 from brain79.core.session_commit import commit_session
@@ -525,9 +521,6 @@ Content here.
     single_line = "# Auth Feature"
     norm_single = normalize_backlink_footer(single_line, "features/auth.md")
     assert "[← Volver al Índice](../INDEX.md)" in norm_single
-
-    # 3. Two-line body without backlink is flagged by check_article_backlinks
-    wiki = Path("/tmp/mock_wiki")  # check_article_backlinks uses parse_frontmatter
 
 
 def test_adversarial_defect_2_wall_of_text_and_word_boundaries(clean_project: Path) -> None:

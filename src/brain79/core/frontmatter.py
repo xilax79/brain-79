@@ -60,7 +60,19 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "handoff": {
         "required": ["type", "session_type", "previous_ref", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner", "schema_version", "applies_to"],
+        "optional": [
+            "summary",
+            "supersedes",
+            "related",
+            "owner",
+            "schema_version",
+            "applies_to",
+            "created_at",
+            "git_branch",
+            "git_head",
+            "wiki_digest",
+            "code_digest",
+        ],
         "enum": {
             "session_type": [
                 "feature",
@@ -156,7 +168,19 @@ GENERAL_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "handoff": {
         "required": ["type", "session_type", "previous_ref", "last_updated"],
-        "optional": ["summary", "supersedes", "related", "owner", "schema_version", "applies_to"],
+        "optional": [
+            "summary",
+            "supersedes",
+            "related",
+            "owner",
+            "schema_version",
+            "applies_to",
+            "created_at",
+            "git_branch",
+            "git_head",
+            "wiki_digest",
+            "code_digest",
+        ],
         "enum": {
             "session_type": ["feature", "bugfix", "research", "brainstorming", "work", "general", "writing", "analysis"],
         },

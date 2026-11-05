@@ -5,7 +5,21 @@ from typing import Any, Final
 
 from brain79.config import get_wiki_root
 from brain79.core import wiki as wiki_ops
-from brain79.core.frontmatter import load_active_schema
+from brain79.core.frontmatter import (
+    load_active_schema,
+    parse_frontmatter,
+)
+from brain79.core.handoff_freshness import (
+    HandoffFreshness,
+    compute_code_digest,
+    compute_handoff_freshness,
+    compute_wiki_digest,
+    get_git_branch,
+    get_git_head,
+)
+
+HANDOFF_ESCALATION_AGE_DAYS: int = 14
+HANDOFF_ESCALATION_COMMITS: int = 20
 
 SessionType = str
 VALID_SESSION_TYPES = {
@@ -154,6 +168,18 @@ def _resolve_handoff_path(ref: str, wiki_root: Path | None = None) -> Path:
         files = sorted(handoffs_dir.glob("handoff-*.md"))
         if not files:
             raise NoHandoffsExistError()
+
+        # Branch-aware resolution (R4)
+        cur_branch = get_git_branch(w_root.parent)
+        if cur_branch and cur_branch not in ("none", "unknown", "detached"):
+            for fpath in reversed(files):
+                try:
+                    txt = fpath.read_text(encoding="utf-8")
+                    fm, _ = parse_frontmatter(txt)
+                    if str(fm.get("git_branch", "")).strip() == cur_branch:
+                        return fpath
+                except Exception:
+                    continue
         return files[-1]
 
     # Specific ref provided
@@ -422,6 +448,15 @@ def write_handoff(
     boot_instruction = params["boot_instruction"]
     wiki_deviation_justification = params["wiki_deviation_justification"]
 
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    project_root = w_root.parent
+
+    created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    git_branch = get_git_branch(project_root)
+    git_head = get_git_head(project_root)
+    wiki_digest = compute_wiki_digest(w_root)
+    code_digest = compute_code_digest(project_root)
+
     timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H%M%S-%f")[:-3]
     rel_path = f"handoffs/handoff-{timestamp}.md"
 
@@ -431,24 +466,29 @@ def write_handoff(
         "type: handoff",
         f"session_type: {session_type}",
         f"previous_ref: {previous_handoff_ref or 'none'}",
+        f"created_at: {created_at}",
         f"last_updated: {today_iso}",
+        f"git_branch: {git_branch}",
+        f"git_head: {git_head}",
+        f"wiki_digest: {wiki_digest}",
+        f"code_digest: {code_digest}",
         "schema_version: 1",
         "---",
         "",
         f"# Handoff — {timestamp} (UTC)",
-        f"**Tipo de sesión:** {session_type}",
-        f"**Referencia anterior:** {previous_handoff_ref or 'none'}\n",
+        f"**Session type**: {session_type}",
+        f"**Previous ref**: {previous_handoff_ref or 'none'}\n",
     ]
 
     if (
         wiki_deviation_justification
         and wiki_deviation_justification.strip().lower() != "none"
     ):
-        lines.append("## ⚠️ Desviación de la wiki (Temporal)")
+        lines.append("## ⚠️ Wiki deviation (temporary)")
         lines.append(wiki_deviation_justification.strip())
         lines.append("")
 
-    lines.append("## Contexto inmediato")
+    lines.append("## Immediate context")
     lines.append(f"{summary}\n")
 
     def _add_section(title: str, items: list[str]) -> None:
@@ -458,46 +498,130 @@ def write_handoff(
                 lines.append(f"- {item}")
             lines.append("")
 
-    _add_section("Trabajo completado", completed_work)
-    _add_section("Trabajo pendiente", pending_work)
+    _add_section("Completed work", completed_work)
+    _add_section("Pending work", pending_work)
     _add_section(
-        "Conocimiento pendiente de promoción (a wiki)", knowledge_pending_promotion
+        "Knowledge pending promotion", knowledge_pending_promotion
     )
-    _add_section("Recursos", resources)
+    _add_section("Resources", resources)
     _add_section("Gotchas", gotchas)
 
-    lines.append("## Instrucción de arranque")
+    lines.append("## Boot instruction")
     lines.append(boot_instruction)
 
     content = "\n".join(lines)
-    wiki_ops.write_article(rel_path, content, wiki_root=wiki_root)
+    wiki_ops.write_article(rel_path, content, wiki_root=w_root)
 
     return rel_path
 
 
 
-def read_handoff(ref: str = "latest", wiki_root: Path | None = None) -> tuple[str, bool]:
-    """
-    Read a handoff document.
+def _format_age(seconds: float) -> str:
+    """Format age in seconds into a human-readable compact string."""
+    if seconds < 60:
+        return f"{int(seconds)}s"
+    if seconds < 3600:
+        return f"{int(seconds / 60)}m"
+    if seconds < 86400:
+        return f"{int(seconds / 3600)}h"
+    return f"{int(seconds / 86400)}d"
+
+
+def read_handoff(
+    ref: str = "latest",
+    wiki_root: Path | None = None,
+    for_orient: bool = False,
+    freshness: HandoffFreshness | None = None,
+) -> tuple[str, bool]:
+    """Read a handoff document and apply authority decay banners.
 
     Args:
         ref: "latest", "none", or "" (default to latest), or a specific timestamp with or without
-             milliseconds or file extension (e.g., "2024-01-01-120000", "2024-01-01-120000-123", or "handoff-2024-01-01-120000.md").
-             Timestamp prefixes are supported (e.g., "2024" or "2024-08" returns the latest handoff matching that prefix).
+             milliseconds or file extension.
         wiki_root: Optional custom wiki root path.
+        for_orient: If True, applies orient-specific projection (e.g. omits boot instruction
+                    for foreign branch handoffs).
+        freshness: Optional pre-computed HandoffFreshness object to avoid redundant calculations.
 
     Returns:
-        tuple[str, bool]: (handoff_content, has_promotion_pending)
+        tuple[str, bool]: (rendered_content, has_promotion_pending)
     """
     target_path = _resolve_handoff_path(ref, wiki_root=wiki_root)
     w_root = (wiki_root or get_wiki_root()).resolve()
     rel_path = target_path.relative_to(w_root).as_posix()
     content = wiki_ops.read_article(rel_path, wiki_root=w_root)
 
-    header = f"=== Handoff: {rel_path} ===\n\n"
-    has_promotion_pending = "## Conocimiento pendiente de promoción" in content
+    if freshness is None:
+        freshness = compute_handoff_freshness(target_path, wiki_root=w_root)
+    age_str = _format_age(freshness.age_seconds)
 
-    return header + content, has_promotion_pending
+    # Detect promotion pending (support both English and legacy Spanish)
+    has_promotion_pending = (
+        "## Knowledge pending promotion" in content
+        or "## Conocimiento pendiente de promoción" in content
+    )
+
+    # Build Header and Banner based on Freshness State
+    if freshness.state == "fresh":
+        banner = (
+            f"## ⏱️ Active handoff state\n\n"
+            f"> Fresh: written {age_str} ago on '{freshness.handoff_branch}'; no wiki or code changes since.\n\n"
+        )
+        rendered_content = banner + content
+
+    elif freshness.state in ("stale", "unverified"):
+        reasons_str = ", ".join(freshness.reasons) if freshness.reasons else "workspace state changed"
+        commits_str = f"{freshness.commits_since} commit(s)" if freshness.commits_since is not None else "unknown commits"
+        code_str = "yes" if freshness.code_changed is True else ("no" if freshness.code_changed is False else "unknown")
+        if not freshness.changed_wiki_articles:
+            articles_str = "none"
+        elif len(freshness.changed_wiki_articles) <= 10:
+            articles_str = ", ".join(freshness.changed_wiki_articles)
+        else:
+            articles_str = f"{', '.join(freshness.changed_wiki_articles[:10])} (and {len(freshness.changed_wiki_articles) - 10} more)"
+
+        banner = (
+            f"## ⏱️ Last handoff (stale: verify before acting)\n\n"
+            f"> ⚠️ **Stale handoff**: written {age_str} ago on '{freshness.handoff_branch}'.\n"
+            f"> Reasons: {reasons_str}.\n"
+            f"> Changes since handoff: {commits_str}, code changed: {code_str}, changed wiki articles: {articles_str}.\n\n"
+        )
+
+        adjusted = content
+        adjusted = adjusted.replace("## Boot instruction\n", "## Boot instruction (historical: verify against current state)\n")
+        adjusted = adjusted.replace("## Instrucción de arranque\n", "## Instrucción de arranque (historical: verify against current state)\n")
+        rendered_content = banner + adjusted
+
+    elif freshness.state == "foreign_branch":
+        banner = (
+            f"## ⏱️ Last handoff (from branch '{freshness.handoff_branch}', current branch '{freshness.current_branch}')\n\n"
+            f"> ⚠️ **Foreign branch handoff**: recorded on branch '{freshness.handoff_branch}' while active branch is '{freshness.current_branch}'.\n\n"
+        )
+        if for_orient:
+            lines = content.splitlines()
+            extracted_lines: list[str] = []
+            capturing_context = False
+            for line in lines:
+                if line.startswith("## Immediate context") or line.startswith("## Contexto inmediato"):
+                    capturing_context = True
+                    extracted_lines.append(line)
+                elif line.startswith("## ") and capturing_context:
+                    break
+                elif capturing_context:
+                    extracted_lines.append(line)
+                elif line.startswith("# Handoff —") or line.startswith("**Session type") or line.startswith("**Tipo de sesión") or line.startswith("**Previous ref") or line.startswith("**Referencia anterior"):
+                    extracted_lines.append(line)
+
+            extracted_str = "\n".join(extracted_lines).strip()
+            hint = "\n\n> ℹ️ Call `brain79_handoff_read(...)` to inspect the complete cross-branch handoff."
+            rendered_content = banner + extracted_str + hint
+        else:
+            rendered_content = banner + content
+
+    else:
+        rendered_content = f"=== Handoff: {rel_path} ===\n\n" + content
+
+    return rendered_content, has_promotion_pending
 
 
 def purge_handoffs(wiki_root: Path, apply: bool = False) -> str:

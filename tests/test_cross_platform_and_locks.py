@@ -12,12 +12,10 @@ Covers all 5 pillars deterministically on local environment without CI:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-import yaml
 
 from brain79.config import set_project_root
 from brain79.core.context import get_context
@@ -32,8 +30,6 @@ from brain79.core.locks import (
     cleanup_legacy_inline_locks,
     get_lock_path,
     has_exact_case_path,
-    normalize_posix_input,
-    rel_posix,
 )
 from brain79.core.navigation import (
     load_registry,

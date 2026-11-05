@@ -9,7 +9,6 @@ from pathlib import Path
 import pytest
 import yaml
 
-import brain79
 from brain79 import __version__
 from brain79.__main__ import main
 from brain79.server import mcp

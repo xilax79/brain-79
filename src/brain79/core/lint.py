@@ -13,7 +13,6 @@ from brain79.core.lint_organizational import OrganizationalIssue
 from brain79.core.locks import (
     get_lock_path,
     has_exact_case_path,
-    rel_posix,
 )
 
 # Directories excluded from article listings (raw sources and locks are not wiki articles)
