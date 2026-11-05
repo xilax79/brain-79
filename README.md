@@ -58,7 +58,11 @@ RAG (retrieval-augmented generation) and vector search help find fragments of te
 
 ### Prerequisites and cross-platform installation
 
-`brain-79` is tested natively across **macOS**, **Linux** (Debian/Ubuntu/Fedora/Arch), and **Windows** (x64/ARM64). It requires Python 3.10+ and [`uv`](https://docs.astral.sh/uv/) (the fast Python package and tool manager).
+`brain-79` is tested natively across **macOS**, **Linux** (Debian/Ubuntu/Fedora/Arch), and **Windows** (x64/ARM64).
+
+- **Python 3.10+**: runtime environment.
+- **[`uv`](https://docs.astral.sh/uv/)**: fast Python package and tool manager.
+- **Git (v2.25+)**: recommended. Required for software codebases (`--profile software`) to enable automated code drift detection (`documentation_drift_suspected`) and working-tree code freshness hashing (`code_digest`). In non-git directories and general knowledge workspaces (`--profile general`), `brain-79` operates 100% autonomously without git.
 
 #### Step 1: install uv
 - **macOS / Linux:**
