@@ -422,38 +422,6 @@
       ]
     },
     {
-      "path": "architecture/roadmap-industrial-scale.md",
-      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
-      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.8) and next-stage adoption and context guardrails (7-8)",
-      "section": "architecture",
-      "registered_at": "2026-11-13T22:04:40.200425+00:00",
-      "applies_to": [
-        ".brain-79/features/*.md"
-      ],
-      "related": [
-        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-011-session-commit-and-batch-reading.md",
-        "decisions/adr-012-structural-quality-and-drift-detection.md",
-        "decisions/adr-013-versioning-and-release-governance.md",
-        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
-        "decisions/adr-015-sentence-case-first-policy.md",
-        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
-        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
-        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
-        "features/version-governance.md",
-        "features/cross-platform-and-lock-isolation.md",
-        "features/session-triage-and-research-persistence.md",
-        "features/handoff-continuity.md",
-        "features/transitive-drift-and-ripple-guards.md",
-        "features/project-upgrade-and-multi-harness-doctor.md",
-        "architecture/defect-backlog.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
       "path": "changelog/v0-9-0.md",
       "title": "Changelog \u2014 Release 0.9.0: Project upgrade, multi-harness zero-config, and doctor diagnostics",
       "summary": "release v0.9.0 \u2014 project protocol upgrader, delimited AGENTS.md blocks, multi-harness zero-config, and doctor diagnostics",
@@ -519,6 +487,38 @@
         "features/project-upgrade-and-multi-harness-doctor.md",
         "architecture/roadmap-industrial-scale.md",
         "changelog/legacy-internal-releases.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
+      "summary": "project roadmap covering completed protocol phases (0-7) and the public launch readiness specification (Phase 8)",
+      "section": "architecture",
+      "registered_at": "2026-11-13T23:03:10.356493+00:00",
+      "applies_to": [
+        ".brain-79/features/*.md"
+      ],
+      "related": [
+        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-013-versioning-and-release-governance.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
+        "decisions/adr-015-sentence-case-first-policy.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
+        "features/version-governance.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "features/session-triage-and-research-persistence.md",
+        "features/handoff-continuity.md",
+        "features/transitive-drift-and-ripple-guards.md",
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "architecture/defect-backlog.md"
+      ],
+      "outgoing_links": [
         "INDEX.md"
       ]
     }

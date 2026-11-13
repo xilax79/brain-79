@@ -112,15 +112,19 @@
       "src/brain79/server.py": "sha256:e6d9b8ca9815992a"
     },
     "architecture/roadmap-industrial-scale.md": {
-      ".brain-79/features/cli.md": "sha256:68ae8607efcd9ff3",
-      ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:d64a8d84f73b6b97",
-      ".brain-79/features/handoff-continuity.md": "sha256:bc06f8dcc9daf499",
-      ".brain-79/features/mcp-server.md": "sha256:05cea41c77fd6731",
-      ".brain-79/features/organizational-enforcement.md": "sha256:3f301dc41d7476be",
-      ".brain-79/features/project-upgrade-and-multi-harness-doctor.md": "sha256:d564366f6477d359",
-      ".brain-79/features/session-triage-and-research-persistence.md": "sha256:bcec2480ff469f04",
-      ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:33f4f4d0f8032357",
-      ".brain-79/features/version-governance.md": "sha256:b7d67f26b02814dc"
+      "count": 9,
+      "digest": "sha256:4d6d69907e3419fd",
+      "targets": {
+        ".brain-79/features/cli.md": "sha256:68ae8607efcd9ff3",
+        ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:d64a8d84f73b6b97",
+        ".brain-79/features/handoff-continuity.md": "sha256:bc06f8dcc9daf499",
+        ".brain-79/features/mcp-server.md": "sha256:05cea41c77fd6731",
+        ".brain-79/features/organizational-enforcement.md": "sha256:3f301dc41d7476be",
+        ".brain-79/features/project-upgrade-and-multi-harness-doctor.md": "sha256:d564366f6477d359",
+        ".brain-79/features/session-triage-and-research-persistence.md": "sha256:bcec2480ff469f04",
+        ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:33f4f4d0f8032357",
+        ".brain-79/features/version-governance.md": "sha256:b7d67f26b02814dc"
+      }
     },
     "architecture/symmetry.md": {
       "src/brain79/cli/dispatch.py": "sha256:0d80369bd9722516",
