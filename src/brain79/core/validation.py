@@ -5,6 +5,7 @@ import sys
 from typing import Any
 
 from brain79.core.frontmatter import (
+    INACTIVE_STATUSES,
     FrontmatterError,
     ValidationError,
     _normalize_content,
@@ -21,6 +22,20 @@ from brain79.core.frontmatter import (
 
 # Limits
 DEFAULT_INDEX_MAX_LINES = 150
+MAX_ARTICLE_LINES = 400
+MAX_ARTICLE_BYTES = 20_480  # 20 KB
+
+TEMPORAL_MILESTONE_REGEX = re.compile(
+    r"(?<!-)\b(phase|phases|fase|fases|sprint|milestone|etapa)\s+(\d+(\.\d+)?|[ivx]+)\b"
+    r"|\b(roadmap\s+ticket)\b"
+    r"|\bWIP\b",
+    re.IGNORECASE,
+)
+
+SHIPPED_SPECIFICATION_REGEX = re.compile(
+    r"\b(specification|especificación|especificacion)\b",
+    re.IGNORECASE,
+)
 
 
 def get_index_max_lines() -> int:
@@ -195,6 +210,84 @@ def validate_article_content(
     content = dump_frontmatter(meta, body)
     validate_frontmatter(meta, rel_path, schema=active_s)
     validate_location_consistency(meta, rel_path, schema=active_s)
+
+    top_dir = rel_path.split("/")[0]
+    status = str(meta.get("status", "")).lower()
+    stability = str(meta.get("stability", "")).lower()
+    is_inactive = status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES
+
+    # Check article atomicity and byte size
+    atomicity_exempt_dirs = {"decisions", "changelog", "handoffs", "_raw", ".locks"}
+    if top_dir not in atomicity_exempt_dirs and not is_inactive:
+        new_lines = len(content.splitlines())
+        new_bytes = len(content.encode("utf-8"))
+        if new_lines > MAX_ARTICLE_LINES or new_bytes > MAX_ARTICLE_BYTES:
+            is_monotonic_reduction = False
+            target_disk = (w_root / rel_path) if w_root else None
+            if target_disk and target_disk.is_file():
+                try:
+                    old_raw = target_disk.read_text(encoding="utf-8")
+                    old_lines = len(old_raw.splitlines())
+                    old_bytes = len(old_raw.encode("utf-8"))
+                    if (old_lines > MAX_ARTICLE_LINES or old_bytes > MAX_ARTICLE_BYTES) and (new_bytes < old_bytes and new_lines <= old_lines):
+                        is_monotonic_reduction = True
+                except Exception:
+                    pass
+            if not is_monotonic_reduction:
+                raise ValidationError(
+                    rule="article_too_large",
+                    path=rel_path,
+                    message=f"Article has {new_lines} lines and {new_bytes} bytes (max recommended: {MAX_ARTICLE_LINES} lines / {MAX_ARTICLE_BYTES} bytes).",
+                    actionable="Split or distill the article into a concise living manual (< 400 lines and < 20480 bytes).",
+                )
+
+    # Check temporal decontamination for living manuals
+    living_dirs = ("features", "architecture", "product")
+    if top_dir in living_dirs and "roadmap" not in rel_path.lower() and not is_inactive:
+        summary = str(meta.get("summary") or "")
+        m_summary = TEMPORAL_MILESTONE_REGEX.search(summary)
+        if m_summary:
+            raise ValidationError(
+                rule="temporal_contamination_in_summary",
+                path=rel_path,
+                message=f"Living manual summary contains temporal project management marker '{m_summary.group(0)}'.",
+                actionable="Remove temporal milestone tags from summary. Living manuals must describe software capabilities evergreenly.",
+            )
+
+        body_masked = _mask_code_fences(body)
+        is_shipped = status == "shipped" or stability == "stable"
+
+        for line_no, raw_line in enumerate(body_masked.splitlines(), start=1):
+            line = raw_line.strip()
+            if line.startswith("# "):
+                title_text = line[2:].strip()
+                m_title = TEMPORAL_MILESTONE_REGEX.search(title_text)
+                if m_title:
+                    raise ValidationError(
+                        rule="temporal_contamination_in_title",
+                        path=rel_path,
+                        message=f"Living manual title contains temporal project management marker '{m_title.group(0)}'.",
+                        actionable="Remove temporal milestone tags (e.g. '(Phase X)') from title. Record release delivery in changelog/ instead.",
+                    )
+                if is_shipped:
+                    m_spec = SHIPPED_SPECIFICATION_REGEX.search(title_text)
+                    if m_spec:
+                        raise ValidationError(
+                            rule="shipped_specification_title",
+                            path=rel_path,
+                            message="Shipped living manual title contains 'specification'.",
+                            actionable="Rename title to describe active capability directly (e.g. 'Feature — Subsystem') rather than a specification.",
+                        )
+            elif line.startswith("## ") or line.startswith("### "):
+                heading_text = line.lstrip("#").strip()
+                m_heading = TEMPORAL_MILESTONE_REGEX.search(heading_text)
+                if m_heading:
+                    raise ValidationError(
+                        rule="temporal_contamination_in_heading",
+                        path=rel_path,
+                        message=f"Living manual heading contains temporal project management marker '{m_heading.group(0)}'.",
+                        actionable="Remove temporal milestone tags from heading. Keep living manual structure timeless.",
+                    )
 
     if check_workspace_targets and w_root and not (w_root / rel_path).exists():
         check_anti_sprawl_overlap(meta, rel_path, wiki_root=w_root)

@@ -19,8 +19,12 @@ from brain79.core.validation import (
     DECISION_BULLET_STRICT,
     DECISION_HEADER_STRICT,
     INDEX_ALLOWED_H2,
+    MAX_ARTICLE_BYTES,
+    MAX_ARTICLE_LINES,
+    SHIPPED_SPECIFICATION_REGEX,
     TECHNICAL_DEBT_BULLET_STRICT,
     TECHNICAL_DEBT_HEADER_STRICT,
+    TEMPORAL_MILESTONE_REGEX,
     _mask_code_fences,
     get_index_max_lines,
 )
@@ -242,10 +246,6 @@ def check_technical_debt_leakage(
     return issues
 
 
-MAX_ARTICLE_LINES = 400
-MAX_ARTICLE_BYTES = 20_480  # 20 KB
-
-
 def check_article_atomicity(
     wiki_root: Path, md_files: list[Path] | None = None
 ) -> list[OrganizationalIssue]:
@@ -255,10 +255,19 @@ def check_article_atomicity(
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
         rel_str = rel.as_posix()
-        if rel.parts[0] in ("_raw", ".locks", "handoffs", "decisions") or rel_str in ("INDEX.md", "SCHEMA.md"):
+        if rel.parts[0] in ("_raw", ".locks", "handoffs", "decisions", "changelog") or rel_str in ("INDEX.md", "SCHEMA.md"):
             continue
 
         content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
+        try:
+            meta, _ = parse_frontmatter(content)
+        except Exception:
+            meta = {}
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
+            continue
+
         lines = content.splitlines()
         byte_len = len(content.encode("utf-8"))
         masked_content = _mask_code_fences(content)
@@ -1031,19 +1040,6 @@ def check_git_repository(
             )
         ]
     return []
-
-
-TEMPORAL_MILESTONE_REGEX = re.compile(
-    r"(?<!-)\b(phase|phases|fase|fases|sprint|milestone|etapa)\s+(\d+(\.\d+)?|[ivx]+)\b"
-    r"|\b(roadmap\s+ticket)\b"
-    r"|\bWIP\b",
-    re.IGNORECASE,
-)
-
-SHIPPED_SPECIFICATION_REGEX = re.compile(
-    r"\b(specification|especificación|especificacion)\b",
-    re.IGNORECASE,
-)
 
 
 def check_temporal_contamination(

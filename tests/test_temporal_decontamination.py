@@ -290,3 +290,161 @@ def test_article_too_large_triggered_by_byte_size(tmp_path: Path) -> None:
         for i in issues
     )
 
+
+def test_write_time_blocks_oversized_article_by_bytes(tmp_path: Path) -> None:
+    from brain79.core.validation import ValidationError, validate_article_content
+
+    w_root = tmp_path / ".brain-79"
+    feat_dir = w_root / "features"
+    feat_dir.mkdir(parents=True)
+
+    long_line = "B" * 2500 + "\n"
+    content = (
+        "---\n"
+        "type: feature\n"
+        "summary: oversized article test\n"
+        "status: shipped\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-11-13\n"
+        "---\n\n"
+        "# Feature — Oversized Article\n\n"
+        "## Overview\n"
+    ) + (long_line * 10) + "\n[← Volver al Índice](../INDEX.md)\n"
+
+    with pytest.raises(ValidationError) as exc_info:
+        validate_article_content("features/oversized.md", content, wiki_root=w_root)
+
+    assert exc_info.value.rule == "article_too_large"
+    assert "20480 bytes" in exc_info.value.message
+
+
+def test_write_time_allows_monotonic_reduction_of_legacy_oversized_article(tmp_path: Path) -> None:
+    from brain79.core.validation import ValidationError, validate_article_content
+
+    w_root = tmp_path / ".brain-79"
+    feat_dir = w_root / "features"
+    feat_dir.mkdir(parents=True)
+
+    # Initial file on disk: 25 KB
+    line_2500 = "C" * 2500 + "\n"
+    initial_content = (
+        "---\n"
+        "type: feature\n"
+        "summary: legacy oversized article\n"
+        "status: shipped\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-11-13\n"
+        "---\n\n"
+        "# Feature — Legacy Oversized\n\n"
+        "## Overview\n"
+    ) + (line_2500 * 10) + "\n[← Volver al Índice](../INDEX.md)\n"
+
+    target_file = feat_dir / "legacy-oversized.md"
+    target_file.write_text(initial_content, encoding="utf-8")
+
+    # 1. Monotonic reduction to 21 KB (reduces bytes from ~25 KB to ~21 KB)
+    line_2100 = "C" * 2100 + "\n"
+    reduced_content = (
+        "---\n"
+        "type: feature\n"
+        "summary: legacy oversized article\n"
+        "status: shipped\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-11-13\n"
+        "---\n\n"
+        "# Feature — Legacy Oversized\n\n"
+        "## Overview\n"
+    ) + (line_2100 * 10) + "\n[← Volver al Índice](../INDEX.md)\n"
+
+    # Should succeed without error due to monotonic reduction
+    res = validate_article_content("features/legacy-oversized.md", reduced_content, wiki_root=w_root)
+    assert res is not None
+
+    # 2. Expansion to 27 KB (increases bytes from ~25 KB to ~27 KB)
+    line_2700 = "C" * 2700 + "\n"
+    expanded_content = (
+        "---\n"
+        "type: feature\n"
+        "summary: legacy oversized article\n"
+        "status: shipped\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-11-13\n"
+        "---\n\n"
+        "# Feature — Legacy Oversized\n\n"
+        "## Overview\n"
+    ) + (line_2700 * 10) + "\n[← Volver al Índice](../INDEX.md)\n"
+
+    with pytest.raises(ValidationError) as exc_info:
+        validate_article_content("features/legacy-oversized.md", expanded_content, wiki_root=w_root)
+
+    assert exc_info.value.rule == "article_too_large"
+
+
+def test_write_time_blocks_temporal_contamination_in_title(tmp_path: Path) -> None:
+    from brain79.core.validation import ValidationError, validate_article_content
+
+    w_root = tmp_path / ".brain-79"
+    feat_dir = w_root / "features"
+    feat_dir.mkdir(parents=True)
+
+    # 1. Title with Phase 7
+    content_title = (
+        "---\n"
+        "type: feature\n"
+        "summary: clean summary\n"
+        "status: planned\n"
+        "version: 0.1.0\n"
+        "last_updated: 2026-11-13\n"
+        "---\n\n"
+        "# Feature — Future Subsystem (Phase 7)\n\n"
+        "## Overview\n"
+        "Description.\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
+    )
+
+    with pytest.raises(ValidationError) as exc_info:
+        validate_article_content("features/future.md", content_title, wiki_root=w_root)
+
+    assert exc_info.value.rule == "temporal_contamination_in_title"
+
+    # 2. Summary with Sprint 4
+    content_summary = (
+        "---\n"
+        "type: feature\n"
+        "summary: deliverables for Sprint 4\n"
+        "status: planned\n"
+        "version: 0.1.0\n"
+        "last_updated: 2026-11-13\n"
+        "---\n\n"
+        "# Feature — Future Subsystem\n\n"
+        "## Overview\n"
+        "Description.\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
+    )
+
+    with pytest.raises(ValidationError) as exc_info_s:
+        validate_article_content("features/future2.md", content_summary, wiki_root=w_root)
+
+    assert exc_info_s.value.rule == "temporal_contamination_in_summary"
+
+    # 3. Shipped title with 'specification'
+    content_shipped_spec = (
+        "---\n"
+        "type: feature\n"
+        "summary: clean summary\n"
+        "status: shipped\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-11-13\n"
+        "---\n\n"
+        "# Feature — Active Subsystem Specification\n\n"
+        "## Overview\n"
+        "Description.\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
+    )
+
+    with pytest.raises(ValidationError) as exc_info_spec:
+        validate_article_content("features/active.md", content_shipped_spec, wiki_root=w_root)
+
+    assert exc_info_spec.value.rule == "shipped_specification_title"
+
+

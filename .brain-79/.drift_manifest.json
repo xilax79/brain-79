@@ -97,8 +97,8 @@
       "src/brain79/core/frontmatter.py": "sha256:3cb8b1b72db6999c",
       "src/brain79/core/handoff_freshness.py": "sha256:c18b37cced71edda",
       "src/brain79/core/init_project.py": "sha256:7dfeb054b63ab229",
-      "src/brain79/core/lint_organizational.py": "sha256:591ee278382984c1",
-      "src/brain79/core/validation.py": "sha256:ab619fc1e6cc7577"
+      "src/brain79/core/lint_organizational.py": "sha256:45de2d4d2bb52ef4",
+      "src/brain79/core/validation.py": "sha256:d8ec3848f1aa4cda"
     },
     "architecture/dispatcher.md": {
       "src/brain79/__main__.py": "sha256:daa34be62549edea",
@@ -139,9 +139,9 @@
     "decisions/adr-012-structural-quality-and-drift-detection.md": {
       "src/brain79/core/drift.py": "sha256:5377710ac0e3f5aa",
       "src/brain79/core/frontmatter.py": "sha256:3cb8b1b72db6999c",
-      "src/brain79/core/lint_organizational.py": "sha256:591ee278382984c1",
+      "src/brain79/core/lint_organizational.py": "sha256:45de2d4d2bb52ef4",
       "src/brain79/core/orient.py": "sha256:f5d7de8a387d871d",
-      "src/brain79/core/validation.py": "sha256:ab619fc1e6cc7577",
+      "src/brain79/core/validation.py": "sha256:d8ec3848f1aa4cda",
       "src/brain79/core/wiki.py": "sha256:89d6d2de455fce78"
     },
     "decisions/adr-013-versioning-and-release-governance.md": {
@@ -170,10 +170,10 @@
     "features/organizational-enforcement.md": {
       "src/brain79/core/frontmatter.py": "sha256:3cb8b1b72db6999c",
       "src/brain79/core/lint.py": "sha256:d34ce9d50a76b0a5",
-      "src/brain79/core/lint_organizational.py": "sha256:591ee278382984c1",
+      "src/brain79/core/lint_organizational.py": "sha256:45de2d4d2bb52ef4",
       "src/brain79/core/migration.py": "sha256:dcd7919bbe94573d",
       "src/brain79/core/navigation.py": "sha256:bbf07eff59ad2fad",
-      "src/brain79/core/validation.py": "sha256:ab619fc1e6cc7577",
+      "src/brain79/core/validation.py": "sha256:d8ec3848f1aa4cda",
       "src/brain79/templates/__init__.py": "sha256:ba57cc5d749b138b"
     },
     "features/project-upgrade-and-multi-harness-doctor.md": {

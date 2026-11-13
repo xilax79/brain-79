@@ -99,13 +99,6 @@
       "registered_at": "2026-11-05T15:02:04.843048+00:00"
     },
     {
-      "path": "decisions/adr-012-structural-quality-and-drift-detection.md",
-      "title": "ADR-012 \u2014 Structural article quality, auto-injected backlinks, and deterministic drift detection",
-      "summary": "section-level structural skeletons, auto-injected backlinks, and deterministic code-to-wiki drift detection",
-      "section": "decisions",
-      "registered_at": "2026-11-05T15:02:04.844241+00:00"
-    },
-    {
       "path": "decisions/adr-013-versioning-and-release-governance.md",
       "title": "ADR-013 \u2014 Architecture \u2014 Single-source semantic versioning and mechanical release governance",
       "summary": "single-source semantic versioning via Hatchling, FastMCP version handshake exposure, and automated release parity testing",
@@ -139,13 +132,6 @@
       "summary": "Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication",
       "section": "features",
       "registered_at": "2026-11-05T15:02:04.851906+00:00"
-    },
-    {
-      "path": "product/overview.md",
-      "title": "Brain-79 \u2014 Product vision",
-      "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
-      "section": "product",
-      "registered_at": "2026-11-05T15:02:04.855838+00:00"
     },
     {
       "path": "changelog/v0-7-2.md",
@@ -384,6 +370,45 @@
         "architecture/roadmap-industrial-scale.md",
         "decisions/adr-013-versioning-and-release-governance.md",
         "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "decisions/adr-012-structural-quality-and-drift-detection.md",
+      "title": "ADR-012 \u2014 Structural article quality, auto-injected backlinks, and deterministic drift detection",
+      "summary": "section-level structural skeletons, auto-injected backlinks, and deterministic code-to-wiki drift detection",
+      "section": "decisions",
+      "registered_at": "2026-11-13T18:40:56.995839+00:00",
+      "applies_to": [
+        "src/brain79/core/frontmatter.py",
+        "src/brain79/core/validation.py",
+        "src/brain79/core/drift.py",
+        "src/brain79/core/lint_organizational.py",
+        "src/brain79/core/orient.py",
+        "src/brain79/core/wiki.py"
+      ],
+      "related": [
+        "decisions/adr-007-frontmatter-summary-and-backlink-navigation.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "architecture/roadmap-industrial-scale.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "product/overview.md",
+      "title": "Brain-79 \u2014 Product vision",
+      "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
+      "section": "product",
+      "registered_at": "2026-11-13T18:40:57.002957+00:00",
+      "applies_to": [
+        ".brain-79/SCHEMA.md",
+        ".brain-79/features/*.md",
+        "src/brain79/__init__.py"
       ],
       "outgoing_links": [
         "INDEX.md"
