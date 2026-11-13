@@ -1,6 +1,6 @@
 ---
 type: feature
-summary: specification for Phase 6.7 — Merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
+summary: merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
 status: shipped
 version: 0.8.0
 applies_to:
@@ -18,11 +18,11 @@ related:
   - architecture/current-state.md
   - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:5f7d6addd2b97b97"
+applies_to_digest: "sha256:0ad08cb3402c96a1"
 applies_to_count: 4
 ---
 
-# Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context (Phase 6.7)
+# Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context
 
 ## Overview
 
@@ -32,7 +32,7 @@ During multi-phase development, LLM coding agents exhibit four recurring behavio
 3. **Partial Context Blindness at Cold Start (`max_articles=4` truncation)**: when 7 articles deterministically govern the files being touched via Signal 1 (`applies_to`), `rank_context_articles()` silently slices `candidates[:4]` and discards the other 3 governing articles.
 4. **Incomplete End-of-Session Synchronization & Rubber-Stamping**: when asked to "update the wiki" at the end of a session, agents either forget some of the `.py` files modified in the working tree or attempt to silence drift alerts with generic excuses without documenting new public functions, classes, or CLI parameters.
 
-This specification defines **Phase 6.7 of the Industrial-Scale Roadmap**, combining a **Merkle leaf-manifest and multi-hop DAG drift engine** with **four behavioral enforcement gates**:
+This subsystem combines a **Merkle leaf-manifest and multi-hop DAG drift engine** with **four behavioral enforcement gates**:
 - **Hard Session Ripple Gate (`unresolved_session_ripple`)**: rejects `session_commit` in pre-flight (Pass 2d) if any umbrella article impacted by the session's writes/edits or any digest-stamped governing article for modified workspace files remains drifted.
 - **Anti-Sprawl & Target Overlap Guard (`duplicate_governance_target`)**: blocks creating a new redundant article in `features/`, `architecture/`, `product/`, `topics/`, or `context/` when its governed files or title/slug collide with an existing active article of the same type unless `supersedes` or `related` is declared.
 - **Unbounded Signal 1 (`applies_to`) Context + Working-Tree Auto-Binding in `orient()`**: never truncates deterministic Signal 1 path matches by `top_n=4`, automatically binds `orient()` to dirty/modified git working-tree files when `paths` is omitted, and provides a Mandatory Reading Manifest if total inlined text exceeds the 64 KB buffer.

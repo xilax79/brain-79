@@ -1,4 +1,4 @@
-"""Atomic session commit protocol for Brain-79 (Phases 3 & 6.7).
+"""Atomic session commit protocol and multi-phase pre-flight transaction pipeline.
 
 Executes the entire end-of-session finalization workflow in a 4-phase transaction:
 1. Pass 1: In-memory syntax/schema validation, verified_articles format check, and staging in virtual_fs.

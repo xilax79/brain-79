@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: industrial-scale roadmap covering completed core protocol phases (0-6.7) and next-stage adoption and context guardrails (7-8)
+summary: industrial-scale roadmap covering completed core protocol phases (0-6.8) and next-stage adoption and context guardrails (7-8)
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -14,6 +14,7 @@ related:
   - decisions/adr-015-sentence-case-first-policy.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
+  - decisions/adr-018-living-manuals-and-temporal-decontamination.md
   - features/version-governance.md
   - features/cross-platform-and-lock-isolation.md
   - features/session-triage-and-research-persistence.md
@@ -22,7 +23,7 @@ related:
   - features/project-upgrade-and-multi-harness-doctor.md
   - architecture/defect-backlog.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:efd8c8e4f2612774"
+applies_to_digest: "sha256:bf791419ca23b77a"
 applies_to_count: 9
 ---
 
@@ -34,7 +35,7 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.7
 
 ---
 
-## Completed foundation (Phases 0–6.7 — condensed)
+## Completed foundation (Phases 0–6.8 — condensed)
 
 - **[x] Phase 0 — Core invariant alignment**: unified write-time validation with organizational linting, enforced pure routing table rules on `INDEX.md` (ADR-008), fixed `bootstrap` templates, and standardized `_raw/sessions/` frontmatter.
 - **[x] Phase 1 — Declarative schema & dual ontology (ADR-009)**: decoupled validation mechanism from ontology policy via `.brain-79/SCHEMA.md` with `<0.1ms` caching, built-in `software` and `general` profiles, and custom directory extensions.
@@ -47,6 +48,7 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.7
 - **[x] Phase 6.5 — Session knowledge triage, research persistence guard, and handoff ergonomics**: introduced the Amnesia Test (3-way triage protocol), unpersisted research engine guard in handoff and session_commit, schema-level parameter alias tolerance (decisions, next_steps, open_questions, pending_tasks), profile-aware curation guide, redundant .brain-79/ path prefix stripping, and real-agent pre-merge E2E smoke suite (scripts/run_e2e_smoke.py).
 - **[x] Phase 6.6 — Handoff freshness, provenance & authority decay (ADR-016)**: established that handoffs are perishable transition notes whose authority decays with workspace drift. Captured deterministic provenance (created_at, git_branch, git_head, wiki_digest, code_digest) in handoff frontmatter, added state classification (fresh, stale, foreign_branch, unverified) in handoff_freshness.py, rendered dynamic authority-decay banners and historical boot instructions in orient(), added branch-aware latest resolution, escalated aging pending tasks, and standardized English handoff templates with sentence-case colons outside bold.
 - **[x] Phase 6.7 — Transitive drift detection, umbrella synthesis tracking & anti-append-only ripple guards (v0.8.0)**: Merkle leaf manifest (`.drift_manifest.json`), multi-hop DAG transitive propagation, 4-phase `_transaction.lock` session commit pipeline, AST Guard C public signature verification, Anti-Sprawl Guard (`duplicate_governance_target`), unanchored governance detection, and unbounded Signal 1 context ranking.
+- **[x] Phase 6.8 — Temporal decontamination, living manuals hygiene & codebase de-phasing (ADR-018, v0.8.1)**: established three-class document ontology, Chesterton's Fence for ADRs, temporal milestone removal in living manuals via `check_temporal_contamination`, line-by-line semantic codebase de-phasing, and epocal changelog consolidation.
 
 ---
 

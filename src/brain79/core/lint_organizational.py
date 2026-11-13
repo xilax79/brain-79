@@ -1028,6 +1028,125 @@ def check_git_repository(
     return []
 
 
+TEMPORAL_MILESTONE_REGEX = re.compile(
+    r"(?<!-)\b(phase|phases|fase|fases|sprint|milestone|etapa)\s+(\d+(\.\d+)?|[ivx]+)\b"
+    r"|\b(roadmap\s+ticket)\b"
+    r"|\bWIP\b",
+    re.IGNORECASE,
+)
+
+SHIPPED_SPECIFICATION_REGEX = re.compile(
+    r"\b(specification|especificación|especificacion)\b",
+    re.IGNORECASE,
+)
+
+
+def check_temporal_contamination(
+    wiki_root: Path,
+    md_files: list[Path] | None = None,
+) -> list[OrganizationalIssue]:
+    """Flag temporal project management markers in living manuals (features, architecture, product)."""
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
+    issues: list[OrganizationalIssue] = []
+
+    living_dirs = ("features", "architecture", "product")
+
+    for md_p in files:
+        rel_str = md_p.relative_to(wiki_root).as_posix()
+        if (
+            rel_str in ("INDEX.md", "SCHEMA.md")
+            or rel_str.startswith("_raw/")
+            or rel_str.startswith("handoffs/")
+        ):
+            continue
+
+        parts = rel_str.split("/")
+        top_dir = parts[0]
+        if top_dir not in living_dirs:
+            continue
+
+        # Roadmaps are by definition milestone schedules and exempt
+        if "roadmap" in rel_str.lower():
+            continue
+
+        try:
+            content = md_p.read_text(encoding="utf-8")
+            meta, body = parse_frontmatter(content)
+        except Exception:
+            continue
+
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        # Inactive / archived articles are historical records and exempt
+        if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
+            continue
+
+        # 1. Check frontmatter summary
+        summary = str(meta.get("summary") or "")
+        m_summary = TEMPORAL_MILESTONE_REGEX.search(summary)
+        if m_summary:
+            issues.append(
+                OrganizationalIssue(
+                    rule="temporal_contamination_in_summary",
+                    path=rel_str,
+                    line=None,
+                    severity="warning",
+                    message=f"Living manual summary contains temporal project management marker '{m_summary.group(0)}'.",
+                    actionable="Remove temporal milestone tags from summary. Living manuals must describe software capabilities evergreenly.",
+                )
+            )
+
+        # 2. Check title (H1) and headings (H2/H3)
+        body_masked = _mask_code_fences(body)
+        is_shipped = status == "shipped" or stability == "stable"
+
+        for line_no, raw_line in enumerate(body_masked.splitlines(), start=1):
+            line = raw_line.strip()
+            if line.startswith("# "):
+                title_text = line[2:].strip()
+                m_title = TEMPORAL_MILESTONE_REGEX.search(title_text)
+                if m_title:
+                    issues.append(
+                        OrganizationalIssue(
+                            rule="temporal_contamination_in_title",
+                            path=rel_str,
+                            line=line_no,
+                            severity="warning",
+                            message=f"Living manual title contains temporal project management marker '{m_title.group(0)}'.",
+                            actionable="Remove temporal milestone tags (e.g. '(Phase X)') from title. Record release delivery in changelog/ instead.",
+                        )
+                    )
+                if is_shipped:
+                    m_spec = SHIPPED_SPECIFICATION_REGEX.search(title_text)
+                    if m_spec:
+                        issues.append(
+                            OrganizationalIssue(
+                                rule="shipped_specification_title",
+                                path=rel_str,
+                                line=line_no,
+                                severity="warning",
+                                message="Shipped living manual title contains 'specification'.",
+                                actionable="Rename title to describe active capability directly (e.g. 'Feature — Subsystem') rather than a specification.",
+                            )
+                        )
+            elif line.startswith("## ") or line.startswith("### "):
+                heading_text = line.lstrip("#").strip()
+                m_heading = TEMPORAL_MILESTONE_REGEX.search(heading_text)
+                if m_heading:
+                    issues.append(
+                        OrganizationalIssue(
+                            rule="temporal_contamination_in_heading",
+                            path=rel_str,
+                            line=line_no,
+                            severity="warning",
+                            message=f"Living manual heading contains temporal project management marker '{m_heading.group(0)}'.",
+                            actionable="Remove temporal milestone tags from heading. Keep living manual structure timeless.",
+                        )
+                    )
+
+    return issues
+
+
 def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     """Run all organizational health checks on the wiki."""
     p_root = wiki_root.parent
@@ -1054,6 +1173,7 @@ def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     issues.extend(check_shared_leaf_targets(wiki_root, md_files=md_files, workspace_index=ws))
     issues.extend(check_architectural_decision_deficit(wiki_root, md_files=md_files))
     issues.extend(check_uncovered_source_files(wiki_root, md_files=md_files, workspace_index=ws))
+    issues.extend(check_temporal_contamination(wiki_root, md_files=md_files))
     return issues
 
 

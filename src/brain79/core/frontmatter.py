@@ -492,14 +492,14 @@ def generate_frontmatter_template(target_type: str, schema: ActiveSchema | None 
     active_types = schema.types if schema else load_active_schema().types
 
     if target_type == "feature":
-        return f"---\ntype: feature\nsummary: <one-line summary of feature>\nstatus: planned  # <planned|in_progress|shipped|deprecated|legacy>\nversion: 0.1.0\nlast_updated: {today}\n---"
+        return f"---\ntype: feature\nsummary: <one-line summary of feature>\nstatus: planned  # <planned|in_progress|shipped|deprecated|archived|legacy>\nversion: 0.1.0\nlast_updated: {today}\n---"
     elif target_type == "decision":
         dec_schema = active_types.get("decision", {})
         has_deciders = "deciders" in dec_schema.get("required", [])
         deciders_line = "deciders: [author]\n" if has_deciders else ""
         return f"---\ntype: decision\nsummary: <one-line summary of decision>\nstatus: proposed  # <proposed|accepted|superseded|rejected|legacy>\ndate: {today}\n{deciders_line}last_updated: {today}\n---"
     elif target_type == "architecture":
-        return f"---\ntype: architecture\nsummary: <one-line summary of architecture>\nstability: experimental  # <experimental|stable|legacy>\nlast_updated: {today}\n---"
+        return f"---\ntype: architecture\nsummary: <one-line summary of architecture>\nstability: experimental  # <experimental|stable|archived|legacy>\nlast_updated: {today}\n---"
     elif target_type == "product":
         return f"---\ntype: product\nsummary: <one-line summary of product vision or domain>\nlast_updated: {today}\n---"
     elif target_type == "context":

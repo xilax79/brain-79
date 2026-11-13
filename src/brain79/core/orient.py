@@ -1,5 +1,5 @@
 """
-1-Call Cold Start Orient Orchestrator (Phase 2).
+Single-call cold start orientation orchestrator and 3-signal context ranker.
 
 Combines:
 1. Routing Table (INDEX.md).
@@ -112,7 +112,7 @@ def orient(
             )
         sections.append(handoff_content.strip())
 
-        # Escalation of aging pending work (R5)
+        # Escalation of aging pending work
         raw_handoff_text = target_handoff.read_text(encoding="utf-8")
         has_pending_work = (
             "## Pending work" in raw_handoff_text
@@ -190,7 +190,7 @@ def orient(
         if dp not in effective_paths:
             effective_paths.append(dp)
 
-    # Unconditional Drift Detection across entire wiki (Pilar 6.1)
+    # Unconditional drift detection across entire wiki
     all_drifts = detect_all_drift(wiki_root=w_root, project_root=p_root, workspace_index=ws)
 
     seen_drifts: set[tuple[str, str, str]] = set()

@@ -4,6 +4,17 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-13
+
+### Added
+- **Living manuals and temporal decontamination governance (ADR-018)**:
+  - Added `check_temporal_contamination` to `lint_organizational.py` flagging temporal project management markers (`Phase X`, `Sprint Y`, `Milestone Z`, `WIP`) in titles, summaries, and headings of living manuals (`features/`, `architecture/`, `product/`).
+  - Added `shipped_specification_title` rule ensuring shipped living manuals describe active capabilities rather than "specifications".
+  - Established formal three-class document ontology (Immutable Audit Trail, Living System Truth, Ephemeral Operational Transition) with Chesterton's Fence invariant for ADRs.
+  - Line-by-line semantic de-phasing across `src/brain79/` comments, docstrings, and root `AGENTS.md`.
+  - Epocal changelog consolidation policy preventing navigation budget exhaustion.
+  - Sized and synchronized state enums (`archived`) in `generate_frontmatter_template()`.
+
 ## [0.8.0] - 2026-11-12
 
 ### Added

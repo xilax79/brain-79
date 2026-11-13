@@ -139,7 +139,7 @@ def register_article(
     if ".." in p.parts or path.startswith("/") or p.is_absolute():
         raise ValueError(f"Invalid path for navigation registry: {path}")
 
-    # Exclude handoffs from navigation registry (P0.5)
+    # Exclude handoffs from navigation registry
     if path.startswith("handoffs/") or section == "handoffs":
         return
 
@@ -154,7 +154,7 @@ def register_article(
         registry = load_registry(wiki_root)
         articles = registry.get("articles", [])
 
-        # Avoid updating registered_at if content metadata has not changed (P2.2)
+        # Avoid updating registered_at if content metadata has not changed
         existing = next((a for a in articles if a.get("path") == path), None)
         if (
             existing is not None
@@ -371,7 +371,7 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
 
     new_section = generate_quick_navigation(wiki_root)
 
-    # Use centralized INDEX.md.lock for synchronization with writes (P1.1, Phase 6)
+    # Synchronize navigation regeneration with concurrent writes via centralized INDEX.md.lock
     index_lock = acquire_wiki_lock(wiki_root, "INDEX.md", timeout=5.0)
 
     with index_lock:

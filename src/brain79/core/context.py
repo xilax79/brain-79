@@ -309,7 +309,7 @@ def rank_context_articles(
 
     scored_map: dict[Path, tuple[float, list[str]]] = {}
 
-    # Gather explicit paths and paths mentioned in task description (Defect 5)
+    # Gather explicit paths and paths extracted from task description
     extracted_from_task = _extract_paths_from_text(task or "")
     combined_paths = list(paths or [])
     for ep in extracted_from_task:
@@ -362,7 +362,7 @@ def rank_context_articles(
     keywords = extract_keywords(task or "")
     if keywords:
         n_docs = len(snapshot)
-        # Search title (H1), H2 subheadings, summary, and content (Defect 2 & Defect 4)
+        # Search title (H1), H2 subheadings, summary, and article body
         doc_contents: dict[Path, tuple[str, str, str, str, dict[str, Any]]] = {}
         df_map: dict[str, int] = {kw: 0 for kw in keywords}
 
@@ -498,7 +498,7 @@ def rank_context_articles(
                         expanded_adrs.append(candidate_path)
                         already_selected.add(candidate_path)
 
-    # Defect 1: Preserve top_candidates AND append expanded ADRs without truncation
+    # Preserve top candidates and append expanded 1-hop ADRs without truncation
     final_results: list[tuple[float, Path, list[str]]] = list(top_candidates)
     for adr_p in expanded_adrs:
         final_results.append((50.0, adr_p, ["graph:1-hop ADR expansion"]))

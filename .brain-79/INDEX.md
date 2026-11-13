@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 ---
 
 # Project index
@@ -14,12 +14,13 @@ last_updated: 2026-11-12
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — industrial-scale roadmap covering completed core protocol phases (0-6.7) and next-stage adoption and context guardrails (7-8)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — industrial-scale roadmap covering completed core protocol phases (0-6.8) and next-stage adoption and context guardrails (7-8)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
 ### Changelog
 - [Changelog — Historical internal development milestones (v1.0.0 through v2.0.2)](changelog/legacy-internal-releases.md) — historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration
+- [Changelog — Release 0.8.1: Living manuals, temporal decontamination, and codebase de-phasing](changelog/v0-8-1.md) — release v0.8.1 — living manuals, temporal decontamination, codebase de-phasing, and three-class document ontology
 - [Changelog — Version 0.7.2 — Pre-GA semantic calibration](changelog/v0-7-2.md) — semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release
 - [Changelog — Version 0.8.0 — Transitive drift and ripple guards](changelog/v0-8-0.md) — Phase 6.7 release — Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification
 
@@ -41,15 +42,16 @@ last_updated: 2026-11-12
 - [ADR-015: Sentence case first policy for documentation and wiki generation](decisions/adr-015-sentence-case-first-policy.md) — enforce sentence case first across all documentation, headings, lists, and wiki generation
 - [ADR-016: Handoff freshness, provenance, and authority decay](decisions/adr-016-handoff-freshness-and-authority-decay.md) — treat handoffs as perishable transition notes with authority decaying based on deterministic workspace drift
 - [ADR-017: Semantic versioning calibration for pre-GA maturation](decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md) — semantic versioning calibration to 0.7.2 for pre-GA maturation prior to public release
+- [Decision — ADR-018: Living manuals, temporal decontamination, and the three-class document ontology](decisions/adr-018-living-manuals-and-temporal-decontamination.md) — architectural foundation for living manuals, temporal decontamination, Chesterton's Fence for ADRs, and epocal changelog consolidation
 
 ### Features
 - [Feature — Cross-platform portability and centralized lock isolation](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
 - [Feature — FastMCP integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
-- [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics (Phase 7 specification)](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
+- [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
 - [Feature — Session knowledge triage and research persistence](features/session-triage-and-research-persistence.md) — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics
 - [Feature — Short-term handoff continuity, freshness, and lifecycle operations](features/handoff-continuity.md) — tactical session transitions, freshness evaluation, authority decay, anti-hallucination work tracking, and operational purge
 - [Feature — Standalone CLI interface](features/cli.md) — deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
-- [Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context (Phase 6.7)](features/transitive-drift-and-ripple-guards.md) — specification for Phase 6.7 — Merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
+- [Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context](features/transitive-drift-and-ripple-guards.md) — merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
 - [Feature — Versioning and release governance](features/version-governance.md) — single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
 - [Feature — Wiki organizational enforcement](features/organizational-enforcement.md) — prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing
 

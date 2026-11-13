@@ -1,13 +1,6 @@
 {
   "articles": [
     {
-      "path": "architecture/current-state.md",
-      "title": "Architecture \u2014 System current state",
-      "summary": "high-level overview of system architecture, active milestones, runtime invariants, and roadmap",
-      "section": "architecture",
-      "registered_at": "2026-11-05T15:02:04.821747+00:00"
-    },
-    {
       "path": "architecture/dispatcher.md",
       "title": "Architecture \u2014 CLI dispatcher",
       "summary": "CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings",
@@ -148,13 +141,6 @@
       "registered_at": "2026-11-05T15:02:04.851906+00:00"
     },
     {
-      "path": "features/organizational-enforcement.md",
-      "title": "Feature \u2014 Wiki organizational enforcement",
-      "summary": "prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing",
-      "section": "features",
-      "registered_at": "2026-11-05T15:02:04.852791+00:00"
-    },
-    {
       "path": "product/overview.md",
       "title": "Brain-79 \u2014 Product vision",
       "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
@@ -188,27 +174,6 @@
       "summary": "tactical session transitions, freshness evaluation, authority decay, anti-hallucination work tracking, and operational purge",
       "section": "features",
       "registered_at": "2026-11-12T18:46:54.745749+00:00"
-    },
-    {
-      "path": "features/project-upgrade-and-multi-harness-doctor.md",
-      "title": "Feature \u2014 Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics (Phase 7 specification)",
-      "summary": "non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics",
-      "section": "features",
-      "registered_at": "2026-11-12T18:46:54.753095+00:00"
-    },
-    {
-      "path": "features/transitive-drift-and-ripple-guards.md",
-      "title": "Feature \u2014 Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context (Phase 6.7)",
-      "summary": "specification for Phase 6.7 \u2014 Merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context",
-      "section": "features",
-      "registered_at": "2026-11-12T18:46:54.760232+00:00"
-    },
-    {
-      "path": "architecture/roadmap-industrial-scale.md",
-      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
-      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.7) and next-stage adoption and context guardrails (7-8)",
-      "section": "architecture",
-      "registered_at": "2026-11-12T18:50:25.445951+00:00"
     },
     {
       "path": "changelog/v0-8-0.md",
@@ -251,6 +216,159 @@
       "summary": "master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)",
       "section": "architecture",
       "registered_at": "2026-11-12T23:38:46.384687+00:00"
+    },
+    {
+      "path": "changelog/v0-8-1.md",
+      "title": "Changelog \u2014 Release 0.8.1: Living manuals, temporal decontamination, and codebase de-phasing",
+      "summary": "release v0.8.1 \u2014 living manuals, temporal decontamination, codebase de-phasing, and three-class document ontology",
+      "section": "changelog",
+      "registered_at": "2026-11-13T17:48:36.766922+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
+      "title": "Decision \u2014 ADR-018: Living manuals, temporal decontamination, and the three-class document ontology",
+      "summary": "architectural foundation for living manuals, temporal decontamination, Chesterton's Fence for ADRs, and epocal changelog consolidation",
+      "section": "decisions",
+      "registered_at": "2026-11-13T17:48:36.771673+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/transitive-drift-and-ripple-guards.md",
+      "title": "Feature \u2014 Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context",
+      "summary": "merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context",
+      "section": "features",
+      "registered_at": "2026-11-13T17:48:36.774285+00:00",
+      "applies_to": [
+        "src/brain79/core/drift.py",
+        "src/brain79/core/context.py",
+        "src/brain79/core/session_commit.py",
+        "src/brain79/core/orient.py"
+      ],
+      "related": [
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+        "architecture/roadmap-industrial-scale.md",
+        "architecture/current-state.md",
+        "features/session-triage-and-research-persistence.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/project-upgrade-and-multi-harness-doctor.md",
+      "title": "Feature \u2014 Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics",
+      "summary": "non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics",
+      "section": "features",
+      "registered_at": "2026-11-13T17:48:36.775822+00:00",
+      "applies_to": [
+        "src/brain79/core/init_project.py",
+        "src/brain79/core/migration.py"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
+      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.8) and next-stage adoption and context guardrails (7-8)",
+      "section": "architecture",
+      "registered_at": "2026-11-13T17:58:08.171929+00:00",
+      "applies_to": [
+        ".brain-79/features/*.md"
+      ],
+      "related": [
+        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-013-versioning-and-release-governance.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
+        "decisions/adr-015-sentence-case-first-policy.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
+        "features/version-governance.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "features/session-triage-and-research-persistence.md",
+        "features/handoff-continuity.md",
+        "features/transitive-drift-and-ripple-guards.md",
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "architecture/defect-backlog.md"
+      ],
+      "outgoing_links": [
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/current-state.md",
+      "title": "Architecture \u2014 System current state",
+      "summary": "high-level overview of system architecture, active milestones, runtime invariants, and roadmap",
+      "section": "architecture",
+      "registered_at": "2026-11-13T17:58:08.173812+00:00",
+      "applies_to": [
+        ".brain-79/decisions/adr-*.md",
+        ".brain-79/features/*.md",
+        "src/brain79/__init__.py",
+        "src/brain79/core/__init__.py"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md"
+      ],
+      "outgoing_links": [
+        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-013-versioning-and-release-governance.md",
+        "architecture/defect-backlog.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
+        "decisions/adr-015-sentence-case-first-policy.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/organizational-enforcement.md",
+      "title": "Feature \u2014 Wiki organizational enforcement",
+      "summary": "prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing",
+      "section": "features",
+      "registered_at": "2026-11-13T17:58:08.175140+00:00",
+      "applies_to": [
+        "src/brain79/core/lint.py",
+        "src/brain79/core/lint_organizational.py",
+        "src/brain79/core/validation.py",
+        "src/brain79/core/frontmatter.py",
+        "src/brain79/core/navigation.py",
+        "src/brain79/core/migration.py",
+        "src/brain79/templates/__init__.py"
+      ],
+      "related": [
+        "decisions/adr-004-strict-write-validation.md",
+        "decisions/adr-006-auto-navigation-and-batch-operations.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-018-living-manuals-and-temporal-decontamination.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
     }
   ]
 }

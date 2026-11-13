@@ -2,8 +2,8 @@
 type: feature
 summary: prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing
 status: shipped
-version: 0.8.0
-last_updated: 2026-11-12
+version: 0.8.1
+last_updated: 2026-11-13
 applies_to:
   - src/brain79/core/lint.py
   - src/brain79/core/lint_organizational.py
@@ -16,7 +16,8 @@ related:
   - decisions/adr-004-strict-write-validation.md
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - decisions/adr-012-structural-quality-and-drift-detection.md
-applies_to_digest: "sha256:793fe2e68749eb85"
+  - decisions/adr-018-living-manuals-and-temporal-decontamination.md
+applies_to_digest: "sha256:55698b29c0b32c29"
 applies_to_count: 7
 ---
 
@@ -24,7 +25,7 @@ applies_to_count: 7
 
 ## Overview
 
-The Organizational Enforcement system prevents organic quality degradation of repository wikis. It automatically enforces frontmatter metadata schemas, checks type-location consistency, blocks structural decision leakage in non-decision folders, detects oversized or non-atomic articles, identifies unfilled template placeholders in `INDEX.md`, flags unanchored governance articles, enforces target existence, and prevents duplicate governance target sprawl.
+The Organizational Enforcement system prevents organic quality degradation of repository wikis. It automatically enforces frontmatter metadata schemas, checks type-location consistency, blocks structural decision leakage in non-decision folders, detects oversized or non-atomic articles, identifies unfilled template placeholders in `INDEX.md`, flags unanchored governance articles, enforces target existence, prevents duplicate governance target sprawl, and cleanses temporal project management debris from living manuals.
 
 ## Subsystem architecture
 
@@ -35,6 +36,7 @@ The Organizational Enforcement system prevents organic quality degradation of re
 5. **Thread-Safe Navigation Registry (`navigation.py`)**: Maintains `.navigation_registry.json` under `filelock` and updates `INDEX.md` Quick navigation atomically, prioritizing frontmatter `summary:` declarations with hardened fallback heuristics.
 6. **Git Pre-Commit Hook (`init_project.py`)**: Deploys `.git/hooks/pre-commit` during `brain79 init` to execute `brain79 lint --strict` before commits are accepted.
 7. **Back-Navigation Convention**: Standardizes footer back-links (`[← Volver al Índice](../INDEX.md)`) for high-connectivity graphs and seamless editor navigation.
+8. **Temporal Decontamination & Living Manual Governance (`lint_organizational.py`)**: Enforces rule `temporal_contamination_in_title` on living manual ontologies (`features/`, `architecture/`, `product/`), ensuring titles, summaries, and headings remain evergreen and free of temporal project management milestone tags (`Phase X`, `Sprint Y`, `WIP`), while exempting immutable audit folders and roadmaps (ADR-018).
 
 ## Commands and tools
 

@@ -46,7 +46,7 @@
 | Session handoff (read) | `brain79_handoff_read(ref?)` | `brain79 handoff-read [ref]` |
 | Bootstrap legacy project | `brain79_bootstrap(scope?, force?)` | `brain79 bootstrap [--scope <scope>] [--force]` |
 
-### Organizational enforcement (Phases 6–10)
+### Organizational enforcement and wiki governance
 
 The wiki has **mechanical organizational enforcement** that prevents quality
 degradation. Always run these checks before declaring wiki work complete.

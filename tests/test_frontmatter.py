@@ -185,3 +185,20 @@ def test_validate_location_consistency_unknown_location() -> None:
     with pytest.raises(ValidationError) as exc_info:
         validate_location_consistency(meta, "random_folder/login.md")
     assert exc_info.value.rule == "location_unknown"
+
+
+def test_generate_frontmatter_template_enums() -> None:
+    from brain79.core.frontmatter import generate_frontmatter_template
+
+    feat = generate_frontmatter_template("feature")
+    assert "status: planned  # <planned|in_progress|shipped|deprecated|archived|legacy>" in feat
+
+    arch = generate_frontmatter_template("architecture")
+    assert "stability: experimental  # <experimental|stable|archived|legacy>" in arch
+
+    topic = generate_frontmatter_template("topic")
+    assert "status: active  # <draft|active|archived|legacy>" in topic
+
+    dec = generate_frontmatter_template("decision")
+    assert "status: proposed  # <proposed|accepted|superseded|rejected|legacy>" in dec
+

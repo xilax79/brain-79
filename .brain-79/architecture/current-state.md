@@ -10,15 +10,15 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:13c8746ca4b4307e"
-applies_to_count: 28
+applies_to_digest: "sha256:81ea77e543cb570d"
+applies_to_count: 29
 ---
 
 # Architecture — System current state
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.8.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.8.1.
 
 ## Completed milestones and merged features
 
@@ -44,6 +44,7 @@ This document maintains a high-level summary of the repository's current archite
 - **Phase 23 – Phase 6.6: Handoff Freshness & Authority Decay**: Cryptographic provenance tracking (`wiki_digest`, `git_head`), deterministic authority decay diagnostics in `orient()`, branch-aware resolution, and aging escalation. Documented in [ADR-016](../decisions/adr-016-handoff-freshness-and-authority-decay.md).
 - **Phase 24 – ADR-017: Pre-GA Semantic Version Recalibration**: Recalibrated nominal package version to `0.7.x` in accordance with SemVer 2.0.0 §4 for pre-GA maturity. Documented in [ADR-017](../decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md).
 - **Phase 25 – Phase 6.7: Transitive Drift, Anti-Sprawl & Hard Session Ripple Gate (v0.8.0)**: Merkle leaf manifest (`.drift_manifest.json`), multi-hop DAG transitive propagation, 4-phase `_transaction.lock` session commit pipeline, AST Guard C public signature verification, Anti-Sprawl Guard (`duplicate_governance_target`), unanchored governance detection, and unbounded Signal 1 context ranking.
+- **Phase 26 – ADR-018: Living Manuals, Temporal Decontamination & Codebase De-Phasing (v0.8.1)**: Three-class document ontology, Chesterton's Fence for ADRs, mechanical linter rules for temporal milestone removal in living manuals (`temporal_contamination_in_title`), line-by-line codebase de-phasing, and epocal changelog consolidation policy. Documented in [ADR-018](../decisions/adr-018-living-manuals-and-temporal-decontamination.md).
 
 ## System invariants and invariant guards
 

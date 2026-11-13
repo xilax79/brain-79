@@ -392,7 +392,7 @@ def write_article(
             f"El archivo {path} está bloqueado por otro proceso. Reintenta en unos segundos."
         )
 
-    # Best-effort navigation registration & synchronization (P1.1, P0.5)
+    # Best-effort navigation registration and index synchronization
     try:
         if (
             not force_validation_skip

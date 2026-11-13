@@ -1,5 +1,5 @@
 """
-Deterministic Code-to-Wiki Drift Detection (Phase 4 & Phase 6.7).
+Deterministic Merkle leaf-manifest and multi-hop DAG code-to-wiki drift detection.
 
 Monitors source code and intra-wiki files governed by wiki articles via the `applies_to` frontmatter field.
 Provides:
@@ -833,7 +833,7 @@ def check_article_drift(
                     "message": f"governed targets digest changed ({stored_digest} -> {curr_digest})",
                 })
     else:
-        # Legacy fallback (Phase 4 timestamp comparison) for articles without applies_to_digest
+        # Fallback timestamp comparison for unhashed legacy articles without applies_to_digest
         last_updated_raw = meta.get("last_updated")
         if last_updated_raw:
             if isinstance(last_updated_raw, (date, datetime)):

@@ -15,11 +15,11 @@ applies_to_digest: "sha256:42d9bff2d63f2b0e"
 applies_to_count: 2
 ---
 
-# Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics (Phase 7 specification)
+# Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics
 
 ## Overview
 
-This specification defines **Phase 7 of the Industrial-Scale Roadmap**: resolving the **"Split-Brain" version skew problem** when the global `brain79` binary is updated while existing project repositories still host older `AGENTS.md`, `SCHEMA.md`, `.mcp.json`, git hooks, and legacy wiki articles.
+This document defines the project protocol upgrade and multi-harness doctor subsystem, resolving the **"Split-Brain" version skew problem** when the global `brain79` binary is updated while existing project repositories still host older `AGENTS.md`, `SCHEMA.md`, `.mcp.json`, git hooks, and legacy wiki articles.
 
 It establishes a non-destructive project protocol upgrader (`brain79 update-project` / `brain79 init --upgrade`), a resilient multi-harness MCP registration model, two-tier wiki reconditioning, and the `brain79 doctor` diagnostic engine.
 
@@ -147,7 +147,7 @@ Inspects 7 operational health categories in $<50\text{ ms}$:
 
 ---
 
-## Implementation checklist (Phase 7)
+## Implementation checklist
 
 1. **Delimited Templates (`src/brain79/templates/`):**
    - Add `<!-- brain79:start -->` and `<!-- brain79:end -->` markers to `AGENTS.md`.
