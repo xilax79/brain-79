@@ -197,13 +197,6 @@
       "registered_at": "2026-11-12T20:08:46.912619+00:00"
     },
     {
-      "path": "features/version-governance.md",
-      "title": "Feature \u2014 Versioning and release governance",
-      "summary": "single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks",
-      "section": "features",
-      "registered_at": "2026-11-12T20:08:46.913888+00:00"
-    },
-    {
       "path": "changelog/legacy-internal-releases.md",
       "title": "Changelog \u2014 Historical internal development milestones (v1.0.0 through v2.0.2)",
       "summary": "historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration",
@@ -233,32 +226,6 @@
       "summary": "architectural foundation for living manuals, temporal decontamination, Chesterton's Fence for ADRs, and epocal changelog consolidation",
       "section": "decisions",
       "registered_at": "2026-11-13T17:48:36.771673+00:00",
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "features/transitive-drift-and-ripple-guards.md",
-      "title": "Feature \u2014 Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context",
-      "summary": "merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context",
-      "section": "features",
-      "registered_at": "2026-11-13T17:48:36.774285+00:00",
-      "applies_to": [
-        "src/brain79/core/drift.py",
-        "src/brain79/core/context.py",
-        "src/brain79/core/session_commit.py",
-        "src/brain79/core/orient.py"
-      ],
-      "related": [
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-011-session-commit-and-batch-reading.md",
-        "decisions/adr-012-structural-quality-and-drift-detection.md",
-        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
-        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
-        "architecture/roadmap-industrial-scale.md",
-        "architecture/current-state.md",
-        "features/session-triage-and-research-persistence.md"
-      ],
       "outgoing_links": [
         "INDEX.md"
       ]
@@ -316,36 +283,6 @@
       ]
     },
     {
-      "path": "architecture/current-state.md",
-      "title": "Architecture \u2014 System current state",
-      "summary": "high-level overview of system architecture, active milestones, runtime invariants, and roadmap",
-      "section": "architecture",
-      "registered_at": "2026-11-13T17:58:08.173812+00:00",
-      "applies_to": [
-        ".brain-79/decisions/adr-*.md",
-        ".brain-79/features/*.md",
-        "src/brain79/__init__.py",
-        "src/brain79/core/__init__.py"
-      ],
-      "related": [
-        "architecture/roadmap-industrial-scale.md"
-      ],
-      "outgoing_links": [
-        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-011-session-commit-and-batch-reading.md",
-        "decisions/adr-012-structural-quality-and-drift-detection.md",
-        "decisions/adr-013-versioning-and-release-governance.md",
-        "architecture/defect-backlog.md",
-        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
-        "decisions/adr-015-sentence-case-first-policy.md",
-        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
-        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
-        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
-        "INDEX.md"
-      ]
-    },
-    {
       "path": "features/organizational-enforcement.md",
       "title": "Feature \u2014 Wiki organizational enforcement",
       "summary": "prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing",
@@ -365,6 +302,88 @@
         "decisions/adr-006-auto-navigation-and-batch-operations.md",
         "decisions/adr-012-structural-quality-and-drift-detection.md",
         "decisions/adr-018-living-manuals-and-temporal-decontamination.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/current-state.md",
+      "title": "Architecture \u2014 System current state",
+      "summary": "high-level overview of system architecture, active milestones, runtime invariants, and roadmap",
+      "section": "architecture",
+      "registered_at": "2026-11-13T18:21:46.439381+00:00",
+      "applies_to": [
+        ".brain-79/decisions/adr-*.md",
+        ".brain-79/features/*.md",
+        "src/brain79/__init__.py",
+        "src/brain79/core/__init__.py"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md"
+      ],
+      "outgoing_links": [
+        "features/cli.md",
+        "architecture/dispatcher.md",
+        "features/mcp-server.md",
+        "architecture/mcp-server.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "features/transitive-drift-and-ripple-guards.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "features/organizational-enforcement.md",
+        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
+        "features/handoff-continuity.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "architecture/roadmap-industrial-scale.md",
+        "changelog/legacy-internal-releases.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/transitive-drift-and-ripple-guards.md",
+      "title": "Feature \u2014 Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context",
+      "summary": "merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context",
+      "section": "features",
+      "registered_at": "2026-11-13T18:21:46.441478+00:00",
+      "applies_to": [
+        "src/brain79/core/drift.py",
+        "src/brain79/core/context.py",
+        "src/brain79/core/session_commit.py",
+        "src/brain79/core/orient.py"
+      ],
+      "related": [
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
+        "architecture/roadmap-industrial-scale.md",
+        "architecture/current-state.md",
+        "features/session-triage-and-research-persistence.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/version-governance.md",
+      "title": "Feature \u2014 Versioning and release governance",
+      "summary": "single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks",
+      "section": "features",
+      "registered_at": "2026-11-13T18:21:46.442697+00:00",
+      "applies_to": [
+        "src/brain79/__init__.py",
+        "pyproject.toml",
+        "src/brain79/core/update.py"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "decisions/adr-013-versioning-and-release-governance.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md"
       ],
       "outgoing_links": [
         "INDEX.md"

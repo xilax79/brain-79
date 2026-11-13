@@ -88,8 +88,8 @@
       ".brain-79/features/organizational-enforcement.md": "sha256:3f301dc41d7476be",
       ".brain-79/features/project-upgrade-and-multi-harness-doctor.md": "sha256:3fb344e6be887571",
       ".brain-79/features/session-triage-and-research-persistence.md": "sha256:bcec2480ff469f04",
-      ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:038233e26646ebfc",
-      ".brain-79/features/version-governance.md": "sha256:c120b0464c690ebc",
+      ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:33f4f4d0f8032357",
+      ".brain-79/features/version-governance.md": "sha256:b7d67f26b02814dc",
       "src/brain79/__init__.py": "sha256:39c97bf616db1fcf",
       "src/brain79/core/__init__.py": "sha256:8c15bb5da5688e3f"
     },
@@ -97,7 +97,7 @@
       "src/brain79/core/frontmatter.py": "sha256:3cb8b1b72db6999c",
       "src/brain79/core/handoff_freshness.py": "sha256:c18b37cced71edda",
       "src/brain79/core/init_project.py": "sha256:7dfeb054b63ab229",
-      "src/brain79/core/lint_organizational.py": "sha256:c3054658894b5ad9",
+      "src/brain79/core/lint_organizational.py": "sha256:591ee278382984c1",
       "src/brain79/core/validation.py": "sha256:ab619fc1e6cc7577"
     },
     "architecture/dispatcher.md": {
@@ -117,8 +117,8 @@
       ".brain-79/features/organizational-enforcement.md": "sha256:3f301dc41d7476be",
       ".brain-79/features/project-upgrade-and-multi-harness-doctor.md": "sha256:3fb344e6be887571",
       ".brain-79/features/session-triage-and-research-persistence.md": "sha256:bcec2480ff469f04",
-      ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:038233e26646ebfc",
-      ".brain-79/features/version-governance.md": "sha256:c120b0464c690ebc"
+      ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:33f4f4d0f8032357",
+      ".brain-79/features/version-governance.md": "sha256:b7d67f26b02814dc"
     },
     "architecture/symmetry.md": {
       "src/brain79/cli/dispatch.py": "sha256:9c17220bc676fd83",
@@ -139,7 +139,7 @@
     "decisions/adr-012-structural-quality-and-drift-detection.md": {
       "src/brain79/core/drift.py": "sha256:5377710ac0e3f5aa",
       "src/brain79/core/frontmatter.py": "sha256:3cb8b1b72db6999c",
-      "src/brain79/core/lint_organizational.py": "sha256:c3054658894b5ad9",
+      "src/brain79/core/lint_organizational.py": "sha256:591ee278382984c1",
       "src/brain79/core/orient.py": "sha256:f5d7de8a387d871d",
       "src/brain79/core/validation.py": "sha256:ab619fc1e6cc7577",
       "src/brain79/core/wiki.py": "sha256:89d6d2de455fce78"
@@ -170,7 +170,7 @@
     "features/organizational-enforcement.md": {
       "src/brain79/core/frontmatter.py": "sha256:3cb8b1b72db6999c",
       "src/brain79/core/lint.py": "sha256:d34ce9d50a76b0a5",
-      "src/brain79/core/lint_organizational.py": "sha256:c3054658894b5ad9",
+      "src/brain79/core/lint_organizational.py": "sha256:591ee278382984c1",
       "src/brain79/core/migration.py": "sha256:dcd7919bbe94573d",
       "src/brain79/core/navigation.py": "sha256:bbf07eff59ad2fad",
       "src/brain79/core/validation.py": "sha256:ab619fc1e6cc7577",
@@ -209,8 +209,8 @@
       ".brain-79/features/organizational-enforcement.md": "sha256:3f301dc41d7476be",
       ".brain-79/features/project-upgrade-and-multi-harness-doctor.md": "sha256:3fb344e6be887571",
       ".brain-79/features/session-triage-and-research-persistence.md": "sha256:bcec2480ff469f04",
-      ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:038233e26646ebfc",
-      ".brain-79/features/version-governance.md": "sha256:c120b0464c690ebc",
+      ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:33f4f4d0f8032357",
+      ".brain-79/features/version-governance.md": "sha256:b7d67f26b02814dc",
       "src/brain79/__init__.py": "sha256:39c97bf616db1fcf"
     }
   },

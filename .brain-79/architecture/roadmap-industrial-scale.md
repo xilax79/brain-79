@@ -23,7 +23,7 @@ related:
   - features/project-upgrade-and-multi-harness-doctor.md
   - architecture/defect-backlog.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:bf791419ca23b77a"
+applies_to_digest: "sha256:53e74da1828bf737"
 applies_to_count: 9
 ---
 

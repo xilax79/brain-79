@@ -2,7 +2,7 @@
 type: feature
 summary: single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
 status: shipped
-version: 0.8.0
+version: 0.8.1
 applies_to:
   - src/brain79/__init__.py
   - pyproject.toml
@@ -11,7 +11,7 @@ related:
   - architecture/roadmap-industrial-scale.md
   - decisions/adr-013-versioning-and-release-governance.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 applies_to_digest: "sha256:2cb42aa0c7f43ba2"
 applies_to_count: 3
 ---
@@ -25,7 +25,7 @@ The Versioning and Release Governance system enforces mechanical release parity 
 ## Architecture and runtime invariants
 
 ### 1. Single source of truth (Hatchling dynamic version)
-- **Canonical source**: `src/brain79/__init__.py` defines `__version__ = "0.8.0"`.
+- **Canonical source**: `src/brain79/__init__.py` defines `__version__ = "<semver>"` (e.g. `"0.8.1"`), serving as the sole package authority.
 - **Build configuration (`pyproject.toml`)**: uses Hatchling dynamic metadata resolution:
   ```toml
   [project]

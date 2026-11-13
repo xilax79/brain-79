@@ -256,3 +256,37 @@ def test_multilingual_detection(tmp_path: Path) -> None:
     issues = check_temporal_contamination(w_root)
     assert any(i.rule == "temporal_contamination_in_title" and "Fase 4" in i.message for i in issues)
     assert any(i.rule == "temporal_contamination_in_heading" and "Etapa 2" in i.message for i in issues)
+
+
+def test_article_too_large_triggered_by_byte_size(tmp_path: Path) -> None:
+    from brain79.core.lint_organizational import check_article_atomicity
+
+    w_root = tmp_path / ".brain-79"
+    feat_dir = w_root / "features"
+    feat_dir.mkdir(parents=True)
+
+    # 10 lines, but each line has 2,500 bytes -> 25,000 bytes (> 20,480 bytes)
+    long_line = "A" * 2500 + "\n"
+    content = (
+        "---\n"
+        "type: feature\n"
+        "summary: large byte payload\n"
+        "status: shipped\n"
+        "version: 1.0.0\n"
+        "last_updated: 2026-11-13\n"
+        "---\n\n"
+        "# Feature — Large Payload\n\n"
+        "## Overview\n"
+    ) + (long_line * 10) + "\n[← Volver al Índice](../INDEX.md)\n"
+
+    article = feat_dir / "large-payload.md"
+    article.write_text(content, encoding="utf-8")
+
+    issues = check_article_atomicity(w_root)
+    assert any(
+        i.rule == "article_too_large"
+        and "lines and" in i.message
+        and "20480 bytes" in i.message
+        for i in issues
+    )
+

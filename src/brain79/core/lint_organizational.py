@@ -242,10 +242,14 @@ def check_technical_debt_leakage(
     return issues
 
 
+MAX_ARTICLE_LINES = 400
+MAX_ARTICLE_BYTES = 20_480  # 20 KB
+
+
 def check_article_atomicity(
     wiki_root: Path, md_files: list[Path] | None = None
 ) -> list[OrganizationalIssue]:
-    """Detect non-atomic or overly large articles (>400 lines or >7 H2 headings)."""
+    """Detect non-atomic or overly large articles (>400 lines, >20480 bytes, or >7 H2 headings)."""
     issues = []
     files = md_files if md_files is not None else _filter_md_files(wiki_root)
     for md_file in files:
@@ -256,18 +260,19 @@ def check_article_atomicity(
 
         content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
         lines = content.splitlines()
+        byte_len = len(content.encode("utf-8"))
         masked_content = _mask_code_fences(content)
         masked_lines = masked_content.splitlines()
         h2_count = sum(1 for line in masked_lines if line.startswith("## "))
 
-        if len(lines) > 400:
+        if len(lines) > MAX_ARTICLE_LINES or byte_len > MAX_ARTICLE_BYTES:
             issues.append(
                 OrganizationalIssue(
                     rule="article_too_large",
                     path=rel_str,
                     line=None,
                     severity="warning",
-                    message=f"Article has {len(lines)} lines (max recommended: 400).",
+                    message=f"Article has {len(lines)} lines and {byte_len} bytes (max recommended: {MAX_ARTICLE_LINES} lines / {MAX_ARTICLE_BYTES} bytes).",
                     actionable="Split into multiple focused articles.",
                 )
             )
