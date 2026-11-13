@@ -493,9 +493,9 @@
     {
       "path": "architecture/roadmap-industrial-scale.md",
       "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
-      "summary": "project roadmap covering completed protocol phases (0-7) and the public launch readiness specification (Phase 8)",
+      "summary": "project roadmap covering completed phases (0-7) and pre-GA maturation phases (8-9) for visual documentation and automated battle-testing",
       "section": "architecture",
-      "registered_at": "2026-11-13T23:03:10.356493+00:00",
+      "registered_at": "2026-11-13T23:13:39.618561+00:00",
       "applies_to": [
         ".brain-79/features/*.md"
       ],
