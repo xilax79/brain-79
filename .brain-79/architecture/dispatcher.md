@@ -2,7 +2,7 @@
 type: architecture
 summary: CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 stability: stable
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 applies_to:
   - src/brain79/__main__.py
   - src/brain79/cli/dispatch.py
@@ -11,7 +11,7 @@ related:
   - architecture/symmetry.md
   - features/cli.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:006c4175d970d93a"
+applies_to_digest: "sha256:a63f6dccffb80a12"
 applies_to_count: 3
 ---
 
@@ -35,8 +35,8 @@ Global flags can appear before or after subcommands without breaking parsing:
 
 ## Whitelist routing and fallback execution
 
-The dispatcher maintains a strict whitelist (`WHITELIST`) of 22 subcommands:
-`init`, `update`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
+The dispatcher maintains a strict whitelist (`WHITELIST`) of 24 subcommands:
+`init`, `update`, `update-project`, `doctor`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
 
 Routing order in `src/brain79/__main__.py`:
 1. **Empty arguments** (e.g. `brain79` or `brain79 --project-root .`): Launches `_cmd_serve()`, starting the FastMCP server on standard IO.

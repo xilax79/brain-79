@@ -783,3 +783,98 @@ def brain79_migrate(
         return migrate_wiki(get_wiki_root(), dry_run=dry_run)
     except (OSError, ValueError) as exc:
         return f"Migration Error: {exc}"
+
+
+@mcp.tool(output_schema=None)
+def brain79_update_project(
+    dry_run: bool = False,
+    commit_transition: bool = False,
+    include_desktop: bool = False,
+    tool: str | None = None,
+    args: dict[str, Any] | None = None,
+) -> str:
+    """
+    Non-destructively upgrade project templates, schemas, and multi-harness registrations.
+
+    Args:
+        dry_run: If True, simulate updates without modifying files on disk. Default False.
+        commit_transition: If True, write a fresh maintenance handoff after reconditioning. Default False.
+        include_desktop: If True, configure host desktop application configs (Claude Desktop, Windsurf). Default False.
+    """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        dry_run = unpacked.get("dry_run", dry_run)
+        commit_transition = unpacked.get("commit_transition", commit_transition)
+        include_desktop = unpacked.get("include_desktop", include_desktop)
+    try:
+        from brain79.config import get_project_root
+        from brain79.core.init_project import update_project
+
+        res = update_project(
+            get_project_root(),
+            dry_run=dry_run,
+            commit_transition=commit_transition,
+            include_desktop=include_desktop,
+        )
+        lines = [
+            f"# Brain-79 Project Upgrade ({'DRY RUN' if res.get('dry_run') else 'APPLIED'})",
+            f"- **Status**: {res.get('status', 'ok')}",
+            f"- **AGENTS.md updated**: {res.get('manifest_updated')}",
+            f"- **SCHEMA.md updated**: {res.get('schema_updated')}",
+            f"- **MCP configurations**: {', '.join(res.get('mcp_configs', [])) if res.get('mcp_configs') else 'none'}",
+            f"- **Git hook**: {res.get('git_hook')}",
+        ]
+        if res.get("transition_handoff"):
+            lines.append(f"- **Transition handoff**: `{res['transition_handoff']}`")
+        if res.get("migration_report"):
+            lines.append("")
+            lines.append(str(res["migration_report"]))
+        return "\n".join(lines)
+    except Exception as exc:
+        return f"Project Upgrade Error: {exc}"
+
+
+@mcp.tool(output_schema=None)
+def brain79_doctor(
+    fix: bool = False,
+    force: bool = False,
+    include_desktop: bool = False,
+    format: str = "text",
+    tool: str | None = None,
+    args: dict[str, Any] | None = None,
+) -> str:
+    """
+    Run 7-point operational diagnostic checks and optionally auto-repair defects.
+
+    Args:
+        fix: If True, automatically repair discovered defects and skew. Default False.
+        force: If True, bypass git safety guard during --fix even if working tree is dirty. Default False.
+        include_desktop: If True, include desktop application configurations during --fix. Default False.
+        format: Output format: 'text' (default) or 'json'. Default text.
+    """
+    if args:
+        unpacked = _unpack_nested_args(args)
+        fix = unpacked.get("fix", fix)
+        force = unpacked.get("force", force)
+        include_desktop = unpacked.get("include_desktop", include_desktop)
+        format = unpacked.get("format", format)
+    try:
+        import json
+        from brain79.config import get_project_root, get_wiki_root
+        from brain79.core.doctor import run_doctor
+
+        p_root = get_project_root()
+        w_root = get_wiki_root()
+        report = run_doctor(
+            project_root=p_root,
+            wiki_root=w_root,
+            fix=fix,
+            force=force,
+            include_desktop=include_desktop,
+            format=format,
+        )
+        if format == "json":
+            return json.dumps(report.to_dict(), indent=2)
+        return report.format_text()
+    except Exception as exc:
+        return f"Doctor Diagnostic Error: {exc}"

@@ -4,6 +4,19 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-13
+
+### Added
+- **Project upgrade, legacy wiki reconditioning, and multi-harness doctor diagnostics**:
+  - Non-destructive `AGENTS.md` manifest upgrader (`sync_agents_manifest`) wrapping instructions in versioned comment blocks (`<!-- brain79:start v0.9.0 -->`...`<!-- brain79:end -->`) while preserving user notes and persona directives.
+  - Non-destructive `SCHEMA.md` upgrader (`sync_schema_file`) elevating to `schema_version: 2` while preserving custom directory profiles and extensions.
+  - Universal portable Tier 1 MCP harnesses configured automatically across `.mcp.json`, `.agents/mcp_config.json`, and `.cursor/mcp.json` with machine-path sanitization.
+  - Respectful Git hook integration preserving third-party managers (Husky, `pre-commit`, Lefthook).
+  - Two-tier wiki reconditioning (`migrate_wiki` v2) with full-pass article inspection, backlink normalization, bullet colon repair, and semantic legacy status downgrade for incomplete articles.
+  - Subsecond 7-point operational diagnostic engine (`brain79 doctor` / `brain79_doctor`) with POSIX exit codes `0/1/2`, text and JSON output, and Git-aware `--fix` safety guard.
+  - Passive protocol skew alert in `orient()` prompting users when repository templates lag behind the installed binary.
+  - Complete 1:1 CLI and FastMCP symmetry across 24 CLI subcommands and 22 MCP tools.
+
 ## [0.8.1] - 2026-11-13
 
 ### Added

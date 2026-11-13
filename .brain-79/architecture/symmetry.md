@@ -2,7 +2,7 @@
 type: architecture
 summary: "enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools"
 stability: stable
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 applies_to:
   - src/brain79/cli/dispatch.py
   - src/brain79/server.py
@@ -11,7 +11,7 @@ related:
   - architecture/current-state.md
   - features/cli.md
   - features/mcp-server.md
-applies_to_digest: "sha256:f4ff7b56beffcf40"
+applies_to_digest: "sha256:721474315cc0ac9e"
 applies_to_count: 3
 ---
 
@@ -25,7 +25,7 @@ applies_to_count: 3
 
 Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite inspects:
 - Every subcommand in `WHITELIST` (`dispatch.py`) has a corresponding `@mcp.tool()` definition in `server.py` (with the exception of CLI-only setup commands `init` and `update`).
-- Parameter mappings, default values, and operational semantics match identically across interfaces (22 CLI subcommands, 20 MCP tools).
+- Parameter mappings, default values, and operational semantics match identically across interfaces (24 CLI subcommands, 22 MCP tools).
 
 ## Operational mapping table
 
@@ -53,6 +53,8 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 | Query relevant context | `brain79 context <query>` | `brain79_context(task, top_n?, paths?)` |
 | Migrate legacy frontmatter | `brain79 migrate [--apply]` | `brain79_migrate(dry_run?, apply?)` |
 | Lint wiki organization | `brain79 lint [--strict]` | `brain79_lint()` |
+| Upgrade project protocol | `brain79 update-project` | `brain79_update_project(dry_run?, commit_transition?, include_desktop?)` |
+| Operational diagnostics | `brain79 doctor [--fix]` | `brain79_doctor(fix?, force?, include_desktop?, format?)` |
 
 ## Dry-run default invariant
 

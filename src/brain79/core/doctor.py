@@ -1,0 +1,521 @@
+from dataclasses import asdict, dataclass
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+from typing import Any, Literal
+
+from brain79 import __version__
+from brain79.config import get_project_root, get_wiki_root
+from brain79.core.frontmatter import load_active_schema, parse_frontmatter
+from brain79.core.handoff_freshness import compute_handoff_freshness, is_git_workspace
+from brain79.core.init_project import (
+    AGENTS_END_REGEX,
+    AGENTS_START_REGEX,
+    update_project,
+)
+from brain79.core.locks import acquire_wiki_lock
+from brain79.core.migration import migrate_wiki
+
+
+@dataclass
+class DoctorCheck:
+    category: str
+    status: Literal["ok", "warning", "error", "info"]
+    message: str
+    actionable: str | None = None
+
+
+@dataclass
+class DoctorReport:
+    status: Literal["ok", "warning", "error"]
+    exit_code: int
+    checks: list[DoctorCheck]
+    fixed: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "exit_code": self.exit_code,
+            "checks": [asdict(c) for c in self.checks],
+            "fixed": self.fixed,
+        }
+
+    def format_text(self) -> str:
+        lines = [
+            "# Brain-79 Doctor Diagnostic Report",
+            f"[Status: {self.status.upper()}] [Exit code: {self.exit_code}]",
+            "",
+        ]
+        status_icons = {
+            "ok": "[✓]",
+            "info": "[i]",
+            "warning": "[!]",
+            "error": "[✗]",
+        }
+        for c in self.checks:
+            icon = status_icons.get(c.status, "[?]")
+            lines.append(f"{icon} {c.category}: {c.message}")
+            if c.actionable:
+                lines.append(f"    Action: {c.actionable}")
+
+        if self.fixed:
+            lines.append("")
+            lines.append(f"## Repaired items ({len(self.fixed)})")
+            for item in self.fixed:
+                lines.append(f"- {item}")
+
+        return "\n".join(lines)
+
+
+def run_doctor(
+    project_root: Path | None = None,
+    wiki_root: Path | None = None,
+    fix: bool = False,
+    force: bool = False,
+    include_desktop: bool = False,
+    format: str = "text",
+) -> DoctorReport:
+    """Run 7-point operational diagnostic checks and optionally auto-repair defects."""
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    p_root = (project_root or (w_root.parent if w_root.parent.exists() else get_project_root())).resolve()
+
+    fixed: list[str] = []
+
+    if fix:
+        if not force and is_git_workspace(p_root):
+            try:
+                proc = subprocess.run(
+                    [
+                        "git",
+                        "status",
+                        "--porcelain",
+                        "--",
+                        "AGENTS.md",
+                        ".brain-79",
+                        ".mcp.json",
+                        ".agents/mcp_config.json",
+                        ".cursor/mcp.json",
+                    ],
+                    cwd=p_root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if proc.stdout.strip():
+                    dirty_check = DoctorCheck(
+                        category="dirty_working_tree",
+                        status="error",
+                        message="Uncommitted changes detected in project protocol files.",
+                        actionable="Commit or stash changes before running --fix, or use --force.",
+                    )
+                    return DoctorReport(
+                        status="error",
+                        exit_code=1,
+                        checks=[dirty_check],
+                        fixed=[],
+                    )
+            except Exception:
+                pass
+
+        # Execute repairs
+        try:
+            up_res = update_project(p_root, include_desktop=include_desktop)
+            if up_res.get("manifest_updated"):
+                fixed.append("Synchronized AGENTS.md protocol block")
+            if up_res.get("schema_updated"):
+                fixed.append("Synchronized SCHEMA.md to schema_version 2")
+            if up_res.get("mcp_configs"):
+                fixed.append(f"Configured MCP harnesses: {', '.join(up_res['mcp_configs'])}")
+            if up_res.get("git_hook") and "updated" in str(up_res["git_hook"]):
+                fixed.append("Installed/updated git pre-commit hook")
+            mig_rep = migrate_wiki(w_root, dry_run=False)
+            if "Changes (0)" not in mig_rep:
+                fixed.append("Reconditioned legacy wiki articles via migrate_wiki")
+        except Exception as exc:
+            err_check = DoctorCheck(
+                category="repair_failure",
+                status="error",
+                message=f"Failed to execute automatic repair: {exc}",
+                actionable="Review project permissions or run repair commands manually.",
+            )
+            return DoctorReport(
+                status="error",
+                exit_code=1,
+                checks=[err_check],
+                fixed=fixed,
+            )
+
+    checks: list[DoctorCheck] = []
+
+    # 1. binary_and_environment
+    binary_path = shutil.which("brain79")
+    py_ver = sys.version_info
+    if py_ver < (3, 10):
+        checks.append(
+            DoctorCheck(
+                category="binary_and_environment",
+                status="error",
+                message=f"Python runtime {py_ver.major}.{py_ver.minor} is below minimum requirement 3.10.",
+                actionable="Upgrade Python to version 3.10 or higher.",
+            )
+        )
+    elif not binary_path:
+        checks.append(
+            DoctorCheck(
+                category="binary_and_environment",
+                status="warning",
+                message="Executable 'brain79' not found in system PATH.",
+                actionable="Run 'uv tool install --editable .' or ensure binary directory is in PATH.",
+            )
+        )
+    else:
+        checks.append(
+            DoctorCheck(
+                category="binary_and_environment",
+                status="ok",
+                message=f"Binary located at {binary_path} (Python {py_ver.major}.{py_ver.minor}.{py_ver.micro}).",
+            )
+        )
+
+    # 2. protocol_sync
+    agents_file = p_root / "AGENTS.md"
+    schema_file = w_root / "SCHEMA.md"
+    protocol_status: Literal["ok", "warning", "error"] = "ok"
+    protocol_msg = []
+    protocol_act = None
+
+    if not agents_file.is_file():
+        protocol_status = "warning"
+        protocol_msg.append("AGENTS.md is missing")
+        protocol_act = "Run 'brain79 update-project' to generate AGENTS.md."
+    else:
+        try:
+            a_content = agents_file.read_text(encoding="utf-8")
+            starts = list(AGENTS_START_REGEX.finditer(a_content))
+            ends = list(AGENTS_END_REGEX.finditer(a_content))
+            if (
+                len(starts) > 1
+                or len(ends) > 1
+                or len(starts) != len(ends)
+                or (starts and ends and starts[0].start() > ends[0].start())
+            ):
+                protocol_status = "error"
+                protocol_msg.append("AGENTS.md contains corrupted delimiters")
+                protocol_act = "Restore delimiters or run 'brain79 update-project --force'."
+            elif not starts or not ends:
+                protocol_status = "warning"
+                protocol_msg.append("AGENTS.md lacks delimited protocol markers")
+                protocol_act = "Run 'brain79 update-project' to wrap instructions in delimited markers."
+            else:
+                v_block = starts[0].group(1)
+                if not v_block or v_block != __version__:
+                    protocol_status = "warning"
+                    protocol_msg.append(f"AGENTS.md protocol (v{v_block or 'unknown'}) lags behind v{__version__}")
+                    protocol_act = "Run 'brain79 update-project' to sync AGENTS.md."
+        except Exception as e:
+            protocol_status = "error"
+            protocol_msg.append(f"Could not read AGENTS.md: {e}")
+
+    if not schema_file.is_file():
+        if protocol_status != "error":
+            protocol_status = "warning"
+        protocol_msg.append("SCHEMA.md is missing")
+        protocol_act = "Run 'brain79 update-project' to sync SCHEMA.md."
+    else:
+        try:
+            s_meta, _ = parse_frontmatter(schema_file.read_text(encoding="utf-8"))
+            s_ver = int(s_meta.get("schema_version", 1))
+            if s_ver < 2:
+                if protocol_status != "error":
+                    protocol_status = "warning"
+                protocol_msg.append(f"SCHEMA.md is at schema_version {s_ver} (latest: 2)")
+                protocol_act = "Run 'brain79 update-project' to upgrade SCHEMA.md."
+        except Exception as e:
+            protocol_status = "error"
+            protocol_msg.append(f"Could not parse SCHEMA.md: {e}")
+
+    if not protocol_msg:
+        checks.append(
+            DoctorCheck(
+                category="protocol_sync",
+                status="ok",
+                message=f"AGENTS.md and SCHEMA.md synchronized with brain79 v{__version__}.",
+            )
+        )
+    else:
+        checks.append(
+            DoctorCheck(
+                category="protocol_sync",
+                status=protocol_status,
+                message="; ".join(protocol_msg) + ".",
+                actionable=protocol_act,
+            )
+        )
+
+    # 3. wiki_structure
+    try:
+        active_s = load_active_schema(w_root)
+        index_file = w_root / "INDEX.md"
+        if not index_file.is_file():
+            checks.append(
+                DoctorCheck(
+                    category="wiki_structure",
+                    status="error",
+                    message="INDEX.md routing table is missing.",
+                    actionable="Run 'brain79 init' or 'brain79 update-project' to initialize wiki index.",
+                )
+            )
+        else:
+            missing_dirs = []
+            for loc in active_s.location_to_type.keys():
+                if loc not in ("INDEX.md", "SCHEMA.md") and not (w_root / loc).is_dir():
+                    missing_dirs.append(loc)
+
+            # Check unmigrated articles
+            unmigrated = []
+            for f in w_root.rglob("*.md"):
+                rel = f.relative_to(w_root).as_posix()
+                if rel in ("INDEX.md", "SCHEMA.md") or rel.startswith(("_raw/", ".locks/")):
+                    continue
+                try:
+                    f_meta, _ = parse_frontmatter(f.read_text(encoding="utf-8"))
+                    if not f_meta.get("type"):
+                        unmigrated.append(rel)
+                except Exception:
+                    unmigrated.append(rel)
+
+            if missing_dirs or unmigrated:
+                issues = []
+                if missing_dirs:
+                    issues.append(f"missing directories ({', '.join(missing_dirs)})")
+                if unmigrated:
+                    issues.append(f"{len(unmigrated)} unmigrated articles")
+                checks.append(
+                    DoctorCheck(
+                        category="wiki_structure",
+                        status="warning",
+                        message="; ".join(issues) + ".",
+                        actionable="Run 'brain79 migrate --apply' to repair wiki structure.",
+                    )
+                )
+            else:
+                checks.append(
+                    DoctorCheck(
+                        category="wiki_structure",
+                        status="ok",
+                        message=f"Clean directory layout and schema adherence under '{active_s.profile}' profile.",
+                    )
+                )
+    except Exception as e:
+        checks.append(
+            DoctorCheck(
+                category="wiki_structure",
+                status="error",
+                message=f"Failed to inspect wiki structure: {e}",
+                actionable="Verify .brain-79/ permissions and directory layout.",
+            )
+        )
+
+    # 4. mcp_harnesses
+    tier1_targets = [
+        p_root / ".mcp.json",
+        p_root / ".agents" / "mcp_config.json",
+        p_root / ".cursor" / "mcp.json",
+    ]
+    harness_issues = []
+    harness_has_error = False
+
+    for target in tier1_targets:
+        rel_target = target.relative_to(p_root).as_posix()
+        if not target.is_file():
+            harness_issues.append(f"missing {rel_target}")
+        else:
+            try:
+                data = json.loads(target.read_text(encoding="utf-8"))
+                srv = data.get("mcpServers", {}).get("brain79", {})
+                cmd = str(srv.get("command", ""))
+                if cmd != "brain79":
+                    harness_issues.append(f"{rel_target} uses non-portable command '{cmd}'")
+            except Exception:
+                harness_has_error = True
+                harness_issues.append(f"{rel_target} contains corrupt JSON")
+
+    if harness_has_error:
+        checks.append(
+            DoctorCheck(
+                category="mcp_harnesses",
+                status="error",
+                message="; ".join(harness_issues) + ".",
+                actionable="Run 'brain79 update-project' to rebuild corrupted MCP configuration files.",
+            )
+        )
+    elif harness_issues:
+        checks.append(
+            DoctorCheck(
+                category="mcp_harnesses",
+                status="warning",
+                message="; ".join(harness_issues) + ".",
+                actionable="Run 'brain79 update-project' to register portable MCP harnesses.",
+            )
+        )
+    else:
+        checks.append(
+            DoctorCheck(
+                category="mcp_harnesses",
+                status="ok",
+                message="Universal Tier 1 MCP harnesses configured with portable 'brain79' command.",
+            )
+        )
+
+    # 5. locks_and_filesystem
+    try:
+        lock = acquire_wiki_lock(w_root, "doctor_probe", timeout=0.5)
+        with lock:
+            pass
+        inline_locks = list(w_root.rglob("*.lock"))
+        legacy_locks = [f.as_posix() for f in inline_locks if ".locks" not in f.parts]
+        if legacy_locks:
+            checks.append(
+                DoctorCheck(
+                    category="locks_and_filesystem",
+                    status="warning",
+                    message=f"Detected {len(legacy_locks)} legacy inline lock files.",
+                    actionable="Run 'brain79 update-project' to purge legacy inline locks.",
+                )
+            )
+        else:
+            checks.append(
+                DoctorCheck(
+                    category="locks_and_filesystem",
+                    status="ok",
+                    message="Isolated .locks/ directory operational; 0 legacy inline locks.",
+                )
+            )
+    except Exception as e:
+        checks.append(
+            DoctorCheck(
+                category="locks_and_filesystem",
+                status="error",
+                message=f"Filesystem lock error: {e}",
+                actionable="Check permissions in .brain-79/.locks/.",
+            )
+        )
+
+    # 6. git_hooks
+    schema = load_active_schema(w_root)
+    git_dir = p_root / ".git"
+    if schema.profile == "general" and not git_dir.exists():
+        checks.append(
+            DoctorCheck(
+                category="git_hooks",
+                status="ok",
+                message="General profile workspace outside Git; git hooks omitted cleanly.",
+            )
+        )
+    elif not git_dir.exists():
+        checks.append(
+            DoctorCheck(
+                category="git_hooks",
+                status="info",
+                message="No Git repository detected at project root.",
+                actionable="Initialize git via 'git init' to enable commit hooks and drift detection.",
+            )
+        )
+    else:
+        hook_path = git_dir / "hooks" / "pre-commit"
+        if not hook_path.is_file():
+            checks.append(
+                DoctorCheck(
+                    category="git_hooks",
+                    status="warning",
+                    message="Pre-commit hook is not installed.",
+                    actionable="Run 'brain79 update-project' to install .git/hooks/pre-commit.",
+                )
+            )
+        else:
+            content = hook_path.read_text(encoding="utf-8")
+            is_executable = os.access(hook_path, os.X_OK)
+            if "# brain-79 pre-commit hook" in content and is_executable:
+                checks.append(
+                    DoctorCheck(
+                        category="git_hooks",
+                        status="ok",
+                        message="Executable .git/hooks/pre-commit hook installed.",
+                    )
+                )
+            elif not is_executable:
+                checks.append(
+                    DoctorCheck(
+                        category="git_hooks",
+                        status="warning",
+                        message="Pre-commit hook file exists but lacks executable permission.",
+                        actionable="Run 'chmod +x .git/hooks/pre-commit'.",
+                    )
+                )
+            else:
+                checks.append(
+                    DoctorCheck(
+                        category="git_hooks",
+                        status="ok",
+                        message="Third-party git hook manager detected; hook preserved.",
+                    )
+                )
+
+    # 7. handoff_hygiene
+    handoffs_dir = w_root / "handoffs"
+    if not handoffs_dir.exists():
+        checks.append(
+            DoctorCheck(
+                category="handoff_hygiene",
+                status="ok",
+                message="Handoff directory clean.",
+            )
+        )
+    else:
+        all_handoffs = sorted(handoffs_dir.glob("*.md"))
+        count = len(all_handoffs)
+        if count == 0:
+            checks.append(
+                DoctorCheck(
+                    category="handoff_hygiene",
+                    status="ok",
+                    message="No active handoffs; wiki is clean.",
+                )
+            )
+        else:
+            latest = all_handoffs[-1]
+            freshness = compute_handoff_freshness(latest, wiki_root=w_root)
+            if count > 10:
+                checks.append(
+                    DoctorCheck(
+                        category="handoff_hygiene",
+                        status="warning",
+                        message=f"Accumulated {count} handoffs (latest is {freshness.state}).",
+                        actionable="Run 'brain79 handoff-purge --apply' to purge legacy handoffs.",
+                    )
+                )
+            else:
+                checks.append(
+                    DoctorCheck(
+                        category="handoff_hygiene",
+                        status="ok",
+                        message=f"Latest handoff '{latest.name}' is {freshness.state} ({count} total handoffs).",
+                    )
+                )
+
+    # Compute overall status and exit code
+    has_error = any(c.status == "error" for c in checks)
+    has_warning = any(c.status == "warning" for c in checks)
+
+    overall_status: Literal["ok", "warning", "error"] = "error" if has_error else ("warning" if has_warning else "ok")
+    exit_code = 1 if has_error else (2 if has_warning else 0)
+
+    return DoctorReport(
+        status=overall_status,
+        exit_code=exit_code,
+        checks=checks,
+        fixed=fixed,
+    )

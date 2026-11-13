@@ -1,3 +1,4 @@
+<!-- brain79:start v0.9.0 -->
 # Brain-79 AI memory protocol
 
 ## Prerequisites (one-time setup)
@@ -155,6 +156,7 @@ To maintain consistent, high-quality documentation across all agent and human in
    - After a colon (`:`), the following word must start with a lowercase letter unless it is a proper noun or acronym (e.g., `- Item 1: description`, not `- Item 1: Description`).
    - Place colons outside bold formatting: `- **Label**: description`, never `- **Label:** Description`.
    - Never use Title Case (capitalizing every major word). Title Case is prohibited across all documentation artifacts.
+<!-- brain79:end -->
 
 ## Project notes
 

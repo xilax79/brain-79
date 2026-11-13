@@ -21,6 +21,7 @@ last_updated: 2026-11-13
 ### Changelog
 - [Changelog — Historical internal development milestones (v1.0.0 through v2.0.2)](changelog/legacy-internal-releases.md) — historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration
 - [Changelog — Release 0.8.1: Living manuals, temporal decontamination, and codebase de-phasing](changelog/v0-8-1.md) — release v0.8.1 — living manuals, temporal decontamination, codebase de-phasing, and three-class document ontology
+- [Changelog — Release 0.9.0: Project upgrade, multi-harness zero-config, and doctor diagnostics](changelog/v0-9-0.md) — release v0.9.0 — project protocol upgrader, delimited AGENTS.md blocks, multi-harness zero-config, and doctor diagnostics
 - [Changelog — Version 0.7.2 — Pre-GA semantic calibration](changelog/v0-7-2.md) — semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release
 - [Changelog — Version 0.8.0 — Transitive drift and ripple guards](changelog/v0-8-0.md) — Phase 6.7 release — Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification
 

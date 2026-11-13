@@ -2,14 +2,14 @@
 type: feature
 summary: Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
 status: shipped
-version: 0.8.0
-last_updated: 2026-11-12
+version: 0.9.0
+last_updated: 2026-11-13
 applies_to:
   - src/brain79/server.py
 related:
   - architecture/symmetry.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:b5ecbf5f93c1bd13"
+applies_to_digest: "sha256:d1f7568c7f9bcb4e"
 applies_to_count: 1
 ---
 
@@ -45,6 +45,8 @@ Built using `FastMCP 2.0+`, it suppresses standard error banners during initiali
 | `brain79_navigate(regenerate?)` | `brain79 navigate` | Query or update navigation registry |
 | `brain79_context(task, top_n?, paths?)` | `brain79 context` | Retrieve relevant articles via 3-signal ranking |
 | `brain79_migrate(apply?, dry_run?)` | `brain79 migrate` | Migrate legacy articles to frontmatter V3 |
+| `brain79_update_project(...)` | `brain79 update-project` | Non-destructively upgrade templates, schemas, and MCP harnesses |
+| `brain79_doctor(fix?, force?, ...)` | `brain79 doctor` | Run 7-point operational diagnostic checks and auto-repair |
 
 ## Usage examples
 

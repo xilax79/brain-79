@@ -11,6 +11,8 @@ from brain79.cli.io import read_input_field
 WHITELIST = {
     "init",
     "update",
+    "update-project",
+    "doctor",
     "index",
     "read",
     "read-batch",
@@ -92,6 +94,18 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             default="software",
             help="Knowledge profile ('software' or 'general', default: software)",
         )
+        parser.add_argument(
+            "--upgrade",
+            action="store_true",
+            default=False,
+            help="Upgrade project protocol and configurations if wiki already exists",
+        )
+        parser.add_argument(
+            "--include-desktop",
+            action="store_true",
+            default=False,
+            help="Also configure host desktop application configs (Claude Desktop, Windsurf)",
+        )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
         from brain79.config import get_project_root
@@ -107,6 +121,8 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             install_git_hooks_flag=parsed.install_git_hooks,
             profile=parsed.profile,
             auto_git_init=parsed.auto_git_init,
+            upgrade=parsed.upgrade,
+            include_desktop=parsed.include_desktop,
         )
         return 0
 
@@ -122,9 +138,9 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             help="Template branch override (auto-detected by default)",
         )
         parsed = parser.parse_args(sub_args)
-        from brain79.core.update import update_project
+        from brain79.core.update import update_project as update_installation
 
-        return update_project(branch_override=parsed.branch)
+        return update_installation(branch_override=parsed.branch)
 
     elif cmd == "index":
         parser = argparse.ArgumentParser(
@@ -912,6 +928,127 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
                 lines.append(f"- ⚠️ {w}")
         _write_stdout("\n".join(lines))
         return 0
+
+    elif cmd == "update-project":
+        parser = argparse.ArgumentParser(
+            prog="brain79 update-project",
+            description="Non-destructively upgrade project templates, schemas, and multi-harness registrations.",
+        )
+        parser.add_argument(
+            "--project-root",
+            default=None,
+            metavar="PATH",
+            help="Project root directory (default: current directory)",
+        )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            default=False,
+            help="Simulate updates without modifying files on disk",
+        )
+        parser.add_argument(
+            "--commit-transition",
+            action="store_true",
+            default=False,
+            help="Write a fresh maintenance handoff after reconditioning project",
+        )
+        parser.add_argument(
+            "--include-desktop",
+            action="store_true",
+            default=False,
+            help="Also configure host desktop application configs (Claude Desktop, Windsurf)",
+        )
+        parsed = parser.parse_args(sub_args)
+        from pathlib import Path
+        from brain79.config import get_project_root
+        from brain79.core.init_project import update_project as run_update_project
+
+        target_root = (
+            Path(parsed.project_root).resolve()
+            if parsed.project_root
+            else get_project_root()
+        )
+        up_res = run_update_project(
+            target_root,
+            dry_run=parsed.dry_run,
+            commit_transition=parsed.commit_transition,
+            include_desktop=parsed.include_desktop,
+        )
+        lines = [
+            f"# Brain-79 Project Upgrade ({'DRY RUN' if up_res.get('dry_run') else 'APPLIED'})",
+            f"- **Status**: {up_res.get('status', 'ok')}",
+            f"- **AGENTS.md updated**: {up_res.get('manifest_updated')}",
+            f"- **SCHEMA.md updated**: {up_res.get('schema_updated')}",
+            f"- **MCP configurations**: {', '.join(up_res.get('mcp_configs', [])) if up_res.get('mcp_configs') else 'none'}",
+            f"- **Git hook**: {up_res.get('git_hook')}",
+        ]
+        if up_res.get("transition_handoff"):
+            lines.append(f"- **Transition handoff**: `{up_res['transition_handoff']}`")
+        if up_res.get("migration_report"):
+            lines.append("")
+            lines.append(str(up_res["migration_report"]))
+        _write_stdout("\n".join(lines))
+        return 0
+
+    elif cmd == "doctor":
+        parser = argparse.ArgumentParser(
+            prog="brain79 doctor",
+            description="Run 7-point operational diagnostic checks and optionally auto-repair defects.",
+        )
+        parser.add_argument(
+            "--project-root",
+            default=None,
+            metavar="PATH",
+            help="Project root directory (default: current directory)",
+        )
+        parser.add_argument(
+            "--fix",
+            action="store_true",
+            default=False,
+            help="Automatically repair discovered defects and skew",
+        )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            default=False,
+            help="Bypass git safety guard during --fix even if working tree is dirty",
+        )
+        parser.add_argument(
+            "--include-desktop",
+            action="store_true",
+            default=False,
+            help="Include desktop application configurations during --fix",
+        )
+        parser.add_argument(
+            "--format",
+            choices=["text", "json"],
+            default="text",
+            help="Output format: 'text' (default) or 'json'",
+        )
+        parsed = parser.parse_args(sub_args)
+        from pathlib import Path
+        from brain79.config import get_project_root, get_wiki_root
+        from brain79.core.doctor import run_doctor
+
+        target_root = (
+            Path(parsed.project_root).resolve()
+            if parsed.project_root
+            else get_project_root()
+        )
+        wiki_root = target_root / ".brain-79" if parsed.project_root else get_wiki_root()
+        doc_report = run_doctor(
+            project_root=target_root,
+            wiki_root=wiki_root,
+            fix=parsed.fix,
+            force=parsed.force,
+            include_desktop=parsed.include_desktop,
+            format=parsed.format,
+        )
+        if parsed.format == "json":
+            _write_stdout(json.dumps(doc_report.to_dict(), indent=2))
+        else:
+            _write_stdout(doc_report.format_text())
+        return int(doc_report.exit_code)
 
     raise ValueError(f"Unknown command: {cmd}")
 

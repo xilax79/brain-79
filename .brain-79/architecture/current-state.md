@@ -4,21 +4,23 @@ summary: high-level overview of system architecture, active milestones, runtime 
 stability: stable
 last_updated: 2026-11-13
 applies_to:
+  - README.md
+  - ARCHITECTURE.md
   - .brain-79/decisions/adr-*.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:daa50a43e92fe275"
-applies_to_count: 29
+applies_to_digest: "sha256:7200b5329b9f82d6"
+applies_to_count: 31
 ---
 
 # Architecture — System current state
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.8.1.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.9.0.
 
 ## Active subsystem topology
 
@@ -32,6 +34,7 @@ This document maintains a high-level summary of the repository's current archite
 | **Organizational Linter & Schema Engine** | `src/brain79/core/lint_organizational.py`, `src/brain79/core/validation.py`, `src/brain79/core/frontmatter.py` | [Feature — Wiki organizational enforcement](../features/organizational-enforcement.md), [ADR-018](../decisions/adr-018-living-manuals-and-temporal-decontamination.md) |
 | **Cross-Platform Lock & I/O Layer** | `src/brain79/core/locks.py`, `src/brain79/config.py` | [Feature — Cross-platform portability and centralized lock isolation](../features/cross-platform-and-lock-isolation.md), [ADR-014](../decisions/adr-014-centralized-locks-and-cross-platform-io.md) |
 | **Handoff Continuity & Freshness** | `src/brain79/core/handoff.py`, `src/brain79/core/handoff_freshness.py` | [Feature — Short-term handoff continuity](../features/handoff-continuity.md), [ADR-016](../decisions/adr-016-handoff-freshness-and-authority-decay.md) |
+| **Project Protocol Upgrade & Diagnostics** | `src/brain79/core/init_project.py`, `src/brain79/core/doctor.py`, `src/brain79/core/migration.py` | [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md) |
 
 > For the historical sequence of developmental milestones and releases, refer to [Architecture — Industrial-scale roadmap and adoption evolution](roadmap-industrial-scale.md) and [Changelog — Historical internal development milestones](../changelog/legacy-internal-releases.md).
 
@@ -41,14 +44,14 @@ This document maintains a high-level summary of the repository's current archite
 - **Zero-Modification Idempotence**: Wiki updates strictly require real repository mutations (code, tests, decisions); synthetic documentation churn is rejected.
 - **Synchronous Write Validation**: Writes to `.brain-79/` are validated against schema rules prior to disk mutation.
 - **Code Fence Masking**: Regex linter rules mask code blocks before scanning to eliminate false positive leakage errors.
-- **1:1 CLI & MCP Symmetry**: Every operational subcommand has a matching `@mcp.tool()` equivalent in `server.py` (22 subcommands, 20 MCP tools).
+- **1:1 CLI & MCP Symmetry**: Every operational subcommand has a matching `@mcp.tool()` equivalent in `server.py` (24 subcommands, 22 MCP tools).
 - **Centralized Lock Isolation**: File mutexes are strictly isolated into `.brain-79/.locks/`, maintaining 100% clean content directories.
 - **Cross-Platform Determinism**: Strict POSIX path serialization (`.as_posix()`), pure LF (`\n`) line endings, and segment-by-segment character casing parity across macOS, Linux, and Windows.
 - **Hard Session Ripple Gate**: Commits modifying code or intra-wiki targets must atomically update or verify all impacted leaf and umbrella articles.
 
 ## Immediate focus and maintenance
 
-- Execution of Phase 7: Project Protocol Upgrade (`brain79 update-project`), Legacy Wiki Conditioning, Multi-Harness Setup, and `brain79 doctor` Diagnostics.
+- Execution of Phase 8: Zero-Clone Distribution and Context Budget Guardrails (`max_tokens` ceiling on `orient()`, standalone binary distribution).
 
 ---
 

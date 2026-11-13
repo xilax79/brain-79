@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "brain79": {
+      "command": "brain79",
+      "args": [
+        "--project-root",
+        "."
+      ]
+    }
+  }
+}

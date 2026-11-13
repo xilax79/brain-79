@@ -1,5 +1,6 @@
 ---
 profile: software
+schema_version: 2
 ---
 # Brain-79 — Wiki schema (normative)
 

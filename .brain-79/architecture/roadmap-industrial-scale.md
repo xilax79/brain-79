@@ -22,8 +22,8 @@ related:
   - features/transitive-drift-and-ripple-guards.md
   - features/project-upgrade-and-multi-harness-doctor.md
   - architecture/defect-backlog.md
-last_updated: 2026-11-12
-applies_to_digest: "sha256:be291fae43dae0bc"
+last_updated: 2026-11-13
+applies_to_digest: "sha256:4d6d69907e3419fd"
 applies_to_count: 9
 ---
 
@@ -49,6 +49,7 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.7
 - **[x] Phase 6.6 — Handoff freshness, provenance & authority decay (ADR-016)**: established that handoffs are perishable transition notes whose authority decays with workspace drift. Captured deterministic provenance (created_at, git_branch, git_head, wiki_digest, code_digest) in handoff frontmatter, added state classification (fresh, stale, foreign_branch, unverified) in handoff_freshness.py, rendered dynamic authority-decay banners and historical boot instructions in orient(), added branch-aware latest resolution, escalated aging pending tasks, and standardized English handoff templates with sentence-case colons outside bold.
 - **[x] Phase 6.7 — Transitive drift detection, umbrella synthesis tracking & anti-append-only ripple guards (v0.8.0)**: Merkle leaf manifest (`.drift_manifest.json`), multi-hop DAG transitive propagation, 4-phase `_transaction.lock` session commit pipeline, AST Guard C public signature verification, Anti-Sprawl Guard (`duplicate_governance_target`), unanchored governance detection, and unbounded Signal 1 context ranking.
 - **[x] Phase 6.8 — Temporal decontamination, living manuals hygiene & codebase de-phasing (ADR-018, v0.8.1)**: established three-class document ontology, Chesterton's Fence for ADRs, temporal milestone removal in living manuals via `check_temporal_contamination`, line-by-line semantic codebase de-phasing, and epocal changelog consolidation.
+- **[x] Phase 7 — Multi-harness zero-config, project protocol upgrader, and doctor diagnostics (v0.9.0)**: introduced delimited managed blocks in `AGENTS.md`, non-destructive `SCHEMA.md` synchronization (`schema_version: 2`), portable Tier 1 MCP configurations (`.mcp.json`, `.agents/`, `.cursor/`), full-pass legacy wiki reconditioning (`migrate_wiki` v2), subsecond diagnostic engine (`brain79 doctor`), and complete 1:1 CLI and FastMCP symmetry.
 
 ---
 
@@ -56,15 +57,9 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.7
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 7: Multi-harness zero-config & doctor diagnostics (v0.9.0)                | [ ] Planned|
-+-----------------------------------------------------------------------------------+
 | Phase 8: Zero-clone distribution & context budget guardrails (v0.10.0)           | [ ] Planned|
 +-----------------------------------------------------------------------------------+
 ```
-
-### Phase 7: Project protocol upgrade, legacy wiki reconditioning and doctor diagnostics (`brain79 doctor`)
-- **Specification**: [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup & doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md)
-- **Scope**: solve "Split-Brain" version skew across existing projects via delimited managed blocks in `AGENTS.md` (`<!-- brain79:start -->`), non-destructive `SCHEMA.md` upgrades (preserving `profile`, `custom_types`, and extensions), two-tier legacy wiki reconditioning (`migrate_wiki` v2), portable 2-tier multi-harness MCP setup, and the `brain79 doctor [--fix]` diagnostic tool.
 
 ### Phase 8: Zero-clone distribution and context budget guardrails
 - **Problem**: installing or updating `brain-79` currently assumes a cloned repository (`scripts/install.py` and `git pull` inside `brain79 update`). Additionally, oversized articles can inflate `orient` payloads.

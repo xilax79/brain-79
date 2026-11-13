@@ -27,6 +27,62 @@ from brain79.core.wiki import get_index, read_article
 MAX_ORIENT_INLINE_CHARS = 64_000
 
 
+def check_protocol_version_skew(project_root: Path, wiki_root: Path) -> str | None:
+    """Inspect AGENTS.md delimiter version and SCHEMA.md schema_version for protocol skew."""
+    from brain79 import __version__
+    from brain79.core.init_project import AGENTS_START_REGEX
+
+    agents_file = project_root / "AGENTS.md"
+    if not agents_file.is_file():
+        return (
+            f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
+            "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
+        )
+
+    try:
+        content = agents_file.read_text(encoding="utf-8")
+        m_start = AGENTS_START_REGEX.search(content)
+        if not m_start:
+            return (
+                f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
+                "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
+            )
+        version_in_block = m_start.group(1)
+        if not version_in_block or version_in_block != __version__:
+            return (
+                f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
+                "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
+            )
+    except Exception:
+        return (
+            f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
+            "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
+        )
+
+    schema_file = wiki_root / "SCHEMA.md"
+    if not schema_file.is_file():
+        return (
+            f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
+            "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
+        )
+
+    try:
+        s_meta, _ = parse_frontmatter(schema_file.read_text(encoding="utf-8"))
+        schema_version = int(s_meta.get("schema_version", 1))
+        if schema_version < 2:
+            return (
+                f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
+                "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
+            )
+    except Exception:
+        return (
+            f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
+            "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
+        )
+
+    return None
+
+
 def orient(
     task: str | None = None,
     paths: list[str] | None = None,
@@ -51,8 +107,14 @@ def orient(
     sections: list[str] = [
         "# Brain-79 — Session Cold Start Orientation",
         "",
-        "## 🗺️ Project Index (Routing Table)",
     ]
+
+    skew_notice = check_protocol_version_skew(p_root, w_root)
+    if skew_notice:
+        sections.append(skew_notice)
+        sections.append("")
+
+    sections.append("## 🗺️ Project Index (Routing Table)")
 
     # 1. INDEX.md / Routing Table
     try:

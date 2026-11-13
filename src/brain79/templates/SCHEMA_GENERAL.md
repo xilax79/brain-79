@@ -1,5 +1,6 @@
 ---
 profile: general
+schema_version: 2
 ---
 # Brain-79 — Wiki Schema (General Knowledge & Research)
 

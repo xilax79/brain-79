@@ -11,16 +11,24 @@ from brain79.core.drift import (
     save_drift_manifest,
 )
 from brain79.core.frontmatter import (
+    INACTIVE_STATUSES,
     ActiveSchema,
     LOCATION_TO_TYPE,
     dump_frontmatter,
     load_active_schema,
     normalize_backlink_footer,
+    normalize_bullet_colons,
     parse_frontmatter,
+    sanitize_summary,
 )
 from brain79.core.locks import (
     atomic_replace_with_retry,
     cleanup_legacy_inline_locks,
+)
+from brain79.core.validation import (
+    MAX_ARTICLE_BYTES,
+    MAX_ARTICLE_LINES,
+    check_missing_sections,
 )
 
 _TYPE_DEFAULTS: dict[str, dict[str, str]] = {
@@ -149,150 +157,116 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
         if content.startswith("---\n"):
             try:
                 meta, body = parse_frontmatter(content)
-                target_type = (meta.get("type") if meta else None) or inferred_type
-                needs_summary_repair = bool(
-                    target_type
-                    and target_type not in ("navigation", "handoff", "raw_session", "raw_commit")
-                    and (not meta or "summary" not in meta or not meta["summary"])
-                )
-
-                if meta and "type" in meta and not needs_summary_repair:
-                    # Check if applies_to_digest / manifest seeding is needed
-                    applies = meta.get("applies_to")
-                    needs_digest_seeding = False
-                    if applies:
-                        patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
-                        m_dig, cnt, tgts = compute_applies_to_manifest(
-                            patterns, p_root, wiki_root, exclude_self_path=rel_str, workspace_index=ws_index
-                        )
-                        if m_dig and (
-                            meta.get("applies_to_digest") != m_dig
-                            or meta.get("applies_to_count") != cnt
-                            or rel_str not in manifest_articles
-                        ):
-                            meta["applies_to_digest"] = m_dig
-                            meta["applies_to_count"] = cnt
-                            manifest_articles[rel_str] = {"digest": m_dig, "count": cnt, "targets": tgts}
-                            new_content = dump_frontmatter(meta, body)
-                            needs_digest_seeding = True
-
-                    if needs_digest_seeding:
-                        if not dry_run:
-                            tmp_path = md_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
-                            tmp_path.write_text(new_content, encoding="utf-8", newline="\n")
-                            atomic_replace_with_retry(tmp_path, md_file)
-                        changes.append(f"{rel_str} (seeded applies_to_digest & .drift_manifest.json)")
-                        continue
-
-                    skipped.append(f"{rel_str}: already has valid frontmatter")
-                    if not dry_run:
-                        try:
-                            from brain79.core.navigation import extract_title_and_summary
-                            title, summary = extract_title_and_summary(content)
-                            sec = rel.parts[0] if len(rel.parts) > 1 else "root"
-                            register_article(wiki_root, rel_str, title, summary, sec)
-                        except Exception:
-                            pass
-                    continue
-
-                # Frontmatter exists but is missing 'type' or needs summary repair
-                if target_type is None:
-                    skipped.append(f"{rel_str}: has incomplete frontmatter but cannot infer type")
-                    continue
-                meta = meta or {}
-                meta["type"] = target_type
-                if "last_updated" not in meta:
-                    meta["last_updated"] = today
-
-                defaults = _TYPE_DEFAULTS.get(target_type, {})
-                for key, default_template in defaults.items():
-                    if key not in meta:
-                        if default_template == "<file mtime>":
-                            val = file_mtime
-                        elif default_template == "<today>":
-                            val = today
-                        elif default_template == "<file mtime or today>":
-                            val = file_mtime or today
-                        else:
-                            val = default_template
-                        meta[key] = val
-
-                if needs_summary_repair:
-                    from brain79.core.frontmatter import sanitize_summary
-                    from brain79.core.navigation import extract_title_and_summary
-
-                    _, extracted_s = extract_title_and_summary(body)
-                    meta["summary"] = sanitize_summary(extracted_s or f"Legacy migrated {target_type}")
-
-                new_content = dump_frontmatter(meta, body)
             except Exception:
                 skipped.append(f"{rel_str}: malformed frontmatter")
                 continue
         else:
-            if inferred_type is None:
-                skipped.append(f"{rel_str}: cannot infer type from location")
-                continue
+            meta = {}
+            body = content
 
-            lines = ["---", f"type: {inferred_type}", f"last_updated: {today}"]
+        target_type = (meta.get("type") if meta else None) or inferred_type
+        if target_type is None:
+            skipped.append(f"{rel_str}: cannot infer type from location")
+            continue
 
-            defaults = _TYPE_DEFAULTS.get(inferred_type, {})
-            for key, default_template in defaults.items():
+        meta = meta or {}
+
+        # Paso A: Campos requeridos por tipo
+        meta["type"] = target_type
+        if "last_updated" not in meta:
+            meta["last_updated"] = today
+
+        defaults = _TYPE_DEFAULTS.get(target_type, {})
+        for key, default_template in defaults.items():
+            if key not in meta:
                 if default_template == "<file mtime>":
-                    value = file_mtime
+                    val = file_mtime
                 elif default_template == "<today>":
-                    value = today
+                    val = today
                 elif default_template == "<file mtime or today>":
-                    value = file_mtime or today
+                    val = file_mtime or today
                 else:
-                    value = default_template
-                lines.append(f"{key}: {value}")
+                    val = default_template
+                meta[key] = val
 
-            # Auto-populate summary if missing
-            try:
-                from brain79.core.frontmatter import sanitize_summary
+        if target_type not in ("navigation", "handoff", "raw_session", "raw_commit"):
+            if "summary" not in meta or not meta["summary"]:
                 from brain79.core.navigation import extract_title_and_summary
-                _, inferred_summary = extract_title_and_summary(content)
-                meta_dict: dict[str, Any] = {"type": inferred_type, "last_updated": today}
-                for key, default_template in defaults.items():
-                    if default_template == "<file mtime>":
-                        val = file_mtime
-                    elif default_template == "<today>":
-                        val = today
-                    elif default_template == "<file mtime or today>":
-                        val = file_mtime or today
-                    else:
-                        val = default_template
-                    meta_dict[key] = val
-                clean_s = sanitize_summary(inferred_summary) if inferred_summary else f"Legacy migrated {inferred_type}"
-                meta_dict["summary"] = clean_s
-                body_norm = normalize_backlink_footer(content, rel_str)
-                new_content = dump_frontmatter(meta_dict, body_norm)
-            except Exception:
-                meta_dict = {"type": inferred_type, "last_updated": today, "summary": f"Legacy migrated {inferred_type}"}
-                body_norm = normalize_backlink_footer(content, rel_str)
-                new_content = dump_frontmatter(meta_dict, body_norm)
 
-        if not dry_run:
-            tmp_path = md_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
-            try:
-                tmp_path.write_text(new_content, encoding="utf-8", newline="\n")
-                atomic_replace_with_retry(tmp_path, md_file)
+                _, extracted_s = extract_title_and_summary(body)
+                meta["summary"] = sanitize_summary(extracted_s or f"Legacy migrated {target_type}")
+            else:
+                meta["summary"] = sanitize_summary(str(meta["summary"]))
+
+        # Paso B: Exención semántica de secciones y tamaño (Tier 2)
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        is_active = status not in INACTIVE_STATUSES and stability not in INACTIVE_STATUSES
+        if is_active:
+            missing_h2 = check_missing_sections(body, target_type, schema=schema)
+            top_dir = rel.parts[0] if len(rel.parts) > 1 else ""
+            atomicity_exempt = {"decisions", "changelog", "handoffs", "_raw", ".locks"}
+            is_oversized = False
+            if top_dir not in atomicity_exempt:
+                cand_content = dump_frontmatter(meta, body)
+                if (
+                    len(cand_content.splitlines()) > MAX_ARTICLE_LINES
+                    or len(cand_content.encode("utf-8")) > MAX_ARTICLE_BYTES
+                ):
+                    is_oversized = True
+            if missing_h2 or is_oversized:
+                if target_type == "architecture" or "stability" in meta:
+                    meta["stability"] = "legacy"
+                else:
+                    meta["status"] = "legacy"
+
+        # Paso C: Normalización mecánica del cuerpo (Tier 1)
+        body = normalize_backlink_footer(body, rel_str)
+        body = normalize_bullet_colons(body)
+
+        # Paso D: Sembrado Merkle de applies_to
+        applies = meta.get("applies_to")
+        manifest_missing = False
+        if applies:
+            patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
+            m_dig, cnt, tgts = compute_applies_to_manifest(
+                patterns, p_root, wiki_root, exclude_self_path=rel_str, workspace_index=ws_index
+            )
+            if m_dig:
+                if meta.get("applies_to_digest") != m_dig or meta.get("applies_to_count") != cnt:
+                    meta["applies_to_digest"] = m_dig
+                    meta["applies_to_count"] = cnt
+                if rel_str not in manifest_articles or manifest_articles[rel_str].get("digest") != m_dig:
+                    manifest_articles[rel_str] = {"digest": m_dig, "count": cnt, "targets": tgts}
+                    manifest_missing = True
+
+        new_content = dump_frontmatter(meta, body)
+        content_changed = new_content != content
+
+        if content_changed or manifest_missing:
+            if not dry_run:
+                tmp_path = md_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
                 try:
-                    from brain79.core.navigation import extract_title_and_summary
-                    title, summary = extract_title_and_summary(new_content)
-                    sec = rel.parts[0] if len(rel.parts) > 1 else "root"
-                    register_article(wiki_root, rel_str, title, summary, sec)
-                except Exception:
-                    pass
-            except Exception:
-                if tmp_path.exists():
+                    tmp_path.write_text(new_content, encoding="utf-8", newline="\n")
+                    atomic_replace_with_retry(tmp_path, md_file)
                     try:
-                        tmp_path.unlink()
-                    except OSError:
-                        pass
-                raise
+                        from brain79.core.navigation import extract_title_and_summary
 
-        changes.append(rel_str)
+                        title, summary = extract_title_and_summary(new_content)
+                        sec = rel.parts[0] if len(rel.parts) > 1 else "root"
+                        register_article(wiki_root, rel_str, title, summary, sec)
+                    except Exception:
+                        pass
+                except Exception:
+                    if tmp_path.exists():
+                        try:
+                            tmp_path.unlink()
+                        except OSError:
+                            pass
+                    raise
+            changes.append(rel_str)
+        else:
+            skipped.append(f"{rel_str}: up-to-date")
 
     if not dry_run:
         if changes or manifest_purged:

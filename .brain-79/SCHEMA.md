@@ -1,6 +1,9 @@
 ---
 profile: software
+schema_version: 2
+last_updated: 2026-11-13
 ---
+
 # Brain-79 — Wiki schema (normative)
 
 This file defines the **enforced rules** for maintaining this project's wiki.
@@ -35,7 +38,7 @@ type: feature
 summary: one-line summary for INDEX.md entry
 status: planned  # planned | in_progress | shipped | deprecated | archived | legacy
 version: 1.0.0
-last_updated: YYYY-MM-DD
+last_updated: 2026-11-13
 ---
 
 # Decision (decisions/adr-*.md)
@@ -43,9 +46,9 @@ last_updated: YYYY-MM-DD
 type: decision
 summary: one-line summary of architectural decision
 status: proposed  # proposed | accepted | superseded | rejected | legacy
-date: YYYY-MM-DD
+date: 2026-11-13
 deciders: [author]
-last_updated: YYYY-MM-DD
+last_updated: 2026-11-13
 ---
 
 # Architecture (architecture/*.md)
@@ -53,14 +56,14 @@ last_updated: YYYY-MM-DD
 type: architecture
 summary: one-line summary of subsystem or pattern
 stability: experimental  # experimental | stable | archived | legacy
-last_updated: YYYY-MM-DD
+last_updated: 2026-11-13
 ---
 
 # Product (product/*.md)
 ---
 type: product
 summary: one-line summary of domain or vision
-last_updated: YYYY-MM-DD
+last_updated: 2026-11-13
 ---
 
 # Topic (topics/*.md)
@@ -68,7 +71,7 @@ last_updated: YYYY-MM-DD
 type: topic
 summary: one-line summary of research, benchmark, or domain topic
 status: active  # active | archived | draft | legacy
-last_updated: YYYY-MM-DD
+last_updated: 2026-11-13
 ---
 ```
 
@@ -87,7 +90,7 @@ Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions
 Articles must include standard structural sections per document type:
 - `decision`: Requires `## Status`, `## Context`, `## Decision`, `## Consequences`.
 - `feature`: Requires `## Overview`.
-- `architecture`: Requires `## Overview`, `## General description`, or `## State`.
+- `architecture`: Requires `## Overview`, `## General Description`, or `## State`.
 - `product`: Requires `## Overview`, `## Problem`, or `## Executive Summary`.
 
 Inspect complete document skeletons via `brain79_schema(type)`.
@@ -95,23 +98,6 @@ Inspect complete document skeletons via `brain79_schema(type)`.
 ### Deterministic drift detection (`applies_to`)
 
 Articles declaring `applies_to` paths or globs in frontmatter are continuously checked against git commit timestamps and filesystem modification dates. Stale articles surface as `documentation_drift_suspected` warnings in `brain79 lint` and `brain79_orient`.
-
----
-
-## Writing and documentation guidelines (clean B2)
-
-To ensure the wiki remains accessible to human engineers and easy for LLMs to reason over without high entropy:
-
-1. **Tone & Level (Clean B2):**
-   - Write in direct, accessible English (CEFR B2).
-   - Use straightforward Subject-Verb-Object sentence structures.
-   - Avoid inflated language, baroque adjectives, and convoluted phrasing.
-2. **Technical Precision:**
-   - Always preserve exact engineering terms (`atomic rename`, `POSIX mutex`, `BFS reachability`, `FastMCP`, `JSON-RPC`, `TF-IDF`, `WAL`).
-   - Define technical interactions by explaining *what happens* and *why it matters*.
-3. **Visual Structure:**
-   - Prefer concise bullet lists, visual ASCII topologies, and structured tables over unbroken blocks of prose.
-   - Maintain clear H2/H3 hierarchies to support fast scanning.
 
 ---
 

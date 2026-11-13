@@ -2,8 +2,8 @@
 type: feature
 summary: deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
 status: shipped
-version: 0.8.0
-last_updated: 2026-11-12
+version: 0.9.0
+last_updated: 2026-11-13
 applies_to:
   - src/brain79/cli/dispatch.py
   - src/brain79/cli/io.py
@@ -11,7 +11,7 @@ applies_to:
 related:
   - architecture/symmetry.md
   - architecture/dispatcher.md
-applies_to_digest: "sha256:1d91d476d4e05900"
+applies_to_digest: "sha256:2cc76932dc12e007"
 applies_to_count: 3
 ---
 
@@ -19,7 +19,7 @@ applies_to_count: 3
 
 ## Overview
 
-The Standalone CLI interface provides 22 deterministic command-line subcommands for managing the repository wiki, executing organizational linter checks, performing handoffs, and initializing memory protocols without requiring an active MCP host connection.
+The Standalone CLI interface provides 24 deterministic command-line subcommands for managing the repository wiki, executing organizational linter checks, performing handoffs, diagnosing environment health, upgrading project configurations, and initializing memory protocols without requiring an active MCP host connection.
 
 It is designed for direct developer interaction in the terminal, shell scripts, CI/CD pipelines, and git hooks.
 
@@ -27,7 +27,9 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 
 | Command | Description | Inputs / Flags | Exit Codes |
 |---|---|---|---|
-| `brain79 init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root`, `--install-git-hooks` / `--no-git-hooks` | `0`, `1`, `2` |
+| `brain79 init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root`, `--install-git-hooks` / `--no-git-hooks`, `--upgrade`, `--include-desktop` | `0`, `1`, `2` |
+| `brain79 update-project` | Non-destructively upgrade templates, schemas, and MCP harnesses | `[--project-root]`, `[--dry-run]`, `[--commit-transition]`, `[--include-desktop]` | `0`, `1` |
+| `brain79 doctor` | Run 7-point operational diagnostic checks and auto-repair | `[--project-root]`, `[--fix]`, `[--force]`, `[--include-desktop]`, `[--format text\|json]` | `0`, `1`, `2` |
 | `brain79 update` | Update editable installation from upstream git repo | `--branch` | `0`, `1` |
 | `brain79 orient` | Collapsed 1-call cold start orientation with inlined governing context | `[--task <t>]`, `[--paths ...]` | `0`, `3` |
 | `brain79 index` | Print `INDEX.md` entry point | None | `0`, `3` |

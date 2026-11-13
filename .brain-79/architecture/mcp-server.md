@@ -2,14 +2,14 @@
 type: architecture
 summary: FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 stability: stable
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 applies_to:
   - src/brain79/server.py
   - src/brain79/__main__.py
 related:
   - architecture/symmetry.md
   - features/mcp-server.md
-applies_to_digest: "sha256:44c61214f7923323"
+applies_to_digest: "sha256:b50908ef70422883"
 applies_to_count: 2
 ---
 
@@ -21,7 +21,7 @@ The Model Context Protocol (MCP) server integration in `brain-79` enables AI ass
 
 ## Components and server lifecycle
 
-1. **`src/brain79/server.py`**: Declares the `FastMCP("brain79", version=__version__)` instance and registers all 20 `brain79_*` tools with `output_schema=None` to prevent redundant response payloads. Implements `_unpack_nested_args` to unpack double-wrapped JSON arguments from client adapters.
+1. **`src/brain79/server.py`**: Declares the `FastMCP("brain79", version=__version__)` instance and registers all 22 `brain79_*` tools with `output_schema=None` to prevent redundant response payloads. Implements `_unpack_nested_args` to unpack double-wrapped JSON arguments from client adapters.
 2. **`src/brain79/__main__.py`**: Invokes `_cmd_serve()` when no subcommand is provided.
 
 ## Startup banner and logging suppression
@@ -34,7 +34,7 @@ To prevent connection drops:
 
 ## Tool definitions
 
-All 20 MCP tools are named with the `brain79_` prefix:
+All 22 MCP tools are named with the `brain79_` prefix:
 - `brain79_orient(task?, paths?)`: Collapsed 1-call cold start orientation with inlined governing articles and handoff freshness.
 - `brain79_index()`: Returns contents of `INDEX.md`.
 - `brain79_schema(target_type?)`: Returns schema rules and copy-paste templates.
@@ -55,6 +55,8 @@ All 20 MCP tools are named with the `brain79_` prefix:
 - `brain79_navigate(regenerate?)`: Queries or regenerates navigation registry.
 - `brain79_context(task, top_n?, paths?)`: Performs 3-signal context ranking across articles.
 - `brain79_migrate(apply?, dry_run?)`: Migrates legacy articles to V3 frontmatter schema.
+- `brain79_update_project(...)`: Non-destructively upgrades templates, schemas, and MCP harnesses.
+- `brain79_doctor(fix?, force?, ...)`: Runs 7-point operational diagnostic checks and auto-repairs defects.
 
 ## File descriptor teardown (`mcp.close()`)
 

@@ -719,53 +719,55 @@ def _mask_code_fences_text(content: str) -> str:
 
 
 def normalize_backlink_footer(body: str, rel_path: str) -> str:
-    """Ensure standard backlink navigation footer exists at the tail of subfolder articles.
+    """Ensure standard backlink navigation footer exists at the tail of articles.
 
-    Articles in root (INDEX.md, SCHEMA.md), _raw/, and handoffs/ are excluded from backlink injection.
-    Root files with a trailing unmasked backlink referencing ../INDEX.md are normalized to INDEX.md.
-    Empty bodies are excluded.
-    Verifies that the backlink is located in the final non-empty lines outside code fences.
+    INDEX.md, SCHEMA.md, and anything under _raw/ or handoffs/ are excluded from backlink injection.
+    Root files (e.g. root-overview.md) receive [← Volver al Índice](INDEX.md).
+    Subfolder files receive relative traversal [← Volver al Índice](../INDEX.md).
+    Existing backlinks referencing ../INDEX.md inside root files are rewritten to INDEX.md.
     """
     clean_rel = rel_path.strip().lstrip("/")
     parts = Path(clean_rel).parts
     is_root_file = len(parts) <= 1 or clean_rel in ("INDEX.md", "SCHEMA.md")
-    if is_root_file or parts[0] in ("_raw", "handoffs"):
-        if is_root_file and body.strip():
-            masked = _mask_code_fences_text(body)
-            masked_lines = masked.splitlines()
-            body_lines = body.splitlines()
 
-            non_empty_indices = [
-                i for i, line in enumerate(masked_lines) if line.strip()
-            ]
-            tail_indices = non_empty_indices[-5:] if non_empty_indices else []
+    # Rewrite invalid ../INDEX.md in root files
+    if is_root_file and body.strip():
+        masked = _mask_code_fences_text(body)
+        masked_lines = masked.splitlines()
+        body_lines = body.splitlines()
 
-            backlink_markers = (
-                "[← volver al índice]",
-                "[← return to index]",
-                "[← back to index]",
-                "[volver al índice]",
-            )
-            for idx in tail_indices:
-                m_line = masked_lines[idx].lower()
-                if any(marker in m_line for marker in backlink_markers) and "](../index.md)" in m_line:
-                    if "](../INDEX.md)" in body_lines[idx]:
-                        body_lines[idx] = body_lines[idx].replace("](../INDEX.md)", "](INDEX.md)")
-                        return "\n".join(body_lines) + ("\n" if body.endswith("\n") else "")
+        non_empty_indices = [i for i, line in enumerate(masked_lines) if line.strip()]
+        tail_indices = non_empty_indices[-5:] if non_empty_indices else []
+
+        backlink_markers = (
+            "[← volver al índice]",
+            "[← return to index]",
+            "[← back to index]",
+            "[volver al índice]",
+        )
+        for idx in tail_indices:
+            m_line = masked_lines[idx].lower()
+            if any(marker in m_line for marker in backlink_markers) and "](../index.md)" in m_line:
+                if "](../INDEX.md)" in body_lines[idx]:
+                    body_lines[idx] = body_lines[idx].replace("](../INDEX.md)", "](INDEX.md)")
+                    body = "\n".join(body_lines) + ("\n" if body.endswith("\n") else "")
+                    masked = _mask_code_fences_text(body)
+                    masked_lines = masked.splitlines()
+
+    if clean_rel in ("INDEX.md", "SCHEMA.md") or (parts and parts[0] in ("_raw", "handoffs")):
         return body
 
     stripped_body = body.strip()
     if not stripped_body:
         return body
 
-    # Calculate relative path back to INDEX.md
-    depth = len(parts) - 1
-    rel_to_index = ("../" * depth) + "INDEX.md"
+    rel_to_index = "INDEX.md" if is_root_file else ("../" * (len(parts) - 1)) + "INDEX.md"
 
     # Check if backlink is already present at the tail of the document outside code fences
     masked = _mask_code_fences_text(body)
-    non_empty_masked_lines = [line.strip().lower() for line in masked.splitlines() if line.strip()]
-    tail_lines = non_empty_masked_lines[-5:] if non_empty_masked_lines else []
+    masked_lines = masked.splitlines()
+    non_empty_indices = [i for i, line in enumerate(masked_lines) if line.strip()]
+    tail_indices = non_empty_indices[-5:] if non_empty_indices else []
 
     backlink_markers = (
         "[← volver al índice]",
@@ -774,6 +776,7 @@ def normalize_backlink_footer(body: str, rel_path: str) -> str:
         "[volver al índice]",
     )
 
+    tail_lines = [masked_lines[i].strip().lower() for i in tail_indices] if tail_indices else []
     has_tail_backlink = any(
         any(marker in line for marker in backlink_markers)
         for line in tail_lines

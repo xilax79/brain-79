@@ -15,6 +15,8 @@ async def test_mcp_cli_symmetry() -> None:
 
         cli_subs = set(WHITELIST)
 
+        assert len(cli_subs) == 24, f"Expected 24 CLI subcommands, got {len(cli_subs)}"
+        assert len(mcp_tool_names) == 22, f"Expected 22 MCP tools, got {len(mcp_tool_names)}"
         assert mcp_tool_names.issubset(cli_subs), (
             f"MCP tools {mcp_tool_names - cli_subs} not present in CLI subcommands"
         )
@@ -26,6 +28,32 @@ async def test_mcp_cli_symmetry() -> None:
             res = mcp.close()
             if hasattr(res, "__await__"):
                 await res
+
+
+def test_update_project_and_doctor_parameter_symmetry() -> None:
+    """Validate parameter symmetry for update-project and doctor between MCP and core."""
+    import inspect
+    from brain79.core.doctor import run_doctor
+    from brain79.core.init_project import update_project
+    from brain79.server import brain79_doctor, brain79_update_project
+
+    # 1. update_project
+    mcp_up = inspect.signature(brain79_update_project)
+    core_up = inspect.signature(update_project)
+    for p in ("dry_run", "commit_transition", "include_desktop"):
+        assert p in mcp_up.parameters
+        assert p in core_up.parameters
+        assert mcp_up.parameters[p].default is False
+
+    # 2. doctor
+    mcp_doc = inspect.signature(brain79_doctor)
+    core_doc = inspect.signature(run_doctor)
+    for p in ("fix", "force", "include_desktop"):
+        assert p in mcp_doc.parameters
+        assert p in core_doc.parameters
+        assert mcp_doc.parameters[p].default is False
+    assert "format" in mcp_doc.parameters
+    assert mcp_doc.parameters["format"].default == "text"
 
 
 def test_session_commit_parameter_symmetry() -> None:
