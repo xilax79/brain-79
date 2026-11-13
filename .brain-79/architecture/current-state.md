@@ -10,7 +10,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:40f4acbc9a5e42c2"
+applies_to_digest: "sha256:daa50a43e92fe275"
 applies_to_count: 29
 ---
 

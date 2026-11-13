@@ -217,25 +217,6 @@
       ]
     },
     {
-      "path": "features/project-upgrade-and-multi-harness-doctor.md",
-      "title": "Feature \u2014 Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics",
-      "summary": "non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics",
-      "section": "features",
-      "registered_at": "2026-11-13T17:48:36.775822+00:00",
-      "applies_to": [
-        "src/brain79/core/init_project.py",
-        "src/brain79/core/migration.py"
-      ],
-      "related": [
-        "architecture/roadmap-industrial-scale.md",
-        "features/cross-platform-and-lock-isolation.md",
-        "decisions/adr-016-handoff-freshness-and-authority-decay.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
       "path": "architecture/roadmap-industrial-scale.md",
       "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
       "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.8) and next-stage adoption and context guardrails (7-8)",
@@ -409,6 +390,30 @@
         ".brain-79/SCHEMA.md",
         ".brain-79/features/*.md",
         "src/brain79/__init__.py"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/project-upgrade-and-multi-harness-doctor.md",
+      "title": "Feature \u2014 Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics",
+      "summary": "non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics",
+      "section": "features",
+      "registered_at": "2026-11-13T21:06:17.889380+00:00",
+      "applies_to": [
+        "src/brain79/core/init_project.py",
+        "src/brain79/core/migration.py",
+        "src/brain79/cli/dispatch.py",
+        "src/brain79/server.py",
+        "src/brain79/core/orient.py"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "architecture/symmetry.md",
+        "architecture/current-state.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md"
       ],
       "outgoing_links": [
         "INDEX.md"

@@ -6,7 +6,7 @@ applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:90148bcc6ee6f3cd"
+applies_to_digest: "sha256:4c678c7f9bb24246"
 applies_to_count: 11
 ---
 
