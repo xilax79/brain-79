@@ -554,15 +554,42 @@ def dump_frontmatter(meta: dict[str, Any], body: str) -> str:
     return "\n".join(lines) + ("\n" + clean_body if clean_body else "")
 
 
+_PROTECTED_PROPER_NOUNS = {
+    "Python",
+    "Windows",
+    "Linux",
+    "macOS",
+    "Git",
+    "GitHub",
+    "Hatchling",
+    "Brain-79",
+    "Docker",
+    "SQLite",
+    "FastAPI",
+    "Pydantic",
+}
+
+
 def sanitize_summary(summary_text: str) -> str:
     """Sanitize summary text into a clean single line safe for frontmatter serialization.
 
     Prevents raw newlines, leading/trailing whitespace, and ensures text starting/ending
     with brackets is not accidentally deserialized as a YAML list by parse_frontmatter.
+    Normalizes initial word to sentence case (lowercase) while preserving uppercase acronyms,
+    camelCase identifiers, and known proper nouns.
     """
     clean = " ".join(summary_text.replace("\r", " ").replace("\n", " ").split()).strip()
     if not clean:
         return ""
+
+    # Normalization of initial word to lowercase for sentence case compliance
+    words = clean.split(" ", 1)
+    first_word = words[0]
+    if first_word not in _PROTECTED_PROPER_NOUNS:
+        is_acronym = first_word.isupper() and len(first_word) >= 2
+        has_internal_upper = any(c.isupper() for c in first_word[1:])
+        if not is_acronym and not has_internal_upper and first_word[0].isupper():
+            clean = clean[0].lower() + clean[1:]
 
     # If the text starts with '[' and ends with ']' or contains quotes, quote it safely
     # so YAML parsers treat it strictly as a string, not an inline list.
@@ -1135,3 +1162,13 @@ def validate_location_consistency(
             message=f"type='{declared_type}' but file is in '{rel.parts[0] if len(rel.parts) > 1 else '.'}' (expected type='{expected_type}').",
             actionable=f"Move file to a directory matching type='{declared_type}', or change frontmatter type to '{expected_type}'.",
         )
+
+    if declared_type == "changelog":
+        stem = rel.stem
+        if "." in stem or re.match(r"^\d", stem):
+            raise ValidationError(
+                rule="invalid_changelog_slug",
+                path=path,
+                message=f"Changelog slug '{rel.name}' violates standard naming convention.",
+                actionable="Use kebab-case semver slug format 'vX-Y-Z.md' (e.g. 'v1-1-0.md' instead of '1.1.0.md').",
+            )

@@ -16,8 +16,9 @@ related:
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
   - architecture/roadmap-industrial-scale.md
   - architecture/current-state.md
+  - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:b77f1a64a174998b"
+applies_to_digest: "sha256:5f7d6addd2b97b97"
 applies_to_count: 4
 ---
 

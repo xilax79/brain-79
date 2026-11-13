@@ -80,6 +80,13 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             help="Skip git hook installation",
         )
         parser.add_argument(
+            "--no-git",
+            dest="auto_git_init",
+            action="store_false",
+            default=True,
+            help="Skip automatic git repository initialization in software profile",
+        )
+        parser.add_argument(
             "--profile",
             choices=["software", "general"],
             default="software",
@@ -99,6 +106,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             target_root,
             install_git_hooks_flag=parsed.install_git_hooks,
             profile=parsed.profile,
+            auto_git_init=parsed.auto_git_init,
         )
         return 0
 

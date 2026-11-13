@@ -266,7 +266,7 @@ def test_migrate_wiki_repairs_missing_summary_in_existing_frontmatter(project_en
     # Verify that summary was added and linter passes
     meta, _ = parse_frontmatter(legacy_file.read_text(encoding="utf-8"))
     assert "summary" in meta
-    assert meta["summary"] == "This feature was created before summary was mandatory."
+    assert meta["summary"] == "this feature was created before summary was mandatory."
 
     issues = check_frontmatter_consistency(wiki_root)
     assert not any(i.path == "features/has_fm_no_summary.md" for i in issues)

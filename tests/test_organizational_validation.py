@@ -21,7 +21,7 @@ def test_validate_valid_feature_article() -> None:
     content = (
         "---\n"
         "type: feature\n"
-        "summary: Valid feature summary\n"
+        "summary: valid feature summary\n"
         "status: planned\n"
         "version: 0.1.0\n"
         "last_updated: 2026-08-11\n"

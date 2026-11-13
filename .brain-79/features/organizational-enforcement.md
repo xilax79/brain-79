@@ -16,7 +16,7 @@ related:
   - decisions/adr-004-strict-write-validation.md
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - decisions/adr-012-structural-quality-and-drift-detection.md
-applies_to_digest: "sha256:ed92d5d8d7c678d3"
+applies_to_digest: "sha256:793fe2e68749eb85"
 applies_to_count: 7
 ---
 

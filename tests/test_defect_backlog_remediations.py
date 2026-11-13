@@ -359,3 +359,412 @@ def test_orient_includes_active_schema_summary(tmp_path: Path) -> None:
     assert "**Profile:** `software`" in orient_out
     assert "features/" in orient_out
     assert "decisions/" in orient_out
+
+
+# ==============================================================================
+# BUG-003: Profile-aware Git repository enforcement and fallback code digest
+# ==============================================================================
+
+def test_bug_003_init_software_auto_initializes_git(tmp_path: Path) -> None:
+    """In software profile, init_project should auto-run git init and install pre-commit hooks."""
+    proj = tmp_path / "sw_project"
+    proj.mkdir()
+    init_project(proj, profile="software")
+
+    assert (proj / ".git").is_dir(), "Software profile must auto-initialize git if absent"
+    hook_file = proj / ".git" / "hooks" / "pre-commit"
+    assert hook_file.is_file(), "Pre-commit hook must be installed"
+
+
+def test_bug_003_init_general_does_not_initialize_git(tmp_path: Path) -> None:
+    """In general profile, init_project must NEVER initialize git."""
+    proj = tmp_path / "gen_project"
+    proj.mkdir()
+    init_project(proj, profile="general")
+
+    assert not (proj / ".git").exists(), "General profile must remain 100% git-free"
+
+
+def test_bug_003_init_software_can_disable_git(tmp_path: Path) -> None:
+    """When auto_git_init=False, software profile should not initialize git."""
+    proj = tmp_path / "sw_no_git"
+    proj.mkdir()
+    init_project(proj, profile="software", auto_git_init=False)
+
+    assert not (proj / ".git").exists()
+
+
+def test_bug_003_linter_warns_missing_git_only_for_software_profile(tmp_path: Path) -> None:
+    """Linter issues missing_git_repository rule strictly for software profile without git."""
+    from brain79.core.lint_organizational import lint_organizational
+
+    sw_proj = tmp_path / "sw_gitless"
+    sw_proj.mkdir()
+    init_project(sw_proj, profile="software", auto_git_init=False)
+    sw_issues = lint_organizational(sw_proj / ".brain-79")
+    sw_rules = [i.rule for i in sw_issues]
+    assert "missing_git_repository" in sw_rules
+
+    gen_proj = tmp_path / "gen_gitless"
+    gen_proj.mkdir()
+    init_project(gen_proj, profile="general")
+    gen_issues = lint_organizational(gen_proj / ".brain-79")
+    gen_rules = [i.rule for i in gen_issues]
+    assert "missing_git_repository" not in gen_rules
+
+
+def test_bug_003_code_digest_fallback_for_software_without_git(tmp_path: Path) -> None:
+    """Software project without git computes real cryptographic digest over code files via fallback."""
+    from brain79.core.handoff_freshness import compute_code_digest
+
+    sw_proj = tmp_path / "sw_code_digest"
+    sw_proj.mkdir()
+    init_project(sw_proj, profile="software", auto_git_init=False)
+
+    code_file = sw_proj / "app.py"
+    code_file.write_text("print('version 1')\n", encoding="utf-8")
+
+    digest1 = compute_code_digest(sw_proj, wiki_root=sw_proj / ".brain-79")
+    assert digest1 != "none"
+    assert len(digest1) == 64
+
+    code_file.write_text("print('version 2')\n", encoding="utf-8")
+    digest2 = compute_code_digest(sw_proj, wiki_root=sw_proj / ".brain-79")
+    assert digest2 != "none"
+    assert digest2 != digest1
+    assert len(digest2) == 64
+
+    # General profile returns 'none'
+    gen_proj = tmp_path / "gen_code_digest"
+    gen_proj.mkdir()
+    init_project(gen_proj, profile="general")
+    (gen_proj / "data.csv").write_text("a,b,c\n", encoding="utf-8")
+    assert compute_code_digest(gen_proj, wiki_root=gen_proj / ".brain-79") == "none"
+
+
+# ==============================================================================
+# BUG-004: Shared umbrella file governance and sibling leaf article conflicts
+# ==============================================================================
+
+def test_bug_004_sibling_leaf_article_overlap_advisory(tmp_path: Path) -> None:
+    """Linter emits advisory shared_target_in_leaf_article (severity: info) on overlapping leaf targets."""
+    from brain79.core.lint_organizational import lint_organizational
+    from brain79.core.wiki import write_article
+
+    proj = tmp_path / "overlap_proj"
+    proj.mkdir()
+    init_project(proj, profile="software", auto_git_init=False)
+    wiki_root = proj / ".brain-79"
+
+    # Shared file
+    (proj / "style.css").write_text("body { color: red; }\n", encoding="utf-8")
+
+    write_article(
+        "features/game-roulette.md",
+        (
+            "---\n"
+            "type: feature\n"
+            "summary: roulette game engine\n"
+            "status: shipped\n"
+            "version: 1.0.0\n"
+            "applies_to:\n"
+            "  - style.css\n"
+            "---\n\n"
+            "# Roulette\n\n"
+            "## Overview\n"
+            "Roulette game.\n"
+        ),
+        wiki_root=wiki_root,
+    )
+
+    write_article(
+        "features/game-crash.md",
+        (
+            "---\n"
+            "type: feature\n"
+            "summary: crash game engine\n"
+            "status: shipped\n"
+            "version: 1.0.0\n"
+            "applies_to:\n"
+            "  - style.css\n"
+            "---\n\n"
+            "# Crash\n\n"
+            "## Overview\n"
+            "Crash game.\n"
+        ),
+        force_validation_skip=True,
+        wiki_root=wiki_root,
+    )
+
+    issues = lint_organizational(wiki_root)
+    overlap_issues = [i for i in issues if i.rule == "shared_target_in_leaf_article"]
+    assert len(overlap_issues) >= 1
+    assert overlap_issues[0].severity == "info"
+    assert "style.css" in overlap_issues[0].message
+
+
+def test_bug_004_overlap_suppressed_with_allow_overlapping_governance(tmp_path: Path) -> None:
+    """When allow_overlapping_governance: true is set, shared_target_in_leaf_article is suppressed."""
+    from brain79.core.lint_organizational import lint_organizational
+    from brain79.core.wiki import write_article
+
+    proj = tmp_path / "overlap_suppressed"
+    proj.mkdir()
+    init_project(proj, profile="software", auto_git_init=False)
+    wiki_root = proj / ".brain-79"
+
+    (proj / "style.css").write_text("body { color: blue; }\n", encoding="utf-8")
+
+    write_article(
+        "features/game-roulette.md",
+        (
+            "---\n"
+            "type: feature\n"
+            "summary: roulette game engine\n"
+            "status: planned\n"
+            "version: 1.0.0\n"
+            "allow_overlapping_governance: true\n"
+            "applies_to:\n"
+            "  - style.css\n"
+            "---\n\n"
+            "# Roulette\n\n"
+            "## Overview\n"
+            "Roulette game.\n"
+        ),
+        wiki_root=wiki_root,
+    )
+
+    write_article(
+        "features/game-crash.md",
+        (
+            "---\n"
+            "type: feature\n"
+            "summary: crash game engine\n"
+            "status: planned\n"
+            "version: 1.0.0\n"
+            "allow_overlapping_governance: true\n"
+            "applies_to:\n"
+            "  - style.css\n"
+            "---\n\n"
+            "# Crash\n\n"
+            "## Overview\n"
+            "Crash game.\n"
+        ),
+        wiki_root=wiki_root,
+    )
+
+    issues = lint_organizational(wiki_root)
+    overlap_issues = [i for i in issues if i.rule == "shared_target_in_leaf_article"]
+    assert len(overlap_issues) == 0
+
+
+# ==============================================================================
+# BUG-005: Architectural decision deficit heuristic (advisory, non-blocking)
+# ==============================================================================
+
+def test_bug_005_architectural_decision_deficit_advisory(tmp_path: Path) -> None:
+    """Linter emits architectural_decision_deficit (severity: info) when >= 3 features/arch and 0 ADRs."""
+    from brain79.core.lint_organizational import lint_organizational
+    from brain79.core.wiki import write_article
+    from brain79.core.orient import orient
+
+    proj = tmp_path / "adr_deficit_proj"
+    proj.mkdir()
+    init_project(proj, profile="software", auto_git_init=False)
+    wiki_root = proj / ".brain-79"
+
+    for i in range(3):
+        write_article(
+            f"features/feature-{i}.md",
+            (
+                "---\n"
+                "type: feature\n"
+                f"summary: feature {i} description\n"
+                "status: planned\n"
+                "version: 1.0.0\n"
+                "---\n\n"
+                f"# Feature {i}\n\n"
+                "## Overview\n"
+                f"Feature {i} overview.\n"
+            ),
+            wiki_root=wiki_root,
+        )
+
+    issues = lint_organizational(wiki_root)
+    deficit_issues = [i for i in issues if i.rule == "architectural_decision_deficit"]
+    assert len(deficit_issues) == 1
+    assert deficit_issues[0].severity == "info"
+    assert "decisions" in deficit_issues[0].path
+
+    set_project_root(proj)
+    orient_out = orient(task="Review project architecture")
+    assert "architectural decision" in orient_out.lower() or "adr" in orient_out.lower()
+
+
+def test_bug_005_adr_present_clears_deficit(tmp_path: Path) -> None:
+    """When at least 1 active ADR is present, architectural_decision_deficit is not emitted."""
+    from brain79.core.lint_organizational import lint_organizational
+    from brain79.core.wiki import write_article
+
+    proj = tmp_path / "adr_present_proj"
+    proj.mkdir()
+    init_project(proj, profile="software", auto_git_init=False)
+    wiki_root = proj / ".brain-79"
+
+    for i in range(3):
+        write_article(
+            f"features/feature-{i}.md",
+            (
+                "---\n"
+                "type: feature\n"
+                f"summary: feature {i} description\n"
+                "status: planned\n"
+                "version: 1.0.0\n"
+                "---\n\n"
+                f"# Feature {i}\n\n"
+                "## Overview\n"
+                f"Feature {i} overview.\n"
+            ),
+            wiki_root=wiki_root,
+        )
+
+    write_article(
+        "decisions/adr-001-state-store.md",
+        (
+            "---\n"
+            "type: decision\n"
+            "summary: reactive state store decision\n"
+            "status: accepted\n"
+            "date: 2026-11-12\n"
+            "deciders:\n"
+            "  - Lead Architect\n"
+            "---\n\n"
+            "# ADR-001 — Reactive state store\n\n"
+            "## Status\nAccepted.\n\n"
+            "## Context\nNeed state management.\n\n"
+            "## Decision\nUse pub/sub store.\n\n"
+            "## Consequences\nDecoupled modules.\n"
+        ),
+        wiki_root=wiki_root,
+    )
+
+    issues = lint_organizational(wiki_root)
+    deficit_issues = [i for i in issues if i.rule == "architectural_decision_deficit"]
+    assert len(deficit_issues) == 0
+
+
+# ==============================================================================
+# BUG-006: Source code coverage gap detection (uncovered source files)
+# ==============================================================================
+
+def test_bug_006_uncovered_source_files_heuristic(tmp_path: Path) -> None:
+    """Linter emits advisory uncovered_source_files (severity: info) for unanchored source code files."""
+    from brain79.core.lint_organizational import lint_organizational
+    from brain79.core.wiki import write_article
+
+    proj = tmp_path / "coverage_gap_proj"
+    proj.mkdir()
+    init_project(proj, profile="software", auto_git_init=False)
+    wiki_root = proj / ".brain-79"
+
+    # Create two source files
+    src_dir = proj / "src"
+    src_dir.mkdir()
+    (src_dir / "governed_service.py").write_text("def run(): pass\n", encoding="utf-8")
+    (src_dir / "orphaned_service.py").write_text("def orphan(): pass\n", encoding="utf-8")
+
+    # Feature article only governs governed_service.py
+    write_article(
+        "features/service.md",
+        (
+            "---\n"
+            "type: feature\n"
+            "summary: service engine\n"
+            "status: planned\n"
+            "version: 1.0.0\n"
+            "applies_to:\n"
+            "  - src/governed_service.py\n"
+            "---\n\n"
+            "# Service\n\n"
+            "## Overview\n"
+            "Service overview.\n"
+        ),
+        wiki_root=wiki_root,
+    )
+
+    issues = lint_organizational(wiki_root)
+    uncovered = [i for i in issues if i.rule == "uncovered_source_files"]
+    assert len(uncovered) == 1
+    assert uncovered[0].severity == "info"
+    assert "src/orphaned_service.py" in uncovered[0].path
+
+
+# ==============================================================================
+# BUG-007: Frontmatter summary casing normalization and changelog slug standard
+# ==============================================================================
+
+def test_bug_007_changelog_slug_validation(tmp_path: Path) -> None:
+    """Changelog articles must use kebab-case version slugs (e.g. v1-1-0.md, not 1.1.0.md)."""
+    import pytest
+    from brain79.core.frontmatter import ValidationError
+    from brain79.core.wiki import write_article
+
+    proj = tmp_path / "changelog_slug_proj"
+    proj.mkdir()
+    init_project(proj, profile="software", auto_git_init=False)
+    wiki_root = proj / ".brain-79"
+
+    # Dotted slug should be rejected
+    with pytest.raises(ValidationError) as exc_info:
+        write_article(
+            "changelog/1.1.0.md",
+            (
+                "---\n"
+                "type: changelog\n"
+                "summary: release 1.1.0\n"
+                "version: 1.1.0\n"
+                "date: 2026-11-12\n"
+                "---\n\n"
+                "# Changelog 1.1.0\n\n"
+                "## Overview\n"
+                "Release notes.\n"
+            ),
+            wiki_root=wiki_root,
+        )
+    assert exc_info.value.rule == "invalid_changelog_slug"
+
+    # Standard kebab-case vX-Y-Z slug should succeed
+    res = write_article(
+        "changelog/v1-1-0.md",
+        (
+            "---\n"
+            "type: changelog\n"
+            "summary: release 1.1.0\n"
+            "version: 1.1.0\n"
+            "date: 2026-11-12\n"
+            "---\n\n"
+            "# Changelog 1.1.0\n\n"
+            "## Overview\n"
+            "Release notes.\n"
+        ),
+        wiki_root=wiki_root,
+    )
+    assert "changelog/v1-1-0.md" in res
+
+
+def test_bug_007_summary_initial_lowercase_normalization() -> None:
+    """sanitize_summary normalizes initial words to lowercase, preserving acronyms and proper nouns."""
+    from brain79.core.frontmatter import sanitize_summary
+
+    assert sanitize_summary("Arquitectura del motor") == "arquitectura del motor"
+    assert sanitize_summary("CLI and MCP symmetry") == "CLI and MCP symmetry"
+    assert sanitize_summary("FastMCP server integration") == "FastMCP server integration"
+    assert sanitize_summary("Python packaging and distribution") == "Python packaging and distribution"
+    assert sanitize_summary("   Docker container deployment   ") == "Docker container deployment"
+
+
+
+
+
+
+

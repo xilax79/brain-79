@@ -90,6 +90,11 @@ def prepare_curation_guide(wiki_root: Path, raw_content: str | None = None) -> s
         "",
     ]
 
+    deficit = next((i for i in org_issues if i.rule == "architectural_decision_deficit"), None)
+    if deficit:
+        lines.append(f"> 💡 **Advisory**: {deficit.message} {deficit.actionable}")
+        lines.append("")
+
     if state.issues_summary:
         lines.append("### Specific Violations Needing Remediation")
         lines.extend(state.issues_summary)

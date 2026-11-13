@@ -152,7 +152,7 @@ def test_write_article_with_frontmatter_summary_indexes_into_quick_nav(
     index_file.write_text(filled_index, encoding="utf-8")
 
     index_content = (wiki_root / "INDEX.md").read_text(encoding="utf-8")
-    assert "- [Audio Streaming](features/audio.md) — High-performance streaming audio pipeline." in index_content
+    assert "- [Audio Streaming](features/audio.md) — high-performance streaming audio pipeline." in index_content
 
     # Strict lint check should pass with the back-link included and no placeholder warnings
     code = run_cli("lint", ["--strict"])
@@ -298,7 +298,7 @@ def test_pure_index_navigation_lifecycle(setup_wiki_root: Path) -> None:
 
     updated_index = index_path.read_text(encoding="utf-8")
     assert "### Features" in updated_index
-    assert "[Pure Routing](features/pure.md) — Pure routing table verification" in updated_index
+    assert "[Pure Routing](features/pure.md) — pure routing table verification" in updated_index
     # Verify no accidental text injection
     assert "## Current focus" not in updated_index
     assert "## Roadmap" not in updated_index

@@ -11,7 +11,7 @@ related:
   - architecture/current-state.md
   - features/cli.md
   - features/mcp-server.md
-applies_to_digest: "sha256:f6dfdd5a143173bc"
+applies_to_digest: "sha256:f4ff7b56beffcf40"
 applies_to_count: 3
 ---
 

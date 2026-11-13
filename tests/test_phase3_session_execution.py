@@ -320,7 +320,7 @@ Handles JWT token issuance and revocation.
     # Verify INDEX.md quick navigation was synchronized
     index_content = read_article("INDEX.md")
     assert "features/auth.md" in index_content
-    assert "User authentication subsystem" in index_content
+    assert "user authentication subsystem" in index_content
 
 
 def test_commit_session_preflight_validation_rollback(clean_project: Path) -> None:

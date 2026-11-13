@@ -342,7 +342,7 @@ def test_tree_max_entries_respected(project: Path) -> None:
 
 
 def test_tree_excludes_git_and_cache(project: Path) -> None:
-    (project / ".git").mkdir()
+    (project / ".git").mkdir(exist_ok=True)
     (project / "__pycache__").mkdir()
     result = run_bootstrap()
     tree_section = result.split("## Project Structure")[1].split("---")[0]

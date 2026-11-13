@@ -1,7 +1,7 @@
 ---
 type: architecture
 summary: master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-stability: experimental
+stability: archived
 applies_to:
   - src/brain79/core/init_project.py
   - src/brain79/core/validation.py
@@ -14,7 +14,7 @@ related:
   - features/cross-platform-and-lock-isolation.md
   - features/transitive-drift-and-ripple-guards.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:055dc293064d86f9"
+applies_to_digest: "sha256:4bc9b5949c1bf4f7"
 applies_to_count: 5
 ---
 
@@ -42,9 +42,10 @@ The Phase 6.7 core engine performed as designed during live execution: Merkle dr
 
 ---
 
-## 1. Ergonomics and lifecycle specifications (to be addressed in dedicated branch)
+## 1. Ergonomics and lifecycle remediations (implemented in feat/uat-remediations)
 
-### BUG-003: Profile-aware Git repository enforcement and fallback code digest
+### BUG-003 (Resolved): Profile-aware Git repository enforcement and fallback code digest
+- **Status**: resolved in `feat/uat-remediations`.
 - **Severity**: high.
 - **Locations**: `src/brain79/core/init_project.py`, `src/brain79/core/handoff_freshness.py`, `src/brain79/core/lint_organizational.py`.
 - **Symptom**: running `brain79 init` in `/tmp/test-wiki` succeeded without an active Git repository. This resulted in:
@@ -53,63 +54,59 @@ The Phase 6.7 core engine performed as designed during live execution: Merkle dr
   3. Pre-commit hooks (`.git/hooks/pre-commit`) silently skipping installation.
 - **Forensic root cause & adversarial boundaries**:
   While software projects require Git for authority hierarchy (`code and git > wiki > handoff`), workspaces initialized with `--profile general` (research notes, sports statistics, market forecasts, legal analysis) **must remain 100% free of Git requirements**. Making Git mandatory across all profiles would break valid zero-git document repositories.
-- **Corrected remediation specification**:
+- **Remediation**:
   1. **Profile-restricted auto-init (`init_project.py`)**: when `profile == "software"`, if no `.git` directory exists and the workspace is not inside a Git worktree, execute `git init` automatically (unless explicitly disabled via `--no-git`). For `--profile general`, do not mandate Git.
-  2. **Profile-aware linter check (`lint_organizational.py`)**: issue rule `missing_git_repository` (severity: info or warning) **strictly when `profile == "software"`**. Workspaces with `--profile general` are exempt.
-  3. **Fallback code digest (`handoff_freshness.py`)**: when a software workspace lacks `.git`, `compute_code_digest()` should fall back to walking the filesystem via `WorkspaceIndex` and hashing source files with the standard 64 KB leaf hasher instead of returning `"none"`. This preserves cryptographic code mutation tracking even in gitless folders.
+  2. **Profile-aware linter check (`lint_organizational.py`)**: issue rule `missing_git_repository` (severity: info) strictly when `profile == "software"`. Workspaces with `--profile general` are exempt.
+  3. **Fallback code digest (`handoff_freshness.py`)**: when a software workspace lacks `.git`, `compute_code_digest()` falls back to walking the filesystem via `WorkspaceIndex` and hashing source files with 64 KB leaf byte-streaming instead of returning `"none"`.
 
 ---
 
-### BUG-004: Shared umbrella file governance and sibling leaf article conflicts
+### BUG-004 (Resolved): Shared umbrella file governance and sibling leaf article conflicts
+- **Status**: resolved in `feat/uat-remediations`.
 - **Severity**: medium.
-- **Locations**: `src/brain79/core/validation.py`, `src/brain79/core/drift.py`, `.brain-79/SCHEMA.md`.
-- **Symptom**: in `/tmp/test-wiki`, `architecture/roulette-engine.md` declared `applies_to` over `css/style.css`, `js/app.js`, and `js/sound.js`. When the Crash Game was added, those shared files were modified, triggering:
-  ```text
-  ⚠️ Documentation Drift Suspected: Article 'architecture/roulette-engine.md' governs 'css/style.css'
-  ```
+- **Locations**: `src/brain79/core/validation.py`, `src/brain79/core/lint_organizational.py`.
+- **Symptom**: in `/tmp/test-wiki`, `architecture/roulette-engine.md` declared `applies_to` over `css/style.css`, `js/app.js`, and `js/sound.js`. When the Crash Game was added, those shared files were modified, triggering drift.
 - **Forensic root cause & adversarial evaluation**:
   The drift engine worked exactly as designed: `css/style.css` was modified, so the article claiming to govern it was flagged. The architectural mistake was human/agent authoring error: a specialized leaf game article claimed ownership over transversal platform files.
-- **Corrected remediation specification**:
-  1. **Documentation invariant**: document in `SCHEMA.md` and curation guides that transversal infrastructure files (`style.css`, `app.js`, `sound.js`) belong strictly to platform/umbrella architecture articles (`multigame-platform.md`), not individual leaf features.
-  2. **Sibling overlap heuristic (`lint_organizational.py`)**: add an advisory check `shared_target_in_leaf_article` (severity: info) alerting when multiple sibling leaf articles claim the same root workspace file without declaring `supersedes` or `allow_overlapping_governance`.
-  3. **Testbed alignment**: in `/tmp/test-wiki`, scope `architecture/roulette-engine.md` strictly to `js/engine.js`, `js/wheel.js`, and `js/test-engine.js`.
+- **Remediation**:
+  1. **Sibling overlap heuristic (`lint_organizational.py`)**: added advisory check `shared_target_in_leaf_article` (severity: info) alerting when multiple sibling leaf articles claim the same workspace file without declaring `supersedes` or `allow_overlapping_governance`.
+  2. **Suppression mechanism**: setting `allow_overlapping_governance: true` or referencing sibling articles via `related` or `supersedes` suppresses the advisory alert.
 
 ---
 
-### BUG-005: Architectural decision deficit heuristic (advisory, non-blocking)
+### BUG-005 (Resolved): Architectural decision deficit heuristic (advisory, non-blocking)
+- **Status**: resolved in `feat/uat-remediations`.
 - **Severity**: medium (advisory).
 - **Locations**: `src/brain79/core/lint_organizational.py`, `src/brain79/core/orient.py`, `src/brain79/core/curate.py`.
 - **Symptom**: despite implementing five distinct games, shared localStorage state, Web Audio API synthesis, and mathematical payout models, `.brain-79/decisions/` in `/tmp/test-wiki` remained 100% empty (0 ADRs).
-- **Forensic root cause & adversarial boundaries**:
-  LLM agents naturally prioritize features and changelogs because they map directly to prompt requests, while architectural decisions are treated as implicit implementation details. However, flagging this as a `warning` in `lint_organizational.py` would cause `brain79 lint --strict` to exit with code 1, which would break small initial projects or early migrations that legitimately have 0 ADRs.
-- **Corrected remediation specification**:
-  1. **Non-blocking info check (`lint_organizational.py`)**: emit rule `architectural_decision_deficit` strictly with `severity: info` (never warning or critical) when a software wiki has $\ge 3$ features or architecture articles but 0 active ADRs.
-  2. **Advisory agent prompt (`orient.py`, `curate.py`)**: render a prominent tip in `brain79_orient()` and curation summaries reminding agents to record architectural decisions when multiple new subsystems are created.
+- **Remediation**:
+  1. **Non-blocking info check (`lint_organizational.py`)**: emits rule `architectural_decision_deficit` strictly with `severity: info` when a software wiki has $\ge 3$ features or architecture articles but 0 active ADRs.
+  2. **Advisory agent prompt (`orient.py`, `curate.py`)**: renders an advisory tip in `brain79_orient()` and curation summaries reminding agents to record architectural decisions when multiple new subsystems are created.
 
 ---
 
-### BUG-006: Source code coverage gap detection (uncovered source files)
+### BUG-006 (Resolved): Source code coverage gap detection (uncovered source files)
+- **Status**: resolved in `feat/uat-remediations`.
 - **Severity**: medium.
-- **Locations**: `src/brain79/core/lint_organizational.py`, `src/brain79/core/init_project.py` (Phase 7 doctor).
+- **Locations**: `src/brain79/core/lint_organizational.py`.
 - **Symptom**: in `/tmp/test-wiki`, core game engines (`js/blackjack-engine.js`, `js/slots-engine.js`) were unanchored—not claimed by the `applies_to` frontmatter of any feature or architecture article.
 - **Forensic root cause & rejection of antipattern**:
-  The initial proposal to enforce 1:1 filename matching between `product/<slug>.md` and `features/<slug>.md` is an antipattern and was rejected. A software repository frequently has 1 high-level vision document (`product/overview.md`) covering 10 distinct technical features (as in Brain-79 itself). The real metric is **source code coverage**.
-- **Corrected remediation specification**:
-  1. **Uncovered source files check (`uncovered_source_files`)**: integrate with Phase 7 `brain79 doctor` to scan the workspace against the union of all `applies_to` targets.
-  2. Flag unanchored source code files so agents are prompted to bind them to governing architecture or feature articles, maintaining 100% code governance coverage without artificial 1:1 naming constraints.
+  The initial proposal to enforce 1:1 filename matching between `product/<slug>.md` and `features/<slug>.md` is an antipattern and was rejected. The real metric is source code coverage.
+- **Remediation**:
+  1. **Uncovered source files check (`uncovered_source_files`)**: scans the workspace for recognized source files (`.py`, `.js`, `.ts`, etc., excluding `tests/`, `scripts/`, `node_modules/`, `.venv/`) and flags unanchored source code files (severity: info) not covered by any active `applies_to` rule.
 
 ---
 
-### BUG-007: Frontmatter summary casing normalization and changelog slug standard
-- **Severity**: minor / polish (pre-merge resolution).
-- **Locations**: `src/brain79/core/frontmatter.py`, `src/brain79/core/validation.py`.
+### BUG-007 (Resolved): Frontmatter summary casing normalization and changelog slug standard
+- **Status**: resolved in `feat/uat-remediations`.
+- **Severity**: minor / polish.
+- **Locations**: `src/brain79/core/frontmatter.py`.
 - **Symptom**:
-  1. Agents authoring frontmatter frequently supply `summary: Arquitectura...` (capitalized). When rendered in `INDEX.md` after the em-dash (`- [Title](path) — Summary`), it violates sentence case governance.
+  1. Agents authoring frontmatter frequently supply capitalized summaries violating sentence case governance.
   2. Changelogs in `/tmp/test-wiki` were created as `1.1.0.md` instead of the kebab-case standard `v1-1-0.md`.
-- **Pre-merge resolution & implementation**:
-  1. **Implemented in `src/brain79/core/frontmatter.py`**: `sanitize_summary()` now normalizes the initial word to lowercase using `_SAFE_LOWERCASE_AFTER_COLON` vocabulary and common domain nouns, while strictly preserving acronyms (`CLI`, `MCP`, `ADR`, `RTP`) and proper nouns.
-  2. **Unit tests added in `tests/test_frontmatter.py`**: verified sentence case conversion, acronym preservation, and whitespace sanitization.
-  3. Changelog slug format `v<semver>.md` scheduled for validation check in follow-up tranche.
+- **Remediation**:
+  1. **Implemented in `src/brain79/core/frontmatter.py`**: `sanitize_summary()` normalizes initial words to lowercase while strictly preserving acronyms (`CLI`, `MCP`, `ADR`, `RTP`) and proper nouns.
+  2. **Location consistency validation**: `validate_location_consistency()` rejects changelog slugs with dots or starting with a digit (`rule: invalid_changelog_slug`), requiring standard kebab-case semver slugs (`vX-Y-Z.md`).
 
 ---
 

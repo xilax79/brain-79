@@ -155,15 +155,66 @@ def compute_wiki_digest(wiki_root: Path) -> str:
 def compute_code_digest(
     project_root: Path,
     workspace_files: list[str] | set[str] | None = None,
+    wiki_root: Path | None = None,
 ) -> str:
     """Compute sha256 over sorted (path, blob_sha) pairs outside .brain-79.
 
     Uses git index + untracked files to be commit-independent (commit of same tree yields same hash).
     Tolerates deleted files in working tree, submodules, and symlinks.
-    Returns 'none' outside git, 'unknown' on error.
+    In software profile without git, falls back to WorkspaceIndex and 64 KB leaf byte-streaming.
+    Returns 'none' outside git for non-software profiles, 'unknown' on error.
     """
     if not (project_root / ".git").exists() and not is_git_workspace(project_root):
-        return "none"
+        w_root = wiki_root or (project_root / ".brain-79")
+        try:
+            from brain79.core.frontmatter import load_active_schema
+
+            schema = load_active_schema(w_root)
+            is_software = schema.profile == "software"
+        except Exception:
+            is_software = False
+
+        if not is_software:
+            return "none"
+
+        # Software profile fallback: walk files via WorkspaceIndex and stream 64 KB hash
+        try:
+            from brain79.core.drift import WorkspaceIndex, compute_file_content_digest
+
+            ws = WorkspaceIndex.build(project_root, w_root)
+            raw_list = workspace_files if workspace_files is not None else ws.all_paths
+            cand_files: list[str] = []
+            for p in raw_list:
+                norm = str(p).replace("\\", "/").strip().lstrip("/")
+                if (
+                    norm.startswith(".brain-79/")
+                    or norm.startswith(".git/")
+                    or norm == ".brain-79"
+                    or norm == ".git"
+                ):
+                    continue
+                cand_files.append(norm)
+
+            if not cand_files:
+                return "none"
+
+            fallback_hashes: list[tuple[str, str]] = []
+            for rel in sorted(cand_files):
+                file_path = project_root / rel
+                if file_path.is_file():
+                    h = compute_file_content_digest(file_path)
+                    if h is not None:
+                        fallback_hashes.append((rel, h))
+
+            if not fallback_hashes:
+                return hashlib.sha256(b"empty").hexdigest()
+
+            hasher = hashlib.sha256()
+            for f, h in fallback_hashes:
+                hasher.update(f"{f}:{h}\n".encode("utf-8"))
+            return hasher.hexdigest()
+        except Exception:
+            return "unknown"
 
     try:
         if workspace_files is not None:
@@ -294,7 +345,7 @@ def compute_handoff_freshness(
     cur_branch = get_git_branch(project_root)
     cur_wiki_digest = compute_wiki_digest(wiki_root)
     ws_files = getattr(workspace_index, "all_paths", None) if workspace_index is not None else None
-    cur_code_digest = compute_code_digest(project_root, workspace_files=ws_files)
+    cur_code_digest = compute_code_digest(project_root, workspace_files=ws_files, wiki_root=wiki_root)
 
     reasons: list[str] = []
     commits_since: int | None = None

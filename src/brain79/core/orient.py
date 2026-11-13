@@ -78,6 +78,19 @@ def orient(
 
     sections.extend(["", "---", ""])
 
+    # Advisory prompt if architectural decision deficit exists
+    try:
+        from brain79.core.lint_organizational import check_architectural_decision_deficit
+
+        adr_issues = check_architectural_decision_deficit(w_root)
+        if adr_issues:
+            sections.extend([
+                f"> 💡 **Advisory**: {adr_issues[0].message} {adr_issues[0].actionable}",
+                "",
+            ])
+    except Exception:
+        pass
+
     # Operation-scoped WorkspaceIndex (built once per orient invocation)
     from brain79.core.drift import WorkspaceIndex, detect_all_drift
     ws = WorkspaceIndex.build(p_root, w_root)

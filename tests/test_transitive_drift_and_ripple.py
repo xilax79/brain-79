@@ -1989,10 +1989,10 @@ def test_golden_wiki_blueprint_verification() -> None:
     assert not (w_root / "features/handoff-freshness.md").exists()
     assert not (w_root / "features/handoff-purge.md").exists()
 
-    # 2. Historical lifecycle accuracy: defect-backlog transitioned to stability: archived or experimental
+    # 2. Historical lifecycle accuracy: defect-backlog transitioned to stability: archived
     defect_backlog = (w_root / "architecture/defect-backlog.md").read_text(encoding="utf-8")
     meta_backlog, _ = parse_frontmatter(defect_backlog)
-    assert meta_backlog.get("stability") in ("archived", "experimental")
+    assert meta_backlog.get("stability") == "archived"
 
     # 3. 100% source code governance coverage across src/brain79/**/*.py
     all_py_files: set[str] = set()

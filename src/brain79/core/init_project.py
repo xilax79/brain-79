@@ -3,6 +3,7 @@ from importlib import resources
 import json
 from pathlib import Path
 import shutil
+import subprocess
 
 from brain79.core.locks import cleanup_legacy_inline_locks
 
@@ -69,6 +70,7 @@ def init_project(
     project_root: Path,
     install_git_hooks_flag: bool = True,
     profile: str = "software",
+    auto_git_init: bool = True,
 ) -> None:
     """Bootstrap .brain-79/ in a project directory and register MCP configurations."""
     wiki_root = project_root / ".brain-79"
@@ -82,6 +84,22 @@ def init_project(
     profile_clean = profile.strip().lower()
     if profile_clean not in ("software", "general"):
         raise ValueError(f"Unknown profile '{profile}'. Choose 'software' or 'general'.")
+
+    # In software profile, auto-initialize git repository if not already in a git worktree
+    if profile_clean == "software" and auto_git_init:
+        git_dir = project_root / ".git"
+        if not git_dir.exists():
+            from brain79.core.handoff_freshness import is_git_workspace
+            if not is_git_workspace(project_root):
+                try:
+                    subprocess.run(
+                        ["git", "init"],
+                        cwd=project_root,
+                        check=True,
+                        capture_output=True,
+                    )
+                except Exception:
+                    pass
 
     wiki_dirs = WIKI_DIRS_GENERAL if profile_clean == "general" else WIKI_DIRS_SOFTWARE
 

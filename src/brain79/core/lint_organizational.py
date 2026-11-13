@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 import re
-from typing import Literal
+from typing import Any, Literal
 
 from brain79.config import get_wiki_root
 from brain79.core.drift import WorkspaceIndex
@@ -603,12 +603,18 @@ def check_article_backlinks(
 
 
 def check_documentation_drift(
-    wiki_root: Path, md_files: list[Path] | None = None
+    wiki_root: Path,
+    md_files: list[Path] | None = None,
+    workspace_index: WorkspaceIndex | None = None,
 ) -> list[OrganizationalIssue]:
     """Verify that articles with `applies_to` frontmatter have not fallen behind workspace code changes."""
     from brain79.core.drift import detect_all_drift
 
-    drifts = detect_all_drift(wiki_root=wiki_root, md_files=md_files)
+    drifts = detect_all_drift(
+        wiki_root=wiki_root,
+        md_files=md_files,
+        workspace_index=workspace_index,
+    )
     issues: list[OrganizationalIssue] = []
 
     for d in drifts:
@@ -745,10 +751,290 @@ def check_applies_to_target_missing(
     return issues
 
 
+def check_shared_leaf_targets(
+    wiki_root: Path,
+    md_files: list[Path] | None = None,
+    workspace_index: WorkspaceIndex | None = None,
+) -> list[OrganizationalIssue]:
+    """Flag overlapping governance targets among active sibling articles without supersedes or allow_overlapping_governance."""
+    schema = load_active_schema(wiki_root)
+    if schema.profile != "software":
+        return []
+
+    p_root = wiki_root.parent
+    ws = workspace_index or WorkspaceIndex.build(p_root, wiki_root)
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
+
+    target_to_articles: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+
+    non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+
+    for md_p in files:
+        rel_str = md_p.relative_to(wiki_root).as_posix()
+        if (
+            rel_str in ("INDEX.md", "SCHEMA.md")
+            or rel_str.startswith("_raw/")
+            or rel_str.startswith("handoffs/")
+        ):
+            continue
+        try:
+            meta, _ = parse_frontmatter(md_p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        if status in non_active or stability in non_active:
+            continue
+        if meta.get("allow_overlapping_governance") is True:
+            continue
+
+        applies = meta.get("applies_to")
+        if not applies:
+            continue
+        patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
+
+        # Exclude umbrella articles (those governing intra-wiki articles or .md files)
+        if any(".brain-79/" in p or p.endswith(".md") for p in patterns):
+            continue
+
+        for pat in patterns:
+            matched = ws.find_matching_files([pat])
+            for m in matched:
+                if m.startswith(".brain-79/") or m.startswith(".git/") or m == ".brain-79":
+                    continue
+                target_to_articles.setdefault(m, []).append((rel_str, meta))
+
+    issues: list[OrganizationalIssue] = []
+    seen_pairs: set[tuple[str, str]] = set()
+
+    for target, articles in sorted(target_to_articles.items()):
+        if len(articles) <= 1:
+            continue
+        for i, (art_a, meta_a) in enumerate(articles):
+            for art_b, meta_b in articles[i + 1:]:
+                # Sibling leaf articles must share the same document type
+                if meta_a.get("type") != meta_b.get("type"):
+                    continue
+
+                supersedes_a = {str(x).strip().lstrip("/") for x in (meta_a.get("supersedes") or [])}
+                supersedes_b = {str(x).strip().lstrip("/") for x in (meta_b.get("supersedes") or [])}
+                related_a = {str(x).strip().lstrip("/") for x in (meta_a.get("related") or [])}
+                related_b = {str(x).strip().lstrip("/") for x in (meta_b.get("related") or [])}
+
+                if (
+                    art_b in supersedes_a
+                    or art_a in supersedes_b
+                    or art_b in related_a
+                    or art_a in related_b
+                ):
+                    continue
+
+                pair_key = (art_a, target)
+                if pair_key not in seen_pairs:
+                    seen_pairs.add(pair_key)
+                    issues.append(
+                        OrganizationalIssue(
+                            rule="shared_target_in_leaf_article",
+                            path=art_a,
+                            line=None,
+                            severity="info",
+                            message=f"Shared workspace file '{target}' is also governed by sibling article '{art_b}'.",
+                            actionable="Consider delegating transversal platform files to an umbrella architecture article or declare allow_overlapping_governance: true.",
+                        )
+                    )
+
+    return issues
+
+
+SOURCE_CODE_EXTENSIONS = (
+    ".py",
+    ".js",
+    ".ts",
+    ".jsx",
+    ".tsx",
+    ".go",
+    ".rs",
+    ".rb",
+    ".java",
+    ".c",
+    ".cpp",
+    ".cs",
+    ".php",
+)
+
+
+def check_uncovered_source_files(
+    wiki_root: Path,
+    md_files: list[Path] | None = None,
+    workspace_index: WorkspaceIndex | None = None,
+) -> list[OrganizationalIssue]:
+    """Flag source code files in the workspace not covered by any active applies_to frontmatter."""
+    schema = load_active_schema(wiki_root)
+    if schema.profile != "software":
+        return []
+
+    p_root = wiki_root.parent
+    ws = workspace_index or WorkspaceIndex.build(p_root, wiki_root)
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
+
+    governed_files: set[str] = set()
+
+    for md_p in files:
+        rel_str = md_p.relative_to(wiki_root).as_posix()
+        if (
+            rel_str in ("INDEX.md", "SCHEMA.md")
+            or rel_str.startswith("_raw/")
+            or rel_str.startswith("handoffs/")
+        ):
+            continue
+        try:
+            meta, _ = parse_frontmatter(md_p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
+            continue
+
+        applies = meta.get("applies_to")
+        if not applies:
+            continue
+        patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
+        for pat in patterns:
+            matched = ws.find_matching_files([pat])
+            governed_files.update(matched)
+
+    issues: list[OrganizationalIssue] = []
+
+    for path_str in sorted(ws.all_paths):
+        posix_p = path_str.replace("\\", "/").strip().lstrip("/")
+        if (
+            posix_p.startswith(".brain-79/")
+            or posix_p.startswith(".git/")
+            or posix_p.startswith("tests/")
+            or posix_p.startswith("test/")
+            or posix_p.startswith("scripts/")
+            or posix_p.startswith(".venv/")
+            or posix_p.startswith("node_modules/")
+        ):
+            continue
+
+        if not any(posix_p.endswith(ext) for ext in SOURCE_CODE_EXTENSIONS):
+            continue
+
+        base_name = posix_p.split("/")[-1]
+        if (
+            base_name.startswith("test_")
+            or base_name.endswith("_test.py")
+            or base_name.endswith(".test.js")
+            or base_name.endswith(".spec.js")
+            or base_name.endswith(".test.ts")
+            or base_name.endswith(".spec.ts")
+        ):
+            continue
+
+        if posix_p not in governed_files:
+            issues.append(
+                OrganizationalIssue(
+                    rule="uncovered_source_files",
+                    path=posix_p,
+                    line=None,
+                    severity="info",
+                    message=f"Source file '{posix_p}' is not governed by any active feature or architecture article.",
+                    actionable=f"Declare '{posix_p}' in the applies_to frontmatter of a governing architecture or feature article.",
+                )
+            )
+
+    return issues
+
+
+def check_architectural_decision_deficit(
+    wiki_root: Path,
+    md_files: list[Path] | None = None,
+) -> list[OrganizationalIssue]:
+    """Flag software projects with >= 3 feature/architecture articles but zero active ADRs."""
+    schema = load_active_schema(wiki_root)
+    if schema.profile != "software":
+        return []
+
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
+    feat_arch_count = 0
+    active_adr_count = 0
+
+    for md_p in files:
+        rel_str = md_p.relative_to(wiki_root).as_posix()
+        if (
+            rel_str in ("INDEX.md", "SCHEMA.md")
+            or rel_str.startswith("_raw/")
+            or rel_str.startswith("handoffs/")
+        ):
+            continue
+        try:
+            meta, _ = parse_frontmatter(md_p.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        doc_type = str(meta.get("type", "")).strip()
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
+            continue
+
+        if doc_type in ("feature", "architecture"):
+            feat_arch_count += 1
+        elif doc_type == "decision":
+            active_adr_count += 1
+
+    if feat_arch_count >= 3 and active_adr_count == 0:
+        return [
+            OrganizationalIssue(
+                rule="architectural_decision_deficit",
+                path="decisions",
+                line=None,
+                severity="info",
+                message=f"Project wiki has {feat_arch_count} active feature/architecture articles but zero architectural decision records (ADRs).",
+                actionable="Record key technical decisions, trade-offs, and state models under decisions/adr-*.md.",
+            )
+        ]
+
+    return []
+
+
+def check_git_repository(
+    wiki_root: Path,
+    project_root: Path | None = None,
+) -> list[OrganizationalIssue]:
+    """Flag software profile wiki lacking an active git repository."""
+    from brain79.core.handoff_freshness import is_git_workspace
+
+    schema = load_active_schema(wiki_root)
+    if schema.profile != "software":
+        return []
+
+    p_root = project_root or wiki_root.parent
+    if not is_git_workspace(p_root):
+        return [
+            OrganizationalIssue(
+                rule="missing_git_repository",
+                path=".",
+                line=None,
+                severity="info",
+                message="Software profile wiki is not inside a git repository.",
+                actionable="Initialize git via `git init` to enable code digest mutation tracking and pre-commit hooks.",
+            )
+        ]
+    return []
+
+
 def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     """Run all organizational health checks on the wiki."""
+    p_root = wiki_root.parent
+    ws = WorkspaceIndex.build(p_root, wiki_root)
     md_files = _filter_md_files(wiki_root)
     issues: list[OrganizationalIssue] = []
+    issues.extend(check_git_repository(wiki_root))
     issues.extend(check_index_size(wiki_root))
     issues.extend(check_frontmatter_consistency(wiki_root, md_files=md_files))
     issues.extend(check_type_location_mismatch(wiki_root, md_files=md_files))
@@ -762,9 +1048,12 @@ def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     issues.extend(check_unfilled_placeholders(wiki_root))
     issues.extend(check_article_structural_sections(wiki_root, md_files=md_files))
     issues.extend(check_article_backlinks(wiki_root, md_files=md_files))
-    issues.extend(check_documentation_drift(wiki_root, md_files=md_files))
+    issues.extend(check_documentation_drift(wiki_root, md_files=md_files, workspace_index=ws))
     issues.extend(check_unanchored_governance(wiki_root, md_files=md_files))
-    issues.extend(check_applies_to_target_missing(wiki_root, md_files=md_files))
+    issues.extend(check_applies_to_target_missing(wiki_root, md_files=md_files, workspace_index=ws))
+    issues.extend(check_shared_leaf_targets(wiki_root, md_files=md_files, workspace_index=ws))
+    issues.extend(check_architectural_decision_deficit(wiki_root, md_files=md_files))
+    issues.extend(check_uncovered_source_files(wiki_root, md_files=md_files, workspace_index=ws))
     return issues
 
 
