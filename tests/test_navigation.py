@@ -192,6 +192,8 @@ def test_write_article_auto_registers(setup_wiki_root: Path) -> None:
 
 def test_regenerate_index_navigation(setup_wiki_root: Path) -> None:
     wiki_root = setup_wiki_root / ".brain-79"
+    (wiki_root / "features").mkdir(parents=True, exist_ok=True)
+    (wiki_root / "features" / "search.md").write_text("# Search Feature\nSearch wiki", encoding="utf-8")
     register_article(wiki_root, "features/search.md", "Search Feature", "Search wiki", "features")
 
     msg = regenerate_index_navigation(wiki_root)

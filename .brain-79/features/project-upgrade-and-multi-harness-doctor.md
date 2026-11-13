@@ -2,22 +2,17 @@
 type: feature
 summary: non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
 status: planned
-version: 2.1.0
+version: 0.9.0
 applies_to:
   - src/brain79/core/init_project.py
   - src/brain79/core/migration.py
-  - src/brain79/core/orient.py
-  - src/brain79/core/doctor.py
-  - src/brain79/cli/dispatch.py
-  - src/brain79/server.py
-  - src/brain79/templates/AGENTS.md
-  - src/brain79/templates/SCHEMA.md
-  - src/brain79/templates/SCHEMA_GENERAL.md
 related:
   - architecture/roadmap-industrial-scale.md
   - features/cross-platform-and-lock-isolation.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
-last_updated: 2026-11-05
+last_updated: 2026-11-12
+applies_to_digest: "sha256:01f61d9a1b3dedd3"
+applies_to_count: 2
 ---
 
 # Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics (Phase 7 specification)
@@ -39,14 +34,14 @@ When `brain79 init` runs on a project under an older version, static protocol fi
 
 ### 2. Incomplete reconditioning of older wikis (`migration.py` gaps)
 Existing `src/brain79/core/migration.py` has 4 architectural gaps when upgrading a legacy wiki:
-1. **Early exit on existing `type` and `summary`:** If a legacy article already possesses `type` and `summary`, `migrate_wiki` skips it immediately—leaving missing backlink footers, invalid relative paths (`../INDEX.md` inside root files), or missing type-specific fields uncorrected.
-2. **Legacy prose in `INDEX.md`:** Wikis created before ADR-008 retain legacy `## Project` or `## Roadmap` sections in `INDEX.md`, or lack the `type: navigation` frontmatter header.
-3. **Semantic preservation vs. mechanical normalization:** Mechanical envelope attributes (frontmatter defaults, `summary`, backlink footers, `INDEX.md` routing table, `.locks/` cleanup) must be upgraded deterministically. Inventing prose sections (`## Context`, `## Consequences`) must never occur mechanically; legacy articles must receive `status: legacy` or `stability: legacy` so `lint` exempts them until an agent or human naturally edits them.
-4. **Authority decay and handoff invalidation (ADR-016):** Mass-migrating articles alters `compute_wiki_digest(wiki_root)`, turning active handoffs `stale`. The upgrader must provide an explicit transition path so authority decay does not leave agents stranded without active context.
+1. **Early exit on existing `type` and `summary`**: If a legacy article already possesses `type` and `summary`, `migrate_wiki` skips it immediately—leaving missing backlink footers, invalid relative paths (`../INDEX.md` inside root files), or missing type-specific fields uncorrected.
+2. **Legacy prose in `INDEX.md`**: Wikis created before ADR-008 retain legacy `## Project` or `## Roadmap` sections in `INDEX.md`, or lack the `type: navigation` frontmatter header.
+3. **Semantic preservation vs. mechanical normalization**: Mechanical envelope attributes (frontmatter defaults, `summary`, backlink footers, `INDEX.md` routing table, `.locks/` cleanup) must be upgraded deterministically. Inventing prose sections (`## Context`, `## Consequences`) must never occur mechanically; legacy articles must receive `status: legacy` or `stability: legacy` so `lint` exempts them until an agent or human naturally edits them.
+4. **Authority decay and handoff invalidation (ADR-016)**: Mass-migrating articles alters `compute_wiki_digest(wiki_root)`, turning active handoffs `stale`. The upgrader must provide an explicit transition path so authority decay does not leave agents stranded without active context.
 
 ### 3. Multi-harness scope and portability hazards
-- **Portability hazard (absolute machine paths in git):** Writing machine-specific absolute binary paths (e.g., `/Users/xilax/.local/bin/brain79`) into committed repository files (`.mcp.json`, `.cursor/mcp.json`, `.agents/mcp_config.json`) breaks cross-developer portability. When another developer on Linux (`/home/dev/...`) or Windows clones the repository, their MCP client fails with `ENOENT`.
-- **Harness proliferation and maintenance boundaries:** Attempting to mutate configuration files across all arbitrary desktop GUI apps creates unbounded maintenance debt. Project-level tools must maintain clear scope boundaries: automate project-level files inside the repository, and provide diagnostic guidance for user-level global configurations.
+- **Portability hazard (absolute machine paths in git)**: Writing machine-specific absolute binary paths (e.g., `/Users/xilax/.local/bin/brain79`) into committed repository files (`.mcp.json`, `.cursor/mcp.json`, `.agents/mcp_config.json`) breaks cross-developer portability. When another developer on Linux (`/home/dev/...`) or Windows clones the repository, their MCP client fails with `ENOENT`.
+- **Harness proliferation and maintenance boundaries**: Attempting to mutate configuration files across all arbitrary desktop GUI apps creates unbounded maintenance debt. Project-level tools must maintain clear scope boundaries: automate project-level files inside the repository, and provide diagnostic guidance for user-level global configurations.
 
 ---
 
@@ -56,21 +51,21 @@ Existing `src/brain79/core/migration.py` has 4 architectural gaps when upgrading
 1. **Managed block markers in `AGENTS.md`:**
    Wrap the core protocol instructions inside versioned HTML comment delimiters:
    ```markdown
-   <!-- brain79:start v2.1.0 -->
+   <!-- brain79:start v0.8.0 -->
    # Brain-79 AI memory protocol
    ...
    <!-- brain79:end -->
    ```
    - **Parser and synchronization rules (`sync_agents_manifest`):**
-     - **Tolerant regex:** Match delimiters using whitespace-insensitive patterns:
+     - **Tolerant regex**: Match delimiters using whitespace-insensitive patterns:
        `r"<!--\s*brain79:start(?:\s+v?[0-9\.]+)?\s*-->"` and `r"<!--\s*brain79:end\s*-->"`.
-     - **Corruption guard:** If an opening marker exists without a closing marker, **abort with an actionable error** rather than guessing or truncating user content.
-     - **Idempotence:** Replacing the delimited block must preserve 100% of content before and after the block (persona overrides, project notes, team guidelines).
-     - **Legacy fallback (v1.x without markers):** If no delimiters exist but `# Brain-79 AI memory protocol` is present, locate that header and replace up to `## Project notes` (or end of file), wrapping the replacement in standard delimiters and preserving everything under `## Project notes`.
+     - **Corruption guard**: If an opening marker exists without a closing marker, **abort with an actionable error** rather than guessing or truncating user content.
+     - **Idempotence**: Replacing the delimited block must preserve 100% of content before and after the block (persona overrides, project notes, team guidelines).
+     - **Legacy fallback (v1.x without markers)**: If no delimiters exist but `# Brain-79 AI memory protocol` is present, locate that header and replace up to `## Project notes` (or end of file), wrapping the replacement in standard delimiters and preserving everything under `## Project notes`.
 
 2. **Non-destructive `SCHEMA.md` upgrade (`sync_schema_file`):**
-   - **Frontmatter preservation:** Parse existing YAML frontmatter first. Retain `profile` (`software` or `general`), `custom_types:`, and update or inject `schema_version: "2.1"`.
-   - **Body preservation:** Core normative tables and rules are updated to the latest standard. If the user defined a `## Project-specific schema extensions` section, that section is preserved intact at the end of the file.
+   - **Frontmatter preservation**: Parse existing YAML frontmatter first. Retain `profile` (`software` or `general`), `custom_types:`, and update or inject `schema_version: 2`.
+   - **Body preservation**: Core normative tables and rules are updated to the latest standard. If the user defined a `## Project-specific schema extensions` section, that section is preserved intact at the end of the file.
 
 ---
 
@@ -112,9 +107,9 @@ Covers desktop GUI harnesses whose configuration lives in user-level OS paths ou
 
 ### Pillar 4: Two-tier wiki reconditioning (`migrate_wiki` v2)
 1. **Tier 1 — Deterministic mechanical normalization:**
-   - **Backlink footer normalization:** Check all subfolder articles. If missing a backlink, append `[← Volver al Índice](../INDEX.md)`. For root-level articles (e.g. `SCHEMA.md`), do not inject `../INDEX.md`. If an article already possesses an equivalent backlink (e.g. `[← Back to Index](../INDEX.md)`), do not inject a duplicate.
-   - **Frontmatter field completion:** Populate missing `last_updated`, `status: legacy`, or default values without altering existing semantic fields.
-   - **Index and lock cleanup:** Regenerate `INDEX.md` routing table and prune stale inline locks.
+   - **Backlink footer normalization**: check all subfolder articles. If missing a backlink, append `[← Volver al Índice](../INDEX.md)`. For root-level articles (e.g. `SCHEMA.md`), do not inject `../INDEX.md`. If an article already possesses an equivalent backlink (e.g. `[← Back to Index](../INDEX.md)`), do not inject a duplicate.
+   - **Frontmatter field completion**: Populate missing `last_updated`, `status: legacy`, or default values without altering existing semantic fields.
+   - **Index and lock cleanup**: Regenerate `INDEX.md` routing table and prune stale inline locks.
 2. **Tier 2 — Semantic structure exemption:**
    - Articles missing specific H2 headings (e.g., ADRs lacking `## Consequences`) are assigned `status: legacy`. The linter exempts legacy articles from strict section requirements until an agent or engineer edits them.
 3. **Handoff freshness transition (ADR-016 integration):**
@@ -126,20 +121,20 @@ Covers desktop GUI harnesses whose configuration lives in user-level OS paths ou
 ### Pillar 5: Project upgrader and `brain79 doctor` diagnostic engine
 
 #### 1. CLI command unification: `brain79 update-project`
-- **Canonical command:** `brain79 update-project [--project-root <path>] [--dry-run] [--commit-transition]`
-- **Idempotent alias:** `brain79 init --upgrade` (and running `brain79 init` on an existing wiki invokes `update-project` safely rather than erroring out).
-- **Passive alert in `orient()`:** When `orient()` detects an older `AGENTS.md` block or legacy schema version, it emits a non-blocking one-line notice:
+- **Canonical command**: `brain79 update-project [--project-root <path>] [--dry-run] [--commit-transition]`
+- **Idempotent alias**: `brain79 init --upgrade` (and running `brain79 init` on an existing wiki invokes `update-project` safely rather than erroring out).
+- **Passive alert in `orient()`**: when `orient()` detects an older `AGENTS.md` block or legacy schema version, it emits a non-blocking one-line notice:
   `> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md.`
 
 #### 2. Diagnostic engine (`brain79 doctor [--fix]` / `brain79_doctor(fix=False)`)
 Inspects 7 operational health categories in $<50\text{ ms}$:
-1. **Binary and environment:** CLI binary resolution, python environment, and system PATH availability.
-2. **Protocol synchronization:** `AGENTS.md` managed block version and `SCHEMA.md` `schema_version` parity with running binary.
-3. **Wiki structure and schema:** Directory layout, valid profile, and clean navigation index.
-4. **MCP harness registration:** Verification of `.mcp.json`, `.agents/mcp_config.json`, and `.cursor/mcp.json` validity and tool prefix definitions.
-5. **Lock engine and filesystem:** Lock acquisition latency in `.brain-79/.locks/` and absence of legacy inline `.lock` files.
-6. **Git hooks integration:** Presence, executable mode, and integrity of `.git/hooks/pre-commit`.
-7. **Handoff freshness and hygiene:** Status of latest handoff (fresh/stale/unverified) and count of unpurged legacy handoffs.
+1. **Binary and environment**: CLI binary resolution, python environment, and system PATH availability.
+2. **Protocol synchronization**: `AGENTS.md` managed block version and `SCHEMA.md` `schema_version` parity with running binary.
+3. **Wiki structure and schema**: Directory layout, valid profile, and clean navigation index.
+4. **MCP harness registration**: Verification of `.mcp.json`, `.agents/mcp_config.json`, and `.cursor/mcp.json` validity and tool prefix definitions.
+5. **Lock engine and filesystem**: Lock acquisition latency in `.brain-79/.locks/` and absence of legacy inline `.lock` files.
+6. **Git hooks integration**: Presence, executable mode, and integrity of `.git/hooks/pre-commit`.
+7. **Handoff freshness and hygiene**: Status of latest handoff (fresh/stale/unverified) and count of unpurged legacy handoffs.
 
 **POSIX exit codes and formatting:**
 - `0`: All operational checks pass.
@@ -156,7 +151,7 @@ Inspects 7 operational health categories in $<50\text{ ms}$:
 
 1. **Delimited Templates (`src/brain79/templates/`):**
    - Add `<!-- brain79:start -->` and `<!-- brain79:end -->` markers to `AGENTS.md`.
-   - Add `schema_version: "2.1"` to `SCHEMA.md` and `SCHEMA_GENERAL.md`.
+   - Add `schema_version: 2` to `SCHEMA.md` and `SCHEMA_GENERAL.md`.
 2. **Manifest and Schema Upgrader (`src/brain79/core/init_project.py`):**
    - Implement `sync_agents_manifest()` with tolerant regex and corruption guards.
    - Implement `sync_schema_file()` preserving custom extensions and frontmatter.

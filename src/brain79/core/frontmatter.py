@@ -51,6 +51,22 @@ class ValidationError(ValueError):
         return res
 
 
+# Status categorization constants
+INACTIVE_STATUSES: frozenset[str] = frozenset({
+    "superseded",
+    "deprecated",
+    "rejected",
+    "archived",
+    "legacy",
+})
+
+PRE_IMPLEMENTATION_STATUSES: frozenset[str] = frozenset({
+    "proposed",
+    "draft",
+    "planned",
+})
+
+
 # Built-in Profiles & Ontologies
 SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     "navigation": {
@@ -91,29 +107,61 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "product": {
         "required": ["type", "summary", "last_updated"],
-        "optional": ["supersedes", "related", "owner", "applies_to"],
+        "optional": [
+            "supersedes",
+            "related",
+            "owner",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {},
         "required_sections": [["Overview", "Problem", "Executive Summary", "Vision"]],
     },
     "architecture": {
         "required": ["type", "summary", "stability", "last_updated"],
-        "optional": ["supersedes", "related", "owner", "applies_to"],
+        "optional": [
+            "supersedes",
+            "related",
+            "owner",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {
-            "stability": ["experimental", "stable", "legacy"],
+            "stability": ["experimental", "stable", "archived", "legacy"],
         },
         "required_sections": [["Overview", "General Description", "State"]],
     },
     "feature": {
         "required": ["type", "summary", "status", "version", "last_updated"],
-        "optional": ["supersedes", "related", "owner", "applies_to"],
+        "optional": [
+            "supersedes",
+            "related",
+            "owner",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {
-            "status": ["planned", "in_progress", "shipped", "deprecated", "legacy"],
+            "status": ["planned", "in_progress", "shipped", "deprecated", "archived", "legacy"],
         },
         "required_sections": ["Overview"],
     },
     "decision": {
         "required": ["type", "summary", "status", "date", "deciders", "last_updated"],
-        "optional": ["supersedes", "related", "owner", "applies_to"],
+        "optional": [
+            "supersedes",
+            "related",
+            "owner",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {
             "status": ["proposed", "accepted", "superseded", "rejected", "legacy"],
         },
@@ -121,13 +169,31 @@ SOFTWARE_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "changelog": {
         "required": ["type", "summary", "version", "date", "last_updated"],
-        "optional": ["supersedes", "related", "owner", "applies_to"],
+        "optional": [
+            "supersedes",
+            "related",
+            "owner",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {},
         "required_sections": [],
     },
     "topic": {
         "required": ["type", "summary", "last_updated"],
-        "optional": ["tags", "status", "supersedes", "related", "owner", "applies_to"],
+        "optional": [
+            "tags",
+            "status",
+            "supersedes",
+            "related",
+            "owner",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {
             "status": ["active", "archived", "draft", "legacy"],
         },
@@ -187,13 +253,32 @@ GENERAL_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "context": {
         "required": ["type", "summary", "last_updated"],
-        "optional": ["supersedes", "related", "owner", "scope", "applies_to"],
+        "optional": [
+            "supersedes",
+            "related",
+            "owner",
+            "scope",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {},
         "required_sections": ["Overview"],
     },
     "topic": {
         "required": ["type", "summary", "last_updated"],
-        "optional": ["status", "supersedes", "related", "owner", "tags", "applies_to"],
+        "optional": [
+            "status",
+            "supersedes",
+            "related",
+            "owner",
+            "tags",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {
             "status": ["draft", "active", "archived", "legacy"],
         },
@@ -201,7 +286,16 @@ GENERAL_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "decision": {
         "required": ["type", "summary", "status", "date", "last_updated"],
-        "optional": ["deciders", "supersedes", "related", "owner", "applies_to"],
+        "optional": [
+            "deciders",
+            "supersedes",
+            "related",
+            "owner",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {
             "status": ["proposed", "accepted", "superseded", "rejected", "legacy"],
         },
@@ -209,7 +303,16 @@ GENERAL_PROFILE_SCHEMA: dict[str, dict[str, Any]] = {
     },
     "log": {
         "required": ["type", "summary", "date", "last_updated"],
-        "optional": ["version", "supersedes", "related", "owner", "applies_to"],
+        "optional": [
+            "version",
+            "supersedes",
+            "related",
+            "owner",
+            "applies_to",
+            "applies_to_digest",
+            "applies_to_count",
+            "allow_overlapping_governance",
+        ],
         "enum": {},
         "required_sections": [],
     },
@@ -367,6 +470,9 @@ ALLOWED_UNKNOWN_KEYS: set[str] = {
     "title",
     "tags",
     "created",
+    "applies_to_digest",
+    "applies_to_count",
+    "allow_overlapping_governance",
 }
 
 
@@ -792,6 +898,10 @@ def _parse_inline_list(val_str: str) -> list[str]:
     return [_clean_value(i) for i in items if i.strip()]
 
 
+_PARSE_CACHE_MAX = 2048
+_PARSE_CACHE: dict[str, tuple[dict[str, Any], str]] = {}
+
+
 def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     """Parse line-based frontmatter from markdown content.
 
@@ -807,6 +917,10 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     Raises:
         FrontmatterError if frontmatter is missing or malformed.
     """
+    if content in _PARSE_CACHE:
+        cached_meta, cached_body = _PARSE_CACHE[content]
+        return {k: list(v) if isinstance(v, list) else v for k, v in cached_meta.items()}, cached_body
+
     content = _normalize_content(content)
     if not content.startswith("---\n") and content != "---":
         raise FrontmatterError(
@@ -848,6 +962,10 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
         raise FrontmatterError(f"Frontmatter malformed YAML: {e}")
 
     body = "\n".join(lines[end_idx + 1:]).lstrip("\n")
+    if len(_PARSE_CACHE) >= _PARSE_CACHE_MAX:
+        _PARSE_CACHE.pop(next(iter(_PARSE_CACHE)))
+    cloned_cache = {k: list(v) if isinstance(v, list) else v for k, v in metadata.items()}
+    _PARSE_CACHE[content] = (cloned_cache, body)
     return metadata, body
 
 
@@ -934,6 +1052,26 @@ def validate_frontmatter(
                     "rule": "frontmatter_unknown_key",
                     "message": f"Unknown frontmatter key '{key}' for type='{declared_type}'.",
                     "actionable": f"Remove `{key}` or add it to ALLOWED_UNKNOWN_KEYS if intentional.",
+                })
+
+        # applies_to_digest check
+        if "applies_to_digest" in meta:
+            digest_val = meta["applies_to_digest"]
+            if not isinstance(digest_val, str) or not re.fullmatch(r"^sha256:[0-9a-f]{16}$", str(digest_val)):
+                issues.append({
+                    "rule": "frontmatter_invalid_digest",
+                    "message": f"`applies_to_digest` must match '^sha256:[0-9a-f]{{16}}$', got '{digest_val}'.",
+                    "actionable": "Ensure `applies_to_digest` has prefix 'sha256:' followed by 16 hex characters.",
+                })
+
+        # applies_to_count check
+        if "applies_to_count" in meta:
+            cnt = meta["applies_to_count"]
+            if not isinstance(cnt, int) or isinstance(cnt, bool) or cnt < 0:
+                issues.append({
+                    "rule": "frontmatter_invalid_count",
+                    "message": f"`applies_to_count` must be a non-negative integer, got '{cnt}'.",
+                    "actionable": "Ensure `applies_to_count` is an integer >= 0.",
                 })
 
     if issues:

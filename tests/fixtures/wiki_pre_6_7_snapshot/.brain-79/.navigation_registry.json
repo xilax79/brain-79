@@ -1,0 +1,406 @@
+{
+  "articles": [
+    {
+      "path": "architecture/current-state.md",
+      "title": "Architecture \u2014 System current state",
+      "summary": "high-level overview of system architecture, active milestones, runtime invariants, and roadmap",
+      "section": "architecture",
+      "registered_at": "2026-11-05T15:02:04.821747+00:00"
+    },
+    {
+      "path": "architecture/defect-backlog.md",
+      "title": "Architecture \u2014 Defect backlog and agent efficiency deep dive",
+      "summary": "master defect backlog, forensic root-cause analysis, and specification for bug fixes, agent efficiency, and on-demand handoff policy",
+      "section": "architecture",
+      "registered_at": "2026-11-05T15:02:04.823989+00:00"
+    },
+    {
+      "path": "architecture/dispatcher.md",
+      "title": "Architecture \u2014 CLI dispatcher",
+      "summary": "CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings",
+      "section": "architecture",
+      "registered_at": "2026-11-05T15:02:04.824992+00:00"
+    },
+    {
+      "path": "architecture/mcp-server.md",
+      "title": "Architecture \u2014 MCP server",
+      "summary": "FastMCP server architecture, logging suppression, tool definitions, and lifecycle management",
+      "section": "architecture",
+      "registered_at": "2026-11-05T15:02:04.825994+00:00"
+    },
+    {
+      "path": "architecture/symmetry.md",
+      "title": "Architecture \u2014 CLI and MCP symmetry",
+      "summary": "enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools",
+      "section": "architecture",
+      "registered_at": "2026-11-05T15:02:04.828133+00:00"
+    },
+    {
+      "path": "changelog/v1-1.md",
+      "title": "Changelog \u2014 Version 1.1.0 \u2014 Performance and session workflow optimization",
+      "summary": "performance and session workflow optimizations, partial edits, batch writes, and schema inspection",
+      "section": "changelog",
+      "registered_at": "2026-11-05T15:02:04.829053+00:00"
+    },
+    {
+      "path": "changelog/v1.md",
+      "title": "Changelog \u2014 Version 1.0.0",
+      "summary": "initial production release of brain-79 with mechanical organizational enforcement and handoff continuity",
+      "section": "changelog",
+      "registered_at": "2026-11-05T15:02:04.829917+00:00"
+    },
+    {
+      "path": "changelog/v2-0-1.md",
+      "title": "Changelog \u2014 Version 2.0.1 \u2014 Purge obsolete integration fixture",
+      "summary": "remove obsolete legacy Truco Arena test fixture and decouple local development paths",
+      "section": "changelog",
+      "registered_at": "2026-11-05T15:02:04.830716+00:00"
+    },
+    {
+      "path": "changelog/v2-0-2.md",
+      "title": "Changelog \u2014 Version 2.0.2 \u2014 Defect backlog and agent protocol polish",
+      "summary": "defect backlog remediations, composite H2 atomicity thresholds, root backlink normalization, and agent protocol efficiency",
+      "section": "changelog",
+      "registered_at": "2026-11-05T15:02:04.831750+00:00"
+    },
+    {
+      "path": "changelog/v2-0.md",
+      "title": "Changelog \u2014 Version 2.0.0 \u2014 Two-call protocol and release governance",
+      "summary": "major release 2.0.0 introducing Two-Call Session Protocol, declarative ontologies, deterministic drift detection, and release governance",
+      "section": "changelog",
+      "registered_at": "2026-11-05T15:02:04.832615+00:00"
+    },
+    {
+      "path": "decisions/adr-001-hybrid-cli.md",
+      "title": "ADR-001 \u2014 Architecture \u2014 Dual-mode hybrid CLI and MCP server interface",
+      "summary": "dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.833617+00:00"
+    },
+    {
+      "path": "decisions/adr-002-immutable-handoffs.md",
+      "title": "ADR-002 \u2014 Handoffs \u2014 Immutable session transition records",
+      "summary": "tactical handoff immutability via unique timestamped files to maintain audit trail and prevent context loss",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.834497+00:00"
+    },
+    {
+      "path": "decisions/adr-003-v3-legacy-status.md",
+      "title": "ADR-003 \u2014 Migration \u2014 Progressive V3 migration with legacy status default",
+      "summary": "assigning status legacy during progressive V3 migration to preserve semantic intent without blocking adoption",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.835337+00:00"
+    },
+    {
+      "path": "decisions/adr-004-strict-write-validation.md",
+      "title": "ADR-004 \u2014 Curation \u2014 Synchronous write-time frontmatter and location validation",
+      "summary": "synchronous write-time schema validation with multi-error reporting and deterministic field auto-fill",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.836149+00:00"
+    },
+    {
+      "path": "decisions/adr-005-fence-mask-tracking.md",
+      "title": "ADR-005 \u2014 Linter \u2014 Code fence masking for decision and debt leakage regex rules",
+      "summary": "enforcing code fence masking in organizational linter to eliminate false positives in documentation examples",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.836988+00:00"
+    },
+    {
+      "path": "decisions/adr-006-auto-navigation-and-batch-operations.md",
+      "title": "ADR-006 \u2014 Architecture \u2014 Automatic navigation regeneration, inline health checks, and partial/batch operations",
+      "summary": "automatic thread-safe navigation synchronization, inline write diagnostics, and partial/batch write operations",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.837891+00:00"
+    },
+    {
+      "path": "decisions/adr-007-frontmatter-summary-and-backlink-navigation.md",
+      "title": "ADR-007 \u2014 Navigation \u2014 Explicit frontmatter summary and article backlinks",
+      "summary": "standardize explicit frontmatter summary field and footer backlink navigation convention",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.838724+00:00"
+    },
+    {
+      "path": "decisions/adr-008-pure-index-routing-table.md",
+      "title": "ADR-008 \u2014 Architecture \u2014 Pure automated routing table for INDEX.md",
+      "summary": "pure automated routing table architecture for INDEX.md and automated timestamp synchronization",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.839760+00:00"
+    },
+    {
+      "path": "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+      "title": "ADR-009 \u2014 Declarative schema loading and dual built-in ontologies (mechanism vs. policy)",
+      "summary": "decoupling validation mechanism from ontology policy with dual built-in profiles and custom folder support",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.840706+00:00"
+    },
+    {
+      "path": "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+      "title": "ADR-010 \u2014 Two-call session protocol: 1-call cold start orient and deterministic 3-signal context ranking",
+      "summary": "1-call cold start orientation and deterministic 3-signal context ranking",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.841854+00:00"
+    },
+    {
+      "path": "decisions/adr-011-session-commit-and-batch-reading.md",
+      "title": "ADR-011 \u2014 Two-call session protocol: 1-call atomic session commit and section-projected batch reading",
+      "summary": "1-call atomic session finalization and section-projected batch reading",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.843048+00:00"
+    },
+    {
+      "path": "decisions/adr-012-structural-quality-and-drift-detection.md",
+      "title": "ADR-012 \u2014 Structural article quality, auto-injected backlinks, and deterministic drift detection",
+      "summary": "section-level structural skeletons, auto-injected backlinks, and deterministic code-to-wiki drift detection",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.844241+00:00"
+    },
+    {
+      "path": "decisions/adr-013-versioning-and-release-governance.md",
+      "title": "ADR-013 \u2014 Architecture \u2014 Single-source semantic versioning and mechanical release governance",
+      "summary": "single-source semantic versioning via Hatchling, FastMCP version handshake exposure, and automated release parity testing",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.845280+00:00"
+    },
+    {
+      "path": "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
+      "title": "ADR-014: Centralized lock directory isolation and cross-platform I/O normalization",
+      "summary": "centralize file locks in .brain-79/.locks/, enforce POSIX paths, strict LF I/O, and exact-case resolution",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.846256+00:00"
+    },
+    {
+      "path": "decisions/adr-015-sentence-case-first-policy.md",
+      "title": "ADR-015: Sentence case first policy for documentation and wiki generation",
+      "summary": "enforce sentence case first across all documentation, headings, lists, and wiki generation",
+      "section": "decisions",
+      "registered_at": "2026-11-05T15:02:04.847251+00:00"
+    },
+    {
+      "path": "features/cli.md",
+      "title": "Feature \u2014 Standalone CLI interface",
+      "summary": "deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs",
+      "section": "features",
+      "registered_at": "2026-11-05T15:02:04.848251+00:00"
+    },
+    {
+      "path": "features/cross-platform-and-lock-isolation.md",
+      "title": "Feature \u2014 Cross-platform portability and centralized lock isolation (Phase 6 specification)",
+      "summary": "centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests",
+      "section": "features",
+      "registered_at": "2026-11-05T15:02:04.849449+00:00"
+    },
+    {
+      "path": "features/handoff-continuity.md",
+      "title": "Feature \u2014 Short-term handoff continuity",
+      "summary": "tactical session transitions, immutable state snapshots, and anti-hallucination work tracking",
+      "section": "features",
+      "registered_at": "2026-11-05T15:02:04.850186+00:00"
+    },
+    {
+      "path": "features/handoff-purge.md",
+      "title": "Feature \u2014 Handoff purge operations",
+      "summary": "safe batch deletion of short-term handoffs with dry-run default guard and navigation registry cleanup",
+      "section": "features",
+      "registered_at": "2026-11-05T15:02:04.851103+00:00"
+    },
+    {
+      "path": "features/mcp-server.md",
+      "title": "Feature \u2014 FastMCP integration",
+      "summary": "Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication",
+      "section": "features",
+      "registered_at": "2026-11-05T15:02:04.851906+00:00"
+    },
+    {
+      "path": "features/organizational-enforcement.md",
+      "title": "Feature \u2014 Wiki organizational enforcement",
+      "summary": "prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing",
+      "section": "features",
+      "registered_at": "2026-11-05T15:02:04.852791+00:00"
+    },
+    {
+      "path": "features/version-governance.md",
+      "title": "Feature \u2014 Versioning and release governance (Phase 5 specification)",
+      "summary": "single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks",
+      "section": "features",
+      "registered_at": "2026-11-05T15:02:04.855126+00:00"
+    },
+    {
+      "path": "product/overview.md",
+      "title": "Brain-79 \u2014 Product vision",
+      "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
+      "section": "product",
+      "registered_at": "2026-11-05T15:02:04.855838+00:00"
+    },
+    {
+      "path": "features/session-triage-and-research-persistence.md",
+      "title": "Feature \u2014 Session knowledge triage, research persistence guard and handoff ergonomics (Phase 6.5)",
+      "summary": "specification for Phase 6.5 \u2014 session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide,path prefix normalization, and handoff schema ergonomics",
+      "section": "features",
+      "registered_at": "2026-11-05T15:36:23.868226+00:00",
+      "applies_to": [
+        "src/brain79/core/handoff.py",
+        "src/brain79/core/session_commit.py",
+        "src/brain79/core/curate.py",
+        "src/brain79/core/locks.py",
+        "src/brain79/server.py",
+        "src/brain79/templates/AGENTS.md"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "architecture/defect-backlog.md",
+        "features/handoff-continuity.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+      "title": "ADR-016: Handoff freshness, provenance, and authority decay",
+      "summary": "treat handoffs as perishable transition notes with authority decaying based on deterministic workspace drift",
+      "section": "decisions",
+      "registered_at": "2026-11-05T21:25:57.637865+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/handoff-freshness.md",
+      "title": "Feature \u2014 Handoff freshness, provenance, and authority decay (Phase 6.6)",
+      "summary": "specification for Phase 6.6 \u2014 handoff freshness, provenance digests, authority decay, branch-aware resolution, and aging escalation",
+      "section": "features",
+      "registered_at": "2026-11-05T21:26:23.065158+00:00",
+      "applies_to": [
+        "src/brain79/core/handoff_freshness.py",
+        "src/brain79/core/handoff.py",
+        "src/brain79/core/orient.py",
+        "src/brain79/core/session_commit.py",
+        "src/brain79/server.py"
+      ],
+      "related": [
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "features/handoff-continuity.md",
+        "architecture/roadmap-industrial-scale.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "changelog/v0-7-2.md",
+      "title": "Changelog \u2014 Version 0.7.2 \u2014 Pre-GA semantic calibration",
+      "summary": "semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release",
+      "section": "changelog",
+      "registered_at": "2026-11-05T23:18:14.814743+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+      "title": "ADR-017: Semantic versioning calibration for pre-GA maturation",
+      "summary": "semantic versioning calibration to 0.7.2 for pre-GA maturation prior to public release",
+      "section": "decisions",
+      "registered_at": "2026-11-05T23:18:45.279365+00:00",
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
+      "summary": "industrial-scale roadmap covering completed core protocol phases (0-6.6) and next-stage adoption and context guardrails (7-8)",
+      "section": "architecture",
+      "registered_at": "2026-11-06T22:57:46.295889+00:00",
+      "applies_to": [
+        "src/brain79/__init__.py",
+        "src/brain79/__main__.py",
+        "pyproject.toml"
+      ],
+      "related": [
+        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-013-versioning-and-release-governance.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
+        "decisions/adr-015-sentence-case-first-policy.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+        "features/version-governance.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "features/session-triage-and-research-persistence.md",
+        "features/handoff-freshness.md",
+        "features/transitive-drift-and-ripple-guards.md",
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "architecture/defect-backlog.md"
+      ],
+      "outgoing_links": [
+        "features/transitive-drift-and-ripple-guards.md",
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/project-upgrade-and-multi-harness-doctor.md",
+      "title": "Feature \u2014 Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics (Phase 7 specification)",
+      "summary": "non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics",
+      "section": "features",
+      "registered_at": "2026-11-06T23:08:34.191105+00:00",
+      "applies_to": [
+        "src/brain79/core/init_project.py",
+        "src/brain79/core/migration.py",
+        "src/brain79/core/orient.py",
+        "src/brain79/core/doctor.py",
+        "src/brain79/cli/dispatch.py",
+        "src/brain79/server.py",
+        "src/brain79/templates/AGENTS.md",
+        "src/brain79/templates/SCHEMA.md",
+        "src/brain79/templates/SCHEMA_GENERAL.md"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/transitive-drift-and-ripple-guards.md",
+      "title": "Feature \u2014 Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context (Phase 6.7)",
+      "summary": "specification for Phase 6.7 \u2014 Merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context",
+      "section": "features",
+      "registered_at": "2026-11-10T18:19:30.205331+00:00",
+      "applies_to": [
+        "src/brain79/core/drift.py",
+        "src/brain79/core/context.py",
+        "src/brain79/core/frontmatter.py",
+        "src/brain79/core/handoff_freshness.py",
+        "src/brain79/core/locks.py",
+        "src/brain79/core/lint_organizational.py",
+        "src/brain79/core/migration.py",
+        "src/brain79/core/validation.py",
+        "src/brain79/core/wiki.py",
+        "src/brain79/core/session_commit.py",
+        "src/brain79/core/orient.py",
+        "src/brain79/core/curate.py",
+        "src/brain79/server.py",
+        "src/brain79/cli/dispatch.py"
+      ],
+      "related": [
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+        "architecture/roadmap-industrial-scale.md",
+        "architecture/current-state.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    }
+  ]
+}

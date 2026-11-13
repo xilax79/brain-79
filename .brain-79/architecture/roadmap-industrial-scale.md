@@ -1,11 +1,9 @@
 ---
 type: architecture
-summary: industrial-scale roadmap covering completed core protocol phases (0-6.6) and next-stage adoption and context guardrails (7-8)
+summary: industrial-scale roadmap covering completed core protocol phases (0-6.7) and next-stage adoption and context guardrails (7-8)
 stability: stable
 applies_to:
-  - src/brain79/__init__.py
-  - src/brain79/__main__.py
-  - pyproject.toml
+  - .brain-79/features/*.md
 related:
   - decisions/adr-009-declarative-schema-and-dual-ontologies.md
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
@@ -19,21 +17,24 @@ related:
   - features/version-governance.md
   - features/cross-platform-and-lock-isolation.md
   - features/session-triage-and-research-persistence.md
-  - features/handoff-freshness.md
+  - features/handoff-continuity.md
+  - features/transitive-drift-and-ripple-guards.md
   - features/project-upgrade-and-multi-harness-doctor.md
   - architecture/defect-backlog.md
-last_updated: 2026-11-05
+last_updated: 2026-11-12
+applies_to_digest: "sha256:e92912ef246f1a98"
+applies_to_count: 9
 ---
 
 # Architecture — Industrial-scale roadmap and adoption evolution
 
 ## Overview
 
-This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.6 established the core deterministic memory engine, the Two-Call Session Protocol, universal ontologies, release governance, cross-platform `.locks/` isolation, session knowledge triage, and handoff freshness with authority decay. Phases 7 and 8 focus on **universal multi-harness adoption and context-budget guardrails**.
+This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.7 established the core deterministic memory engine, the Two-Call Session Protocol, universal ontologies, release governance, cross-platform `.locks/` isolation, session knowledge triage, handoff freshness with authority decay, Merkle drift detection, transitive DAG propagation, and Hard Session Ripple Gates. Phases 7 and 8 focus on **universal multi-harness adoption and context-budget guardrails**.
 
 ---
 
-## Completed foundation (Phases 0–6.6 — condensed)
+## Completed foundation (Phases 0–6.7 — condensed)
 
 - **[x] Phase 0 — Core invariant alignment**: unified write-time validation with organizational linting, enforced pure routing table rules on `INDEX.md` (ADR-008), fixed `bootstrap` templates, and standardized `_raw/sessions/` frontmatter.
 - **[x] Phase 1 — Declarative schema & dual ontology (ADR-009)**: decoupled validation mechanism from ontology policy via `.brain-79/SCHEMA.md` with `<0.1ms` caching, built-in `software` and `general` profiles, and custom directory extensions.
@@ -45,6 +46,7 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.6
 - **[x] Phase 6 — Centralized `.locks/` isolation, cross-platform OS portability & sentence case governance (ADR-014, ADR-015)**: isolated all mutex locks into `.brain-79/.locks/`, added automatic legacy lock purge, enforced segment-by-segment Linux case-sensitivity parity on macOS APFS, ensured POSIX path normalization across registries and engines, implemented atomic replace with retry on NTFS PermissionError, guaranteed pure LF line endings on all I/O, and standardized sentence case across all documentation and templates.
 - **[x] Phase 6.5 — Session knowledge triage, research persistence guard, and handoff ergonomics**: introduced the Amnesia Test (3-way triage protocol), unpersisted research engine guard in handoff and session_commit, schema-level parameter alias tolerance (decisions, next_steps, open_questions, pending_tasks), profile-aware curation guide, redundant .brain-79/ path prefix stripping, and real-agent pre-merge E2E smoke suite (scripts/run_e2e_smoke.py).
 - **[x] Phase 6.6 — Handoff freshness, provenance & authority decay (ADR-016)**: established that handoffs are perishable transition notes whose authority decays with workspace drift. Captured deterministic provenance (created_at, git_branch, git_head, wiki_digest, code_digest) in handoff frontmatter, added state classification (fresh, stale, foreign_branch, unverified) in handoff_freshness.py, rendered dynamic authority-decay banners and historical boot instructions in orient(), added branch-aware latest resolution, escalated aging pending tasks, and standardized English handoff templates with sentence-case colons outside bold.
+- **[x] Phase 6.7 — Transitive drift detection, umbrella synthesis tracking & anti-append-only ripple guards (v0.8.0)**: Merkle leaf manifest (`.drift_manifest.json`), multi-hop DAG transitive propagation, 4-phase `_transaction.lock` session commit pipeline, AST Guard C public signature verification, Anti-Sprawl Guard (`duplicate_governance_target`), unanchored governance detection, and unbounded Signal 1 context ranking.
 
 ---
 
@@ -52,13 +54,13 @@ This document tracks the engineering roadmap of `brain-79`. Phases 0 through 6.6
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 7 (TOP PRIORITY): Multi-harness zero-config & doctor diagnostics (v0.8.0) | [ ] Next   |
+| Phase 7: Multi-harness zero-config & doctor diagnostics (v0.9.0)                | [ ] Planned|
 +-----------------------------------------------------------------------------------+
-| Phase 8: Zero-clone distribution & context budget guardrails (v0.9.0)          | [ ] Planned|
+| Phase 8: Zero-clone distribution & context budget guardrails (v0.10.0)           | [ ] Planned|
 +-----------------------------------------------------------------------------------+
 ```
 
-### Phase 7 (top priority): Project protocol upgrade, legacy wiki reconditioning and doctor diagnostics (`brain79 doctor`)
+### Phase 7: Project protocol upgrade, legacy wiki reconditioning and doctor diagnostics (`brain79 doctor`)
 - **Specification**: [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup & doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md)
 - **Scope**: solve "Split-Brain" version skew across existing projects via delimited managed blocks in `AGENTS.md` (`<!-- brain79:start -->`), non-destructive `SCHEMA.md` upgrades (preserving `profile`, `custom_types`, and extensions), two-tier legacy wiki reconditioning (`migrate_wiki` v2), portable 2-tier multi-harness MCP setup, and the `brain79 doctor [--fix]` diagnostic tool.
 

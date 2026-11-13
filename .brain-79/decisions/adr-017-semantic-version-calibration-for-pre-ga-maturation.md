@@ -23,8 +23,9 @@ Presenting a `2.0.x` tag upon first public release misrepresents the product's e
 
 We recalibrate the active package version from `2.0.2` to `0.7.2`:
 - Current state (Phases 0 through 6.6 fully delivered): `0.7.2`.
-- Phase 7 delivery (Project upgrader & doctor): `0.8.0`.
-- Phase 8 delivery (Zero-clone distribution & context budget guardrails): `0.9.0`.
+- Phase 6.7 delivery (Transitive drift & ripple guards): `0.8.0`.
+- Phase 7 delivery (Project upgrader & doctor): `0.9.0`.
+- Phase 8 delivery (Zero-clone distribution & context budget guardrails): `0.10.0`.
 - Public General Availability (GA): `1.0.0`.
 
 ## Consequences

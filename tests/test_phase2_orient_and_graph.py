@@ -65,6 +65,10 @@ def test_schema_allows_applies_to_related_supersedes(clean_wiki: Path) -> None:
 
 def test_registry_indexes_graph_metadata(clean_wiki: Path) -> None:
     """Validate that register_article captures applies_to, related, and outgoing links in registry."""
+    src_dir = clean_wiki.parent / "src" / "auth"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "jwt.py").write_text("# jwt\n", encoding="utf-8")
+
     content = """---
 type: feature
 summary: Authentication service with JWT tokens
@@ -96,6 +100,11 @@ Detailed auth spec. For security reasons, see [ADR-001](decisions/adr-001-hybrid
 
 def test_context_signal1_deterministic_path_matching(clean_wiki: Path) -> None:
     """Articles with matching applies_to glob must be prioritized when paths are provided."""
+    val_dir = clean_wiki.parent / "src" / "brain79" / "core"
+    val_dir.mkdir(parents=True, exist_ok=True)
+    (val_dir / "validation.py").write_text("# val\n", encoding="utf-8")
+    (val_dir / "frontmatter.py").write_text("# fm\n", encoding="utf-8")
+
     # Create article 1 bound to validation files
     write_article(
         "architecture/validation-pipeline.md",
@@ -115,6 +124,10 @@ Pipeline details...
     )
 
     # Create article 2 with random text
+    other_dir = clean_wiki.parent / "src" / "other"
+    other_dir.mkdir(parents=True, exist_ok=True)
+    (other_dir / "other.py").write_text("# other\n", encoding="utf-8")
+
     write_article(
         "features/other.md",
         """---
@@ -188,6 +201,10 @@ Users enter credentials and proceed through MFA.
 
 def test_orient_returns_index_handoff_and_inlined_articles(clean_wiki: Path) -> None:
     """brain79_orient must return INDEX.md, active handoff, and inlined articles in a single call."""
+    src_dir = clean_wiki.parent / "src" / "auth"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "jwt.py").write_text("# jwt\n", encoding="utf-8")
+
     # Write an initial handoff
     write_handoff(
         session_type="feature",

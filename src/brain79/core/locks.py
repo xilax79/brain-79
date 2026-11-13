@@ -84,6 +84,8 @@ def get_lock_path(wiki_root: Path, rel_posix_path: str) -> Path:
     Maps filenames deterministically:
     - .navigation_registry.json -> .locks/_registry.lock
     - .bootstrap_state.json     -> .locks/_bootstrap.lock
+    - .drift_manifest.json      -> .locks/_drift_manifest.lock
+    - _transaction.lock         -> .locks/_transaction.lock
     - INDEX.md                  -> .locks/INDEX.md.lock
     - decisions/adr-001.md      -> .locks/decisions__adr-001.md.lock
     """
@@ -94,6 +96,10 @@ def get_lock_path(wiki_root: Path, rel_posix_path: str) -> Path:
         return locks_dir / "_registry.lock"
     if clean == ".bootstrap_state.json":
         return locks_dir / "_bootstrap.lock"
+    if clean == ".drift_manifest.json":
+        return locks_dir / "_drift_manifest.lock"
+    if clean in ("_transaction.lock", "_transaction"):
+        return locks_dir / "_transaction.lock"
 
     lock_name = clean.replace("/", "__")
     if not lock_name.endswith(".lock"):

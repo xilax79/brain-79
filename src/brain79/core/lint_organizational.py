@@ -3,7 +3,11 @@ from pathlib import Path
 import re
 from typing import Literal
 
+from brain79.config import get_wiki_root
+from brain79.core.drift import WorkspaceIndex
 from brain79.core.frontmatter import (
+    INACTIVE_STATUSES,
+    PRE_IMPLEMENTATION_STATUSES,
     ValidationError,
     load_active_schema,
     parse_frontmatter,
@@ -608,22 +612,136 @@ def check_documentation_drift(
     issues: list[OrganizationalIssue] = []
 
     for d in drifts:
+        file_date = d.get("file_date")
+        art_date = d.get("article_date")
+        if file_date and art_date:
+            msg = (
+                f"Article '{d['article_path']}' governs '{d['workspace_file']}' "
+                f"(modified {file_date}), but article was last updated {art_date}."
+            )
+        else:
+            msg = (
+                f"Article '{d['article_path']}' governs '{d['workspace_file']}': "
+                f"{d.get('message', 'drift detected')}."
+            )
+
         issues.append(
             OrganizationalIssue(
                 rule="documentation_drift_suspected",
                 path=d["article_path"],
                 line=None,
-                severity="warning",
-                message=(
-                    f"Article '{d['article_path']}' governs '{d['workspace_file']}' "
-                    f"(modified {d['file_date']}), but article was last updated {d['article_date']}."
-                ),
+                severity="info",
+                message=msg,
                 actionable=(
                     f"Verify accuracy of '{d['article_path']}' against recent changes in "
                     f"'{d['workspace_file']}' and update frontmatter `last_updated`."
                 ),
             )
         )
+    return issues
+
+
+def check_unanchored_governance(
+    wiki_root: Path, md_files: list[Path] | None = None
+) -> list[OrganizationalIssue]:
+    """Flag strictly active architecture and feature articles missing applies_to in software profile."""
+    if not (wiki_root / "SCHEMA.md").is_file():
+        return []
+    schema = load_active_schema(wiki_root)
+    if schema.profile != "software":
+        return []
+
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
+    issues: list[OrganizationalIssue] = []
+
+    for f in files:
+        try:
+            rel_str = f.relative_to(wiki_root).as_posix()
+        except ValueError:
+            continue
+        if rel_str in ("INDEX.md", "SCHEMA.md") or rel_str.startswith("_raw/") or rel_str.startswith("handoffs/"):
+            continue
+
+        try:
+            content = f.read_text(encoding="utf-8")
+            meta, _ = parse_frontmatter(content)
+        except Exception:
+            continue
+
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+        if status in non_active or stability in non_active:
+            continue
+
+        doc_type = str(meta.get("type", "")).lower()
+        if doc_type in ("architecture", "feature"):
+            applies = meta.get("applies_to")
+            if not applies or (isinstance(applies, list) and len(applies) == 0):
+                issues.append(
+                    OrganizationalIssue(
+                        rule="unanchored_governance_article",
+                        path=rel_str,
+                        line=None,
+                        severity="warning",
+                        message=f"Active {doc_type} article '{rel_str}' lacks applies_to governance pattern in frontmatter.",
+                        actionable=f"Add 'applies_to: [...]' to frontmatter of '{rel_str}' specifying the code or intra-wiki files it governs.",
+                    )
+                )
+
+    return issues
+
+
+def check_applies_to_target_missing(
+    wiki_root: Path,
+    md_files: list[Path] | None = None,
+    workspace_index: WorkspaceIndex | None = None,
+) -> list[OrganizationalIssue]:
+    """Emit info issue when an active article's applies_to pattern resolves to 0 files in workspace."""
+    from brain79.config import get_project_root
+    p_root = (wiki_root.parent or get_project_root()).resolve()
+    ws = workspace_index or WorkspaceIndex.build(p_root, wiki_root)
+
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
+    issues: list[OrganizationalIssue] = []
+
+    for f in files:
+        try:
+            rel_str = f.relative_to(wiki_root).as_posix()
+        except ValueError:
+            continue
+        if rel_str in ("INDEX.md", "SCHEMA.md") or rel_str.startswith("_raw/") or rel_str.startswith("handoffs/"):
+            continue
+
+        try:
+            content = f.read_text(encoding="utf-8")
+            meta, _ = parse_frontmatter(content)
+        except Exception:
+            continue
+
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+        if status in non_active or stability in non_active:
+            continue
+
+        applies = meta.get("applies_to")
+        if applies:
+            patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
+            for pat in patterns:
+                matches = ws.find_matching_files([pat])
+                if not matches:
+                    issues.append(
+                        OrganizationalIssue(
+                            rule="applies_to_target_missing",
+                            path=rel_str,
+                            line=None,
+                            severity="info",
+                            message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
+                            actionable=f"Verify that governed files exist or update applies_to pattern in '{rel_str}'.",
+                        )
+                    )
+
     return issues
 
 
@@ -645,6 +763,8 @@ def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     issues.extend(check_article_structural_sections(wiki_root, md_files=md_files))
     issues.extend(check_article_backlinks(wiki_root, md_files=md_files))
     issues.extend(check_documentation_drift(wiki_root, md_files=md_files))
+    issues.extend(check_unanchored_governance(wiki_root, md_files=md_files))
+    issues.extend(check_applies_to_target_missing(wiki_root, md_files=md_files))
     return issues
 
 

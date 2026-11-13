@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+from typing import Any
 
 from brain79.core.frontmatter import parse_frontmatter
 
@@ -31,7 +32,7 @@ class HandoffFreshness:
 
 
 _EXCLUDED_WIKI_SUBDIRS = ("handoffs", "_raw", ".locks")
-_EXCLUDED_WIKI_FILES = ("INDEX.md", ".navigation_registry.json")
+_EXCLUDED_WIKI_FILES = ("INDEX.md", ".navigation_registry.json", ".drift_manifest.json")
 
 
 def _run_git(args: list[str], cwd: Path, timeout: float = 3.0) -> str:
@@ -45,6 +46,24 @@ def _run_git(args: list[str], cwd: Path, timeout: float = 3.0) -> str:
         check=True,
     )
     return res.stdout.strip()
+
+
+def _resolve_git_dir(project_root: Path) -> Path | None:
+    """Resolve the real .git directory, supporting both regular repositories and Git worktrees."""
+    git_entry = project_root / ".git"
+    if git_entry.is_dir():
+        return git_entry
+    if git_entry.is_file():
+        try:
+            line = git_entry.read_text(encoding="utf-8").strip()
+            if line.startswith("gitdir:"):
+                raw_target = line[len("gitdir:"):].strip()
+                resolved = (project_root / raw_target).resolve()
+                if resolved.is_dir():
+                    return resolved
+        except Exception:
+            return None
+    return None
 
 
 def is_git_workspace(project_root: Path) -> bool:
@@ -63,6 +82,15 @@ def get_git_branch(project_root: Path) -> str:
     if not is_git_workspace(project_root):
         return "none"
     try:
+        git_dir = _resolve_git_dir(project_root)
+        if git_dir is not None:
+            head_file = git_dir / "HEAD"
+            if head_file.is_file():
+                text = head_file.read_text(encoding="utf-8").strip()
+                if text.startswith("ref: refs/heads/"):
+                    return text[len("ref: refs/heads/"):]
+                if re.fullmatch(r"[0-9a-fA-F]{40}", text):
+                    return "detached"
         branch = _run_git(["symbolic-ref", "--short", "HEAD"], cwd=project_root)
         return branch if branch else "detached"
     except subprocess.CalledProcessError:
@@ -76,6 +104,19 @@ def get_git_head(project_root: Path) -> str:
     if not is_git_workspace(project_root):
         return "none"
     try:
+        git_dir = _resolve_git_dir(project_root)
+        if git_dir is not None:
+            head_file = git_dir / "HEAD"
+            if head_file.is_file():
+                text = head_file.read_text(encoding="utf-8").strip()
+                if re.fullmatch(r"[0-9a-fA-F]{40}", text):
+                    return text
+                if text.startswith("ref: "):
+                    ref_path = git_dir / text[len("ref: "):]
+                    if ref_path.is_file():
+                        ref_text = ref_path.read_text(encoding="utf-8").strip()
+                        if re.fullmatch(r"[0-9a-fA-F]{40}", ref_text):
+                            return ref_text
         return _run_git(["rev-parse", "HEAD"], cwd=project_root)
     except Exception:
         return "unknown"
@@ -111,7 +152,10 @@ def compute_wiki_digest(wiki_root: Path) -> str:
     return hasher.hexdigest()
 
 
-def compute_code_digest(project_root: Path) -> str:
+def compute_code_digest(
+    project_root: Path,
+    workspace_files: list[str] | set[str] | None = None,
+) -> str:
     """Compute sha256 over sorted (path, blob_sha) pairs outside .brain-79.
 
     Uses git index + untracked files to be commit-independent (commit of same tree yields same hash).
@@ -122,11 +166,14 @@ def compute_code_digest(project_root: Path) -> str:
         return "none"
 
     try:
-        out = _run_git(
-            ["-c", "core.quotepath=false", "ls-files", "--cached", "--others", "--exclude-standard"],
-            cwd=project_root,
-        )
-        raw_files = [f.strip().strip('"').strip("'") for f in out.splitlines() if f.strip()]
+        if workspace_files is not None:
+            raw_files = [str(f).strip().strip('"').strip("'") for f in workspace_files if str(f).strip()]
+        else:
+            out = _run_git(
+                ["-c", "core.quotepath=false", "ls-files", "--cached", "--others", "--exclude-standard"],
+                cwd=project_root,
+            )
+            raw_files = [f.strip().strip('"').strip("'") for f in out.splitlines() if f.strip()]
         files: list[str] = []
         for f in raw_files:
             norm = f.replace("\\", "/")
@@ -222,7 +269,11 @@ def _parse_created_at(raw_str: str, file_path: Path) -> datetime:
     return datetime.fromtimestamp(file_path.stat().st_mtime, tz=UTC)
 
 
-def compute_handoff_freshness(handoff_path: Path, wiki_root: Path | None = None) -> HandoffFreshness:
+def compute_handoff_freshness(
+    handoff_path: Path,
+    wiki_root: Path | None = None,
+    workspace_index: Any = None,
+) -> HandoffFreshness:
     """Evaluate handoff freshness and calculate authority decay indicators deterministically."""
     if wiki_root is None:
         wiki_root = handoff_path.parent.parent
@@ -242,7 +293,8 @@ def compute_handoff_freshness(handoff_path: Path, wiki_root: Path | None = None)
 
     cur_branch = get_git_branch(project_root)
     cur_wiki_digest = compute_wiki_digest(wiki_root)
-    cur_code_digest = compute_code_digest(project_root)
+    ws_files = getattr(workspace_index, "all_paths", None) if workspace_index is not None else None
+    cur_code_digest = compute_code_digest(project_root, workspace_files=ws_files)
 
     reasons: list[str] = []
     commits_since: int | None = None
@@ -275,18 +327,27 @@ def compute_handoff_freshness(handoff_path: Path, wiki_root: Path | None = None)
                         if sub_rel not in changed_wiki_articles:
                             changed_wiki_articles.append(sub_rel)
             # Check untracked files
-            untracked_out = _run_git(
-                ["-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard", ".brain-79/"],
-                cwd=project_root,
-            )
-            for line in untracked_out.splitlines():
-                line = line.strip().strip('"').replace("\\", "/")
-                if line.startswith(".brain-79/"):
-                    sub_rel = line[len(".brain-79/"):]
-                    parts = sub_rel.split("/")
-                    if parts[0] not in _EXCLUDED_WIKI_SUBDIRS and sub_rel not in _EXCLUDED_WIKI_FILES and sub_rel.endswith(".md"):
-                        if sub_rel not in changed_wiki_articles:
-                            changed_wiki_articles.append(sub_rel)
+            if ws_files is not None:
+                for line in ws_files:
+                    if line.startswith(".brain-79/"):
+                        sub_rel = line[len(".brain-79/"):]
+                        parts = sub_rel.split("/")
+                        if parts[0] not in _EXCLUDED_WIKI_SUBDIRS and sub_rel not in _EXCLUDED_WIKI_FILES and sub_rel.endswith(".md"):
+                            if sub_rel not in changed_wiki_articles:
+                                changed_wiki_articles.append(sub_rel)
+            else:
+                untracked_out = _run_git(
+                    ["-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard", ".brain-79/"],
+                    cwd=project_root,
+                )
+                for line in untracked_out.splitlines():
+                    line = line.strip().strip('"').replace("\\", "/")
+                    if line.startswith(".brain-79/"):
+                        sub_rel = line[len(".brain-79/"):]
+                        parts = sub_rel.split("/")
+                        if parts[0] not in _EXCLUDED_WIKI_SUBDIRS and sub_rel not in _EXCLUDED_WIKI_FILES and sub_rel.endswith(".md"):
+                            if sub_rel not in changed_wiki_articles:
+                                changed_wiki_articles.append(sub_rel)
         except Exception:
             pass
     else:

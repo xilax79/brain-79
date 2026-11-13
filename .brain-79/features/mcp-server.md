@@ -2,8 +2,15 @@
 type: feature
 summary: Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
 status: shipped
-version: 1.1.0
-last_updated: 2026-10-29
+version: 0.8.0
+last_updated: 2026-11-12
+applies_to:
+  - src/brain79/server.py
+related:
+  - architecture/symmetry.md
+  - architecture/mcp-server.md
+applies_to_digest: "sha256:b5ecbf5f93c1bd13"
+applies_to_count: 1
 ---
 
 # Feature — FastMCP integration
@@ -18,23 +25,26 @@ Built using `FastMCP 2.0+`, it suppresses standard error banners during initiali
 
 | MCP Tool | CLI Equivalent | Purpose |
 |---|---|---|
+| `brain79_orient(task?, paths?)` | `brain79 orient` | Collapsed 1-call cold start orientation with inlined governing context |
 | `brain79_index()` | `brain79 index` | Retrieve `INDEX.md` entry point |
 | `brain79_schema(target_type?)` | `brain79 schema` | Inspect schema constraints and copy-paste templates |
-| `brain79_read(path)` | `brain79 read <path>` | Read wiki article safely |
-| `brain79_write(path, content, force_validation_skip)` | `brain79 write <path>` | Write or update wiki article with validation and auto-navigation |
-| `brain79_edit(path, edits, force_validation_skip)` | `brain79 edit <path>` | Targeted text replacement without re-emitting entire article |
-| `brain79_write_many(articles, force_validation_skip)` | `brain79 write-many` | Batch validate and atomically write multiple articles |
-| `brain79_list(section)` | `brain79 list [--section <name>]` | List available wiki articles |
+| `brain79_read(path, sections?)` | `brain79 read <path>` | Read wiki article safely with section projection |
+| `brain79_read_batch(requests)` | `brain79 read-batch` | Read multiple articles in a single call |
+| `brain79_write(path, content, ...)` | `brain79 write <path>` | Write or update wiki article with validation and auto-navigation |
+| `brain79_edit(path, edits, ...)` | `brain79 edit <path>` | Targeted text replacement without re-emitting entire article |
+| `brain79_write_many(articles, ...)` | `brain79 write-many` | Batch validate and atomically write multiple articles |
+| `brain79_session_commit(...)` | `brain79 session-commit` | 1-call atomic session finalization with Hard Session Ripple Gate |
+| `brain79_list(section?)` | `brain79 list [--section <name>]` | List available wiki articles |
 | `brain79_search(query)` | `brain79 search <query>` | High-speed keyword search via ripgrep |
-| `brain79_ingest(session_summary, instructions)` | `brain79 ingest` | Ingest raw session summary to `_raw/sessions/` |
+| `brain79_ingest(session_summary, ...)` | `brain79 ingest` | Ingest raw session summary to `_raw/sessions/` |
 | `brain79_handoff_write(...)` | `brain79 handoff-write` | Create structured, immutable session handoff |
-| `brain79_handoff_read(ref)` | `brain79 handoff-read` | Read referenced session handoff |
-| `brain79_handoff_purge(apply)` | `brain79 handoff-purge` | Purge short-term handoffs |
+| `brain79_handoff_read(ref?)` | `brain79 handoff-read` | Read referenced session handoff |
+| `brain79_handoff_purge(apply?)` | `brain79 handoff-purge` | Purge short-term handoffs |
 | `brain79_lint()` | `brain79 lint` | Run deterministic health check scan |
-| `brain79_bootstrap(scope, force)` | `brain79 bootstrap` | Scan repository and return manifest |
-| `brain79_navigate(regenerate)` | `brain79 navigate` | Query or update navigation registry |
-| `brain79_context(query)` | `brain79 context` | Retrieve relevant articles via TF-IDF |
-| `brain79_migrate(apply, dry_run)` | `brain79 migrate` | Migrate legacy articles to frontmatter V3 |
+| `brain79_bootstrap(scope?, force?)` | `brain79 bootstrap` | Scan repository and return manifest |
+| `brain79_navigate(regenerate?)` | `brain79 navigate` | Query or update navigation registry |
+| `brain79_context(task, top_n?, paths?)` | `brain79 context` | Retrieve relevant articles via 3-signal ranking |
+| `brain79_migrate(apply?, dry_run?)` | `brain79 migrate` | Migrate legacy articles to frontmatter V3 |
 
 ## Usage examples
 

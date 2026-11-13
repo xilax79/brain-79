@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 from pathlib import Path
+import subprocess
 
+from brain79.config import get_project_root
+from brain79.core.context import rank_context_articles
+from brain79.core.drift import WorkspaceIndex, detect_all_drift
 from brain79.core.frontmatter import load_active_schema
 from brain79.core.lint import lint_wiki
 from brain79.core.lint_organizational import OrganizationalIssue, lint_organizational
+from brain79.core.locks import normalize_posix_input
 
 
 @dataclass
@@ -89,6 +94,93 @@ def prepare_curation_guide(wiki_root: Path, raw_content: str | None = None) -> s
         lines.append("### Specific Violations Needing Remediation")
         lines.extend(state.issues_summary)
         lines.append("")
+
+    # Pillar 7.2: Session Impact & Drift Checklist
+    p_root = (wiki_root.parent or get_project_root()).resolve()
+    discovered_dirty_paths: list[str] = []
+    try:
+        res = subprocess.run(
+            ["git", "-c", "core.quotepath=false", "status", "--porcelain=v1", "-z"],
+            cwd=str(p_root),
+            capture_output=True,
+            check=False,
+            timeout=2.0,
+        )
+        if res.returncode == 0 and res.stdout:
+            raw_entries = res.stdout.split(b"\x00")
+            idx = 0
+            while idx < len(raw_entries):
+                entry_bytes = raw_entries[idx]
+                idx += 1
+                if not entry_bytes:
+                    continue
+                entry_str = entry_bytes.decode("utf-8", errors="replace")
+                if len(entry_str) >= 4 and entry_str[2] == " ":
+                    xy = entry_str[:2]
+                    p_str = entry_str[3:]
+                    norm_p = normalize_posix_input(p_str).lstrip("/")
+                    if norm_p and norm_p not in discovered_dirty_paths and not norm_p.startswith(".brain-79/"):
+                        discovered_dirty_paths.append(norm_p)
+                    if "R" in xy or "C" in xy:
+                        if idx < len(raw_entries) and raw_entries[idx]:
+                            orig_bytes = raw_entries[idx]
+                            idx += 1
+                            orig_str = orig_bytes.decode("utf-8", errors="replace")
+                            norm_orig = normalize_posix_input(orig_str).lstrip("/")
+                            if norm_orig and norm_orig not in discovered_dirty_paths and not norm_orig.startswith(".brain-79/"):
+                                discovered_dirty_paths.append(norm_orig)
+                    if len(discovered_dirty_paths) >= 50:
+                        break
+    except Exception:
+        discovered_dirty_paths = []
+
+    ws = WorkspaceIndex.build(p_root, wiki_root)
+    active_drifts = detect_all_drift(wiki_root=wiki_root, project_root=p_root, workspace_index=ws)
+
+    drift_items: list[str] = []
+    seen_drifts: set[tuple[str, str, str]] = set()
+    for d in active_drifts:
+        art_path = d.get("article_path", "")
+        ws_file = d.get("workspace_file", d.get("target_file", ""))
+        kind = d.get("drift_kind", "modified").upper()
+        key = (art_path, ws_file, kind)
+        if key not in seen_drifts:
+            seen_drifts.add(key)
+            tag = "[TRANSITIVE]" if kind == "TRANSITIVE" else "[DIRECT]"
+            msg = d.get("message", f"governed file {ws_file} modified")
+            drift_items.append(f"- **{tag} `{art_path}`**: {msg}")
+
+    governing_items: list[str] = []
+    if discovered_dirty_paths:
+        ranked = rank_context_articles(paths=discovered_dirty_paths, top_n=20, wiki_root=wiki_root)
+        for _, art_p, reasons in ranked:
+            if any(r.startswith("path:") for r in reasons):
+                try:
+                    rel_p = art_p.relative_to(wiki_root).as_posix()
+                    governing_items.append(f"- **`{rel_p}`**: governs modified files in working tree")
+                except ValueError:
+                    pass
+
+    lines.extend([
+        "## 🎯 Session Impact & Drift Checklist",
+        "Before calling `brain79_session_commit`, verify whether code modifications impacted the wiki:",
+    ])
+    if drift_items:
+        lines.append("### Active Documentation Drift Detected (Must Be Resolved)")
+        lines.extend(drift_items)
+        lines.append("")
+    if governing_items:
+        lines.append("### Governing Articles for Modified Code Files")
+        lines.extend(sorted(set(governing_items)))
+        lines.append("")
+    if not drift_items and not governing_items:
+        lines.append("- [Status: OK] Zero documentation drift detected and working tree is clean.")
+        lines.append("")
+    lines.extend([
+        "> **Hard Session Ripple Gate**: `brain79_session_commit` requires all impacted governing "
+        "and umbrella articles to be updated in `writes`/`edits`, or verified as internal refactors in `verified_articles`.",
+        "",
+    ])
 
     lines.extend([
         "## Session Knowledge Triage (The Amnesia Test)",

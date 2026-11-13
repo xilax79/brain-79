@@ -1,0 +1,241 @@
+{
+  "files": {
+    ".bootstrap_state.json": {
+      "sha256": "9fedee7c6947250dd321078b2f757a03add594294d949c0bbffe0d2984491887",
+      "size": 205
+    },
+    ".gitignore": {
+      "sha256": "e4d1a4a8ffedc35cc0b5fb7d07772cb09048a3a00958565d914b6099768fb604",
+      "size": 21
+    },
+    ".navigation_registry.json": {
+      "sha256": "e1303992620af09dc86eb5641c8c20ed2bbfe4f5a2dd2fd7451147170e03f09c",
+      "size": 19857
+    },
+    "INDEX.md": {
+      "sha256": "92499a60f4689686e3f9bedee46fa1c477f13b72697513b93c38b2eaf95f11f6",
+      "size": 9682
+    },
+    "SCHEMA.md": {
+      "sha256": "6f1a443fa7bb3d6991c6f7390822f113b11dcd8dfd6f38ef1c35ea626b7a4277",
+      "size": 5967
+    },
+    "_raw/commits/.gitkeep": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "_raw/sessions/.gitkeep": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "architecture/.gitkeep": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "architecture/current-state.md": {
+      "sha256": "a88084443067664f65458000c529fa9abca6c5ecfb7b7fb5f6ea03014fd75ce2",
+      "size": 8111
+    },
+    "architecture/defect-backlog.md": {
+      "sha256": "60d56fa33a1c658901f75c1c9445c038a3a7be6fcc83a90daf4425056148620c",
+      "size": 11420
+    },
+    "architecture/dispatcher.md": {
+      "sha256": "446542f5fb08767852deb9ed3b44f2c4a0b3c68f2a3747af695219bb5730ccaf",
+      "size": 2650
+    },
+    "architecture/mcp-server.md": {
+      "sha256": "484b76ea67feb9788ccb9eb00feb30aa120c9a3b36fcc2096698cb59cec7a627",
+      "size": 2821
+    },
+    "architecture/roadmap-industrial-scale.md": {
+      "sha256": "b1f5f9f5dc5af247f50e09ce80f769a9fd06e59e22108de898044503e3f90b34",
+      "size": 11861
+    },
+    "architecture/symmetry.md": {
+      "sha256": "ebb55b3e256b708d7dc35a7c3a6669abf0543a8a7e55207e572d75ca2d145db8",
+      "size": 2910
+    },
+    "changelog/.gitkeep": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "changelog/v0-7-2.md": {
+      "sha256": "bd78e1c0b06cc5e2d699c584f593ceb42e6383a49dca1a1731bf07597709c186",
+      "size": 813
+    },
+    "changelog/v1-1.md": {
+      "sha256": "e1799672a4b0cb23c565ad42cf762ba1bdd8a7011459a951af120e2c02e0e01a",
+      "size": 2130
+    },
+    "changelog/v1.md": {
+      "sha256": "9311049bec50f42539b294bafe9c075526dcc4c2509d87f0bacde7647ec758c4",
+      "size": 1794
+    },
+    "changelog/v2-0-1.md": {
+      "sha256": "d3fab726a6bfd9d599d2315fa8a55c26156f6f8a4b10d33f0ded765f7cbaedd7",
+      "size": 939
+    },
+    "changelog/v2-0-2.md": {
+      "sha256": "1f595482d3770a999e9d5eac068303d5aea382c18a7e746271122b0bbf04045a",
+      "size": 2832
+    },
+    "changelog/v2-0.md": {
+      "sha256": "163bfab1ff9d25976c3c3f903a952f9c749dbb2485a8746338dced48abdf7752",
+      "size": 2560
+    },
+    "decisions/.gitkeep": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "decisions/adr-001-hybrid-cli.md": {
+      "sha256": "1d1029c714731920fb640cd80e25d2326bc93b23cfeac45227e9244d882b8b38",
+      "size": 1685
+    },
+    "decisions/adr-002-immutable-handoffs.md": {
+      "sha256": "26ddd486693ec5d1bd9adabdfb33f59a2dac5c1d99d926b92675a36b86fc269b",
+      "size": 1461
+    },
+    "decisions/adr-003-v3-legacy-status.md": {
+      "sha256": "686966d6ce381d881af72c0b3aedcc712ff8d5a20edea4cd374641c64024f94e",
+      "size": 1740
+    },
+    "decisions/adr-004-strict-write-validation.md": {
+      "sha256": "0d95a4f4aeb98c212237233b647ea69754c5c190b1986b2747c7da4abb428a7a",
+      "size": 2794
+    },
+    "decisions/adr-005-fence-mask-tracking.md": {
+      "sha256": "6ad812e2a30e563b2e1ce1f9845e134a637b98717556bd11fa89db7f53a745d3",
+      "size": 1633
+    },
+    "decisions/adr-006-auto-navigation-and-batch-operations.md": {
+      "sha256": "e0c2ffce6aefe2628ddd79bfef0bf740bb2925b6125372416e36b96cdc38770b",
+      "size": 2668
+    },
+    "decisions/adr-007-frontmatter-summary-and-backlink-navigation.md": {
+      "sha256": "340fce08d11fa2dc1ddbaca8e0dcbaac27a485882c982c7344151f58ba788f21",
+      "size": 2415
+    },
+    "decisions/adr-008-pure-index-routing-table.md": {
+      "sha256": "cf0c7e5b78f190e41fce5d523978231782dcc09d798c74b9fc8e7f216c564852",
+      "size": 2481
+    },
+    "decisions/adr-009-declarative-schema-and-dual-ontologies.md": {
+      "sha256": "8d3b407787cb41974f1e57ef35724874d5c03eadcce22be3a4d1b2605080f0fc",
+      "size": 2861
+    },
+    "decisions/adr-010-orient-and-3-signal-context-ranking.md": {
+      "sha256": "7330c8352934cfbc64fecc00670b762b3d71b5c11fae658d0115b7ffe9d888b9",
+      "size": 2954
+    },
+    "decisions/adr-011-session-commit-and-batch-reading.md": {
+      "sha256": "bcf6d4102c4145d5c3285de3ee249df4149b8d05f6093f731b96dbe87cc31e3a",
+      "size": 4146
+    },
+    "decisions/adr-012-structural-quality-and-drift-detection.md": {
+      "sha256": "3b3d6cf8bbcfe569c53d1d17f3ff9c19d0b5257727c7c955b5163767e455574c",
+      "size": 4525
+    },
+    "decisions/adr-013-versioning-and-release-governance.md": {
+      "sha256": "3fc0d68e447c7ef7e2bbf0d5c6591ceb543a1645ab3dfa977e18e6b3e9dcfaf4",
+      "size": 4175
+    },
+    "decisions/adr-014-centralized-locks-and-cross-platform-io.md": {
+      "sha256": "a7af4a615b5f0b5a255ceb2e98b101402e54b6489c31dee231926e216377708b",
+      "size": 3636
+    },
+    "decisions/adr-015-sentence-case-first-policy.md": {
+      "sha256": "24b1ee12613d3932794c15226fff277110a684f2e3befaac8e903bfcb75cebfb",
+      "size": 2005
+    },
+    "decisions/adr-016-handoff-freshness-and-authority-decay.md": {
+      "sha256": "77014a16cfd609b1d6a635bfbf632bc4138832a3c821f857612564ab7aea89ef",
+      "size": 2965
+    },
+    "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md": {
+      "sha256": "3424e407081cd21f02b7b4ae64198ff425494133aff2a927b6111166989008b0",
+      "size": 1603
+    },
+    "features/.gitkeep": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "features/cli.md": {
+      "sha256": "95610643d49b36ac863997b0e1b2644a96aaef64549c8805e6e439c0f4f7f340",
+      "size": 3100
+    },
+    "features/cross-platform-and-lock-isolation.md": {
+      "sha256": "dabff4a9a9edf1cc852d523e5ccdcf863aea458c4f06d6081911916b5f409c3b",
+      "size": 17267
+    },
+    "features/handoff-continuity.md": {
+      "sha256": "887b97df01a52d66dc3600c47bb6b53bf9d8d55450cc1ca58d9a99650bcd237c",
+      "size": 2187
+    },
+    "features/handoff-freshness.md": {
+      "sha256": "fccea589c5b5141ae85abd446d90260e56df866574286b21dcee29e7f172a54c",
+      "size": 3822
+    },
+    "features/handoff-purge.md": {
+      "sha256": "a5a03940d96b7863f7eb58b26a9d29a92dc9599858301f864962650a4a924315",
+      "size": 1762
+    },
+    "features/mcp-server.md": {
+      "sha256": "ac4860be01e7fdbb7b20c1288a713bdb698df053bc3adf944bef3d97afedd75f",
+      "size": 3061
+    },
+    "features/organizational-enforcement.md": {
+      "sha256": "f560e057546ed58cde434a68331f948fee867a918b0c74d993be1dc8f5c31c69",
+      "size": 2718
+    },
+    "features/project-upgrade-and-multi-harness-doctor.md": {
+      "sha256": "036e360a81a337ed64d79cbb4362a5d543eef14ebb7a855f621fbd58e6771133",
+      "size": 14677
+    },
+    "features/session-triage-and-research-persistence.md": {
+      "sha256": "70dcac5ff233cfd46b4c13b815c884bfcdf2adc7f494fc6c0c0d9e42a54f0248",
+      "size": 28615
+    },
+    "features/transitive-drift-and-ripple-guards.md": {
+      "sha256": "8c38c6d36176869209a5eb66620530cbea43659aa803779a425a02b45b017a8a",
+      "size": 51954
+    },
+    "features/version-governance.md": {
+      "sha256": "62bca4896377b8bad448dcf3533f6bb072a1a9c9e636739ff58af78353e6a564",
+      "size": 4787
+    },
+    "handoffs/.gitkeep": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "handoffs/handoff-2026-10-29-201826-788.md": {
+      "sha256": "0a1bc027a1ceb5002787bb5370839b4bd15ca8825ba359b1109a926f6e016f89",
+      "size": 2784
+    },
+    "handoffs/handoff-2026-10-29-203701-486.md": {
+      "sha256": "412ab8002b2bbf343c95ae0e7935043313e7320c9778bd7bdfc14b8ac3db63e0",
+      "size": 1521
+    },
+    "handoffs/handoff-2026-10-29-231147-755.md": {
+      "sha256": "8b941baf56829b6e1d12ed4e8db788ddbfbc445274fc6ec68c1da5d5ae1cdd09",
+      "size": 1630
+    },
+    "handoffs/handoff-2026-11-03-180741-874.md": {
+      "sha256": "b571066180902caf637b57cd5eafa0c7bae4402dd9e7487d34388df2ac1213de",
+      "size": 1623
+    },
+    "handoffs/handoff-2026-11-06-124844-407.md": {
+      "sha256": "29eb8b5b79aeaede12277ff2ab5edaf03a19b0cda26d883ec222e84de69096e1",
+      "size": 1160
+    },
+    "product/.gitkeep": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "product/overview.md": {
+      "sha256": "446ff36b35fdaa47aa241427df5b9ba1ee5eeebb12eb62f476ed7eba70a9d9a3",
+      "size": 1579
+    }
+  },
+  "total_files": 59
+}

@@ -1,8 +1,18 @@
 ---
 type: architecture
-summary: enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
+summary: "enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools"
 stability: stable
-last_updated: 2026-10-29
+last_updated: 2026-11-12
+applies_to:
+  - src/brain79/cli/dispatch.py
+  - src/brain79/server.py
+  - tests/test_symmetry.py
+related:
+  - architecture/current-state.md
+  - features/cli.md
+  - features/mcp-server.md
+applies_to_digest: "sha256:f6dfdd5a143173bc"
+applies_to_count: 3
 ---
 
 # Architecture — CLI and MCP symmetry
@@ -15,7 +25,7 @@ last_updated: 2026-10-29
 
 Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite inspects:
 - Every subcommand in `WHITELIST` (`dispatch.py`) has a corresponding `@mcp.tool()` definition in `server.py` (with the exception of CLI-only setup commands `init` and `update`).
-- Parameter mappings, default values, and operational semantics match identically across interfaces.
+- Parameter mappings, default values, and operational semantics match identically across interfaces (22 CLI subcommands, 20 MCP tools).
 
 ## Operational mapping table
 
@@ -23,22 +33,25 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 |---|---|---|
 | Initialize wiki protocol | `brain79 init` | (CLI only setup step) |
 | Self-update installation | `brain79 update` | (CLI only setup step) |
+| Complete 1-call cold start | `brain79 orient [--task ...] [--paths ...]` | `brain79_orient(task?, paths?)` |
 | Read INDEX.md entrypoint | `brain79 index` | `brain79_index()` |
-| Inspect schema & templates | `brain79 schema [--type <t>]` | `brain79_schema(target_type)` |
-| Read wiki article | `brain79 read <path>` | `brain79_read(path)` |
-| Write wiki article | `brain79 write <path>` | `brain79_write(path, content)` |
-| Partial in-place edit | `brain79 edit <path>` | `brain79_edit(path, edits)` |
-| Batch write articles | `brain79 write-many --file <f>` | `brain79_write_many(articles)` |
-| List articles | `brain79 list [--section <name>]` | `brain79_list(section)` |
+| Inspect schema & templates | `brain79 schema [--type <t>]` | `brain79_schema(target_type?)` |
+| Read wiki article | `brain79 read <path> [--sections ...]` | `brain79_read(path, sections?)` |
+| Batch read articles | `brain79 read-batch --file <f>` | `brain79_read_batch(requests)` |
+| Write wiki article | `brain79 write <path>` | `brain79_write(path, content, ...)` |
+| Partial in-place edit | `brain79 edit <path>` | `brain79_edit(path, edits, ...)` |
+| Batch write articles | `brain79 write-many --file <f>` | `brain79_write_many(articles, ...)` |
+| 1-call atomic session commit | `brain79 session-commit --file <f>` | `brain79_session_commit(...)` |
+| List articles | `brain79 list [--section <name>]` | `brain79_list(section?)` |
 | Search articles | `brain79 search <query>` | `brain79_search(query)` |
-| Ingest session summary | `brain79 ingest` | `brain79_ingest(session_summary)` |
+| Ingest session summary | `brain79 ingest` | `brain79_ingest(session_summary, ...)` |
 | Write session handoff | `brain79 handoff-write` | `brain79_handoff_write(...)` |
-| Read session handoff | `brain79 handoff-read [ref]` | `brain79_handoff_read(ref)` |
-| Purge session handoffs | `brain79 handoff-purge [--apply]` | `brain79_handoff_purge(apply)` |
-| Bootstrap legacy project | `brain79 bootstrap` | `brain79_bootstrap(scope, force)` |
-| Sync navigation registry | `brain79 navigate [--regenerate]` | `brain79_navigate(regenerate)` |
-| Query relevant context | `brain79 context <query>` | `brain79_context(query)` |
-| Migrate legacy frontmatter | `brain79 migrate [--apply]` | `brain79_migrate(dry_run, apply)` |
+| Read session handoff | `brain79 handoff-read [ref]` | `brain79_handoff_read(ref?)` |
+| Purge session handoffs | `brain79 handoff-purge [--apply]` | `brain79_handoff_purge(apply?)` |
+| Bootstrap legacy project | `brain79 bootstrap` | `brain79_bootstrap(scope?, force?)` |
+| Sync navigation registry | `brain79 navigate [--regenerate]` | `brain79_navigate(regenerate?)` |
+| Query relevant context | `brain79 context <query>` | `brain79_context(task, top_n?, paths?)` |
+| Migrate legacy frontmatter | `brain79 migrate [--apply]` | `brain79_migrate(dry_run?, apply?)` |
 | Lint wiki organization | `brain79 lint [--strict]` | `brain79_lint()` |
 
 ## Dry-run default invariant

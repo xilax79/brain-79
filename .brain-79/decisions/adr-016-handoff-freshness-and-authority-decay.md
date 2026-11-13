@@ -4,7 +4,7 @@ summary: treat handoffs as perishable transition notes with authority decaying b
 status: accepted
 deciders: Team
 date: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-12
 ---
 
 # ADR-016: Handoff freshness, provenance, and authority decay

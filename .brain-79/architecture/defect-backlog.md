@@ -1,127 +1,126 @@
 ---
 type: architecture
-summary: master defect backlog, forensic root-cause analysis, and specification for bug fixes, agent efficiency, and on-demand handoff policy
-stability: stable
+summary: master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
+stability: experimental
 applies_to:
-  - src/brain79/templates/SCHEMA.md
-  - src/brain79/templates/SCHEMA_GENERAL.md
-  - src/brain79/templates/AGENTS.md
-  - src/brain79/core/frontmatter.py
+  - src/brain79/core/init_project.py
+  - src/brain79/core/validation.py
   - src/brain79/core/lint_organizational.py
-  - src/brain79/core/orient.py
-  - src/brain79/server.py
-  - AGENTS.md
+  - src/brain79/core/handoff_freshness.py
+  - src/brain79/core/frontmatter.py
 related:
   - architecture/roadmap-industrial-scale.md
   - architecture/current-state.md
   - features/cross-platform-and-lock-isolation.md
-last_updated: 2026-11-05
+  - features/transitive-drift-and-ripple-guards.md
+last_updated: 2026-11-12
+applies_to_digest: "sha256:055dc293064d86f9"
+applies_to_count: 5
 ---
 
-# Architecture — Defect backlog and agent efficiency deep dive
+# Architecture — Defect backlog and live evaluation remediations
 
 ## Overview
 
-This document consolidates the root-cause analysis and engineering specification for defects and LLM agent inefficiencies discovered during live evaluation on greenfield projects (`/private/tmp/test-wiki`, session `01a1a200-0721-762e-bffb-64991a00140d`). It also formalizes the **On-Demand Handoff Policy** to prevent per-turn handoff spam during multi-turn interactive sessions.
+This document consolidates the forensic root-cause analysis and actionable engineering specification for defects, edge cases, and agent protocol gaps discovered during live evaluation on the **Grand Palace Casino** testbed (`/tmp/test-wiki` and `/private/tmp/test-wiki`).
+
+The testbed project implements a comprehensive web casino platform featuring five decoupled game engines (American Roulette, Classic Blackjack, Royal VIP Slots, VIP Punto Banco Baccarat, and Aerospace Crash), a shared reactive state store, procedural Web Audio API synthesis, HTML5 Canvas 2D rendering, and 100% passing test suites across all mathematical models.
+
+The Phase 6.7 core engine performed as designed during live execution: Merkle drift detection successfully identified unaddressed ripple effects on shared infrastructure files, research topics were persisted across zero-code sessions (Type B Amnesia Test), and multi-turn transactions remained atomic. The findings below address ergonomics, profile-aware Git lifecycle integration, and authoring heuristics for follow-up implementation.
 
 ---
 
-## 1. Critical technical bugs (engine and templates)
+## Evaluation testbed reference
 
-### BUG-001: Broken local link in `SCHEMA_GENERAL.md` and root backlink normalization
-* **Severity:** Critical (`[CRITICAL] Broken Local Links`).
-* **Location:** `src/brain79/templates/SCHEMA_GENERAL.md:64` and `src/brain79/core/frontmatter.py:539`.
-* **Symptom:** Immediately after running `brain79 init --profile general`, running `brain79 lint --strict` fails with:
+- **Path**: `/tmp/test-wiki` (symlinked as `/private/tmp/test-wiki`)
+- **Domain**: Grand Palace Casino web platform (lobby, roulette, blackjack, slots, baccarat, crash)
+- **Codebase assets**:
+  - Engines: `js/engine.js`, `js/blackjack-engine.js`, `js/slots-engine.js`, `js/baccarat-engine.js`, `js/crash-engine.js`
+  - Tests: `js/test-engine.js`, `js/test-blackjack.js`, `js/test-slots.js`, `js/test-baccarat.js`, `js/test-crash.js`, `js/test-state.js`
+  - Infrastructure: `js/app.js`, `js/sound.js`, `js/state.js`, `css/style.css`, `index.html`
+- **Active wiki state**: `.brain-79/` with 17 registered articles across product, architecture, features, topics, and changelog.
+
+---
+
+## 1. Ergonomics and lifecycle specifications (to be addressed in dedicated branch)
+
+### BUG-003: Profile-aware Git repository enforcement and fallback code digest
+- **Severity**: high.
+- **Locations**: `src/brain79/core/init_project.py`, `src/brain79/core/handoff_freshness.py`, `src/brain79/core/lint_organizational.py`.
+- **Symptom**: running `brain79 init` in `/tmp/test-wiki` succeeded without an active Git repository. This resulted in:
+  1. `handoff_freshness.py` assigning `git_branch: "none"`, `git_head: "none"`, and `code_digest: "none"`.
+  2. Loss of cryptographic code mutation verification in handoff freshness.
+  3. Pre-commit hooks (`.git/hooks/pre-commit`) silently skipping installation.
+- **Forensic root cause & adversarial boundaries**:
+  While software projects require Git for authority hierarchy (`code and git > wiki > handoff`), workspaces initialized with `--profile general` (research notes, sports statistics, market forecasts, legal analysis) **must remain 100% free of Git requirements**. Making Git mandatory across all profiles would break valid zero-git document repositories.
+- **Corrected remediation specification**:
+  1. **Profile-restricted auto-init (`init_project.py`)**: when `profile == "software"`, if no `.git` directory exists and the workspace is not inside a Git worktree, execute `git init` automatically (unless explicitly disabled via `--no-git`). For `--profile general`, do not mandate Git.
+  2. **Profile-aware linter check (`lint_organizational.py`)**: issue rule `missing_git_repository` (severity: info or warning) **strictly when `profile == "software"`**. Workspaces with `--profile general` are exempt.
+  3. **Fallback code digest (`handoff_freshness.py`)**: when a software workspace lacks `.git`, `compute_code_digest()` should fall back to walking the filesystem via `WorkspaceIndex` and hashing source files with the standard 64 KB leaf hasher instead of returning `"none"`. This preserves cryptographic code mutation tracking even in gitless folders.
+
+---
+
+### BUG-004: Shared umbrella file governance and sibling leaf article conflicts
+- **Severity**: medium.
+- **Locations**: `src/brain79/core/validation.py`, `src/brain79/core/drift.py`, `.brain-79/SCHEMA.md`.
+- **Symptom**: in `/tmp/test-wiki`, `architecture/roulette-engine.md` declared `applies_to` over `css/style.css`, `js/app.js`, and `js/sound.js`. When the Crash Game was added, those shared files were modified, triggering:
   ```text
-  [CRITICAL] Broken Local Links (1)
-  - SCHEMA.md → ../INDEX.md: target not found
+  ⚠️ Documentation Drift Suspected: Article 'architecture/roulette-engine.md' governs 'css/style.css'
   ```
-* **Deep-Dive Root Cause:**
-  1. `SCHEMA_GENERAL.md` ends with `[← Volver al Índice](../INDEX.md)`. Because `SCHEMA.md` lives at the root of `.brain-79/` (`.brain-79/SCHEMA.md`), `../INDEX.md` resolves one level *above* `.brain-79/` into the project workspace root, which does not exist.
-  2. In `src/brain79/core/frontmatter.py`, `normalize_backlink_footer(body, rel_path)` immediately returns `body` untouched when `len(parts) <= 1`. If an agent writes or edits a root-level wiki file containing `](../INDEX.md)`, the normalizer does not rewrite it to `](INDEX.md)`.
-* **Exact Remediation:**
-  1. In `src/brain79/templates/SCHEMA_GENERAL.md` (and `src/brain79/templates/SCHEMA.md`), replace any root-level `../INDEX.md` footer link with `[← Volver al Índice](INDEX.md)`.
-  2. In `normalize_backlink_footer()` (`frontmatter.py`), when `len(parts) == 1` and `clean_rel == "SCHEMA.md"`, rewrite any trailing `](../INDEX.md)` to `](INDEX.md)`.
-  3. Add an invariant test in `tests/test_init_project.py` that initializes both `software` and `general` profiles and asserts `lint_wiki()` returns `[Status: OK]` out of the box.
+- **Forensic root cause & adversarial evaluation**:
+  The drift engine worked exactly as designed: `css/style.css` was modified, so the article claiming to govern it was flagged. The architectural mistake was human/agent authoring error: a specialized leaf game article claimed ownership over transversal platform files.
+- **Corrected remediation specification**:
+  1. **Documentation invariant**: document in `SCHEMA.md` and curation guides that transversal infrastructure files (`style.css`, `app.js`, `sound.js`) belong strictly to platform/umbrella architecture articles (`multigame-platform.md`), not individual leaf features.
+  2. **Sibling overlap heuristic (`lint_organizational.py`)**: add an advisory check `shared_target_in_leaf_article` (severity: info) alerting when multiple sibling leaf articles claim the same root workspace file without declaring `supersedes` or `allow_overlapping_governance`.
+  3. **Testbed alignment**: in `/tmp/test-wiki`, scope `architecture/roulette-engine.md` strictly to `js/engine.js`, `js/wheel.js`, and `js/test-engine.js`.
 
 ---
 
-### BUG-002: Rigid `article_not_atomic` H2 threshold and missing code-fence masking
-* **Severity:** Moderate (`WARN: Article has X H2 sections (max recommended: 7)`).
-* **Location:** `src/brain79/core/lint_organizational.py:251` (`check_article_atomicity`).
-* **Symptom:** Structured reference documents, checklists, or topic outlines (e.g., `topics/checklist-investigacion-libro.md` with 9 short H2 sections) trigger `article_not_atomic` warnings despite being concise and well-organized.
-* **Deep-Dive Root Cause:**
-  1. **Unmasked Code Fences:** `check_article_atomicity` counts `line.startswith("## ")` on raw `content.splitlines()` *without* calling `_mask_code_fences(content)`. Markdown examples inside ```` ```markdown ```` blocks falsely inflate the H2 count.
-  2. **Context-Blind Threshold:** A flat limit of `> 7` H2 sections penalizes short, structured checklists, roadmaps, backlogs, and `general` profile `topic` outlines that use H2 headers to group compact bullet items.
-* **Exact Remediation:**
-  1. Mask code fences via `_mask_code_fences(content)` before counting `## ` headings in `check_article_atomicity`.
-  2. Apply a composite heuristic:
-     - Exempt compact articles (`len(lines) <= 150`) from `article_not_atomic` unless H2 count exceeds `12`.
-     - For checklist/reference/roadmap/backlog articles (detected via filename/tags containing `checklist`, `roadmap`, `backlog`, `glossary`, or body containing $\ge 5$ task checkboxes `- [ ]` / `- [x]`), raise the maximum recommended H2 threshold from `7` to `15`.
-     - For standard prose articles (`> 150` lines), raise the threshold from `7` to `10` H2 sections.
+### BUG-005: Architectural decision deficit heuristic (advisory, non-blocking)
+- **Severity**: medium (advisory).
+- **Locations**: `src/brain79/core/lint_organizational.py`, `src/brain79/core/orient.py`, `src/brain79/core/curate.py`.
+- **Symptom**: despite implementing five distinct games, shared localStorage state, Web Audio API synthesis, and mathematical payout models, `.brain-79/decisions/` in `/tmp/test-wiki` remained 100% empty (0 ADRs).
+- **Forensic root cause & adversarial boundaries**:
+  LLM agents naturally prioritize features and changelogs because they map directly to prompt requests, while architectural decisions are treated as implicit implementation details. However, flagging this as a `warning` in `lint_organizational.py` would cause `brain79 lint --strict` to exit with code 1, which would break small initial projects or early migrations that legitimately have 0 ADRs.
+- **Corrected remediation specification**:
+  1. **Non-blocking info check (`lint_organizational.py`)**: emit rule `architectural_decision_deficit` strictly with `severity: info` (never warning or critical) when a software wiki has $\ge 3$ features or architecture articles but 0 active ADRs.
+  2. **Advisory agent prompt (`orient.py`, `curate.py`)**: render a prominent tip in `brain79_orient()` and curation summaries reminding agents to record architectural decisions when multiple new subsystems are created.
 
 ---
 
-## 2. Agent behavioral inefficiencies and protocol alignment
-
-### INEF-001: Redundant `brain79_write` $\rightarrow$ `brain79_navigate` $\rightarrow$ `brain79_index` loop
-* **Observed Waste:** 8 redundant tool calls across 4 turns.
-* **Deep-Dive Root Cause:**
-  1. `brain79_write`, `brain79_edit`, and `brain79_write_many` already execute `regenerate_index_navigation()` atomically under lock.
-  2. However, their return string is simply `Written: <path> · lint OK`. Because the receipt does not mention that `INDEX.md` was already updated, and because `AGENTS.md` (and `~/.pi/agent/AGENTS.md`) contained legacy instructions saying *"after writing articles, run brain79 navigate --regenerate"*, the agent dutifully called `navigate` and `index` after every single write.
-* **Exact Remediation:**
-  1. **Self-Documenting Tool Receipts (`src/brain79/server.py`):** Update the return message of `brain79_write`, `brain79_edit`, and `brain79_write_many` to:
-     `Written: <path> · INDEX.md auto-synced · lint OK`
-  2. **Tool Docstring Clarification (`src/brain79/server.py`):** Update `brain79_navigate` docstring to state: *"Note: brain79_write, brain79_edit, brain79_write_many, and brain79_session_commit automatically sync INDEX.md. Only call brain79_navigate(regenerate=True) after manual filesystem edits outside MCP."*
-  3. **Remove Misleading Instruction in `AGENTS.md`:** In `src/brain79/templates/AGENTS.md`, `./AGENTS.md`, and `~/.pi/agent/AGENTS.md`, clarify that `navigate --regenerate` is only for manual/CLI bulk fixes, never after MCP writes.
+### BUG-006: Source code coverage gap detection (uncovered source files)
+- **Severity**: medium.
+- **Locations**: `src/brain79/core/lint_organizational.py`, `src/brain79/core/init_project.py` (Phase 7 doctor).
+- **Symptom**: in `/tmp/test-wiki`, core game engines (`js/blackjack-engine.js`, `js/slots-engine.js`) were unanchored—not claimed by the `applies_to` frontmatter of any feature or architecture article.
+- **Forensic root cause & rejection of antipattern**:
+  The initial proposal to enforce 1:1 filename matching between `product/<slug>.md` and `features/<slug>.md` is an antipattern and was rejected. A software repository frequently has 1 high-level vision document (`product/overview.md`) covering 10 distinct technical features (as in Brain-79 itself). The real metric is **source code coverage**.
+- **Corrected remediation specification**:
+  1. **Uncovered source files check (`uncovered_source_files`)**: integrate with Phase 7 `brain79 doctor` to scan the workspace against the union of all `applies_to` targets.
+  2. Flag unanchored source code files so agents are prompted to bind them to governing architecture or feature articles, maintaining 100% code governance coverage without artificial 1:1 naming constraints.
 
 ---
 
-### INEF-002: Skipping `brain79_orient` in favor of `brain79_index` + `brain79_read("SCHEMA.md")`
-* **Observed Waste:** Multiple sequential cold-start calls instead of 1 turn.
-* **Deep-Dive Root Cause:**
-  1. **Contradictory Prompt & Tool Docstring:** The global `~/.pi/agent/AGENTS.md` (line 49) and the docstring of `brain79_index()` in `src/brain79/server.py` (line 55) both say: *"Always call this first at the start of a session"*, directly contradicting `brain79_orient()`.
-  2. **Missing Schema Summary in `orient()`:** When `brain79_orient()` is called on a fresh or general-profile wiki without matching articles, it returns `INDEX.md` and `handoffs/`, but does not summarize the active ontology profile (`software` vs `general`) and valid directories/required fields. This forces the agent to make an extra call to `brain79_read("SCHEMA.md")` or `brain79_schema()`.
-* **Exact Remediation:**
-  1. **Compact Active Schema Header in `orient()` (`src/brain79/core/orient.py`):** Include a concise `## 📐 Active Schema Summary` section in `orient()` output listing the active profile (`software` or `general`) and each directory's `type` and `required` fields (5–8 lines).
-  2. **Fix `brain79_index` Docstring (`src/brain79/server.py`):** Change docstring to: *"Return INDEX.md routing table only. For session cold start, prefer `brain79_orient` which loads index, schema summary, latest handoff, and governing articles in a single call."*
-  3. **Sync Global `~/.pi/agent/AGENTS.md`:** Update rule 1 in `~/.pi/agent/AGENTS.md` from `brain79_index()` to `brain79_orient()`.
+### BUG-007: Frontmatter summary casing normalization and changelog slug standard
+- **Severity**: minor / polish (pre-merge resolution).
+- **Locations**: `src/brain79/core/frontmatter.py`, `src/brain79/core/validation.py`.
+- **Symptom**:
+  1. Agents authoring frontmatter frequently supply `summary: Arquitectura...` (capitalized). When rendered in `INDEX.md` after the em-dash (`- [Title](path) — Summary`), it violates sentence case governance.
+  2. Changelogs in `/tmp/test-wiki` were created as `1.1.0.md` instead of the kebab-case standard `v1-1-0.md`.
+- **Pre-merge resolution & implementation**:
+  1. **Implemented in `src/brain79/core/frontmatter.py`**: `sanitize_summary()` now normalizes the initial word to lowercase using `_SAFE_LOWERCASE_AFTER_COLON` vocabulary and common domain nouns, while strictly preserving acronyms (`CLI`, `MCP`, `ADR`, `RTP`) and proper nouns.
+  2. **Unit tests added in `tests/test_frontmatter.py`**: verified sentence case conversion, acronym preservation, and whitespace sanitization.
+  3. Changelog slug format `v<semver>.md` scheduled for validation check in follow-up tranche.
 
 ---
 
-### INEF-003 (corrected): On-demand handoff policy (preventing per-turn handoff spam)
-* **Initial Misdiagnosis in Forensics:** The prior forensic note flagged the absence of a `handoff_write` at the end of an interactive turn as an error.
-* **Architectural Policy Decision (User-Governed Handoffs):**
-  Handoffs (`brain79_handoff_write` or the `handoff` field in `brain79_session_commit`) **MUST NOT** be executed automatically at the end of every conversational turn. In a 20-turn interactive session, writing a handoff after each turn would pollute `.brain-79/handoffs/` with 20 redundant snapshots and waste thousands of output tokens.
-* **Enforced Rules for Handoffs & Session Commits:**
-  1. **Interactive Human-in-the-Loop Sessions:**
-     - During normal turns, the agent updates wiki articles directly (`brain79_write`, `brain79_edit`, or `brain79_session_commit` *without* the `handoff` payload) when concrete project knowledge changes.
-     - The agent **ONLY** writes a handoff (`brain79_handoff_write` or `brain79_session_commit(handoff=...)`) when **explicitly requested by the user** (e.g., *"save handoff"*, *"wrap up session"*, *"close session"*, *"haz handoff"*).
-  2. **Autonomous / Headless Sub-Agent Sessions:**
-     - When an autonomous worker agent (with no human in the loop) is spawned to execute a bounded task and terminate its process/context window, it writes a single handoff right before terminating to hand over state to the next agent or human.
-* **Exact Remediation:**
-  - Explicitly codify this **On-Demand Handoff Rule** in `src/brain79/templates/AGENTS.md`, `./AGENTS.md`, `~/.pi/agent/AGENTS.md`, and in the docstrings of `brain79_handoff_write` and `brain79_session_commit` in `src/brain79/server.py`.
+## 2. Historical remediations (archived Phase 5.5 / 6)
 
----
-
-### INEF-004: Post-mutation broken link detection in inline health checks
-* **Observed Issue:** Individual article writes reported `lint OK`, leaving a broken link in `SCHEMA.md` unnoticed until a full `brain79 lint` was run.
-* **Deep-Dive Root Cause:**
-  `check_file_health()` in `src/brain79/core/wiki.py` checks H1 presence, leakage rules, and broken links *inside the written file*, which is fast and O(1). However, `SCHEMA.md` was broken at `init` time (`BUG-001`), not during `write`. Once `BUG-001` is fixed and `check_file_health` validates outgoing links from any written/edited file, inline health checks remain fast while catching broken links immediately on write.
-
----
-
-## 3. Implementation checklist (pre-Phase 6 bugfix and protocol polish)
-
-1. **`src/brain79/templates/SCHEMA_GENERAL.md` & `SCHEMA.md`:** Fix root backlink to `[← Volver al Índice](INDEX.md)`.
-2. **`src/brain79/core/frontmatter.py`:** Ensure `normalize_backlink_footer` normalizes `](../INDEX.md)` to `](INDEX.md)` for root-level files (`len(parts) == 1`).
-3. **`src/brain79/core/lint_organizational.py`:** Mask code fences in `check_article_atomicity` and apply the composite H2 threshold (10 for prose >150 lines, 15 for checklists/roadmaps/compact outlines).
-4. **`src/brain79/core/orient.py`:** Add the compact `## 📐 Active Schema Summary` block so cold-start orientation includes valid directories and required fields in 1 call.
-5. **`src/brain79/server.py`:**
-   - Update `brain79_write`, `brain79_edit`, and `brain79_write_many` receipts to include `· INDEX.md auto-synced · lint OK`.
-   - Update docstrings on `brain79_index`, `brain79_navigate`, `brain79_handoff_write`, and `brain79_session_commit` (enforcing the **On-Demand Handoff Policy**).
-6. **`src/brain79/templates/AGENTS.md`, `./AGENTS.md`, & `~/.pi/agent/AGENTS.md`:** Align cold-start (`brain79_orient`), auto-synced navigation, and the **On-Demand Handoff Policy**.
-7. **Tests:** Add regression tests for `init --profile general` + `lint --strict`, checklist H2 atomicity exemptions, and `orient` active schema summary.
+The following historical issues were fully resolved and verified in prior milestones:
+- **BUG-001 (Resolved)**: root backlink normalization and broken link in `SCHEMA_GENERAL.md`.
+- **BUG-002 (Resolved)**: composite H2 atomicity thresholds and code fence masking in `lint_organizational.py`.
+- **INEF-001 (Resolved)**: self-documenting tool receipts eliminating redundant `write` $\rightarrow$ `navigate` $\rightarrow$ `index` loops.
+- **INEF-002 (Resolved)**: active schema summary included in cold start `orient`.
+- **INEF-003 (Resolved)**: on-demand handoff policy codification preventing conversational handoff spam.
 
 ---
 

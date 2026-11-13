@@ -299,8 +299,81 @@ def write_article(
 
     rel_path_str = target.relative_to(w_root).as_posix()
     content = validate_article_content(
-        rel_path_str, content, force_skip=force_validation_skip, wiki_root=w_root
+        rel_path_str,
+        content,
+        force_skip=force_validation_skip,
+        check_workspace_targets=False,
+        wiki_root=w_root,
     )
+
+    is_special = (
+        rel_path_str in ("INDEX.md", "SCHEMA.md")
+        or rel_path_str.startswith("_raw/")
+        or rel_path_str.startswith("handoffs/")
+    )
+
+    # Single-file target check, anti-sprawl, and digest stamping
+    if not _skip_nav_regen and not is_special and not force_validation_skip:
+        from brain79.config import get_project_root
+        from brain79.core.drift import (
+            WorkspaceIndex,
+            compute_applies_to_manifest,
+            load_drift_manifest,
+            save_drift_manifest,
+        )
+        from brain79.core.frontmatter import (
+            INACTIVE_STATUSES,
+            PRE_IMPLEMENTATION_STATUSES,
+            dump_frontmatter,
+            parse_frontmatter,
+        )
+        from brain79.core.validation import check_anti_sprawl_overlap
+
+        p_root = (w_root.parent or get_project_root()).resolve()
+        ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs={rel_path_str: content})
+        meta, body = parse_frontmatter(content)
+
+        # Anti-sprawl check on new articles
+        if not target.exists():
+            check_anti_sprawl_overlap(meta, rel_path_str, wiki_root=w_root, workspace_index=ws_index)
+
+        status = str(meta.get("status", "")).lower()
+        stability = str(meta.get("stability", "")).lower()
+        non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+        is_strictly_active = status not in non_active and stability not in non_active
+
+        applies = meta.get("applies_to")
+        if applies:
+            patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
+            if is_strictly_active:
+                for pat in patterns:
+                    matches = ws_index.find_matching_files([pat])
+                    if not matches:
+                        raise ValidationError(
+                            rule="applies_to_target_missing",
+                            path=rel_path_str,
+                            message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
+                            actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
+                        )
+
+            master_digest, count, targets_map = compute_applies_to_manifest(
+                patterns,
+                p_root,
+                w_root,
+                exclude_self_path=rel_path_str,
+                workspace_index=ws_index,
+            )
+            if master_digest:
+                meta["applies_to_digest"] = master_digest
+                meta["applies_to_count"] = count
+                content = dump_frontmatter(meta, body)
+                manifest_data = load_drift_manifest(w_root)
+                manifest_data.setdefault("articles", {})[rel_path_str] = {
+                    "digest": master_digest,
+                    "count": count,
+                    "targets": targets_map,
+                }
+                save_drift_manifest(w_root, manifest_data)
 
     target.parent.mkdir(parents=True, exist_ok=True)
     lock = acquire_wiki_lock(w_root, rel_path_str, timeout=timeout)
@@ -511,30 +584,41 @@ def write_many_articles(
     articles: list[dict[str, str]],
     timeout: float = 5.0,
     force_validation_skip: bool = False,
+    wiki_root: Path | None = None,
 ) -> str:
     """Validate all articles in batch first; if all valid, write them atomically."""
+    import json
+    from brain79.config import get_project_root
+    from brain79.core.drift import WorkspaceIndex, compute_applies_to_manifest, load_drift_manifest, save_drift_manifest
+    from brain79.core.frontmatter import INACTIVE_STATUSES, PRE_IMPLEMENTATION_STATUSES, dump_frontmatter, parse_frontmatter
+
     if not articles:
         raise ValueError("articles list cannot be empty.")
 
-    wiki_root = get_wiki_root().resolve()
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    p_root = (w_root.parent or get_project_root()).resolve()
     validated_contents: list[tuple[str, str]] = []
     validation_errors: list[str] = []
 
-    # 1. Validation pass (all-or-nothing)
+    # 1. Validation pass (all-or-nothing schema check)
     for idx, item in enumerate(articles):
         p = item.get("path")
         c = item.get("content")
         if not p or c is None:
             raise ValueError(f"Article #{idx + 1} must have 'path' and 'content'.")
 
-        target = _safe_resolve(p, wiki_root=wiki_root)
+        target = _safe_resolve(p, wiki_root=w_root)
         if target.suffix != ".md":
             raise ValueError(f"write_many_articles requires .md paths, got {p}")
 
-        rel_path_str = target.relative_to(wiki_root).as_posix()
+        rel_path_str = target.relative_to(w_root).as_posix()
         try:
             val_c = validate_article_content(
-                rel_path_str, c, force_skip=force_validation_skip, wiki_root=wiki_root
+                rel_path_str,
+                c,
+                force_skip=force_validation_skip,
+                check_workspace_targets=False,
+                wiki_root=w_root,
             )
             validated_contents.append((rel_path_str, val_c))
         except ValidationError as exc:
@@ -551,26 +635,103 @@ def write_many_articles(
             actionable="Fix all validation errors listed above before re-submitting batch.",
         )
 
-    # 2. Write pass
-    written: list[str] = []
-    for rel_p, val_c in validated_contents:
-        write_article(
-            rel_p,
-            val_c,
-            timeout=timeout,
-            force_validation_skip=force_validation_skip,
-            _skip_nav_regen=True,
-            wiki_root=wiki_root,
-        )
-        written.append(rel_p)
+    # 2. Transaction lock + target check & digest stamping pass
+    tx_lock = acquire_wiki_lock(w_root, "_transaction.lock", timeout=timeout)
+    with tx_lock:
+        virtual_fs = {rel_p: val_c for rel_p, val_c in validated_contents}
+        ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=virtual_fs)
 
-    # 3. Single navigation regeneration at the end of the batch
-    try:
-        from brain79.core.navigation import regenerate_index_navigation
+        # Validate applies_to_target_missing and anti-sprawl overlap
+        from brain79.core.validation import check_anti_sprawl_overlap
+        for rel_p, val_c in validated_contents:
+            try:
+                meta, body = parse_frontmatter(val_c)
+                status = str(meta.get("status", "")).lower()
+                stability = str(meta.get("stability", "")).lower()
+                non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
 
-        regenerate_index_navigation(wiki_root)
-    except Exception:
-        pass
+                if not (w_root / rel_p).is_file():
+                    check_anti_sprawl_overlap(
+                        meta, rel_p, wiki_root=w_root, workspace_index=ws_index, overlay_fs=virtual_fs
+                    )
+
+                if status not in non_active and stability not in non_active:
+                    applies = meta.get("applies_to")
+                    if applies:
+                        patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
+                        for pat in patterns:
+                            matches = ws_index.find_matching_files([pat])
+                            if not matches:
+                                raise ValidationError(
+                                    rule="applies_to_target_missing",
+                                    path=rel_p,
+                                    message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
+                                    actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
+                                )
+            except ValidationError:
+                raise
+            except Exception:
+                pass
+
+        # Stamp digests in virtual_fs and manifest_staging (2 iterations for fixed-point convergence)
+        manifest_data = load_drift_manifest(w_root)
+        manifest_staging = json.loads(json.dumps(manifest_data))
+        manifest_staging.setdefault("articles", {})
+
+        for _ in range(2):
+            for rel_p in list(virtual_fs.keys()):
+                val_c = virtual_fs[rel_p]
+                try:
+                    meta, body = parse_frontmatter(val_c)
+                    applies = meta.get("applies_to")
+                    if applies:
+                        patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
+                        master_digest, count, targets = compute_applies_to_manifest(
+                            patterns,
+                            p_root,
+                            w_root,
+                            exclude_self_path=rel_p,
+                            overlay_fs=virtual_fs,
+                            workspace_index=ws_index,
+                        )
+                        if master_digest:
+                            meta["applies_to_digest"] = master_digest
+                            meta["applies_to_count"] = count
+                            manifest_staging["articles"][rel_p] = {
+                                "digest": master_digest,
+                                "count": count,
+                                "targets": targets,
+                            }
+                            val_c = dump_frontmatter(meta, body)
+                            virtual_fs[rel_p] = val_c
+                except Exception:
+                    pass
+
+        final_contents: list[tuple[str, str]] = [(rel_p, virtual_fs[rel_p]) for rel_p, _ in validated_contents]
+
+        # Save drift manifest
+        save_drift_manifest(w_root, manifest_staging)
+
+        # 3. Write pass
+        written: list[str] = []
+        for rel_p, val_c in final_contents:
+            write_article(
+                rel_p,
+                val_c,
+                timeout=timeout,
+                force_validation_skip=force_validation_skip,
+                _skip_nav_regen=True,
+                wiki_root=w_root,
+            )
+            written.append(rel_p)
+
+        # 4. Navigation regeneration
+        try:
+            from brain79.core.navigation import regenerate_index_navigation
+
+            regenerate_index_navigation(w_root)
+        except Exception:
+            pass
 
     return f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced · lint OK"
 

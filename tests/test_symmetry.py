@@ -26,3 +26,26 @@ async def test_mcp_cli_symmetry() -> None:
             res = mcp.close()
             if hasattr(res, "__await__"):
                 await res
+
+
+def test_session_commit_parameter_symmetry() -> None:
+    """SLA-2: verified_articles and allow_partial_ripple maintain 100% parameter parity across MCP, core, and CLI."""
+    import inspect
+    from brain79.server import brain79_session_commit
+    from brain79.core.session_commit import commit_session
+
+    mcp_sig = inspect.signature(brain79_session_commit)
+    core_sig = inspect.signature(commit_session)
+
+    # 1. MCP tool parameter inspection
+    assert "verified_articles" in mcp_sig.parameters, "MCP brain79_session_commit must expose verified_articles"
+    assert "allow_partial_ripple" in mcp_sig.parameters, "MCP brain79_session_commit must expose allow_partial_ripple"
+    assert mcp_sig.parameters["allow_partial_ripple"].default is False
+    assert mcp_sig.parameters["verified_articles"].default is None
+
+    # 2. Core commit_session parameter inspection
+    assert "verified_articles" in core_sig.parameters, "Core commit_session must accept verified_articles"
+    assert "allow_partial_ripple" in core_sig.parameters, "Core commit_session must accept allow_partial_ripple"
+    assert core_sig.parameters["allow_partial_ripple"].default is False
+    assert core_sig.parameters["verified_articles"].default is None
+

@@ -16,8 +16,8 @@ Violations will be rejected at write time and reported by the linter.
 | `INDEX.md` | `navigation` | `type`, `last_updated` | — | Automated routing table only (no freeform prose) |
 | `handoffs/` | `handoff` | `type`, `session_type`, `previous_ref`, `last_updated` | `session_type`: feature, bugfix, research, brainstorming, architecture, refactor, maintenance, work, general, writing, analysis | Immutable session handoffs |
 | `product/` | `product` | `type`, `summary`, `last_updated` | — | Vision, domain, personas |
-| `architecture/` | `architecture` | `type`, `summary`, `stability`, `last_updated` | `stability`: experimental, stable, legacy | Stack, patterns, topology |
-| `features/` | `feature` | `type`, `summary`, `status`, `version`, `last_updated` | `status`: planned, in_progress, shipped, deprecated, legacy | Feature documentation |
+| `architecture/` | `architecture` | `type`, `summary`, `stability`, `last_updated` | `stability`: experimental, stable, archived, legacy | Stack, patterns, topology |
+| `features/` | `feature` | `type`, `summary`, `status`, `version`, `last_updated` | `status`: planned, in_progress, shipped, deprecated, archived, legacy | Feature documentation |
 | `decisions/` | `decision` | `type`, `summary`, `status`, `date`, `deciders`, `last_updated` | `status`: proposed, accepted, superseded, rejected, legacy | Architectural Decision Records |
 | `changelog/` | `changelog` | `type`, `summary`, `version`, `date`, `last_updated` | — | Versioned changes |
 | `topics/` | `topic` | `type`, `summary`, `last_updated` | `status`: active, archived, draft, legacy | Research, benchmarks, domain analysis |
@@ -26,14 +26,14 @@ Violations will be rejected at write time and reported by the linter.
 
 ### Frontmatter templates
 
-Optional fields accepted across types: `supersedes`, `related`, `owner` (plus `summary` on `navigation` and `handoff`).
+Optional fields accepted across types: `supersedes`, `related`, `owner`, `applies_to`, `applies_to_digest`, `applies_to_count`, `allow_overlapping_governance` (plus `summary` on `navigation` and `handoff`).
 
 ```yaml
 # Feature (features/*.md)
 ---
 type: feature
 summary: one-line summary for INDEX.md entry
-status: planned  # planned | in_progress | shipped | deprecated | legacy
+status: planned  # planned | in_progress | shipped | deprecated | archived | legacy
 version: 1.0.0
 last_updated: YYYY-MM-DD
 ---
@@ -52,7 +52,7 @@ last_updated: YYYY-MM-DD
 ---
 type: architecture
 summary: one-line summary of subsystem or pattern
-stability: experimental  # experimental | stable | legacy
+stability: experimental  # experimental | stable | archived | legacy
 last_updated: YYYY-MM-DD
 ---
 

@@ -8,9 +8,11 @@ Combines:
 """
 
 from pathlib import Path
+import subprocess
 
-from brain79.config import get_wiki_root
+from brain79.config import get_project_root, get_wiki_root
 from brain79.core.context import rank_context_articles
+from brain79.core.frontmatter import parse_frontmatter
 from brain79.core.handoff import (
     HANDOFF_ESCALATION_AGE_DAYS,
     HANDOFF_ESCALATION_COMMITS,
@@ -19,7 +21,10 @@ from brain79.core.handoff import (
 )
 from brain79.core.handoff_freshness import compute_handoff_freshness
 from brain79.core.locks import normalize_posix_input
+from brain79.core.navigation import extract_title_and_summary
 from brain79.core.wiki import get_index, read_article
+
+MAX_ORIENT_INLINE_CHARS = 64_000
 
 
 def orient(
@@ -41,6 +46,7 @@ def orient(
         Structured markdown combining navigation, handoff state, and governing articles.
     """
     w_root = (wiki_root or get_wiki_root()).resolve()
+    p_root = (w_root.parent if w_root.parent.exists() else get_project_root()).resolve()
 
     sections: list[str] = [
         "# Brain-79 — Session Cold Start Orientation",
@@ -72,10 +78,14 @@ def orient(
 
     sections.extend(["", "---", ""])
 
+    # Operation-scoped WorkspaceIndex (built once per orient invocation)
+    from brain79.core.drift import WorkspaceIndex, detect_all_drift
+    ws = WorkspaceIndex.build(p_root, w_root)
+
     # 3. Latest Handoff
     try:
         target_handoff = _resolve_handoff_path("latest", wiki_root=w_root)
-        freshness = compute_handoff_freshness(target_handoff, wiki_root=w_root)
+        freshness = compute_handoff_freshness(target_handoff, wiki_root=w_root, workspace_index=ws)
         handoff_content, has_promotion_pending = read_handoff(
             "latest",
             wiki_root=w_root,
@@ -117,13 +127,94 @@ def orient(
         ])
 
     # 3. Governing Knowledge Articles (3-Signal Ranker)
-    if task or paths:
+    p_root = (w_root.parent if w_root.parent.exists() else get_project_root()).resolve()
+
+    # Unconditional Git working-tree path discovery (even when task=None, paths=None)
+    discovered_paths: list[str] = []
+    try:
+        res = subprocess.run(
+            ["git", "-c", "core.quotepath=false", "status", "--porcelain=v1", "-z"],
+            cwd=str(p_root),
+            capture_output=True,
+            check=False,
+            timeout=2.0,
+        )
+        if res.returncode == 0 and res.stdout:
+            raw_entries = res.stdout.split(b"\x00")
+            idx = 0
+            while idx < len(raw_entries):
+                entry_bytes = raw_entries[idx]
+                idx += 1
+                if not entry_bytes:
+                    continue
+                entry_str = entry_bytes.decode("utf-8", errors="replace")
+                if len(entry_str) >= 4 and entry_str[2] == " ":
+                    xy = entry_str[:2]
+                    p_str = entry_str[3:]
+                    norm_p = normalize_posix_input(p_str).lstrip("/")
+                    if norm_p and norm_p not in discovered_paths and not norm_p.startswith(".brain-79/"):
+                        discovered_paths.append(norm_p)
+                    if "R" in xy or "C" in xy:
+                        if idx < len(raw_entries) and raw_entries[idx]:
+                            orig_bytes = raw_entries[idx]
+                            idx += 1
+                            orig_str = orig_bytes.decode("utf-8", errors="replace")
+                            norm_orig = normalize_posix_input(orig_str).lstrip("/")
+                            if norm_orig and norm_orig not in discovered_paths and not norm_orig.startswith(".brain-79/"):
+                                discovered_paths.append(norm_orig)
+                    if len(discovered_paths) >= 50:
+                        break
+    except Exception:
+        discovered_paths = []
+
+    effective_paths: list[str] = []
+    if paths:
+        for p in paths:
+            clean_p = normalize_posix_input(p).lstrip("/")
+            if clean_p and clean_p not in effective_paths:
+                effective_paths.append(clean_p)
+    for dp in discovered_paths:
+        if dp not in effective_paths:
+            effective_paths.append(dp)
+
+    # Unconditional Drift Detection across entire wiki (Pilar 6.1)
+    all_drifts = detect_all_drift(wiki_root=w_root, project_root=p_root, workspace_index=ws)
+
+    seen_drifts: set[tuple[str, str, str]] = set()
+    drift_alerts: list[str] = []
+    for d in all_drifts:
+        art_path = d.get("article_path", "")
+        ws_file = d.get("workspace_file", d.get("target_file", ""))
+        kind = d.get("drift_kind", "modified").upper()
+        key = (art_path, ws_file, kind)
+        if key not in seen_drifts:
+            seen_drifts.add(key)
+            tag = "[TRANSITIVE]" if kind == "TRANSITIVE" else "[DIRECT]"
+            msg = d.get("message", f"governed file {ws_file} modified")
+            drift_alerts.append(
+                f"> ⚠️ **Documentation Drift Suspected** ({tag}): Article '{art_path}' governs '{ws_file}' "
+                f"({msg}). Verify accuracy before proceeding."
+            )
+
+    if drift_alerts:
+        sections.extend([
+            "",
+            "---",
+            "",
+            "## ⚠️ Documentation Drift Alerts",
+            *drift_alerts,
+            "",
+            "> **Action**: Update drifted articles via `brain79_edit`/`brain79_write`, or pass eligible "
+            "internal leaf code refactors in `verified_articles=[{\"path\": \"...\", \"reason\": \"...\"}]` "
+            "during `brain79_session_commit`.",
+        ])
+
+    if task or effective_paths:
         sections.extend(["", "---", "", "## 📖 Governing Knowledge Articles"])
         effective_max = max(1, max_articles) if max_articles > 0 else 4
-        norm_paths = [normalize_posix_input(p).lstrip("/") for p in paths] if paths else None
         ranked = rank_context_articles(
             task=task,
-            paths=norm_paths,
+            paths=effective_paths if effective_paths else None,
             top_n=effective_max,
             wiki_root=w_root,
         )
@@ -131,30 +222,10 @@ def orient(
         if not ranked:
             sections.append("No specific governing articles matched the task or paths.")
         else:
-            # Check documentation drift for inlined governing articles
-            from brain79.core.drift import check_article_drift
-
-            seen_drifts: set[tuple[str, str]] = set()
-            for _, article_p, _ in ranked:
-                try:
-                    drifts = check_article_drift(article_p, wiki_root=w_root)
-                    for d in drifts:
-                        key = (d["article_path"], d["workspace_file"])
-                        if key not in seen_drifts:
-                            seen_drifts.add(key)
-                            sections.append(
-                                f"> ⚠️ **Documentation Drift Suspected**: Article '{d['article_path']}' "
-                                f"governs '{d['workspace_file']}' (modified {d['file_date']}), but article was "
-                                f"last updated {d['article_date']}. Verify accuracy before proceeding."
-                            )
-                except Exception:
-                    pass
-
-            if seen_drifts:
-                sections.append("")
-
             inlined_count = 0
-            # Inline top candidates AND expanded 1-hop ADRs without truncation
+            manifest_articles: list[tuple[str, str, str, str]] = []
+            current_chars = sum(len(s) for s in sections)
+
             for score, article_p, reasons in ranked:
                 try:
                     rel_p = article_p.relative_to(w_root).as_posix()
@@ -162,17 +233,53 @@ def orient(
                         continue
                     content = read_article(rel_p, wiki_root=w_root)
                     reasons_str = ", ".join(reasons)
-                    sections.append(f"### === Article: {rel_p} ===")
-                    sections.append(f"*Relevance Score: {score:.1f} | Match Signals: {reasons_str}*")
-                    sections.append("")
-                    sections.append(content.strip())
-                    sections.append("")
-                    inlined_count += 1
+                    article_header = f"### === Article: {rel_p} ===\n*Relevance Score: {score:.1f} | Match Signals: {reasons_str}*\n\n"
+                    article_block = article_header + content.strip() + "\n\n"
+
+                    if manifest_articles or (current_chars + len(article_block) > MAX_ORIENT_INLINE_CHARS):
+                        meta, body = parse_frontmatter(content)
+                        summary = str(meta.get("summary") or "").strip()
+                        if not summary:
+                            _, summary = extract_title_and_summary(content)
+                        applies = meta.get("applies_to", [])
+                        applies_list = [str(x) for x in applies] if isinstance(applies, list) else ([str(applies)] if applies else [])
+                        applies_str = ", ".join(f"`{a}`" for a in applies_list) if applies_list else "*(none)*"
+
+                        h2_headers = [
+                            line.removeprefix("## ").strip()
+                            for line in body.splitlines()
+                            if line.strip().startswith("## ")
+                        ]
+                        h2_str = ", ".join(h2_headers) if h2_headers else "*(none)*"
+                        manifest_articles.append((rel_p, summary, applies_str, h2_str))
+                    else:
+                        sections.append(f"### === Article: {rel_p} ===")
+                        sections.append(f"*Relevance Score: {score:.1f} | Match Signals: {reasons_str}*")
+                        sections.append("")
+                        sections.append(content.strip())
+                        sections.append("")
+                        current_chars += len(article_block)
+                        inlined_count += 1
                 except Exception:
                     continue
 
-            if inlined_count == 0:
+            if inlined_count == 0 and not manifest_articles:
                 sections.append("No governing articles inlined.")
+
+            if manifest_articles:
+                sections.extend([
+                    "---",
+                    "",
+                    "## 🚨 Mandatory Reading Manifest (Must Read Before Editing)",
+                    "",
+                    "The governing context exceeds the 64,000-character inline budget. The following governing articles "
+                    "must be read using `brain79_read_batch(requests=[...])` before modifying code or documentation:",
+                    "",
+                ])
+                for rel_p, summary, applies_str, h2_str in manifest_articles:
+                    sections.append(f"- **`{rel_p}`**: {summary}")
+                    sections.append(f"  - **Governs (`applies_to`)**: {applies_str}")
+                    sections.append(f"  - **Key Sections**: {h2_str}")
 
     return "\n".join(sections)
 

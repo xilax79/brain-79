@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-05
+last_updated: 2026-11-12
 ---
 
 # Project index
@@ -13,18 +13,15 @@ last_updated: 2026-11-05
 ### Architecture
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
-- [Architecture — Defect backlog and agent efficiency deep dive](architecture/defect-backlog.md) — master defect backlog, forensic root-cause analysis, and specification for bug fixes, agent efficiency, and on-demand handoff policy
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — industrial-scale roadmap covering completed core protocol phases (0-6.6) and next-stage adoption and context guardrails (7-8)
+- [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — industrial-scale roadmap covering completed core protocol phases (0-6.7) and next-stage adoption and context guardrails (7-8)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
 ### Changelog
+- [Changelog — Historical internal development milestones (v1.0.0 through v2.0.2)](changelog/legacy-internal-releases.md) — historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration
 - [Changelog — Version 0.7.2 — Pre-GA semantic calibration](changelog/v0-7-2.md) — semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release
-- [Changelog — Version 1.0.0](changelog/v1.md) — initial production release of brain-79 with mechanical organizational enforcement and handoff continuity
-- [Changelog — Version 1.1.0 — Performance and session workflow optimization](changelog/v1-1.md) — performance and session workflow optimizations, partial edits, batch writes, and schema inspection
-- [Changelog — Version 2.0.0 — Two-call protocol and release governance](changelog/v2-0.md) — major release 2.0.0 introducing Two-Call Session Protocol, declarative ontologies, deterministic drift detection, and release governance
-- [Changelog — Version 2.0.1 — Purge obsolete integration fixture](changelog/v2-0-1.md) — remove obsolete legacy Truco Arena test fixture and decouple local development paths
-- [Changelog — Version 2.0.2 — Defect backlog and agent protocol polish](changelog/v2-0-2.md) — defect backlog remediations, composite H2 atomicity thresholds, root backlink normalization, and agent protocol efficiency
+- [Changelog — Version 0.8.0 — Transitive drift and ripple guards](changelog/v0-8-0.md) — Phase 6.7 release — Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification
 
 ### Decisions
 - [ADR-001 — Architecture — Dual-mode hybrid CLI and MCP server interface](decisions/adr-001-hybrid-cli.md) — dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server
@@ -46,15 +43,14 @@ last_updated: 2026-11-05
 - [ADR-017: Semantic versioning calibration for pre-GA maturation](decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md) — semantic versioning calibration to 0.7.2 for pre-GA maturation prior to public release
 
 ### Features
-- [Feature — Cross-platform portability and centralized lock isolation (Phase 6 specification)](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
+- [Feature — Cross-platform portability and centralized lock isolation](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
 - [Feature — FastMCP integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
-- [Feature — Handoff freshness, provenance, and authority decay (Phase 6.6)](features/handoff-freshness.md) — specification for Phase 6.6 — handoff freshness, provenance digests, authority decay, branch-aware resolution, and aging escalation
-- [Feature — Handoff purge operations](features/handoff-purge.md) — safe batch deletion of short-term handoffs with dry-run default guard and navigation registry cleanup
 - [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics (Phase 7 specification)](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
-- [Feature — Session knowledge triage, research persistence guard and handoff ergonomics (Phase 6.5)](features/session-triage-and-research-persistence.md) — specification for Phase 6.5 — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide,path prefix normalization, and handoff schema ergonomics
-- [Feature — Short-term handoff continuity](features/handoff-continuity.md) — tactical session transitions, immutable state snapshots, and anti-hallucination work tracking
+- [Feature — Session knowledge triage and research persistence](features/session-triage-and-research-persistence.md) — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics
+- [Feature — Short-term handoff continuity, freshness, and lifecycle operations](features/handoff-continuity.md) — tactical session transitions, freshness evaluation, authority decay, anti-hallucination work tracking, and operational purge
 - [Feature — Standalone CLI interface](features/cli.md) — deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
-- [Feature — Versioning and release governance (Phase 5 specification)](features/version-governance.md) — single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
+- [Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context (Phase 6.7)](features/transitive-drift-and-ripple-guards.md) — specification for Phase 6.7 — Merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
+- [Feature — Versioning and release governance](features/version-governance.md) — single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
 - [Feature — Wiki organizational enforcement](features/organizational-enforcement.md) — prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing
 
 ### Product

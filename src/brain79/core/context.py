@@ -252,16 +252,8 @@ def _safe_mtime_ns(p: Path) -> int:
 
 def _match_applies_to(path_pattern: str, target_path: str) -> bool:
     """Check if target_path matches an applies_to glob pattern or prefix (case-sensitive)."""
-    pat = path_pattern.strip().lstrip("/")
-    tgt = target_path.strip().lstrip("/")
-    if pat == tgt:
-        return True
-    if fnmatch.fnmatchcase(tgt, pat):
-        return True
-    # If pat is a directory without wildcard (e.g. "src/auth/"), match prefix
-    if pat.endswith("/") and tgt.startswith(pat):
-        return True
-    return False
+    from brain79.core.drift import match_applies_to_pattern
+    return match_applies_to_pattern(path_pattern, target_path)
 
 
 def _extract_paths_from_text(text: str) -> list[str]:
@@ -304,7 +296,7 @@ def rank_context_articles(
     Returns:
         List of tuples: (score, article_path, hit_reasons)
     """
-    from brain79.core.frontmatter import parse_frontmatter
+    from brain79.core.frontmatter import INACTIVE_STATUSES, parse_frontmatter
     from brain79.core.navigation import extract_title_and_summary, load_registry
 
     w_root = (wiki_root or get_wiki_root()).resolve()
@@ -331,20 +323,29 @@ def rank_context_articles(
         for p in snapshot:
             rel_str = p.relative_to(w_root).as_posix()
             entry = registry_by_path.get(rel_str)
+            meta: dict[str, Any] = {}
+            status = ""
+            stability = ""
+
+            try:
+                c = p.read_text(encoding="utf-8")
+                if c.startswith("---\n"):
+                    meta, _ = parse_frontmatter(c)
+                    status = str(meta.get("status", "")).lower()
+                    stability = str(meta.get("stability", "")).lower()
+            except Exception:
+                pass
+
+            # Exclude inactive articles from deterministic Signal 1 path boost
+            if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
+                continue
+
             applies_patterns: list[str] = []
             if entry and entry.get("applies_to"):
                 applies_patterns = entry.get("applies_to", [])
-            else:
-                # Direct check in frontmatter if not in registry
-                try:
-                    c = p.read_text(encoding="utf-8")
-                    if c.startswith("---\n"):
-                        meta, _ = parse_frontmatter(c)
-                        if meta and meta.get("applies_to"):
-                            val = meta["applies_to"]
-                            applies_patterns = [str(x) for x in val] if isinstance(val, list) else [str(val)]
-                except Exception:
-                    pass
+            elif meta and meta.get("applies_to"):
+                val = meta["applies_to"]
+                applies_patterns = [str(x) for x in val] if isinstance(val, list) else [str(val)]
 
             for pat in applies_patterns:
                 for target_p in normalized_paths:
@@ -441,8 +442,21 @@ def rank_context_articles(
         key=lambda item: (-item[0], item[1].relative_to(w_root).as_posix())
     )
 
+    # UNBOUNDED SIGNAL 1: Never truncate deterministic path matches by top_n
+    signal1_candidates = [
+        c for c in candidates
+        if any(r.startswith("path:") for r in c[2])
+    ]
+    signal2_only_candidates = [
+        c for c in candidates
+        if not any(r.startswith("path:") for r in c[2])
+    ]
+
+    effective_top_n = top_n if top_n > 0 else 4
+    remaining_slots = max(0, effective_top_n - len(signal1_candidates))
+    top_candidates = list(signal1_candidates) + signal2_only_candidates[:remaining_slots]
+
     # SIGNAL 3: 1-Hop ADR Reference Graph Expansion (Anti-Omission Guard)
-    top_candidates = candidates[:top_n]
     expanded_adrs: list[Path] = []
     already_selected = {p for _, p, _ in top_candidates}
 

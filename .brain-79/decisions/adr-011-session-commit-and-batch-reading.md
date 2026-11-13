@@ -14,7 +14,9 @@ related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-05
+last_updated: 2026-11-12
+applies_to_digest: "sha256:be6d2d586deafea2"
+applies_to_count: 4
 ---
 
 # ADR-011 — Two-call session protocol: 1-call atomic session commit and section-projected batch reading

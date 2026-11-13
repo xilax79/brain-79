@@ -252,6 +252,93 @@ def run_scenario_3() -> bool:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def run_scenario_4() -> bool:
+    print("\n" + "=" * 70)
+    print("▶ Scenario 4: Holistic ripple and drift gate verification (--profile software)")
+    print("=" * 70)
+
+    tmp = Path(tempfile.mkdtemp(prefix="b79-e2e-ripple-"))
+    try:
+        subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test Agent"], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "agent@example.com"], cwd=tmp, check=True, capture_output=True)
+
+        subprocess.run(
+            ["brain79", "init", "--profile", "software", "--no-git-hooks", "--project-root", str(tmp)],
+            check=True,
+            capture_output=True,
+        )
+
+        wiki = tmp / ".brain-79"
+        src_core = tmp / "src" / "core"
+        src_core.mkdir(parents=True, exist_ok=True)
+        (src_core / "auth.py").write_text("def authenticate(): return True\n", encoding="utf-8")
+
+        # Create leaf feature article
+        (wiki / "features").mkdir(exist_ok=True)
+        (wiki / "features" / "auth.md").write_text(
+            "---\ntype: feature\nsummary: Authentication service\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-11-12\napplies_to:\n  - src/core/auth.py\n---\n\n# Feature — Authentication\n\n## Overview\nAuth service details.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n",
+            encoding="utf-8",
+        )
+
+        # Create umbrella architecture article
+        (wiki / "architecture").mkdir(exist_ok=True)
+        (wiki / "architecture" / "overview.md").write_text(
+            "---\ntype: architecture\nsummary: Core system architecture\nstability: stable\nlast_updated: 2026-11-12\napplies_to:\n  - .brain-79/features/*.md\n  - src/core/*.py\n---\n\n# Architecture — Overview\n\n## Overview\nSystem architecture details.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n",
+            encoding="utf-8",
+        )
+
+        from brain79.core.migration import migrate_wiki
+        from brain79.core.navigation import regenerate_index_navigation
+        regenerate_index_navigation(wiki)
+        migrate_wiki(wiki, dry_run=False)
+
+        subprocess.run(["git", "add", "."], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "Initial baseline"], cwd=tmp, check=True, capture_output=True)
+
+        # Modify governed code file
+        (src_core / "auth.py").write_text(
+            "def authenticate(): return True\ndef verify_token(token: str) -> bool: return True\n",
+            encoding="utf-8",
+        )
+
+        prompt = (
+            "Orient yourself. We added token verification to src/core/auth.py. "
+            "Update the wiki and wrap up the session using session commit."
+        )
+
+        print(f"Running agent in {tmp.name} with model {MODEL}...")
+        t0 = time.time()
+        res = subprocess.run(
+            ["pi", "--mcp-project-servers", "allow", "--models", MODEL, "-p", prompt],
+            cwd=tmp,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        duration = time.time() - t0
+        print(f"Agent finished in {duration:.1f}s (exit code {res.returncode})")
+
+        lint_res = subprocess.run(
+            ["brain79", "lint", "--strict", "--project-root", str(tmp)],
+            capture_output=True,
+            text=True,
+        )
+        assert lint_res.returncode == 0, f"Lint failed:\n{lint_res.stdout}"
+        print("Strict lint: [Status: OK]")
+
+        # Check zero-retry MCP metric
+        session_file = find_latest_session_for_dir(tmp)
+        if session_file:
+            failures = check_mcp_zero_retry(session_file)
+            assert not failures, "Zero-retry violation in brain79 MCP calls:\n" + "\n".join(failures)
+            print("Zero-Retry MCP Metric: ✅ PASS (0 tool errors/retries)")
+
+        return True
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main() -> int:
     print("=" * 70)
     print(f"🚀 Brain-79 Pre-Merge E2E Smoke Suite (Agent: pi | Model: {MODEL})")
@@ -260,8 +347,9 @@ def main() -> int:
     try:
         run_scenario_1()
         run_scenario_3()
+        run_scenario_4()
         print("\n" + "=" * 70)
-        print("🎉 ALL 3 PRE-MERGE E2E SCENARIOS PASSED WITH ZERO MCP RETRIES!")
+        print("🎉 ALL 4 PRE-MERGE E2E SCENARIOS PASSED WITH ZERO MCP RETRIES!")
         print("=" * 70)
         return 0
     except Exception as exc:

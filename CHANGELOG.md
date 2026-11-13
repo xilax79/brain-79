@@ -4,12 +4,24 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
-## [0.7.2] - 2026-11-05
+## [0.8.0] - 2026-11-12
+
+### Added
+- **Phase 6.7: Transitive drift, Merkle leaf manifest, and Hard Session Ripple Gate**:
+  - Merkle leaf manifest (`.drift_manifest.json`) recording exact per-file modified, added, and deleted drift attribution with 64 KB chunk streaming and CRLF/BOM normalization.
+  - Multi-hop DAG transitive drift propagation with cycle-immune memoized recursive upward propagation.
+  - 4-phase transaction commit pipeline in `session_commit` and `write_many_articles` wrapped in outer `_transaction.lock`.
+  - Pass 2d Hard Session Ripple Gate (`unresolved_session_ripple`) rejecting incomplete commits that leave impacted umbrella or governing articles drifted.
+  - AST Guard C public signature verification using Python `ast` to detect public signature changes while allowing private helper refactors.
+  - Anti-Sprawl Guard (`duplicate_governance_target`) blocking redundant article creation when governed code targets are already subsumed.
+  - Unbounded Signal 1 context ranker in `rank_context_articles` returning all governing articles without `top_n` truncation.
+  - Golden Blueprint reconditioning: anchored 100% of `src/brain79/**/*.py` across 16 canonical articles, consolidated handoff features into `features/handoff-continuity.md`, archived defect backlog, and verified zero drift across the entire workspace.
+
 
 ### Changed
 - **Pre-GA Semantic Versioning Calibration**: Recalibrated package versioning from `2.0.2` to `0.7.2` to strictly reflect pre-release maturation status according to SemVer 2.0.0 §4 prior to public PyPI distribution.
 - Preserves all architectural features from Phases 0 through 6.6 (Two-Call protocol, deterministic drift detection, FastMCP symmetry, and handoff authority decay).
-- Aligns release roadmap: Phase 7 will release `0.8.0`, Phase 8 will release `0.9.0`, leading to `1.0.0` General Availability (GA).
+- Aligns release roadmap: Phase 6.7 releases `0.8.0`, Phase 7 releases `0.9.0`, Phase 8 releases `0.10.0`, leading to `1.0.0` General Availability (GA).
 
 ### Added
 - **Phase 6.6: Handoff freshness, provenance, and authority decay (ADR-016)**:

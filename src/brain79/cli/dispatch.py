@@ -893,6 +893,8 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             lines.append(f"- **Written Articles ({len(receipt['written_articles'])})**: {', '.join(f'`{a}`' for a in receipt['written_articles'])}")
         if receipt.get("edited_articles"):
             lines.append(f"- **Edited Articles ({len(receipt['edited_articles'])})**: {', '.join(f'`{a}`' for a in receipt['edited_articles'])}")
+        if receipt.get("verified_articles"):
+            lines.append(f"- **Verified Articles ({len(receipt['verified_articles'])})**: {', '.join(f'`{a}`' for a in receipt['verified_articles'])}")
         if receipt.get("handoff_path"):
             lines.append(f"- **Session Handoff**: `{receipt['handoff_path']}`")
         lines.append(f"- **Inline Health**: `{receipt.get('health_status', 'ok')}`")

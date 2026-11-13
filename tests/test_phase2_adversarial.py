@@ -172,6 +172,10 @@ Manage authors and verify authentic books.
 
 def test_defect_5_task_mentioning_file_path_activates_signal_1(adversarial_wiki: Path) -> None:
     """Defect 5: Task mentioning a path (e.g. 'Fix bug in src/auth/jwt.py') activates Signal 1 without paths arg."""
+    src_dir = adversarial_wiki.parent / "src" / "auth"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "jwt.py").write_text("# jwt\n", encoding="utf-8")
+
     write_article(
         "architecture/token-spec.md",
         """---

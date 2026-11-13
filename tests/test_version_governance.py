@@ -137,3 +137,46 @@ def test_cli_subprocess_version() -> None:
     )
     assert proc.returncode == 0
     assert proc.stdout.strip() == f"brain79 {__version__}"
+
+
+def test_no_skewed_or_phantom_versions_in_governance_articles() -> None:
+    """Verify no active documentation or features declare phantom versions exceeding active package version."""
+    wiki_root = REPO_ROOT / ".brain-79"
+    pkg_parts = [int(x) for x in __version__.split(".")]
+
+    for md_file in wiki_root.rglob("*.md"):
+        rel_path = md_file.relative_to(wiki_root).as_posix()
+        # Changelogs and historical archives document past iterations
+        if rel_path.startswith("changelog/") or rel_path.startswith("_raw/"):
+            continue
+
+        content = md_file.read_text(encoding="utf-8")
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                try:
+                    meta = yaml.safe_load(parts[1])
+                except Exception:
+                    continue
+                if not isinstance(meta, dict):
+                    continue
+
+                status = str(meta.get("status", "")).lower()
+                version_str = meta.get("version")
+                if version_str and status == "shipped":
+                    v_str = str(version_str)
+                    if re.match(r"^\d+\.\d+\.\d+$", v_str):
+                        v_parts = [int(x) for x in v_str.split(".")]
+                        assert v_parts[0] == pkg_parts[0], (
+                            f"Article {rel_path} has version '{v_str}' with major '{v_parts[0]}', "
+                            f"mismatching package major '{pkg_parts[0]}' under ADR-017."
+                        )
+                        assert v_parts <= pkg_parts, (
+                            f"Shipped article {rel_path} declares future version '{v_str}' > '{__version__}'."
+                        )
+
+        # Assert no active architecture overview claims stale 'as of version 2.x'
+        if rel_path in ("architecture/current-state.md", "architecture/roadmap-industrial-scale.md"):
+            assert "version 2.1.0" not in content, f"{rel_path} still references stale version 2.1.0."
+            assert "as of version 2." not in content, f"{rel_path} still references stale 'as of version 2.'."
+

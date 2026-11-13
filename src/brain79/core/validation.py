@@ -84,6 +84,7 @@ def validate_article_content(
     content: str,
     force_skip: bool = False,
     wiki_root: Path | None = None,
+    check_workspace_targets: bool = True,
 ) -> str:
     """Validate article content before writing to disk.
 
@@ -195,7 +196,220 @@ def validate_article_content(
     validate_frontmatter(meta, rel_path, schema=active_s)
     validate_location_consistency(meta, rel_path, schema=active_s)
 
+    if check_workspace_targets and w_root and not (w_root / rel_path).exists():
+        check_anti_sprawl_overlap(meta, rel_path, wiki_root=w_root)
+
     return content
+
+
+SPRAWL_GUARD_TYPES: frozenset[str] = frozenset({
+    "feature",
+    "architecture",
+    "product",
+    "topic",
+    "context",
+})
+
+
+def check_anti_sprawl_overlap(
+    meta: dict[str, Any],
+    path: str,
+    wiki_root: Path | None = None,
+    workspace_index: Any | None = None,
+    overlay_fs: dict[str, str] | None = None,
+) -> None:
+    """Anti-Sprawl & Target Subsumption Guard on New Article Creation (AC-B2).
+
+    Prevents creating redundant articles that govern code targets already governed by
+    an active article of the exact same type, unless explicitly superseded or related.
+    """
+    declared_type = str(meta.get("type", "")).strip()
+    if declared_type not in SPRAWL_GUARD_TYPES:
+        return
+
+    if meta.get("allow_overlapping_governance") is True:
+        return
+
+    from brain79.core.frontmatter import INACTIVE_STATUSES, PRE_IMPLEMENTATION_STATUSES
+
+    status = str(meta.get("status", "")).lower()
+    stability = str(meta.get("stability", "")).lower()
+    if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
+        return
+
+    applies_val = meta.get("applies_to")
+    if not applies_val:
+        return
+
+    raw_patterns = (
+        [applies_val] if isinstance(applies_val, str) else [str(x) for x in applies_val if x]
+    )
+    if not raw_patterns:
+        return
+
+    from brain79.config import get_wiki_root
+    from brain79.core.drift import find_matching_workspace_files
+    from brain79.core.locks import normalize_wiki_rel_path, rel_posix
+
+    try:
+        w_root = (wiki_root or get_wiki_root()).resolve()
+    except Exception:
+        return
+
+    p_root = w_root.parent
+
+    # Dynamically extract known wiki directories from active schema
+    try:
+        from brain79.core.frontmatter import load_active_schema
+        active_schema = load_active_schema(w_root)
+        known_dirs = {prefix.split("/")[0] for prefix in active_schema.location_to_type.keys()}
+    except Exception:
+        known_dirs = {"decisions", "features", "architecture", "product", "topics", "context", "log", "changelog"}
+    known_dirs.add(".brain-79")
+
+    def _resolve_targets(pats: list[str]) -> set[str]:
+        code_pats = [
+            p.strip().lstrip("/")
+            for p in pats
+            if not any(
+                p.strip().lstrip("/").startswith(f"{d}/") or p.strip().lstrip("/") == d
+                for d in known_dirs
+            )
+        ]
+        if not code_pats:
+            return set()
+        matched: set[str] = set()
+        if workspace_index is not None and hasattr(workspace_index, "find_matching_files"):
+            matched = set(workspace_index.find_matching_files(code_pats))
+        elif p_root.exists():
+            for p in find_matching_workspace_files(code_pats, p_root):
+                try:
+                    matched.add(rel_posix(p, p_root))
+                except ValueError:
+                    pass
+        return matched if matched else set(code_pats)
+
+    t_new = _resolve_targets(raw_patterns)
+    if not t_new:
+        return
+
+    # Supersedes and related declarations on new article (normalized for .brain-79/ prefixes)
+    supersedes_raw = meta.get("supersedes")
+    supersedes_list = (
+        [supersedes_raw] if isinstance(supersedes_raw, str) else [str(x) for x in (supersedes_raw or []) if x]
+    )
+    supersedes_norm = {
+        normalize_wiki_rel_path(p).removesuffix(".md") for p in supersedes_list
+    } | {normalize_wiki_rel_path(p) for p in supersedes_list}
+
+    related_raw = meta.get("related")
+    related_list = (
+        [related_raw] if isinstance(related_raw, str) else [str(x) for x in (related_raw or []) if x]
+    )
+    related_norm = {
+        normalize_wiki_rel_path(p).removesuffix(".md") for p in related_list
+    } | {normalize_wiki_rel_path(p) for p in related_list}
+
+    rel_path_clean = normalize_wiki_rel_path(path)
+
+    # Collect existing and overlay candidate articles
+    candidates: list[tuple[str, dict[str, Any]]] = []
+
+    if overlay_fs:
+        for ov_path, ov_content in overlay_fs.items():
+            norm_ov = normalize_wiki_rel_path(ov_path)
+            if norm_ov == rel_path_clean or norm_ov in ("INDEX.md", "SCHEMA.md"):
+                continue
+            if norm_ov.startswith("_raw/") or norm_ov.startswith(".locks/"):
+                continue
+            try:
+                from brain79.core.frontmatter import parse_frontmatter
+                meta_ov, _ = parse_frontmatter(ov_content)
+                if meta_ov:
+                    candidates.append((norm_ov, meta_ov))
+            except Exception:
+                continue
+
+    overlay_paths = {c[0] for c in candidates}
+
+    for md_file in sorted(w_root.rglob("*.md")):
+        rel_e = md_file.relative_to(w_root).as_posix()
+        if rel_e == rel_path_clean or rel_e in ("INDEX.md", "SCHEMA.md"):
+            continue
+        if rel_e.startswith("_raw/") or rel_e.startswith(".locks/"):
+            continue
+        if rel_e in overlay_paths:
+            continue
+
+        try:
+            from brain79.core.frontmatter import parse_frontmatter
+            content_e = md_file.read_text(encoding="utf-8")
+            meta_e, _ = parse_frontmatter(content_e)
+            if meta_e:
+                candidates.append((rel_e, meta_e))
+        except Exception:
+            continue
+
+    non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+
+    # Scan candidate articles of the same type
+    for rel_e, meta_e in candidates:
+        if str(meta_e.get("type", "")).strip() != declared_type:
+            continue
+
+        status_e = str(meta_e.get("status", "")).lower()
+        stability_e = str(meta_e.get("stability", "")).lower()
+        if status_e in non_active or stability_e in non_active:
+            continue
+
+        applies_e = meta_e.get("applies_to")
+        if not applies_e:
+            continue
+
+        raw_patterns_e = (
+            [applies_e] if isinstance(applies_e, str) else [str(x) for x in applies_e if x]
+        )
+        t_e = _resolve_targets(raw_patterns_e)
+        if not t_e:
+            continue
+
+        intersection = t_new & t_e
+        if not intersection:
+            continue
+
+        rel_e_clean = rel_e.removesuffix(".md")
+        is_superseded = rel_e in supersedes_norm or rel_e_clean in supersedes_norm
+        is_related = rel_e in related_norm or rel_e_clean in related_norm
+
+        # Case 1 — Full Target Subsumption (T_new subset of T_E)
+        if t_new.issubset(t_e):
+            if is_superseded:
+                continue
+            overlapping_str = ", ".join(sorted(list(intersection))[:5])
+            if len(intersection) > 5:
+                overlapping_str += f" and {len(intersection) - 5} more"
+            raise ValidationError(
+                rule="duplicate_governance_target",
+                path=rel_path_clean,
+                message=f"Anti-sprawl guard: existing active article '{rel_e}' of type '{declared_type}' already governs {overlapping_str}.",
+                actionable=f"Use brain79_edit to update '{rel_e}' organically instead of creating a duplicate article, or declare 'supersedes: {rel_e}'.",
+            )
+
+        # Case 2 — Partial Target Overlap (Jaccard >= 0.65)
+        union = t_new | t_e
+        jaccard = len(intersection) / len(union)
+        if jaccard >= 0.65:
+            if is_superseded or is_related:
+                continue
+            overlapping_str = ", ".join(sorted(list(intersection))[:5])
+            if len(intersection) > 5:
+                overlapping_str += f" and {len(intersection) - 5} more"
+            raise ValidationError(
+                rule="duplicate_governance_target",
+                path=rel_path_clean,
+                message=f"Anti-sprawl guard: existing active article '{rel_e}' of type '{declared_type}' overlaps {len(intersection)} code targets ({int(jaccard * 100)}% Jaccard index: {overlapping_str}).",
+                actionable=f"Use brain79_edit to update '{rel_e}' organically, or declare 'supersedes: {rel_e}' or link '{rel_e}' in 'related'.",
+            )
 
 
 def extract_h2_headers(content: str) -> list[str]:
@@ -224,10 +438,11 @@ def check_missing_sections(
 
     # Exemption for inactive statuses
     try:
+        from brain79.core.frontmatter import INACTIVE_STATUSES, parse_frontmatter
         meta, _ = parse_frontmatter(content)
         status = str(meta.get("status", "")).lower()
         stability = str(meta.get("stability", "")).lower()
-        if status in ("superseded", "deprecated", "rejected", "archived", "legacy") or stability == "legacy":
+        if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
             return []
     except Exception:
         pass

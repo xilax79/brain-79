@@ -3,9 +3,17 @@ from pathlib import Path
 from typing import Any
 import uuid
 
+from brain79.config import get_project_root, get_wiki_root
+from brain79.core.drift import (
+    WorkspaceIndex,
+    compute_applies_to_manifest,
+    load_drift_manifest,
+    save_drift_manifest,
+)
 from brain79.core.frontmatter import (
     ActiveSchema,
     LOCATION_TO_TYPE,
+    dump_frontmatter,
     load_active_schema,
     normalize_backlink_footer,
     parse_frontmatter,
@@ -107,8 +115,20 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
     from brain79.core.navigation import register_article
 
     schema = load_active_schema(wiki_root)
+    p_root = (wiki_root.parent or get_project_root()).resolve()
     changes: list[str] = []
     skipped: list[str] = []
+
+    ws_index = WorkspaceIndex.build(p_root, wiki_root)
+    manifest_data = load_drift_manifest(wiki_root)
+    manifest_articles: dict[str, Any] = manifest_data.setdefault("articles", {})
+    manifest_purged = False
+
+    # Purge deleted articles from manifest
+    for p_art in list(manifest_articles.keys()):
+        if not (wiki_root / p_art).is_file():
+            del manifest_articles[p_art]
+            manifest_purged = True
 
     for md_file in sorted(wiki_root.rglob("*.md")):
         rel = md_file.relative_to(wiki_root)
@@ -137,6 +157,33 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
                 )
 
                 if meta and "type" in meta and not needs_summary_repair:
+                    # Check if applies_to_digest / manifest seeding is needed
+                    applies = meta.get("applies_to")
+                    needs_digest_seeding = False
+                    if applies:
+                        patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
+                        m_dig, cnt, tgts = compute_applies_to_manifest(
+                            patterns, p_root, wiki_root, exclude_self_path=rel_str, workspace_index=ws_index
+                        )
+                        if m_dig and (
+                            meta.get("applies_to_digest") != m_dig
+                            or meta.get("applies_to_count") != cnt
+                            or rel_str not in manifest_articles
+                        ):
+                            meta["applies_to_digest"] = m_dig
+                            meta["applies_to_count"] = cnt
+                            manifest_articles[rel_str] = {"digest": m_dig, "count": cnt, "targets": tgts}
+                            new_content = dump_frontmatter(meta, body)
+                            needs_digest_seeding = True
+
+                    if needs_digest_seeding:
+                        if not dry_run:
+                            tmp_path = md_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
+                            tmp_path.write_text(new_content, encoding="utf-8", newline="\n")
+                            atomic_replace_with_retry(tmp_path, md_file)
+                        changes.append(f"{rel_str} (seeded applies_to_digest & .drift_manifest.json)")
+                        continue
+
                     skipped.append(f"{rel_str}: already has valid frontmatter")
                     if not dry_run:
                         try:
@@ -177,7 +224,6 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
                     _, extracted_s = extract_title_and_summary(body)
                     meta["summary"] = sanitize_summary(extracted_s or f"Legacy migrated {target_type}")
 
-                from brain79.core.frontmatter import dump_frontmatter
                 new_content = dump_frontmatter(meta, body)
             except Exception:
                 skipped.append(f"{rel_str}: malformed frontmatter")
@@ -203,7 +249,7 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
 
             # Auto-populate summary if missing
             try:
-                from brain79.core.frontmatter import dump_frontmatter, sanitize_summary
+                from brain79.core.frontmatter import sanitize_summary
                 from brain79.core.navigation import extract_title_and_summary
                 _, inferred_summary = extract_title_and_summary(content)
                 meta_dict: dict[str, Any] = {"type": inferred_type, "last_updated": today}
@@ -249,7 +295,14 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
         changes.append(rel_str)
 
     if not dry_run:
+        if changes or manifest_purged:
+            save_drift_manifest(wiki_root, manifest_data)
         cleanup_legacy_inline_locks(wiki_root)
+        try:
+            from brain79.core.navigation import regenerate_index_navigation
+            regenerate_index_navigation(wiki_root)
+        except Exception:
+            pass
 
     report_lines = [
         f"# Migration Report ({'DRY RUN' if dry_run else 'APPLIED'})",

@@ -2,15 +2,24 @@
 type: feature
 summary: deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
 status: shipped
-version: 1.1.0
-last_updated: 2026-10-29
+version: 0.8.0
+last_updated: 2026-11-12
+applies_to:
+  - src/brain79/cli/dispatch.py
+  - src/brain79/cli/io.py
+  - src/brain79/cli/__init__.py
+related:
+  - architecture/symmetry.md
+  - architecture/dispatcher.md
+applies_to_digest: "sha256:a4a61a9a1053d9eb"
+applies_to_count: 3
 ---
 
 # Feature — Standalone CLI interface
 
 ## Overview
 
-The Standalone CLI interface provides 16 deterministic command-line subcommands for managing the repository wiki, executing organizational linter checks, performing handoffs, and initializing memory protocols without requiring an active MCP host connection.
+The Standalone CLI interface provides 22 deterministic command-line subcommands for managing the repository wiki, executing organizational linter checks, performing handoffs, and initializing memory protocols without requiring an active MCP host connection.
 
 It is designed for direct developer interaction in the terminal, shell scripts, CI/CD pipelines, and git hooks.
 
@@ -20,12 +29,15 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 |---|---|---|---|
 | `brain79 init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root`, `--install-git-hooks` / `--no-git-hooks` | `0`, `1`, `2` |
 | `brain79 update` | Update editable installation from upstream git repo | `--branch` | `0`, `1` |
+| `brain79 orient` | Collapsed 1-call cold start orientation with inlined governing context | `[--task <t>]`, `[--paths ...]` | `0`, `3` |
 | `brain79 index` | Print `INDEX.md` entry point | None | `0`, `3` |
 | `brain79 schema` | Print schema rules and frontmatter templates | `[--type <type>]` | `0` |
-| `brain79 read` | Read a wiki article by relative path | `<path>` | `0`, `3` |
+| `brain79 read` | Read a wiki article by relative path | `<path>`, `[--sections ...]` | `0`, `3` |
+| `brain79 read-batch` | Batch read multiple articles from JSON payload file | `--file` | `0`, `1`, `3` |
 | `brain79 write` | Write or update a wiki article | `<path>`, `--content-file`, `--content-stdin`, `--force-validation-skip` | `0`, `1`, `3` |
 | `brain79 edit` | Partial in-place text replacement in an article | `<path>`, `--old-text`, `--new-text`, `--edits-file` | `0`, `1`, `3` |
 | `brain79 write-many` | Batch validate and atomically write multiple articles | `--file`, `--stdin` | `0`, `1`, `3` |
+| `brain79 session-commit` | 1-call atomic session finalization with Hard Session Ripple Gate | `--file`, `--stdin` | `0`, `1`, `3` |
 | `brain79 list` | List wiki articles | `[--section <name>]` | `0` |
 | `brain79 search` | Keyword search across wiki articles | `<query>` | `0` |
 | `brain79 ingest` | Save raw session summary | `--summary-file`, `--summary-stdin` | `0`, `3` |
@@ -33,6 +45,7 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 | `brain79 handoff-read` | Read latest or referenced handoff | `[<ref>]` | `0`, `3` |
 | `brain79 handoff-purge` | Purge short-term handoffs | `[--apply]` | `0` |
 | `brain79 navigate` | Query or sync navigation registry | `[--regenerate]` | `0` |
+| `brain79 context` | Retrieve relevant articles via 3-signal ranking | `<task>`, `[--paths ...]` | `0` |
 | `brain79 migrate` | Apply or preview V3 frontmatter migration | `[--apply]`, `[--suggest-relocations]` | `0`, `1` |
 | `brain79 lint` | Run organizational linter | `[--strict]`, `[--suggest-extract]`, `[--format json]` | `0`, `1` |
 | `brain79 bootstrap` | Generate project scan manifest | `[--scope <scope>]`, `[--force]` | `0` |

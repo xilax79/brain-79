@@ -23,7 +23,7 @@ The rules are mechanically validated by `brain79_write` and `brain79_lint`.
 
 ### Frontmatter templates
 
-Optional fields accepted across types: `supersedes`, `related`, `owner` (plus `tags` on `topic`, `scope` on `context`).
+Optional fields accepted across types: `supersedes`, `related`, `owner`, `applies_to`, `applies_to_digest`, `applies_to_count`, `allow_overlapping_governance` (plus `tags` on `topic`, `scope` on `context`).
 
 ```yaml
 # Topic (topics/*.md)

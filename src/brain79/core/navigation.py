@@ -334,18 +334,40 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
     if not index_path.exists():
         raise FileNotFoundError("INDEX.md not found.")
 
-    # Self-heal registry: purge any handoff articles that may have been previously registered (P0.5)
+    # Self-heal registry & drift manifest: purge handoffs and articles whose .md file was deleted
     lock_reg = _get_lock(wiki_root)
     with lock_reg:
         registry = load_registry(wiki_root)
         articles = registry.get("articles", [])
         cleaned = [
             a for a in articles
-            if not a.get("path", "").startswith("handoffs/") and a.get("section") != "handoffs"
+            if not a.get("path", "").startswith("handoffs/")
+            and a.get("section") != "handoffs"
+            and (wiki_root / a.get("path", "")).is_file()
         ]
         if len(cleaned) != len(articles):
             registry["articles"] = cleaned
             _save_registry_unlocked(wiki_root, registry)
+
+        manifest_file = wiki_root / ".drift_manifest.json"
+        if manifest_file.is_file():
+            try:
+                drift_lock = acquire_wiki_lock(wiki_root, ".drift_manifest.json", timeout=5.0)
+                with drift_lock:
+                    if manifest_file.is_file():
+                        m_data = json.loads(manifest_file.read_text(encoding="utf-8"))
+                        m_articles = m_data.get("articles", {})
+                        cleaned_m = {
+                            p: entry for p, entry in m_articles.items()
+                            if (wiki_root / p).is_file()
+                        }
+                        if len(cleaned_m) != len(m_articles):
+                            m_data["articles"] = cleaned_m
+                            tmp_m = manifest_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
+                            tmp_m.write_text(json.dumps(m_data, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+                            atomic_replace_with_retry(tmp_m, manifest_file)
+            except Exception:
+                pass
 
     new_section = generate_quick_navigation(wiki_root)
 

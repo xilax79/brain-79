@@ -2,7 +2,15 @@
 type: architecture
 summary: FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 stability: stable
-last_updated: 2026-10-29
+last_updated: 2026-11-12
+applies_to:
+  - src/brain79/server.py
+  - src/brain79/__main__.py
+related:
+  - architecture/symmetry.md
+  - features/mcp-server.md
+applies_to_digest: "sha256:44c61214f7923323"
+applies_to_count: 2
 ---
 
 # Architecture — MCP server
@@ -13,7 +21,7 @@ The Model Context Protocol (MCP) server integration in `brain-79` enables AI ass
 
 ## Components and server lifecycle
 
-1. **`src/brain79/server.py`**: Declares the `FastMCP("brain79")` instance and registers all `brain79_*` tools with `output_schema=None` to prevent redundant response payloads.
+1. **`src/brain79/server.py`**: Declares the `FastMCP("brain79", version=__version__)` instance and registers all 20 `brain79_*` tools with `output_schema=None` to prevent redundant response payloads. Implements `_unpack_nested_args` to unpack double-wrapped JSON arguments from client adapters.
 2. **`src/brain79/__main__.py`**: Invokes `_cmd_serve()` when no subcommand is provided.
 
 ## Startup banner and logging suppression
@@ -26,24 +34,27 @@ To prevent connection drops:
 
 ## Tool definitions
 
-All MCP tools are named with the `brain79_` prefix:
+All 20 MCP tools are named with the `brain79_` prefix:
+- `brain79_orient(task?, paths?)`: Collapsed 1-call cold start orientation with inlined governing articles and handoff freshness.
 - `brain79_index()`: Returns contents of `INDEX.md`.
-- `brain79_schema(target_type)`: Returns schema rules and copy-paste templates.
-- `brain79_read(path)`: Reads a wiki article safely.
-- `brain79_write(path, content, force_validation_skip)`: Validates and writes a wiki article, auto-regenerating navigation and returning an inline health check.
-- `brain79_edit(path, edits, force_validation_skip)`: Performs targeted in-place text replacements without re-emitting entire articles.
-- `brain79_write_many(articles, force_validation_skip)`: Validates all articles upfront (all-or-nothing) and writes in batch.
-- `brain79_list(section)`: Lists wiki articles.
+- `brain79_schema(target_type?)`: Returns schema rules and copy-paste templates.
+- `brain79_read(path, sections?)`: Reads a wiki article safely with optional section projection.
+- `brain79_read_batch(requests)`: Reads multiple articles in a single call.
+- `brain79_write(path, content, force_validation_skip?)`: Validates and writes a wiki article, auto-regenerating navigation and returning an inline health check.
+- `brain79_edit(path, edits, force_validation_skip?)`: Performs targeted in-place text replacements without re-emitting entire articles.
+- `brain79_write_many(articles, force_validation_skip?)`: Validates all articles upfront (all-or-nothing) and writes in batch.
+- `brain79_session_commit(...)`: 1-call atomic session finalization with Hard Session Ripple Gate.
+- `brain79_list(section?)`: Lists wiki articles.
 - `brain79_search(query)`: High-speed keyword search.
-- `brain79_ingest(session_summary, instructions)`: Saves raw session log to `_raw/sessions/`.
-- `brain79_handoff_write(...)`: Creates an immutable session handoff.
-- `brain79_handoff_read(ref)`: Reads a session handoff note.
-- `brain79_handoff_purge(apply)`: Purges short-term handoffs.
+- `brain79_ingest(session_summary, instructions?)`: Saves raw session log to `_raw/sessions/`.
+- `brain79_handoff_write(...)`: Creates an immutable session handoff with cryptographic provenance.
+- `brain79_handoff_read(ref?)`: Reads a session handoff note with authority decay evaluation.
+- `brain79_handoff_purge(apply?)`: Purges short-term handoffs.
 - `brain79_lint()`: Runs full health check scan across the entire wiki.
-- `brain79_bootstrap(scope, force)`: Scans repository and returns bootstrap manifest.
-- `brain79_navigate(regenerate)`: Queries or regenerates navigation registry.
-- `brain79_context(...)`: Performs TF-IDF relevance scoring across articles.
-- `brain79_migrate(apply, dry_run)`: Migrates legacy articles to V3 frontmatter schema.
+- `brain79_bootstrap(scope?, force?)`: Scans repository and returns bootstrap manifest.
+- `brain79_navigate(regenerate?)`: Queries or regenerates navigation registry.
+- `brain79_context(task, top_n?, paths?)`: Performs 3-signal context ranking across articles.
+- `brain79_migrate(apply?, dry_run?)`: Migrates legacy articles to V3 frontmatter schema.
 
 ## File descriptor teardown (`mcp.close()`)
 

@@ -674,6 +674,8 @@ def brain79_session_commit(
     handoff: dict[str, Any] | None = None,
     session_summary: str | None = None,
     instructions: str | None = None,
+    verified_articles: list[dict[str, str]] | None = None,
+    allow_partial_ripple: bool = False,
     force_validation_skip: bool = False,
     tool: str | None = None,
     args: dict[str, Any] | None = None,
@@ -699,6 +701,8 @@ def brain79_session_commit(
         handoff: Optional dict matching brain79_handoff_write parameters (session_type, summary, completed_work, pending_work, boot_instruction)
         session_summary: Optional high-level summary for raw session archiving (_raw/sessions/)
         instructions: Optional user prompt instructions for raw session archiving
+        verified_articles: Optional list of internal non-breaking refactors [{"path": "...", "reason": "..."}]
+        allow_partial_ripple: Optional boolean to permit committing with partial ripple warnings (default: False)
         force_validation_skip: Whether to bypass frontmatter schema validation
 
     Returns:
@@ -714,6 +718,8 @@ def brain79_session_commit(
         handoff = handoff if handoff is not None else unpacked.get("handoff")
         session_summary = session_summary or unpacked.get("session_summary")
         instructions = instructions or unpacked.get("instructions")
+        verified_articles = verified_articles if verified_articles is not None else unpacked.get("verified_articles")
+        allow_partial_ripple = allow_partial_ripple or unpacked.get("allow_partial_ripple", False)
         force_validation_skip = force_validation_skip or unpacked.get("force_validation_skip", False)
 
     payload: dict[str, Any] = {
@@ -722,6 +728,8 @@ def brain79_session_commit(
         "handoff": handoff,
         "session_summary": session_summary,
         "instructions": instructions,
+        "verified_articles": verified_articles or [],
+        "allow_partial_ripple": allow_partial_ripple,
     }
 
     try:
@@ -738,6 +746,8 @@ def brain79_session_commit(
             lines.append(f"- **Written Articles ({len(receipt['written_articles'])})**: {', '.join(f'`{a}`' for a in receipt['written_articles'])}")
         if receipt.get("edited_articles"):
             lines.append(f"- **Edited Articles ({len(receipt['edited_articles'])})**: {', '.join(f'`{a}`' for a in receipt['edited_articles'])}")
+        if receipt.get("verified_articles"):
+            lines.append(f"- **Verified Articles ({len(receipt['verified_articles'])})**: {', '.join(f'`{a}`' for a in receipt['verified_articles'])}")
         if receipt.get("handoff_path"):
             lines.append(f"- **Session Handoff**: `{receipt['handoff_path']}`")
         lines.append(f"- **Inline Health**: `{receipt.get('health_status', 'ok')}`")
