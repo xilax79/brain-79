@@ -521,4 +521,110 @@ def test_all_subcommands_have_help_descriptions(capsys: pytest.CaptureFixture[st
         assert len(lines) >= 3, f"Help output too short for {cmd}: {lines}"
 
 
+def test_parse_global_flags_dot_leaves_root_unset() -> None:
+    """Test that --project-root . and --project-root=./ leave project_root as None for dynamic resolution."""
+    root1, _, remaining1 = parse_global_flags(["--project-root", ".", "index"])
+    assert root1 is None
+    assert remaining1 == ["index"]
+
+    root2, _, remaining2 = parse_global_flags(["--project-root=./", "index"])
+    assert root2 is None
+    assert remaining2 == ["index"]
+
+    root_win, _, remaining_win = parse_global_flags(["--project-root", ".\\", "index"])
+    assert root_win is None
+    assert remaining_win == ["index"]
+
+    root_win_eq, _, remaining_win_eq = parse_global_flags(["--project-root=.\\", "index"])
+    assert root_win_eq is None
+    assert remaining_win_eq == ["index"]
+
+    root3, _, remaining3 = parse_global_flags(["--project-root", "subdir", "index"])
+    assert root3 == Path("subdir").resolve()
+    assert remaining3 == ["index"]
+
+
+def test_get_project_root_ancestor_walk(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test get_project_root resolves ancestor .brain-79/, respects .git boundaries, and env var."""
+    from brain79.config import get_project_root, set_project_root
+
+    set_project_root(None)
+
+    # 1. BRAIN79_PROJECT_ROOT takes precedence when _project_root is None
+    custom_env_dir = tmp_path / "env_root"
+    custom_env_dir.mkdir()
+    monkeypatch.setenv("BRAIN79_PROJECT_ROOT", str(custom_env_dir))
+    assert get_project_root() == custom_env_dir.resolve()
+    monkeypatch.delenv("BRAIN79_PROJECT_ROOT")
+
+    # 2. Ancestor walk: cwd inside sub/sub2 finds parent with .brain-79/
+    repo_root = tmp_path / "parent_repo"
+    repo_root.mkdir()
+    (repo_root / ".git").mkdir()
+    (repo_root / ".brain-79").mkdir()
+    sub_dir = repo_root / "src" / "package"
+    sub_dir.mkdir(parents=True)
+
+    monkeypatch.chdir(sub_dir)
+    assert get_project_root() == repo_root.resolve()
+
+    # 3. Nested git repo boundary: nested repo has .git but no .brain-79/ -> stops at nested repo cwd
+    nested_repo = repo_root / "submodules" / "nested"
+    nested_repo.mkdir(parents=True)
+    (nested_repo / ".git").mkdir()
+    monkeypatch.chdir(nested_repo)
+    assert get_project_root() == nested_repo.resolve()
+
+    # 4. Explicit set_project_root overrides all
+    override = tmp_path / "explicit"
+    override.mkdir()
+    set_project_root(override)
+    assert get_project_root() == override.resolve()
+    set_project_root(None)
+
+
+def test_init_in_subdirectory_creates_local_wiki(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test brain79 init inside a subdirectory without --project-root creates local .brain-79/."""
+    from brain79.config import set_project_root
+
+    set_project_root(None)
+
+    parent_repo = tmp_path / "outer_project"
+    parent_repo.mkdir()
+    init_project(parent_repo)
+    assert (parent_repo / ".brain-79").is_dir()
+
+    # Create subdirectory
+    sub_project = parent_repo / "services" / "microservice"
+    sub_project.mkdir(parents=True)
+    monkeypatch.chdir(sub_project)
+
+    # Dispatch init without --project-root
+    code = run_cli("init", [])
+    assert code == 0
+    assert (sub_project / ".brain-79").is_dir()
+
+
+def test_e2e_cli_entrypoint_from_subdirectory_resolves_ancestor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invoking main(["--project-root", ".", "index"]) from a subfolder finds ancestor INDEX.md."""
+    parent_repo = tmp_path / "root_workspace"
+    parent_repo.mkdir()
+    init_project(parent_repo)
+    set_project_root(None)
+
+    sub_dir = parent_repo / "services" / "backend"
+    sub_dir.mkdir(parents=True)
+    monkeypatch.chdir(sub_dir)
+
+    with pytest.raises(SystemExit) as exc:
+        main(["--project-root", ".", "index"])
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "# Project index" in captured.out or "INDEX.md" in captured.out
+
+
+
+
 

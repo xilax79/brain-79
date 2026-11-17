@@ -22,7 +22,11 @@ def parse_global_flags(args: list[str]) -> tuple[Path | None, bool, list[str]]:
             i += 1
         elif arg == "--project-root":
             if i + 1 < len(args):
-                project_root = Path(args[i + 1]).resolve()
+                val = args[i + 1]
+                if val in (".", "./", ".\\"):
+                    project_root = None
+                else:
+                    project_root = Path(val).resolve()
                 i += 2
             else:
                 sys.stderr.write("Error: --project-root requires a path argument.\n")
@@ -30,7 +34,10 @@ def parse_global_flags(args: list[str]) -> tuple[Path | None, bool, list[str]]:
 
         elif arg.startswith("--project-root="):
             path_str = arg.split("=", 1)[1]
-            project_root = Path(path_str).resolve()
+            if path_str in (".", "./", ".\\"):
+                project_root = None
+            else:
+                project_root = Path(path_str).resolve()
             i += 1
         else:
             filtered_args.append(arg)

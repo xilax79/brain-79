@@ -108,14 +108,15 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
-        from brain79.config import get_project_root
+        from brain79 import config
         from brain79.core.init_project import init_project
 
-        target_root = (
-            Path(parsed.project_root).resolve()
-            if parsed.project_root
-            else get_project_root()
-        )
+        if parsed.project_root:
+            target_root = Path(parsed.project_root).resolve()
+        elif config._project_root is not None:
+            target_root = config._project_root
+        else:
+            target_root = Path.cwd().resolve()
         init_project(
             target_root,
             install_git_hooks_flag=parsed.install_git_hooks,

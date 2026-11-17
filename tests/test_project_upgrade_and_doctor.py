@@ -573,3 +573,137 @@ def test_doctor_json_and_text_formatting(tmp_path: Path) -> None:
     assert "[✓]" in text or "[!]" in text
 
 
+def test_doctor_flags_missing_agy_plugin_when_legacy_agents_mcp_exists(tmp_path: Path) -> None:
+    """Test doctor reports warning and actionable hint when legacy .agents/mcp_config.json exists without .agents/plugins/brain79."""
+    import shutil
+    from brain79.core.doctor import run_doctor
+
+    init_project(tmp_path)
+    # Remove newly created plugin to simulate legacy project
+    agy_plugin_dir = tmp_path / ".agents" / "plugins" / "brain79"
+    if agy_plugin_dir.exists():
+        shutil.rmtree(agy_plugin_dir)
+
+    report = run_doctor(project_root=tmp_path, wiki_root=tmp_path / ".brain-79")
+    assert report.status == "warning"
+    mcp_check = next(c for c in report.checks if c.category == "mcp_harnesses")
+    assert mcp_check.status == "warning"
+    assert "missing .agents/plugins/brain79" in mcp_check.message
+    assert mcp_check.actionable is not None
+    assert "update-project" in mcp_check.actionable or "doctor --fix" in mcp_check.actionable
+
+
+def test_doctor_detects_invalid_or_corrupt_agy_plugin_files(tmp_path: Path) -> None:
+    """Test doctor flags corrupt plugin.json or invalid command in .agents/plugins/brain79/mcp_config.json."""
+    from brain79.core.doctor import run_doctor
+
+    init_project(tmp_path)
+    plugin_mcp = tmp_path / ".agents" / "plugins" / "brain79" / "mcp_config.json"
+    plugin_mcp.write_text(
+        json.dumps({"mcpServers": {"brain79": {"command": "/invalid/absolute/path"}}}),
+        encoding="utf-8",
+    )
+
+    report = run_doctor(project_root=tmp_path, wiki_root=tmp_path / ".brain-79")
+    mcp_check = next(c for c in report.checks if c.category == "mcp_harnesses")
+    assert mcp_check.status == "warning"
+    assert "non-portable command" in mcp_check.message
+
+
+def test_doctor_fix_dirty_tree_guard_includes_agents_plugins(tmp_path: Path) -> None:
+    """Test doctor --fix checks .agents/plugins/brain79 in dirty tree guard."""
+    import subprocess
+    from brain79.core.doctor import run_doctor
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    init_project(tmp_path)
+    w_root = tmp_path / ".brain-79"
+
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "init", "--no-verify"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    # Modify .agents/plugins/brain79/plugin.json without committing
+    p_file = tmp_path / ".agents" / "plugins" / "brain79" / "plugin.json"
+    p_file.write_text(json.dumps({"name": "modified"}), encoding="utf-8")
+
+    report = run_doctor(project_root=tmp_path, wiki_root=w_root, fix=True, force=False)
+    assert report.status == "error"
+    assert report.exit_code == 1
+    assert any(c.category == "dirty_working_tree" for c in report.checks)
+
+
+def test_doctor_fix_repairs_missing_agy_plugin(tmp_path: Path) -> None:
+    """Test doctor --fix repairs missing .agents/plugins/brain79 files."""
+    import shutil
+    import subprocess
+    from brain79.core.doctor import run_doctor
+
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    init_project(tmp_path)
+    w_root = tmp_path / ".brain-79"
+
+    agy_plugin_dir = tmp_path / ".agents" / "plugins" / "brain79"
+    if agy_plugin_dir.exists():
+        shutil.rmtree(agy_plugin_dir)
+
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "legacy_state", "--no-verify"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+
+    report_pre = run_doctor(project_root=tmp_path, wiki_root=w_root)
+    assert report_pre.status == "warning"
+
+    report_post = run_doctor(project_root=tmp_path, wiki_root=w_root, fix=True)
+    assert report_post.status == "ok"
+    assert report_post.exit_code == 0
+    assert (agy_plugin_dir / "plugin.json").is_file()
+    assert (agy_plugin_dir / "mcp_config.json").is_file()
+    assert (agy_plugin_dir / "skills" / "brain79-wiki" / "SKILL.md").is_file()
+
+
+def test_doctor_detects_non_portable_args_in_agy_mcp_config(tmp_path: Path) -> None:
+    """Test doctor flags non-portable args in .agents/plugins/brain79/mcp_config.json."""
+    from brain79.core.doctor import run_doctor
+
+    init_project(tmp_path)
+    plugin_mcp = tmp_path / ".agents" / "plugins" / "brain79" / "mcp_config.json"
+    plugin_mcp.write_text(
+        json.dumps({
+            "mcpServers": {
+                "brain79": {"command": "brain79", "args": ["--project-root", "/abs/path"]}
+            }
+        }),
+        encoding="utf-8",
+    )
+
+    report = run_doctor(project_root=tmp_path, wiki_root=tmp_path / ".brain-79")
+    mcp_check = next(c for c in report.checks if c.category == "mcp_harnesses")
+    assert mcp_check.status == "warning"
+    assert "non-portable arguments" in mcp_check.message
+
+
+def test_doctor_flags_missing_agy_plugin_when_skill_or_mcp_missing(tmp_path: Path) -> None:
+    """Test doctor flags missing plugin and suggests doctor --fix when SKILL.md is removed."""
+    from brain79.core.doctor import run_doctor
+
+    init_project(tmp_path)
+    skill_file = tmp_path / ".agents" / "plugins" / "brain79" / "skills" / "brain79-wiki" / "SKILL.md"
+    skill_file.unlink()
+
+    report = run_doctor(project_root=tmp_path, wiki_root=tmp_path / ".brain-79")
+    assert report.status == "warning"
+    mcp_check = next(c for c in report.checks if c.category == "mcp_harnesses")
+    assert "doctor --fix" in (mcp_check.actionable or "")
+
+
+
+

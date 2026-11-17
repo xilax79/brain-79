@@ -2,10 +2,10 @@
 
 > **Persistent, curated memory for AI coding assistants. Zero hallucination, zero context rot, and sub-second agent orientation.**
 
-[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-brightgreen.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-575%20passed-success.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-594%20passed-success.svg)](tests/)
 
 ---
 
@@ -101,8 +101,8 @@ brain79 init --profile general
 ```
 This automatically sets up:
 - `.brain-79/`: your project's curated knowledge base (articles, decisions, changelog, and handoffs).
-- `AGENTS.md`: versioned protocol block (`<!-- brain79:start v0.9.0 -->`) teaching AI assistants how to orient themselves while preserving your custom notes.
-- **Universal Tier 1 MCP harnesses**: auto-configures `.mcp.json` (Pi, Claude Code, Zed, OpenCode), `.agents/mcp_config.json` (Antigravity), and `.cursor/mcp.json` (Cursor IDE) using portable execution commands.
+- `AGENTS.md`: versioned protocol block (`<!-- brain79:start v0.9.1 -->`) teaching AI assistants how to orient themselves while preserving your custom notes.
+- **Universal Tier 1 MCP harnesses**: auto-configures `.mcp.json` (Pi, Claude Code, Zed, OpenCode), `.agents/plugins/brain79/` (native Antigravity workspace plugin with on-demand skill), legacy `.agents/mcp_config.json` retention, and `.cursor/mcp.json` (Cursor IDE) using portable execution commands.
 - `.git/hooks/pre-commit`: automated check preventing commits with broken links or unanchored drift, respecting existing hook managers (Husky, Python `pre-commit`, Lefthook).
 
 ### Upgrading & diagnosing existing projects

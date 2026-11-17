@@ -31,9 +31,9 @@ Accepted
 ## Context
 
 Prior to Phase 4 of the Industrial-Scale Roadmap, three documentation degradation risks remained:
-1. **Unstructured Walls of Text**: While frontmatter schema was strictly validated, document bodies lacked section structure requirements. Agents occasionally generated valid frontmatter followed by unorganized prose without standard headings (e.g. ADRs missing `Consequences` or features missing `Overview`).
+1. **Unstructured Walls of Text**: while frontmatter schema was strictly validated, document bodies lacked section structure requirements. Agents occasionally generated valid frontmatter followed by unorganized prose without standard headings (e.g. ADRs missing `Consequences` or features missing `Overview`).
 2. **Backlink Forgetfulness**: ADR-007 mandated that all subfolder articles conclude with a backlink (`[← Volver al Índice](../INDEX.md)`), but enforcement relied on agent and human memory, occasionally leading to missing navigation footers.
-3. **Silent Code-to-Wiki Drift**: When source code evolved in the repository, governing architecture documents and ADRs silently decayed without any automated indication that the code had moved ahead of the documentation.
+3. **Silent Code-to-Wiki Drift**: when source code evolved in the repository, governing architecture documents and ADRs silently decayed without any automated indication that the code had moved ahead of the documentation.
 
 ## Decision
 

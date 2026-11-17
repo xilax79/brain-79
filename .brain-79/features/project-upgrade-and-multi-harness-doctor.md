@@ -2,7 +2,7 @@
 type: feature
 summary: non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
 status: shipped
-version: 0.9.0
+version: 0.9.1
 allow_overlapping_governance: true
 applies_to:
   - src/brain79/core/init_project.py
@@ -17,8 +17,8 @@ related:
   - architecture/current-state.md
   - features/cross-platform-and-lock-isolation.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
-last_updated: 2026-11-13
-applies_to_digest: "sha256:a0414a01aec50488"
+last_updated: 2026-11-16
+applies_to_digest: "sha256:f3c544d2aad15871"
 applies_to_count: 6
 ---
 
@@ -74,9 +74,9 @@ The project protocol upgrade and multi-harness doctor subsystem provides non-des
 - **Frontmatter and extension preservation**: retains existing `profile` (`software` or `general`), `custom_types`, and custom YAML keys. Trailing `## Project-specific schema extensions` sections are preserved intact.
 
 ### 3. Portable Tier 1 multi-harness registration
-- **Universal project files**: configures `.mcp.json` (Pi, Claude Code, Zed, OpenCode), `.agents/mcp_config.json` (Antigravity), and `.cursor/mcp.json` (Cursor IDE).
+- **Universal project files**: configures `.mcp.json` (Pi, Claude Code, Zed, OpenCode), `.agents/plugins/brain79/` (Antigravity workspace plugin with `plugin.json`, `mcp_config.json`, and `SKILL.md`), `.agents/mcp_config.json` (legacy Antigravity fallback), and `.cursor/mcp.json` (Cursor IDE).
 - **Portable execution**: sets `"command": "brain79"` with `"args": ["--project-root", "."]`, automatically sanitizing machine-specific absolute binary paths.
-- **Non-destructive JSON merge**: preserves third-party MCP servers and creates automated `.bak` backups on corrupted files.
+- **Non-destructive JSON merge**: preserves third-party MCP servers, custom plugin metadata, and creates automated `.bak` backups on corrupted files.
 - **Tier 2 desktop opt-in**: supports safe registration in host desktop configurations (Claude Desktop, Windsurf) via `--include-desktop` using project-scoped server keys (`brain79-<project_name>`).
 
 ### 4. Git hook management

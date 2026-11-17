@@ -181,3 +181,224 @@ def test_init_schema_template_compliance(tmp_path: Path) -> None:
     # Verify SCHEMA.md includes operational invariants
     schema_content = (tmp_path / ".brain-79" / "SCHEMA.md").read_text(encoding="utf-8")
     assert "Zero-Modification Idempotence" in schema_content
+
+
+def test_init_project_creates_agy_plugin_and_retains_legacy_agents_mcp(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test fresh init_project generates Antigravity plugin and retains legacy .agents/mcp_config.json."""
+    init_project(tmp_path)
+
+    # 1. .agents/plugins/brain79/plugin.json
+    plugin_json = tmp_path / ".agents" / "plugins" / "brain79" / "plugin.json"
+    assert plugin_json.is_file()
+    plugin_data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert plugin_data == {"name": "brain79"}
+
+    # 2. .agents/plugins/brain79/mcp_config.json
+    plugin_mcp = tmp_path / ".agents" / "plugins" / "brain79" / "mcp_config.json"
+    assert plugin_mcp.is_file()
+    plugin_mcp_data = json.loads(plugin_mcp.read_text(encoding="utf-8"))
+    assert "brain79" in plugin_mcp_data.get("mcpServers", {})
+    srv = plugin_mcp_data["mcpServers"]["brain79"]
+    assert srv["command"] == "brain79"
+    assert srv["args"] == ["--project-root", "."]
+    assert "toolPrefix" not in srv
+
+    # 3. .agents/plugins/brain79/skills/brain79-wiki/SKILL.md
+    skill_file = tmp_path / ".agents" / "plugins" / "brain79" / "skills" / "brain79-wiki" / "SKILL.md"
+    assert skill_file.is_file()
+    skill_content = skill_file.read_text(encoding="utf-8")
+    assert skill_content.startswith("---\nname: brain79-wiki\n")
+    assert "description:" in skill_content
+
+    # 4. Retained legacy .agents/mcp_config.json
+    legacy_mcp = tmp_path / ".agents" / "mcp_config.json"
+    assert legacy_mcp.is_file()
+    legacy_data = json.loads(legacy_mcp.read_text(encoding="utf-8"))
+    assert "brain79" in legacy_data.get("mcpServers", {})
+
+    captured = capsys.readouterr()
+    assert ".agents/plugins/brain79/" in captured.out
+
+
+def test_sync_project_mcp_configs_preserves_custom_fields_in_plugin_json(
+    tmp_path: Path,
+) -> None:
+    """Test re-run / update_project preserves custom fields in plugin.json and third-party mcpServers."""
+    from brain79.core.init_project import sync_project_mcp_configs
+
+    plugin_dir = tmp_path / ".agents" / "plugins" / "brain79"
+    plugin_dir.mkdir(parents=True)
+    plugin_json = plugin_dir / "plugin.json"
+    plugin_json.write_text(
+        json.dumps({"name": "custom-name", "disabled": True, "author": "acme"}, indent=2),
+        encoding="utf-8",
+    )
+
+    plugin_mcp = plugin_dir / "mcp_config.json"
+    plugin_mcp.write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "third_party": {"command": "custom-tool", "args": ["serve"]},
+                    "brain79": {"command": "/hardcoded/path/to/brain79", "args": ["--project-root", "."]},
+                }
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    changed = sync_project_mcp_configs(tmp_path)
+
+    # plugin.json preserves custom fields and non-empty name
+    p_data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert p_data["name"] == "custom-name"
+    assert p_data["disabled"] is True
+    assert p_data["author"] == "acme"
+
+    # mcp_config.json preserves third-party and sanitizes brain79 command
+    m_data = json.loads(plugin_mcp.read_text(encoding="utf-8"))
+    assert m_data["mcpServers"]["third_party"] == {"command": "custom-tool", "args": ["serve"]}
+    assert m_data["mcpServers"]["brain79"]["command"] == "brain79"
+    assert m_data["mcpServers"]["brain79"]["args"] == ["--project-root", "."]
+    assert ".agents/plugins/brain79/mcp_config.json" in changed
+
+
+def test_sync_project_mcp_configs_corrupt_json_backup_to_bak(
+    tmp_path: Path,
+) -> None:
+    """Test corrupt or non-dict JSON in plugin.json and mcp_config.json backs up to .bak and recreates cleanly."""
+    from brain79.core.init_project import sync_project_mcp_configs
+
+    plugin_dir = tmp_path / ".agents" / "plugins" / "brain79"
+    plugin_dir.mkdir(parents=True)
+
+    plugin_json = plugin_dir / "plugin.json"
+    plugin_json.write_text("[1, 2, 3]", encoding="utf-8")
+
+    plugin_mcp = plugin_dir / "mcp_config.json"
+    plugin_mcp.write_text("INVALID JSON {", encoding="utf-8")
+
+    sync_project_mcp_configs(tmp_path)
+
+    assert (plugin_dir / "plugin.json.bak").is_file()
+    assert (plugin_dir / "plugin.json.bak").read_text(encoding="utf-8") == "[1, 2, 3]"
+    p_data = json.loads(plugin_json.read_text(encoding="utf-8"))
+    assert p_data == {"name": "brain79"}
+
+    assert (plugin_dir / "mcp_config.json.bak").is_file()
+    assert (plugin_dir / "mcp_config.json.bak").read_text(encoding="utf-8") == "INVALID JSON {"
+    m_data = json.loads(plugin_mcp.read_text(encoding="utf-8"))
+    assert m_data["mcpServers"]["brain79"]["command"] == "brain79"
+
+
+def test_sync_project_mcp_configs_dry_run_creates_zero_files_or_dirs(
+    tmp_path: Path,
+) -> None:
+    """Test dry_run=True creates zero files or directories under .agents/plugins/brain79/ and reports changes."""
+    from brain79.core.init_project import sync_project_mcp_configs
+
+    changed = sync_project_mcp_configs(tmp_path, dry_run=True)
+
+    assert not (tmp_path / ".agents" / "plugins").exists()
+    assert ".agents/plugins/brain79/plugin.json" in changed
+    assert ".agents/plugins/brain79/mcp_config.json" in changed
+    assert ".agents/plugins/brain79/skills/brain79-wiki/SKILL.md" in changed
+
+
+def test_include_desktop_never_touches_gemini_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test include_desktop=True never creates or modifies ~/.gemini/config/mcp_config.json."""
+    from brain79.core.init_project import sync_project_mcp_configs
+
+    fake_home = tmp_path / "fake_home"
+    fake_gemini_config = fake_home / ".gemini" / "config"
+    fake_gemini_config.mkdir(parents=True)
+    gemini_mcp = fake_gemini_config / "mcp_config.json"
+    gemini_mcp.write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
+
+    monkeypatch.setattr(Path, "home", lambda: fake_home)
+
+    sync_project_mcp_configs(tmp_path, include_desktop=True, desktop_config_dir=fake_gemini_config)
+
+    # ~/.gemini/config/mcp_config.json must remain completely untouched
+    gemini_data = json.loads(gemini_mcp.read_text(encoding="utf-8"))
+    assert len(gemini_data["mcpServers"]) == 0
+    assert not (fake_gemini_config / "mcp_config.json.bak").exists()
+
+
+def test_agents_manifest_size_and_compatibility_anchors() -> None:
+    """Test AGENTS.md template size is <= 6500 bytes and preserves all compatibility anchors."""
+    from importlib import resources
+
+    pkg_templates = resources.files("brain79.templates")
+    template_raw = (pkg_templates / "AGENTS.md").read_text(encoding="utf-8")
+
+    # Size cap requirement
+    size_bytes = len(template_raw.encode("utf-8"))
+    assert size_bytes <= 6500, f"AGENTS.md size {size_bytes} exceeds 6500 byte limit"
+
+    # Compatibility anchors
+    assert "<!-- brain79:start v{{VERSION}} -->" in template_raw
+    assert "<!-- brain79:end -->" in template_raw
+    assert "# Brain-79 AI memory protocol" in template_raw
+    assert "pi-mcp-adapter" in template_raw
+    assert "brain79_index" in template_raw
+    assert "No-Op Idempotence" in template_raw
+    assert "Zero-Modification Rule" in template_raw
+    assert "## Project notes" in template_raw
+
+    # Accurate agy setup instructions (no .mcp.json for agy)
+    assert ".agents/plugins/brain79" in template_raw
+    assert "agy mcp add" in template_raw or ".agents/plugins/brain79/" in template_raw
+
+
+def test_skill_template_valid_frontmatter_and_content() -> None:
+    """Test SKILL.md template has valid YAML frontmatter and comprehensive CLI/MCP reference."""
+    from importlib import resources
+    from brain79.core.frontmatter import parse_frontmatter
+
+    pkg_templates = resources.files("brain79.templates")
+    skill_file = pkg_templates / "SKILL.md"
+    assert skill_file.is_file()
+
+    content = skill_file.read_text(encoding="utf-8")
+    meta, body = parse_frontmatter(content)
+
+    assert meta.get("name") == "brain79-wiki"
+    assert meta.get("description") and len(str(meta["description"]).strip()) > 0
+    assert "brain79_session_commit" in body
+    assert "brain79_orient" in body
+    assert "brain79 lint" in body
+
+
+def test_sync_project_mcp_configs_repeated_corruption_overwrites_bak(tmp_path: Path) -> None:
+    """Test repeated corrupt JSON replaces existing .bak without FileExistsError."""
+    from brain79.core.init_project import sync_project_mcp_configs
+
+    plugin_dir = tmp_path / ".agents" / "plugins" / "brain79"
+    plugin_dir.mkdir(parents=True)
+    plugin_json = plugin_dir / "plugin.json"
+    plugin_bak = plugin_dir / "plugin.json.bak"
+    plugin_bak.write_text("prior_backup", encoding="utf-8")
+
+    plugin_json.write_text("corrupted_once", encoding="utf-8")
+    sync_project_mcp_configs(tmp_path)
+    assert plugin_bak.read_text(encoding="utf-8") == "corrupted_once"
+
+
+def test_sync_project_mcp_configs_directory_collision_guarded(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test sync_project_mcp_configs guards against directory collisions cleanly."""
+    from brain79.core.init_project import sync_project_mcp_configs
+
+    plugin_dir = tmp_path / ".agents" / "plugins" / "brain79"
+    (plugin_dir / "plugin.json").mkdir(parents=True)
+    (plugin_dir / "mcp_config.json").mkdir(parents=True)
+    (plugin_dir / "skills" / "brain79-wiki" / "SKILL.md").mkdir(parents=True)
+
+    changed = sync_project_mcp_configs(tmp_path)
+    captured = capsys.readouterr()
+    assert "is a directory" in captured.out
+
+

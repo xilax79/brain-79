@@ -11,7 +11,7 @@ related:
   - architecture/symmetry.md
   - features/cli.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:a63f6dccffb80a12"
+applies_to_digest: "sha256:790e5f395f451d70"
 applies_to_count: 3
 ---
 
@@ -23,7 +23,7 @@ The CLI dispatcher system in `brain-79` is responsible for parsing global comman
 
 ## Components and entry points
 
-1. **`src/brain79/__main__.py`**: Main entry point registered in `pyproject.toml` as `brain79 = "brain79.__main__:main"`.
+1. **`src/brain79/__main__.py`**: main entry point registered in `pyproject.toml` as `brain79 = "brain79.__main__:main"`.
 2. **`src/brain79/cli/dispatch.py`**: Implementation of argument parsing, subcommand dispatching, and POSIX exit code mappings.
 3. **`src/brain79/cli/io.py`**: Helper routines for standard input and file-based payload handling (`--content-file`, `--content-stdin`).
 

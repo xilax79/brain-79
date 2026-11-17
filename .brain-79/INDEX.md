@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-13
+last_updated: 2026-11-17
 ---
 
 # Project index
@@ -11,6 +11,7 @@ last_updated: 2026-11-13
 ## Quick navigation
 
 ### Architecture
+- [Architecture — Antigravity (agy) plugin initialization and progressive disclosure](architecture/agy-init-and-plugin-design.md) — technical specification for zero-config Antigravity (agy) plugin initialization, progressive AGENTS.md disclosure, and ancestor root resolution
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
@@ -22,8 +23,9 @@ last_updated: 2026-11-13
 - [Changelog — Historical internal development milestones (v1.0.0 through v2.0.2)](changelog/legacy-internal-releases.md) — historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration
 - [Changelog — Release 0.8.1: Living manuals, temporal decontamination, and codebase de-phasing](changelog/v0-8-1.md) — release v0.8.1 — living manuals, temporal decontamination, codebase de-phasing, and three-class document ontology
 - [Changelog — Release 0.9.0: Project upgrade, multi-harness zero-config, and doctor diagnostics](changelog/v0-9-0.md) — release v0.9.0 — project protocol upgrader, delimited AGENTS.md blocks, multi-harness zero-config, and doctor diagnostics
+- [Changelog — Release 0.9.1: Antigravity plugin, progressive disclosure, and root walk](changelog/v0-9-1.md) — release v0.9.1 — Antigravity native plugin, progressive AGENTS.md disclosure, and ancestor root walk
 - [Changelog — Version 0.7.2 — Pre-GA semantic calibration](changelog/v0-7-2.md) — semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release
-- [Changelog — Version 0.8.0 — Transitive drift and ripple guards](changelog/v0-8-0.md) — Phase 6.7 release — Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification
+- [Changelog — Version 0.8.0 — Transitive drift and ripple guards](changelog/v0-8-0.md) — phase 6.7 release — Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification
 
 ### Decisions
 - [ADR-001 — Architecture — Dual-mode hybrid CLI and MCP server interface](decisions/adr-001-hybrid-cli.md) — dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server
@@ -47,7 +49,7 @@ last_updated: 2026-11-13
 
 ### Features
 - [Feature — Cross-platform portability and centralized lock isolation](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
-- [Feature — FastMCP integration](features/mcp-server.md) — Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
+- [Feature — FastMCP integration](features/mcp-server.md) — model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
 - [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
 - [Feature — Session knowledge triage and research persistence](features/session-triage-and-research-persistence.md) — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics
 - [Feature — Short-term handoff continuity, freshness, and lifecycle operations](features/handoff-continuity.md) — tactical session transitions, freshness evaluation, authority decay, anti-hallucination work tracking, and operational purge

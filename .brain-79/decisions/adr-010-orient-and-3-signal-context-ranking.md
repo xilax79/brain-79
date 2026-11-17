@@ -43,7 +43,7 @@ We introduced the **1-Call Cold Start Protocol (`brain79_orient` / `brain79 orie
 2. **3-Signal Context Ranking (`rank_context_articles`)**:
    - **Signal 1 (Path Matching - Highest Weight)**: Exact match or glob matching of `applies_to` against touched files.
    - **Signal 2 (Field-Weighted TF-IDF)**: Matches in `title` ($3\times$), `summary` ($2\times$), and body, deprioritizing `superseded` or `deprecated` articles.
-   - **Signal 3 (1-Hop ADR Reference Expansion - Anti-Omission Guard)**: For top matched articles, active linked decisions in `decisions/` are automatically pulled into context so no agent touches a subsystem without seeing its governing decisions.
+   - **Signal 3 (1-Hop ADR Reference Expansion - Anti-Omission Guard)**: for top matched articles, active linked decisions in `decisions/` are automatically pulled into context so no agent touches a subsystem without seeing its governing decisions.
 
 3. **Consolidated Cold-Start Response (`orient`)**:
    In a single tool call, returns:

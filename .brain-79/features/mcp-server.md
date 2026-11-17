@@ -1,6 +1,6 @@
 ---
 type: feature
-summary: Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
+summary: model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
 status: shipped
 version: 0.9.0
 last_updated: 2026-11-13

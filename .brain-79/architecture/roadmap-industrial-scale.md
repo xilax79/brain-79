@@ -22,8 +22,9 @@ related:
   - features/transitive-drift-and-ripple-guards.md
   - features/project-upgrade-and-multi-harness-doctor.md
   - architecture/defect-backlog.md
-last_updated: 2026-11-13
-applies_to_digest: "sha256:4d6d69907e3419fd"
+  - architecture/agy-init-and-plugin-design.md
+last_updated: 2026-11-16
+applies_to_digest: "sha256:8fa9a19a1945c88a"
 applies_to_count: 9
 ---
 
@@ -35,25 +36,26 @@ This document tracks the engineering roadmap of `brain-79`.
 
 `brain-79` is a mechanical implementation of Andrej Karpathy's **LLM-wiki** pattern. Instead of dumping everything into one huge `CLAUDE.md` file or relying on vector RAG, the AI maintains a structured Markdown wiki inside `.brain-79/`. Because LLMs tend to break links, create duplicate files, or leave documentation outdated when code changes, `brain-79` surrounds that Markdown wiki with a mechanical linter, SHA-256 drift tracking, and atomic MCP/CLI tools.
 
-In accordance with **ADR-017 (Pre-GA Semantic Version Calibration)**, `brain-79` remains in the `0.9.x` series until it completes both **Phase 8 (`v0.9.1` — Zero-clone install & visual documentation)** and **Phase 9 (`v0.9.2` — Automated battle-testing & chaos gauntlet)**. Only after surviving multi-OS, concurrency, and live-agent stress testing will the package graduate to `v1.0.0`.
+In accordance with **ADR-017 (Pre-GA Semantic Version Calibration)**, `brain-79` remains in `0.9.x` until it completes **Phase 7.1 (`v0.9.1`)**, **Phase 8 (`v0.9.2`)**, and **Phase 9 (`v0.9.3`)**, before graduating to `v1.0.0`.
 
 ---
 
 ## Completed foundation (Phases 0–7)
 
-- **[x] Phase 0 — Core invariant alignment**: unified write-time validation with organizational linting. Turned `INDEX.md` into an automated routing table (ADR-008) and standardized session frontmatter.
-- **[x] Phase 1 — Declarative schema & dual ontology (ADR-009)**: separated the validation engine from folder rules via `.brain-79/SCHEMA.md`. Added built-in `software` and `general` profiles plus custom folder support.
-- **[x] Phase 2 — 1-call orientation & 3-signal context ranking (ADR-010)**: added `brain79_orient`. It ranks relevant articles using `applies_to` file paths, field-weighted BM25, and linked ADRs.
-- **[x] Phase 3 — Atomic session commits & batch reads (ADR-011)**: added `brain79_session_commit` for all-or-nothing writes, edits, and handoffs. Added section-projected batch reads (`brain79_read_batch`).
-- **[x] Phase 4 — Section skeletons & drift detection (ADR-012)**: enforced required `## H2` sections per document type, automatic backlink footers, and initial code-to-wiki drift checks.
-- **[x] Phase 5 — Versioning & release governance (ADR-013)**: set up single-source versioning via Hatchling, FastMCP version reporting, and automated release parity tests.
-- **[x] Phase 5.5 — Agent protocol polish**: fixed root backlink handling, refined H2 section limits, added schema summaries to `orient()`, and set an on-demand handoff policy.
-- **[x] Phase 6 — Cross-platform portability & `.locks/` isolation (ADR-014, ADR-015)**: moved all mutex locks into `.brain-79/.locks/`. Added exact case-sensitivity checks on macOS/Windows, POSIX path normalization, NTFS atomic replace retries, LF line endings, and sentence-case rules.
-- **[x] Phase 6.5 — Session knowledge triage (the Amnesia Test)**: added a 3-way triage rule so research sessions without code changes (`Type B`) still save their findings to the wiki. Added parameter aliases and an E2E smoke script.
-- **[x] Phase 6.6 — Handoff freshness & authority decay (ADR-016)**: stamped git and content hashes (`wiki_digest`, `code_digest`, `git_head`, `git_branch`) into handoffs. `orient()` now warns the agent when a handoff is `stale` or from a `foreign_branch`.
-- **[x] Phase 6.7 — Transitive drift & ripple gates (`v0.8.0`)**: added `.drift_manifest.json` with SHA-256 leaf hashes, multi-hop drift propagation to umbrella articles, the Hard Session Ripple Gate in `session_commit`, the Anti-Sprawl Guard, AST signature checks (Guard C), and unbounded `applies_to` context loading.
-- **[x] Phase 6.8 — Living manuals & temporal decontamination (ADR-018, `v0.8.1`)**: defined the three document classes (immutable audit logs, living manuals, and ephemeral handoffs). Blocked milestone tags like `(Phase X)` and oversized files (`> 20 KB`) in living manuals at write-time.
-- **[x] Phase 7 — Multi-harness upgrader & doctor diagnostics (`v0.9.0`)**: added managed `<!-- brain79:start -->` blocks in `AGENTS.md`, non-destructive `SCHEMA.md` upgrades (`schema_version: 2`), portable MCP configs (`.mcp.json`, `.agents/`, `.cursor/`), full-pass `migrate_wiki` v2, and `brain79 doctor [--fix]`.
+- **[x] Phase 0**: unified write/lint validation; pure routing `INDEX.md` (ADR-008); standard frontmatter.
+- **[x] Phase 1**: declarative `.brain-79/SCHEMA.md` and `software`/`general` profiles (ADR-009).
+- **[x] Phase 2**: `brain79_orient` 1-call context ranking via `applies_to`, BM25, and ADRs (ADR-010).
+- **[x] Phase 3**: atomic `brain79_session_commit` and section-projected `brain79_read_batch` (ADR-011).
+- **[x] Phase 4**: H2 section skeletons per type, auto backlinks, and code-to-wiki drift checks (ADR-012).
+- **[x] Phase 5**: Hatchling single-source versioning, FastMCP version handshake, and parity tests (ADR-013).
+- **[x] Phase 5.5**: root backlinks, H2 limits, schema summaries in `orient()`, and on-demand handoffs.
+- **[x] Phase 6**: `.brain-79/.locks/` isolation, POSIX paths, NTFS retries, LF, sentence case (ADR-014, ADR-015).
+- **[x] Phase 6.5**: 3-way session triage (`Type B` research persistence), parameter aliases, E2E smoke script.
+- **[x] Phase 6.6**: git/digest-stamped handoffs (`stale`/`foreign_branch` decay in `orient()`, ADR-016).
+- **[x] Phase 6.7 (`v0.8.0`)**: `.drift_manifest.json`, DAG ripple, Hard Session Ripple Gate, Anti-Sprawl, AST checks.
+- **[x] Phase 6.8 (`v0.8.1`)**: three document classes, temporal decontamination, `<= 20 KB` living manuals (ADR-018).
+- **[x] Phase 7 (`v0.9.0`)**: managed `AGENTS.md` blocks, `SCHEMA.md` v2, MCP harnesses, `migrate_wiki` v2, `doctor`.
+- **[x] Phase 7.1 (`v0.9.1`)**: native `agy` plugin, progressive disclosure AGENTS.md/SKILL.md, ancestor root walk, doctor checks.
 
 ---
 
@@ -61,17 +63,42 @@ In accordance with **ADR-017 (Pre-GA Semantic Version Calibration)**, `brain-79`
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 8: Zero-clone install, honest LLM-wiki docs & visual web guide (v0.9.1)     | [ ] Planned|
+| Phase 7.1: Antigravity (agy) native plugin, AGENTS.md split & root walk (v0.9.1)  | [x] Shipped|
 +-----------------------------------------------------------------------------------+
-| Phase 9: Automated battle-testing, chaos fuzzing & multi-repo gauntlet (v0.9.2)   | [ ] Planned|
+| Phase 8: Zero-clone install, honest LLM-wiki docs & visual web guide (v0.9.2)     | [ ] Planned|
 +-----------------------------------------------------------------------------------+
-| Release 1.0.0: Public open-source launch (after Phase 8 & 9 verification)         | [ ] Planned|
+| Phase 9: Automated battle-testing, chaos fuzzing & multi-repo gauntlet (v0.9.3)   | [ ] Planned|
++-----------------------------------------------------------------------------------+
+| Release 1.0.0: Public open-source launch (after Phase 7.1, 8 & 9 verification)    | [ ] Planned|
 +-----------------------------------------------------------------------------------+
 ```
 
 ---
 
-### Phase 8: Zero-clone installation, honest LLM-wiki documentation, and visual web guide (`v0.9.1`)
+### Phase 7.1: Antigravity (`agy`) zero-config plugin, progressive disclosure, and root resolution (`v0.9.1`)
+
+`agy` ignores `.agents/mcp_config.json` (it only reads `~/.gemini/config/mcp_config.json` or `.agents/plugins/<name>/mcp_config.json`), `AGENTS.md` (`13,439` bytes) consumes excessive rules budget with an inaccurate `.mcp.json` instruction for `agy`, and `--project-root .` pins `cwd` on subdirectory launches. Full contracts and test cases are specified in [the Antigravity plugin design spec](agy-init-and-plugin-design.md).
+
+#### Deliverable 7.1.1: Native `agy` workspace plugin (`src/brain79/core/init_project.py`)
+- In `sync_project_mcp_configs()`, generate `.agents/plugins/brain79/plugin.json` (`{"name": "brain79"}`), `.agents/plugins/brain79/mcp_config.json` (`command: "brain79"`, `args: ["--project-root", "."]`), and `.agents/plugins/brain79/skills/brain79-wiki/SKILL.md` (from `src/brain79/templates/SKILL.md`).
+- Preserve custom `plugin.json` fields (including `"disabled"`) and third-party `mcpServers`, back up corrupt JSON to `.bak`, and support `dry_run=True`.
+- **Backward compatibility**: keep syncing `.agents/mcp_config.json`, `.mcp.json`, and `.cursor/mcp.json`; never write `brain79-<project>` entries into `~/.gemini/config/mcp_config.json` under `--include-desktop`.
+
+#### Deliverable 7.1.2: Progressive disclosure split (`templates/AGENTS.md`, `templates/SKILL.md`)
+- Trim `AGENTS.md` to `<= 6,500` bytes (`always_on`), preserving compatibility anchors (`<!-- brain79:start v{{VERSION}} -->`, `# Brain-79 AI memory protocol`, `pi-mcp-adapter`, `brain79_index`, `No-Op Idempotence`, `Zero-Modification Rule`, `## Project notes`) and fixing the `agy` setup note to reference `.agents/plugins/brain79/` or `agy mcp add`.
+- Move full CLI/MCP tables, JSON examples, lint/migration guides, and `force_validation_skip` to `src/brain79/templates/SKILL.md` (`name: brain79-wiki`).
+
+#### Deliverable 7.1.3: Ancestor root walk & `init` isolation (`__main__.py`, `config.py`, `cli/dispatch.py`)
+- In `parse_global_flags()`, leave `_project_root = None` when `--project-root` is `"."` or `"./"` so `get_project_root()` walks up from `Path.cwd().resolve()` to `.brain-79/`, stopping at `.git` boundaries for nested repos.
+- In `dispatch_cmd()` for `init`, resolve omitted `--project-root` to `Path.cwd().resolve()` directly so `init` stays local.
+
+#### Deliverable 7.1.4: Doctor diagnostics & version parity (`doctor.py`, `tests/`)
+- Update `run_doctor()` in `src/brain79/core/doctor.py` to validate `.agents/plugins/brain79/{plugin.json, mcp_config.json, skills/brain79-wiki/SKILL.md}`, warn when `.agents/mcp_config.json` exists without the plugin, and add `".agents/plugins/brain79"` to the `--fix` dirty-tree guard.
+- Bump `__version__` to `"0.9.1"` (`src/brain79/__init__.py`, `README.md`, `CHANGELOG.md`, `.brain-79/changelog/v0-9-1.md`) per ADR-013; verify with `pytest`, `mypy src/`, and `brain79 lint --strict`.
+
+---
+
+### Phase 8: Zero-clone installation, honest LLM-wiki documentation, and visual web guide (`v0.9.2`)
 
 Before opening the repository to external users, a newcomer must be able to understand what `brain-79` does in 30 seconds, see real before/after terminal examples, and install it with one command without cloning the repository.
 
@@ -125,7 +152,7 @@ Create a self-contained, zero-build static web page at `docs/index.html` (deploy
 
 ---
 
-### Phase 9: Automated battle-testing, chaos fuzzing, and multi-repo gauntlet (`v0.9.2`)
+### Phase 9: Automated battle-testing, chaos fuzzing, and multi-repo gauntlet (`v0.9.3`)
 
 Because `brain-79` is maintained by a solo builder, manual testing cannot cover every OS, git state, or LLM behavior. Phase 9 builds an automated 4-level battle-testing harness that stress-tests the engine against real-world chaos before `v1.0.0`.
 
@@ -150,16 +177,20 @@ An automated end-to-end gauntlet that builds 5 realistic workspace archetypes in
 
 ---
 
-## Acceptance criteria for Phases 8 & 9 (`v0.9.1` & `v0.9.2`)
+## Acceptance criteria for Phases 7.1, 8, and 9 (`v0.9.1`–`v0.9.3`)
 
 | ID | Phase | Criterion | Verification |
 |---|---|---|---|
-| **AC-8.1** | `v0.9.1` | **Zero-clone `brain79 update`**: upgrades via `uv tool` outside a git clone and preserves editable git-pull behavior inside a dev clone. | `tests/test_update.py` |
-| **AC-8.2** | `v0.9.1` | **Honest, B2-clear `README.md` & `ARCHITECTURE.md`**: zero hype claims; positions Karpathy's LLM-wiki pattern; includes real terminal outputs and a full `src/brain79/` module map. | Adversarial doc audit |
-| **AC-8.3** | `v0.9.1` | **Interactive visual web guide (`docs/index.html`)**: zero-build static page with interactive ripple graph, session timeline, and tabbed walkthroughs for GitHub Pages. | Browser & link check |
-| **AC-9.1** | `v0.9.2` | **Multi-OS CI matrix**: `.github/workflows/ci.yml` passes across Ubuntu, macOS, and Windows. | GitHub Actions workflow |
-| **AC-9.2** | `v0.9.2` | **8-process concurrency & fuzzing**: zero file corruption, zero lock leaks, and zero unhandled exceptions under concurrent writes and adversarial fuzz inputs. | `tests/test_chaos_and_fuzzing.py` |
-| **AC-9.3** | `v0.9.2` | **5-Archetype Battle Gauntlet**: all 5 realistic repository archetypes pass their full multi-session lifecycle and scale benchmarks (`< 150ms` at 200 articles / 1,000 files). | `tests/test_battle_gauntlet.py` |
+| **AC-7.1.1** | `v0.9.1` | **Native `agy` workspace plugin**: `init` & `update-project` create `.agents/plugins/brain79/{plugin.json, mcp_config.json, skills/brain79-wiki/SKILL.md}` and retain `.agents/mcp_config.json`. | `tests/test_init_project.py` |
+| **AC-7.1.2** | `v0.9.1` | **Progressive `AGENTS.md` split**: `AGENTS.md` `<= 6,500` bytes with all test anchors and accurate `agy` setup; full reference tables in `SKILL.md`. | `tests/test_init_project.py` |
+| **AC-7.1.3** | `v0.9.1` | **Subdirectory root walk & `init` isolation**: `--project-root .` finds ancestor `.brain-79/`, stops at `.git` boundaries, and `init` stays local to `cwd`. | `tests/test_cli.py` |
+| **AC-7.1.4** | `v0.9.1` | **Doctor & ADR-013 parity**: `doctor` flags missing `.agents/plugins/brain79/`, `doctor --fix` repairs it, and `pytest`/`mypy`/`lint --strict` pass at `v0.9.1`. | `tests/test_project_upgrade_and_doctor.py` |
+| **AC-8.1** | `v0.9.2` | **Zero-clone `brain79 update`**: upgrades via `uv tool` outside a git clone and preserves editable git-pull behavior inside a dev clone. | `tests/test_update.py` |
+| **AC-8.2** | `v0.9.2` | **Honest, B2-clear `README.md` & `ARCHITECTURE.md`**: zero hype claims; positions Karpathy's LLM-wiki pattern; includes real terminal outputs and a full `src/brain79/` module map. | Adversarial doc audit |
+| **AC-8.3** | `v0.9.2` | **Interactive visual web guide (`docs/index.html`)**: zero-build static page with interactive ripple graph, session timeline, and tabbed walkthroughs for GitHub Pages. | Browser & link check |
+| **AC-9.1** | `v0.9.3` | **Multi-OS CI matrix**: `.github/workflows/ci.yml` passes across Ubuntu, macOS, and Windows. | GitHub Actions workflow |
+| **AC-9.2** | `v0.9.3` | **8-process concurrency & fuzzing**: zero file corruption, zero lock leaks, and zero unhandled exceptions under concurrent writes and adversarial fuzz inputs. | `tests/test_chaos_and_fuzzing.py` |
+| **AC-9.3** | `v0.9.3` | **5-Archetype Battle Gauntlet**: all 5 realistic repository archetypes pass their full multi-session lifecycle and scale benchmarks (`< 150ms` at 200 articles / 1,000 files). | `tests/test_battle_gauntlet.py` |
 
 ---
 

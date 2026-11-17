@@ -12,7 +12,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:7200b5329b9f82d6"
+applies_to_digest: "sha256:d8371a8a5a2c0dcc"
 applies_to_count: 31
 ---
 
@@ -20,7 +20,7 @@ applies_to_count: 31
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.9.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.9.1.
 
 ## Active subsystem topology
 
@@ -42,7 +42,7 @@ This document maintains a high-level summary of the repository's current archite
 
 - **Wiki Primacy**: Long-term wiki in `.brain-79/` is the absolute source of truth over tactical handoffs.
 - **Zero-Modification Idempotence**: Wiki updates strictly require real repository mutations (code, tests, decisions); synthetic documentation churn is rejected.
-- **Synchronous Write Validation**: Writes to `.brain-79/` are validated against schema rules prior to disk mutation.
+- **Synchronous Write Validation**: writes to `.brain-79/` are validated against schema rules prior to disk mutation.
 - **Code Fence Masking**: Regex linter rules mask code blocks before scanning to eliminate false positive leakage errors.
 - **1:1 CLI & MCP Symmetry**: Every operational subcommand has a matching `@mcp.tool()` equivalent in `server.py` (24 subcommands, 22 MCP tools).
 - **Centralized Lock Isolation**: File mutexes are strictly isolated into `.brain-79/.locks/`, maintaining 100% clean content directories.

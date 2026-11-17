@@ -3,7 +3,8 @@ type: decision
 summary: tactical handoff immutability via unique timestamped files to maintain audit trail and prevent context loss
 status: accepted
 date: 2026-08-11
-deciders: [xilax]
+deciders:
+  - xilax
 last_updated: 2026-10-29
 ---
 

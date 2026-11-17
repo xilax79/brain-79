@@ -53,7 +53,7 @@ The system is organized into six isolated layers:
 
 ```
                       [ AI agents ]            [ Developers & CI ]
-                   (Pi, Claude, Cursor)          (Terminal CLI)
+               (Pi, Claude, Cursor, agy)         (Terminal CLI)
                              │                         │
                              ▼                         ▼
   LAYER 1: INTERFACE   FastMCP stdio server      CLI dispatcher
@@ -107,15 +107,16 @@ All session finalization executes under `.brain-79/.locks/_transaction.lock`:
 - **Pass 3 & 4 (Atomic multi-write and handoff):** applies temporary file writes with atomic retry and writes immutable handoff records.
 
 ### 5. Non-destructive protocol upgrader and doctor engine (`init_project.py`, `migration.py`, `doctor.py`)
-- **Delimited blocks in `AGENTS.md`:** updates core protocol instructions between `<!-- brain79:start v{version} -->` and `<!-- brain79:end -->` while preserving custom persona headers and team project notes. Corruption guards prevent truncation if tags are damaged.
+- **Delimited blocks and progressive disclosure in `AGENTS.md`:** updates core protocol instructions between `<!-- brain79:start v{version} -->` and `<!-- brain79:end -->` while preserving custom persona headers and team project notes. Compacts root rules (`<= 6,500` bytes) and ships detailed operational manuals in the on-demand `brain79-wiki` skill.
 - **Non-destructive `SCHEMA.md` synchronization:** elevates to `schema_version: 2`, preserving custom directory types and trailing extension sections.
-- **Tier 1 portable MCP configuration:** auto-configures `.mcp.json`, `.agents/mcp_config.json`, and `.cursor/mcp.json` using portable `"command": "brain79"`.
+- **Tier 1 portable MCP configuration:** auto-configures `.mcp.json` (Pi, Claude Code, Zed, OpenCode), `.agents/plugins/brain79/` (native Antigravity workspace plugin with on-demand skill), legacy `.agents/mcp_config.json`, and `.cursor/mcp.json` using portable `"command": "brain79"`.
 - **Full-pass wiki reconditioning (`migrate_wiki` v2):** evaluates all articles, auto-completes fields, repairs footer backlinks, normalizes bullet colons, and downgrades incomplete articles to `legacy` status.
 - **Operational diagnostics (`brain79 doctor`):** evaluates 7 health categories in $<50\text{ ms}$ with POSIX exit codes (`0/1/2`), text/JSON formats, and Git-aware `--fix` safety guards.
 
 ### 6. Storage, centralized locks, and cross-platform I/O (`locks.py`, `config.py`)
 - **Zero cloud lock-in:** pure Markdown files stored directly in Git.
 - **Centralized lock isolation (`.brain-79/.locks/`):** all inter-process `filelock` instances live exclusively in `.brain-79/.locks/`, eliminating `.lock` files from documentation directories.
+- **Dynamic ancestor root discovery:** resolves project root by climbing upwards to an ancestor `.brain-79/` when `--project-root .` is specified, stopping at nested `.git` boundaries for subproject isolation.
 - **Resilient atomic writes:** writes commit to `.tmp` files and execute `atomic_replace_with_retry()` with exponential backoff on Windows NTFS `PermissionError`.
 - **Cross-platform normalization:** enforces strict POSIX paths (`.as_posix()`), pure LF (`\n`) line endings, and APFS segment-by-segment character casing parity on macOS.
 
@@ -196,7 +197,7 @@ All session finalization executes under `.brain-79/.locks/_transaction.lock`:
 
 ## 6. Strategic evolution
 
-Phases 0 through 7 are complete and active in production as of `v0.9.0`. For the upcoming execution roadmap (Phase 8: zero-clone distribution via `uvx` and context budget payload ceilings), see:
+Phases 0 through 7.1 are complete and active in production as of `v0.9.1`. For the upcoming execution roadmap (Phase 8: zero-clone installation via `uv tool` and visual web guide; Phase 9: automated battle-testing and chaos gauntlet), see:
 - 🗺️ [**Industrial scale roadmap**](.brain-79/architecture/roadmap-industrial-scale.md)
 - 📜 [**Changelog and releases**](CHANGELOG.md)
 - 🏗️ [**System current state**](.brain-79/architecture/current-state.md)

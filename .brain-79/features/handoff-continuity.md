@@ -40,7 +40,7 @@ They track completed tasks, pending work items, boot instructions, and knowledge
 3. **Research guard**: Pure research or brainstorming sessions (`session_type="research"` or `"brainstorming"`) require persisting findings to the wiki via `brain79_session_commit()` or providing an explicit justification.
 4. **Lineage reference and cryptographic provenance**: Handoffs record `previous_handoff_ref`, `git_head`, `git_branch`, and `wiki_digest`.
 5. **Freshness and authority decay (ADR-016)**: Handoff authority is perishable. When code, git HEAD, or wiki state changes after the handoff was written, `brain79_orient` tags the handoff with `[Status: STALE - DRIFT DETECTED]` or `[Status: ANOTHER BRANCH]`, treating pending instructions as historical advisory rather than commanding truth.
-6. **Operational purge (`handoff-purge`)**: Allows developers and agents to clean up accumulated tactical handoffs at milestone boundaries. Defaults to safe dry-run preview (`--apply` required to mutate disk).
+6. **Operational purge (`handoff-purge`)**: allows developers and agents to clean up accumulated tactical handoffs at milestone boundaries. Defaults to safe dry-run preview (`--apply` required to mutate disk).
 
 ## Usage examples
 

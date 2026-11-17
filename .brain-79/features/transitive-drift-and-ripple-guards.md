@@ -57,7 +57,7 @@ Tracks workspace target files governed by `applies_to` patterns in `.drift_manif
 
 ### 7. Four-phase transaction pipeline & Hard Session Ripple Gate (`session_commit.py`)
 - Writes, edits, manifest updates, and handoffs execute inside outer mutex `.brain-79/.locks/_transaction.lock`:
-  - **Pass 1**: In-memory syntax and schema pre-flight validation.
+  - **Pass 1**: in-memory syntax and schema pre-flight validation.
   - **Pass 2**: Anti-sprawl check (2a), digest calculation (2b), verified article review (2c), and **Hard Session Ripple Gate (2d)**: aborts the transaction (`unresolved_session_ripple`) if any impacted article remains drifted.
   - **Guard C (AST verification)**: blocks `verified_articles` without prose updates if public AST signatures changed in governed `.py` files.
   - **Pass 3 & Pass 4**: Atomic multi-file disk persistence and handoff emission.

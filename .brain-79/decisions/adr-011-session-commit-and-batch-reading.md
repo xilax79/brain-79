@@ -15,7 +15,7 @@ related:
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - architecture/roadmap-industrial-scale.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:ead686e3866d2c90"
+applies_to_digest: "sha256:1cc75bc22ada9a4c"
 applies_to_count: 4
 ---
 
@@ -28,7 +28,7 @@ Accepted
 ## Context
 
 Prior to Phase 3 of the Industrial-Scale Roadmap, agents experienced high turn tax and unnecessary context token consumption in two critical workflows:
-1. **Mid-Session Exploration Turn Tax**: When inspecting multiple wiki articles or large documents (300+ lines), calling `brain79_read` sequentially required $N$ round trips, and reading entire documents when only a single subsection was needed wasted context window tokens.
+1. **Mid-Session Exploration Turn Tax**: when inspecting multiple wiki articles or large documents (300+ lines), calling `brain79_read` sequentially required $N$ round trips, and reading entire documents when only a single subsection was needed wasted context window tokens.
 2. **End-of-Session Wrap-Up Turn Tax**: Wrapping up a session required 3 to 5 sequential round trips:
    - `brain79_ingest` for raw session logs.
    - `brain79_write` / `brain79_edit` / `brain79_write_many` for article mutations.
@@ -48,10 +48,10 @@ We introduced **Phase 3: Zero-Turn Session Execution**, completing the Two-Call 
 
 2. **1-Call Atomic Session Finalization (`brain79_session_commit` / `brain79 session-commit`)**:
    - Executes raw session archiving (`_raw/sessions/`), article writes, article partial edits, and immutable handoffs in a single all-or-nothing transaction.
-   - **Pre-Flight In-Memory Simulation**: All writes are validated against schema rules, all edits are simulated sequentially in memory and validated, and all handoff anti-hallucination constraints are verified *before* disk mutation.
+   - **Pre-Flight In-Memory Simulation**: all writes are validated against schema rules, all edits are simulated sequentially in memory and validated, and all handoff anti-hallucination constraints are verified *before* disk mutation.
    - **Rollback Guarantee**: If *any* write, edit, or handoff fails validation, **zero files on disk are modified**.
    - **Single Navigation Synchronization**: Synchronizes `.navigation_registry.json` and regenerates `INDEX.md` once under lock for all touched articles.
-   - **Unified Inline Receipt**: Evaluates inline health diagnostics (`check_file_health`) across all touched articles and returns a structured commit receipt with health warnings (if any).
+   - **Unified Inline Receipt**: evaluates inline health diagnostics (`check_file_health`) across all touched articles and returns a structured commit receipt with health warnings (if any).
 
 3. **Strict 1:1 Symmetry**:
    - FastMCP tools: `brain79_read` (with `sections`), `brain79_read_batch`, `brain79_session_commit`.

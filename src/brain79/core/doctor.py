@@ -97,6 +97,7 @@ def run_doctor(
                         ".brain-79",
                         ".mcp.json",
                         ".agents/mcp_config.json",
+                        ".agents/plugins/brain79",
                         ".cursor/mcp.json",
                     ],
                     cwd=p_root,
@@ -343,6 +344,48 @@ def run_doctor(
                 harness_has_error = True
                 harness_issues.append(f"{rel_target} contains corrupt JSON")
 
+    # Antigravity plugin checks (.agents/plugins/brain79/)
+    agy_plugin_dir = p_root / ".agents" / "plugins" / "brain79"
+    agy_plugin_json = agy_plugin_dir / "plugin.json"
+    agy_mcp_json = agy_plugin_dir / "mcp_config.json"
+    agy_skill_md = agy_plugin_dir / "skills" / "brain79-wiki" / "SKILL.md"
+
+    missing_agy_plugin = False
+    if not agy_plugin_json.is_file():
+        missing_agy_plugin = True
+        harness_issues.append("missing .agents/plugins/brain79/plugin.json")
+    else:
+        try:
+            p_data = json.loads(agy_plugin_json.read_text(encoding="utf-8"))
+            if not isinstance(p_data, dict) or not p_data.get("name"):
+                harness_issues.append(".agents/plugins/brain79/plugin.json missing valid name")
+        except Exception:
+            harness_has_error = True
+            harness_issues.append(".agents/plugins/brain79/plugin.json contains corrupt JSON")
+
+    if not agy_mcp_json.is_file():
+        missing_agy_plugin = True
+        harness_issues.append("missing .agents/plugins/brain79/mcp_config.json")
+    else:
+        try:
+            m_data = json.loads(agy_mcp_json.read_text(encoding="utf-8"))
+            srv = m_data.get("mcpServers", {}).get("brain79", {})
+            cmd = str(srv.get("command", ""))
+            args = srv.get("args", [])
+            if cmd != "brain79":
+                harness_issues.append(f".agents/plugins/brain79/mcp_config.json uses non-portable command '{cmd}'")
+            if args != ["--project-root", "."]:
+                harness_issues.append(f".agents/plugins/brain79/mcp_config.json uses non-portable arguments '{args}'")
+        except Exception:
+            harness_has_error = True
+            harness_issues.append(".agents/plugins/brain79/mcp_config.json contains corrupt JSON")
+
+    if not agy_skill_md.is_file() or agy_skill_md.stat().st_size == 0:
+        missing_agy_plugin = True
+        harness_issues.append("missing or empty .agents/plugins/brain79/skills/brain79-wiki/SKILL.md")
+
+    legacy_agents_present = (p_root / ".agents" / "mcp_config.json").is_file()
+
     if harness_has_error:
         checks.append(
             DoctorCheck(
@@ -353,12 +396,17 @@ def run_doctor(
             )
         )
     elif harness_issues:
+        action_msg = (
+            "Run 'brain79 update-project' or 'brain79 doctor --fix' to register the Antigravity (agy) plugin at .agents/plugins/brain79/."
+            if (missing_agy_plugin and legacy_agents_present)
+            else "Run 'brain79 update-project' to register portable MCP harnesses."
+        )
         checks.append(
             DoctorCheck(
                 category="mcp_harnesses",
                 status="warning",
                 message="; ".join(harness_issues) + ".",
-                actionable="Run 'brain79 update-project' to register portable MCP harnesses.",
+                actionable=action_msg,
             )
         )
     else:

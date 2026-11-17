@@ -120,13 +120,6 @@
       "registered_at": "2026-11-12T18:46:54.745749+00:00"
     },
     {
-      "path": "changelog/v0-8-0.md",
-      "title": "Changelog \u2014 Version 0.8.0 \u2014 Transitive drift and ripple guards",
-      "summary": "Phase 6.7 release \u2014 Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification",
-      "section": "changelog",
-      "registered_at": "2026-11-12T18:59:24.002450+00:00"
-    },
-    {
       "path": "features/cross-platform-and-lock-isolation.md",
       "title": "Feature \u2014 Cross-platform portability and centralized lock isolation",
       "summary": "centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests",
@@ -168,260 +161,6 @@
       ]
     },
     {
-      "path": "features/organizational-enforcement.md",
-      "title": "Feature \u2014 Wiki organizational enforcement",
-      "summary": "prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing",
-      "section": "features",
-      "registered_at": "2026-11-13T17:58:08.175140+00:00",
-      "applies_to": [
-        "src/brain79/core/lint.py",
-        "src/brain79/core/lint_organizational.py",
-        "src/brain79/core/validation.py",
-        "src/brain79/core/frontmatter.py",
-        "src/brain79/core/navigation.py",
-        "src/brain79/core/migration.py",
-        "src/brain79/templates/__init__.py"
-      ],
-      "related": [
-        "decisions/adr-004-strict-write-validation.md",
-        "decisions/adr-006-auto-navigation-and-batch-operations.md",
-        "decisions/adr-012-structural-quality-and-drift-detection.md",
-        "decisions/adr-018-living-manuals-and-temporal-decontamination.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "features/transitive-drift-and-ripple-guards.md",
-      "title": "Feature \u2014 Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context",
-      "summary": "merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context",
-      "section": "features",
-      "registered_at": "2026-11-13T18:21:46.441478+00:00",
-      "applies_to": [
-        "src/brain79/core/drift.py",
-        "src/brain79/core/context.py",
-        "src/brain79/core/session_commit.py",
-        "src/brain79/core/orient.py"
-      ],
-      "related": [
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-011-session-commit-and-batch-reading.md",
-        "decisions/adr-012-structural-quality-and-drift-detection.md",
-        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
-        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
-        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
-        "architecture/roadmap-industrial-scale.md",
-        "architecture/current-state.md",
-        "features/session-triage-and-research-persistence.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "features/version-governance.md",
-      "title": "Feature \u2014 Versioning and release governance",
-      "summary": "single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks",
-      "section": "features",
-      "registered_at": "2026-11-13T18:21:46.442697+00:00",
-      "applies_to": [
-        "src/brain79/__init__.py",
-        "pyproject.toml",
-        "src/brain79/core/update.py"
-      ],
-      "related": [
-        "architecture/roadmap-industrial-scale.md",
-        "decisions/adr-013-versioning-and-release-governance.md",
-        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "decisions/adr-012-structural-quality-and-drift-detection.md",
-      "title": "ADR-012 \u2014 Structural article quality, auto-injected backlinks, and deterministic drift detection",
-      "summary": "section-level structural skeletons, auto-injected backlinks, and deterministic code-to-wiki drift detection",
-      "section": "decisions",
-      "registered_at": "2026-11-13T18:40:56.995839+00:00",
-      "applies_to": [
-        "src/brain79/core/frontmatter.py",
-        "src/brain79/core/validation.py",
-        "src/brain79/core/drift.py",
-        "src/brain79/core/lint_organizational.py",
-        "src/brain79/core/orient.py",
-        "src/brain79/core/wiki.py"
-      ],
-      "related": [
-        "decisions/adr-007-frontmatter-summary-and-backlink-navigation.md",
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-011-session-commit-and-batch-reading.md",
-        "architecture/roadmap-industrial-scale.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "product/overview.md",
-      "title": "Brain-79 \u2014 Product vision",
-      "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
-      "section": "product",
-      "registered_at": "2026-11-13T18:40:57.002957+00:00",
-      "applies_to": [
-        ".brain-79/SCHEMA.md",
-        ".brain-79/features/*.md",
-        "src/brain79/__init__.py"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "features/session-triage-and-research-persistence.md",
-      "title": "Feature \u2014 Session knowledge triage and research persistence",
-      "summary": "session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics",
-      "section": "features",
-      "registered_at": "2026-11-13T21:26:47.874402+00:00",
-      "applies_to": [
-        "src/brain79/core/session_commit.py",
-        "src/brain79/core/curate.py",
-        "src/brain79/core/orient.py",
-        "src/brain79/core/context.py",
-        "src/brain79/core/wiki.py",
-        "src/brain79/core/bootstrap.py",
-        "src/brain79/core/init_project.py"
-      ],
-      "related": [
-        "architecture/roadmap-industrial-scale.md",
-        "architecture/defect-backlog.md",
-        "features/handoff-continuity.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "features/project-upgrade-and-multi-harness-doctor.md",
-      "title": "Feature \u2014 Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics",
-      "summary": "non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics",
-      "section": "features",
-      "registered_at": "2026-11-13T21:51:13.297873+00:00",
-      "applies_to": [
-        "src/brain79/core/init_project.py",
-        "src/brain79/core/migration.py",
-        "src/brain79/core/doctor.py",
-        "src/brain79/cli/dispatch.py",
-        "src/brain79/server.py",
-        "src/brain79/core/orient.py"
-      ],
-      "related": [
-        "architecture/roadmap-industrial-scale.md",
-        "architecture/symmetry.md",
-        "architecture/current-state.md",
-        "features/cross-platform-and-lock-isolation.md",
-        "decisions/adr-016-handoff-freshness-and-authority-decay.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "features/cli.md",
-      "title": "Feature \u2014 Standalone CLI interface",
-      "summary": "deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs",
-      "section": "features",
-      "registered_at": "2026-11-13T22:04:40.186958+00:00",
-      "applies_to": [
-        "src/brain79/cli/dispatch.py",
-        "src/brain79/cli/io.py",
-        "src/brain79/cli/__init__.py"
-      ],
-      "related": [
-        "architecture/symmetry.md",
-        "architecture/dispatcher.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "features/mcp-server.md",
-      "title": "Feature \u2014 FastMCP integration",
-      "summary": "Model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication",
-      "section": "features",
-      "registered_at": "2026-11-13T22:04:40.191422+00:00",
-      "applies_to": [
-        "src/brain79/server.py"
-      ],
-      "related": [
-        "architecture/symmetry.md",
-        "architecture/mcp-server.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "architecture/dispatcher.md",
-      "title": "Architecture \u2014 CLI dispatcher",
-      "summary": "CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings",
-      "section": "architecture",
-      "registered_at": "2026-11-13T22:04:40.196620+00:00",
-      "applies_to": [
-        "src/brain79/__main__.py",
-        "src/brain79/cli/dispatch.py",
-        "src/brain79/cli/io.py"
-      ],
-      "related": [
-        "architecture/symmetry.md",
-        "features/cli.md",
-        "architecture/mcp-server.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "architecture/mcp-server.md",
-      "title": "Architecture \u2014 MCP server",
-      "summary": "FastMCP server architecture, logging suppression, tool definitions, and lifecycle management",
-      "section": "architecture",
-      "registered_at": "2026-11-13T22:04:40.197857+00:00",
-      "applies_to": [
-        "src/brain79/server.py",
-        "src/brain79/__main__.py"
-      ],
-      "related": [
-        "architecture/symmetry.md",
-        "features/mcp-server.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "architecture/symmetry.md",
-      "title": "Architecture \u2014 CLI and MCP symmetry",
-      "summary": "enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools",
-      "section": "architecture",
-      "registered_at": "2026-11-13T22:04:40.199002+00:00",
-      "applies_to": [
-        "src/brain79/cli/dispatch.py",
-        "src/brain79/server.py",
-        "tests/test_symmetry.py"
-      ],
-      "related": [
-        "architecture/current-state.md",
-        "features/cli.md",
-        "features/mcp-server.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
       "path": "changelog/v0-9-0.md",
       "title": "Changelog \u2014 Release 0.9.0: Project upgrade, multi-harness zero-config, and doctor diagnostics",
       "summary": "release v0.9.0 \u2014 project protocol upgrader, delimited AGENTS.md blocks, multi-harness zero-config, and doctor diagnostics",
@@ -432,32 +171,130 @@
       ]
     },
     {
+      "path": "architecture/agy-init-and-plugin-design.md",
+      "title": "Architecture \u2014 Antigravity (agy) plugin initialization and progressive disclosure",
+      "summary": "technical specification for zero-config Antigravity (agy) plugin initialization, progressive AGENTS.md disclosure, and ancestor root resolution",
+      "section": "architecture",
+      "registered_at": "2026-11-17T00:54:04.682004+00:00"
+    },
+    {
+      "path": "architecture/dispatcher.md",
+      "title": "Architecture \u2014 CLI dispatcher",
+      "summary": "CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings",
+      "section": "architecture",
+      "registered_at": "2026-11-17T00:54:04.702009+00:00"
+    },
+    {
+      "path": "architecture/mcp-server.md",
+      "title": "Architecture \u2014 MCP server",
+      "summary": "FastMCP server architecture, logging suppression, tool definitions, and lifecycle management",
+      "section": "architecture",
+      "registered_at": "2026-11-17T00:54:04.704221+00:00"
+    },
+    {
+      "path": "architecture/symmetry.md",
+      "title": "Architecture \u2014 CLI and MCP symmetry",
+      "summary": "enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools",
+      "section": "architecture",
+      "registered_at": "2026-11-17T00:54:04.707991+00:00"
+    },
+    {
+      "path": "changelog/v0-8-0.md",
+      "title": "Changelog \u2014 Version 0.8.0 \u2014 Transitive drift and ripple guards",
+      "summary": "phase 6.7 release \u2014 Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification",
+      "section": "changelog",
+      "registered_at": "2026-11-17T00:54:04.711522+00:00"
+    },
+    {
       "path": "decisions/adr-011-session-commit-and-batch-reading.md",
       "title": "ADR-011 \u2014 Two-call session protocol: 1-call atomic session commit and section-projected batch reading",
       "summary": "1-call atomic session finalization and section-projected batch reading",
       "section": "decisions",
-      "registered_at": "2026-11-13T22:07:50.904317+00:00",
-      "applies_to": [
-        "src/brain79/core/session_commit.py",
-        "src/brain79/core/wiki.py",
-        "src/brain79/server.py",
-        "src/brain79/cli/dispatch.py"
-      ],
-      "related": [
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-006-auto-navigation-and-batch-operations.md",
-        "architecture/roadmap-industrial-scale.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
+      "registered_at": "2026-11-17T00:54:04.722213+00:00"
+    },
+    {
+      "path": "decisions/adr-012-structural-quality-and-drift-detection.md",
+      "title": "ADR-012 \u2014 Structural article quality, auto-injected backlinks, and deterministic drift detection",
+      "summary": "section-level structural skeletons, auto-injected backlinks, and deterministic code-to-wiki drift detection",
+      "section": "decisions",
+      "registered_at": "2026-11-17T00:54:04.724151+00:00"
+    },
+    {
+      "path": "features/cli.md",
+      "title": "Feature \u2014 Standalone CLI interface",
+      "summary": "deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs",
+      "section": "features",
+      "registered_at": "2026-11-17T00:54:04.729056+00:00"
+    },
+    {
+      "path": "features/mcp-server.md",
+      "title": "Feature \u2014 FastMCP integration",
+      "summary": "model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication",
+      "section": "features",
+      "registered_at": "2026-11-17T00:54:04.733420+00:00"
+    },
+    {
+      "path": "features/organizational-enforcement.md",
+      "title": "Feature \u2014 Wiki organizational enforcement",
+      "summary": "prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing",
+      "section": "features",
+      "registered_at": "2026-11-17T00:54:04.735665+00:00"
+    },
+    {
+      "path": "features/project-upgrade-and-multi-harness-doctor.md",
+      "title": "Feature \u2014 Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics",
+      "summary": "non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics",
+      "section": "features",
+      "registered_at": "2026-11-17T00:54:04.737407+00:00"
+    },
+    {
+      "path": "features/session-triage-and-research-persistence.md",
+      "title": "Feature \u2014 Session knowledge triage and research persistence",
+      "summary": "session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics",
+      "section": "features",
+      "registered_at": "2026-11-17T00:54:04.739350+00:00"
+    },
+    {
+      "path": "features/transitive-drift-and-ripple-guards.md",
+      "title": "Feature \u2014 Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context",
+      "summary": "merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context",
+      "section": "features",
+      "registered_at": "2026-11-17T00:54:04.741191+00:00"
+    },
+    {
+      "path": "features/version-governance.md",
+      "title": "Feature \u2014 Versioning and release governance",
+      "summary": "single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks",
+      "section": "features",
+      "registered_at": "2026-11-17T00:54:04.743372+00:00"
+    },
+    {
+      "path": "product/overview.md",
+      "title": "Brain-79 \u2014 Product vision",
+      "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
+      "section": "product",
+      "registered_at": "2026-11-17T00:54:04.746486+00:00"
+    },
+    {
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
+      "summary": "project roadmap covering completed phases (0-7) and pre-GA maturation phases (8-9) for visual documentation and automated battle-testing",
+      "section": "architecture",
+      "registered_at": "2026-11-17T00:54:21.033385+00:00"
+    },
+    {
+      "path": "changelog/v0-9-1.md",
+      "title": "Changelog \u2014 Release 0.9.1: Antigravity plugin, progressive disclosure, and root walk",
+      "summary": "release v0.9.1 \u2014 Antigravity native plugin, progressive AGENTS.md disclosure, and ancestor root walk",
+      "section": "changelog",
+      "registered_at": "2026-11-17T00:55:38.093187+00:00"
     },
     {
       "path": "architecture/current-state.md",
       "title": "Architecture \u2014 System current state",
       "summary": "high-level overview of system architecture, active milestones, runtime invariants, and roadmap",
       "section": "architecture",
-      "registered_at": "2026-11-13T22:21:18.257552+00:00",
+      "registered_at": "2026-11-17T01:25:08.315152+00:00",
       "applies_to": [
         "README.md",
         "ARCHITECTURE.md",
@@ -487,38 +324,6 @@
         "features/project-upgrade-and-multi-harness-doctor.md",
         "architecture/roadmap-industrial-scale.md",
         "changelog/legacy-internal-releases.md",
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "architecture/roadmap-industrial-scale.md",
-      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
-      "summary": "project roadmap covering completed phases (0-7) and pre-GA maturation phases (8-9) for visual documentation and automated battle-testing",
-      "section": "architecture",
-      "registered_at": "2026-11-13T23:13:39.618561+00:00",
-      "applies_to": [
-        ".brain-79/features/*.md"
-      ],
-      "related": [
-        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-011-session-commit-and-batch-reading.md",
-        "decisions/adr-012-structural-quality-and-drift-detection.md",
-        "decisions/adr-013-versioning-and-release-governance.md",
-        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
-        "decisions/adr-015-sentence-case-first-policy.md",
-        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
-        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
-        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
-        "features/version-governance.md",
-        "features/cross-platform-and-lock-isolation.md",
-        "features/session-triage-and-research-persistence.md",
-        "features/handoff-continuity.md",
-        "features/transitive-drift-and-ripple-guards.md",
-        "features/project-upgrade-and-multi-harness-doctor.md",
-        "architecture/defect-backlog.md"
-      ],
-      "outgoing_links": [
         "INDEX.md"
       ]
     }

@@ -3,7 +3,8 @@ type: decision
 summary: dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server
 status: accepted
 date: 2026-08-11
-deciders: [xilax]
+deciders:
+  - xilax
 last_updated: 2026-10-29
 ---
 

@@ -3,7 +3,8 @@ type: decision
 summary: assigning status legacy during progressive V3 migration to preserve semantic intent without blocking adoption
 status: accepted
 date: 2026-08-11
-deciders: [xilax]
+deciders:
+  - xilax
 last_updated: 2026-10-29
 ---
 
@@ -30,7 +31,7 @@ We chose to implement a progressive migration mechanism (`brain79 migrate`) that
 
 - **Positive**: Safe, non-destructive bulk onboarding of legacy wikis.
 - **Positive**: Clear visibility into unreviewed legacy documentation via `brain79 lint`.
-- **Negative**: Requires manual or agent follow-up to review and promote legacy statuses.
+- **Negative**: requires manual or agent follow-up to review and promote legacy statuses.
 
 ## Alternatives considered
 

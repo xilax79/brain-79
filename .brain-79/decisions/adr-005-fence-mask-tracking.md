@@ -3,7 +3,8 @@ type: decision
 summary: enforcing code fence masking in organizational linter to eliminate false positives in documentation examples
 status: accepted
 date: 2026-08-11
-deciders: [xilax]
+deciders:
+  - xilax
 last_updated: 2026-10-29
 ---
 

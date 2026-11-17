@@ -23,10 +23,10 @@ Technical documentation and generated wiki articles frequently suffered from art
 ## Decision
 
 Adopt a strict **Sentence case first** policy across the entire project, its internal wiki, and all generated templates:
-1. **Headings and titles (H1, H2, H3):** capitalize only the initial letter. The rest must be lowercase.
-2. **Proper nouns and acronyms:** the only exceptions to lowercase are genuine proper nouns (e.g. Python, Linux, macOS, Docker, Stripe, FastMCP) and acronyms (e.g. ADR, MCP, API, CI, JSON, POSIX, LF, CRLF, TF-IDF).
-3. **Punctuation and colons:** text following a colon (`:`) begins with a lowercase letter unless it is a proper noun or acronym (e.g. `- feature: description`, never `- feature: Description`).
-4. **Lists and table headers:** use sentence case. Title Case is rejected across all documentation artifacts.
+1. **Headings and titles (H1, H2, H3)**: capitalize only the initial letter. The rest must be lowercase.
+2. **Proper nouns and acronyms**: the only exceptions to lowercase are genuine proper nouns (e.g. Python, Linux, macOS, Docker, Stripe, FastMCP) and acronyms (e.g. ADR, MCP, API, CI, JSON, POSIX, LF, CRLF, TF-IDF).
+3. **Punctuation and colons**: text following a colon (`:`) begins with a lowercase letter unless it is a proper noun or acronym (e.g. `- feature: description`, never `- feature: Description`).
+4. **Lists and table headers**: use sentence case. Title Case is rejected across all documentation artifacts.
 
 ## Consequences
 

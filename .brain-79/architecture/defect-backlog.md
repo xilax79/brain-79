@@ -14,7 +14,7 @@ related:
   - features/cross-platform-and-lock-isolation.md
   - features/transitive-drift-and-ripple-guards.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:4fab0b1bdae4ec45"
+applies_to_digest: "sha256:b257c43afe6e002b"
 applies_to_count: 5
 ---
 

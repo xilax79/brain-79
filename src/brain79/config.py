@@ -13,7 +13,7 @@ def set_project_root(path: Path | None) -> None:
 
 
 def get_project_root() -> Path:
-    """Resolve project root from state, env var, or cwd (in that order)."""
+    """Resolve project root from explicit override, BRAIN79_PROJECT_ROOT, or upward ancestor walk."""
     if _project_root is not None:
         return _project_root
 
@@ -23,7 +23,20 @@ def get_project_root() -> Path:
     if env_root:
         return Path(env_root).resolve()
 
-    return Path.cwd().resolve()
+    cwd = Path.cwd().resolve()
+    if (cwd / ".brain-79").is_dir():
+        return cwd
+
+    if (cwd / ".git").exists():
+        return cwd
+
+    for parent in cwd.parents:
+        if (parent / ".brain-79").is_dir():
+            return parent
+        if (parent / ".git").exists():
+            return cwd
+
+    return cwd
 
 
 def get_wiki_root() -> Path:

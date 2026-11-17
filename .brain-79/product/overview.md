@@ -6,7 +6,7 @@ applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:816c48996468956a"
+applies_to_digest: "sha256:79443c243c0c48f7"
 applies_to_count: 11
 ---
 
@@ -26,7 +26,7 @@ LLMs maintain wikis that degrade organically:
 
 `brain-79` is an **AI memory protocol** that enforces mechanical organization:
 
-1. **Cold start (`brain79_orient`)**: The agent retrieves the routing table (`INDEX.md`), active handoff state with authority decay diagnostics, and inlined governing articles in a single call.
+1. **Cold start (`brain79_orient`)**: the agent retrieves the routing table (`INDEX.md`), active handoff state with authority decay diagnostics, and inlined governing articles in a single call.
 2. **Two-call session protocol**: Cold start orientation followed by single-call atomic session finalization (`brain79_session_commit`), validating transitive drift and ripple gates.
 3. **Write-time validation**: Mechanical write operations validate frontmatter schemas, file locations, and target existence.
 4. **Pre-commit hook**: Direct editing bypasses are mechanically blocked before commit via `brain79 lint --strict`.

@@ -4,6 +4,18 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-16
+
+### Added
+- **Antigravity (agy) native plugin, progressive AGENTS.md disclosure, and ancestor root walk**:
+  - Native Antigravity workspace plugin initialization under `.agents/plugins/brain79/` with `plugin.json`, portable `mcp_config.json`, and on-demand `skills/brain79-wiki/SKILL.md`.
+  - Retained legacy `.agents/mcp_config.json` for backward compatibility across existing tooling and environments.
+  - Progressive disclosure split: compacted root `AGENTS.md` to <= 6,500 bytes while preserving all protocol anchors (`<!-- brain79:start -->`, `# Brain-79 AI memory protocol`, `pi-mcp-adapter`, `brain79_index`, `No-Op Idempotence`, `Zero-Modification Rule`, `## Project notes`).
+  - Moved comprehensive MCP/CLI reference tables, workflows, JSON examples, and lint/migration procedures to on-demand `SKILL.md` (`brain79-wiki`).
+  - Dynamic ancestor project root resolution when `--project-root .` or `--project-root=./` is specified, climbing to ancestor `.brain-79/` while respecting nested repository `.git` boundaries and `BRAIN79_PROJECT_ROOT`.
+  - Isolated subdirectory initialization for `brain79 init` without `--project-root`.
+  - Updated `brain79 doctor` diagnostic engine to validate `.agents/plugins/brain79/`, alert on missing plugin when legacy `.agents/mcp_config.json` is present, include plugin directory in dirty-tree git guard, and repair via `doctor --fix`.
+
 ## [0.9.0] - 2026-11-13
 
 ### Added

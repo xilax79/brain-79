@@ -3,7 +3,8 @@ type: decision
 summary: synchronous write-time schema validation with multi-error reporting and deterministic field auto-fill
 status: accepted
 date: 2026-08-11
-deciders: [xilax]
+deciders:
+  - xilax
 last_updated: 2026-10-29
 ---
 
@@ -37,7 +38,7 @@ We chose to enforce synchronous, write-time validation in `brain79_write` / `bra
 - **Positive**: Prevents malformed or misplaced articles from ever hitting disk.
 - **Positive**: Eliminates multi-turn retry chains by auto-inferring deterministic fields and reporting all semantic errors at once.
 - **Positive**: Immediate feedback loop to agents during writing steps with copy-paste templates.
-- **Neutral**: The server injects or normalizes frontmatter during writes.
+- **Neutral**: the server injects or normalizes frontmatter during writes.
 
 ## Alternatives considered
 

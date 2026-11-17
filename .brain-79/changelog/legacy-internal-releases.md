@@ -88,11 +88,11 @@ A milestone major release transitioning brain-79 from an MVP memory logger into 
 Notable improvements addressing end-of-session wiki update performance and tool usability.
 
 ### Added features
-- **Schema exposure tool (`brain79 schema` / `brain79_schema`)**: Inspect schema requirements and copy-paste YAML templates directly.
+- **Schema exposure tool (`brain79 schema` / `brain79_schema`)**: inspect schema requirements and copy-paste YAML templates directly.
 - **Partial edit tool (`brain79 edit` / `brain79_edit`)**: Targeted text replacement avoiding full article regeneration.
 - **Batch write tool (`brain79 write-many` / `brain79_write_many`)**: Batch writes with upfront atomic all-or-nothing validation.
 - **Automatic navigation synchronization**: Article writes auto-register and atomically regenerate `INDEX.md` Quick navigation.
-- **Inline health checks**: Write tools return immediate health check status without requiring separate lint invocations.
+- **Inline health checks**: write tools return immediate health check status without requiring separate lint invocations.
 - **Deterministic field auto-fill**: Automatically infers type and updates timestamps, stripping hallucinated keys.
 
 ### Fixes and adjustments
