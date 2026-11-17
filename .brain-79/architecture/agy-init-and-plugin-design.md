@@ -15,7 +15,7 @@ related:
   - features/project-upgrade-and-multi-harness-doctor.md
   - decisions/adr-013-versioning-and-release-governance.md
 last_updated: 2026-11-16
-applies_to_digest: "sha256:28750f44545a5074"
+applies_to_digest: "sha256:8e36073174fd4a5f"
 applies_to_count: 6
 ---
 

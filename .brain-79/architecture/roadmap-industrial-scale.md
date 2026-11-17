@@ -23,8 +23,8 @@ related:
   - features/project-upgrade-and-multi-harness-doctor.md
   - architecture/defect-backlog.md
   - architecture/agy-init-and-plugin-design.md
-last_updated: 2026-11-16
-applies_to_digest: "sha256:8fa9a19a1945c88a"
+last_updated: 2026-11-17
+applies_to_digest: "sha256:8d8688bc0228430f"
 applies_to_count: 9
 ---
 
@@ -56,16 +56,18 @@ In accordance with **ADR-017 (Pre-GA Semantic Version Calibration)**, `brain-79`
 - **[x] Phase 6.8 (`v0.8.1`)**: three document classes, temporal decontamination, `<= 20 KB` living manuals (ADR-018).
 - **[x] Phase 7 (`v0.9.0`)**: managed `AGENTS.md` blocks, `SCHEMA.md` v2, MCP harnesses, `migrate_wiki` v2, `doctor`.
 - **[x] Phase 7.1 (`v0.9.1`)**: native `agy` plugin, progressive disclosure AGENTS.md/SKILL.md, ancestor root walk, doctor checks.
+- **[x] Phase 8 (`v0.9.2`)**: zero-clone install via `uv tool`, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation structure.
 
 ---
 
-## Upcoming execution roadmap (`v0.9.x` $\rightarrow$ `v1.0.0`)
+## Upcoming execution roadmap (`v0.9.x` $
+ightarrow$ `v1.0.0`)
 
 ```
 +-----------------------------------------------------------------------------------+
 | Phase 7.1: Antigravity (agy) native plugin, AGENTS.md split & root walk (v0.9.1)  | [x] Shipped|
 +-----------------------------------------------------------------------------------+
-| Phase 8: Zero-clone install, honest LLM-wiki docs & visual web guide (v0.9.2)     | [ ] Planned|
+| Phase 8: Zero-clone install, CLI/runtime alignment & Diátaxis docs (v0.9.2)       | [x] Shipped|
 +-----------------------------------------------------------------------------------+
 | Phase 9: Automated battle-testing, chaos fuzzing & multi-repo gauntlet (v0.9.3)   | [ ] Planned|
 +-----------------------------------------------------------------------------------+
@@ -98,9 +100,9 @@ In accordance with **ADR-017 (Pre-GA Semantic Version Calibration)**, `brain-79`
 
 ---
 
-### Phase 8: Zero-clone installation, honest LLM-wiki documentation, and visual web guide (`v0.9.2`)
+### Phase 8: Zero-clone installation, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation (`v0.9.2`)
 
-Before opening the repository to external users, a newcomer must be able to understand what `brain-79` does in 30 seconds, see real before/after terminal examples, and install it with one command without cloning the repository.
+Before opening the repository to external users, a newcomer must be able to understand what `brain-79` does in 30 seconds, see real before/after terminal examples, and install it with one command without cloning the repository. Full engineering contracts, error messages, module maps, and verification steps are specified in [the zero-clone distribution and visual docs design](zero-clone-distribution-and-visual-docs.md).
 
 #### Writing and communication rules (mandatory)
 1. **No marketing hype or false promises**: never claim *"Zero hallucination"*, *"Zero context rot"*, or *"Your AI never forgets"*. No external tool controls LLM weights. State what `brain-79` actually does: it turns a Karpathy-style **LLM-wiki** into an enforced workflow by loading task-relevant files on startup, checking code-to-doc SHA-256 drift, and validating wiki writes before they hit the disk.
@@ -109,46 +111,20 @@ Before opening the repository to external users, a newcomer must be able to unde
    - Avoid AI clichés: no rule-of-three adjective chains, no endless `-ing` participial tails (*"...ensuring X, guaranteeing Y, and enabling Z"*), and no stuffing five technical terms into one sentence.
    - Show real terminal inputs and outputs instead of abstract prose.
 
-#### Deliverable 8.1: Zero-clone installation and self-update (`src/brain79/core/update.py`)
-- **Problem**: `brain79 update` currently assumes the user cloned the Git repository to a local folder and runs `git pull`. External users install CLI tools in one line via `uv tool install`.
-- **Implementation**:
-  1. Update `src/brain79/core/update.py` so `brain79 update` detects how it is installed. When running inside a local development git checkout, keep `git pull` + `uv tool install --editable . --force`. When installed as a standalone tool, run `uv tool install --force git+https://github.com/xilax79/brain-79.git` (or `uv tool upgrade brain79`).
-  2. Standardize the primary installation command across all docs:
-     ```bash
-     uv tool install git+https://github.com/xilax79/brain-79.git
-     ```
+#### Deliverable 8.1: Zero-clone self-update and holistic CLI/runtime alignment (`update.py`, `dispatch.py`, `__main__.py`, `doctor.py`, `templates/AGENTS.md`)
+- Update `src/brain79/core/update.py` so `brain79 update` distinguishes a local editable git checkout (excluding `site-packages`/`dist-packages` and `$HOME` dotfiles false positives) from a standalone zero-clone install.
+- Inside a local dev checkout, run `git pull --ff-only` followed by `uv tool install --editable --force .`. Inside a standalone install, run `uv tool install --force git+https://github.com/xilax79/brain-79.git` (supporting `--branch` via `@<branch>` and handling Windows running-binary lock errors gracefully).
+- Fix `brain79 update` help/flag descriptions in `dispatch.py` and `ROOT_HELP` in `__main__.py` (adding `update-project` and `doctor`), align `doctor.py` Python runtime checks to `>= 3.11` matching `pyproject.toml`, and replace `--editable .` hints in `doctor.py` and `src/brain79/templates/AGENTS.md` with `uv tool install git+https://github.com/xilax79/brain-79.git`.
 
-#### Deliverable 8.2: High-clarity, example-driven `README.md` (user-facing)
-Rewrite `README.md` to be light, visual, and grounded in concrete examples (~160–200 lines):
-1. **Positioning (Karpathy's LLM-wiki with mechanical guardrails)**:
-   - Explain the core idea in plain words: Andrej Karpathy popularized the **LLM-wiki** concept—giving coding agents a structured folder of Markdown files they read and update over time. In practice, raw LLM-wikis break down after a few sessions because agents leave docs outdated when code changes, create duplicate files (`auth-v2.md`), or blow up a single `CLAUDE.md` file. `brain-79` adds the mechanical layer (MCP + CLI) that keeps an LLM-wiki accurate.
-2. **Visual "Without `brain-79` vs. With `brain-79`" comparison**:
-   - A side-by-side table showing the 4 real failure modes:
-     1. Monolithic `CLAUDE.md` / blind file reading $\rightarrow$ 1-call `brain79_orient` routed by `INDEX.md` and `applies_to`.
-     2. Silent code-to-doc drift when `.py`/`.ts` files change $\rightarrow$ SHA-256 drift tracking and the session commit gate.
-     3. Wiki sprawl (duplicate files for the same module) $\rightarrow$ write-time overlap check forcing edits to the existing article.
-     4. Obsolete session handoffs after branch switches or manual commits $\rightarrow$ git-stamped handoffs (`fresh` vs `stale` / `foreign_branch`).
-3. **Three real terminal walkthroughs ("Show, Don't Tell")**:
-   - **Scene 1 — Starting a task**: what the agent receives when calling `brain79 orient --task "add refund endpoint" --paths "src/payments.py"`.
-   - **Scene 2 — Catching outdated docs before session close**: the exact error message `brain79_session_commit` returns when `src/payments.py` changed its function signature and the agent forgot to update `features/payments.md` or `architecture/overview.md`.
-   - **Scene 3 — Research without code (`--profile general`)**: how a research session saves structured notes into `topics/` and `decisions/`.
-4. **3-command quick start & links**:
-   - Install (`uv tool install git+https://...`), initialize (`brain79 init`), and diagnose (`brain79 doctor`).
-   - Prominent link to the interactive visual guide on GitHub Pages (`docs/index.html`) and `ARCHITECTURE.md`.
+#### Deliverable 8.2: High-clarity, human-facing landing page (README.md) and user guide (USER_GUIDE.md)
+- Rewrite `README.md` (~138 lines) in clean B2 English with ADR-015 sentence case: Karpathy LLM-wiki positioning, a 4-row comparison table, ASCII workflow diagram, and day-to-day usage walkthrough without internal engine jargon.
+- Create `USER_GUIDE.md` as Diátaxis How-To and protocol reference: AGENTS.md + MCP connection, 5 concrete code-verified scenarios (cold-start orientation with 64 KB reading manifest, AST Guard C and Ripple Gate stale doc protection, gitless research, on-demand handoffs with cryptographic provenance, and MCP tool vs CLI symmetry table). Preserve the `version-0.9.2-blue.svg` badge required by `tests/test_version_governance.py`.
 
-#### Deliverable 8.3: Developer-grade `ARCHITECTURE.md` (contributor-facing)
-Rewrite `ARCHITECTURE.md` in direct technical prose for engineers who want to understand how the engine works under the hood:
-1. **Source code map (`src/brain79/`)**: a table mapping every `.py` module in `src/brain79/core/`, `cli/`, and `server.py` to its single responsibility.
-2. **End-to-end execution flows**:
-   - Step-by-step trace of `brain79_orient()` (index loading, handoff freshness check, 3-signal ranking, 64 KB inline budget).
-   - Step-by-step trace of `brain79_session_commit()` under `.locks/_transaction.lock` (Pass 1 validation, Pass 2a anti-sprawl, Pass 2b Merkle digest update, Pass 2c AST signature check, Pass 2d ripple gate, Pass 3/4 atomic disk write).
-3. **Storage & concurrency design**: how `.drift_manifest.json`, `.navigation_registry.json`, and `.brain-79/.locks/` work across macOS, Linux, and Windows.
+#### Deliverable 8.3: Developer-grade ARCHITECTURE.md (contributor-facing)
+- Rewrite `ARCHITECTURE.md` retaining the three-class ontology, authority hierarchy, 1:1 symmetry (`24` CLI / `22` MCP), and `.brain-79/` layout while adding a complete 28-file `src/brain79/` module map, verified step-by-step traces of `orient()` and `commit_session()`, and cross-platform `.locks/` + atomic storage details.
 
-#### Deliverable 8.4: Interactive visual web guide for GitHub Pages (`docs/index.html`)
-Create a self-contained, zero-build static web page at `docs/index.html` (deployable directly via GitHub Pages from the `/docs` folder):
-1. **Visual comparison timeline**: an interactive "Session 1 $\rightarrow$ Session 5 $\rightarrow$ Session 10" view contrasting an unmanaged `CLAUDE.md` / raw LLM-wiki against a `brain-79` workspace.
-2. **Interactive dependency & ripple graph**: an interactive diagram where clicking a source file (e.g. `src/payments.py`) highlights the governed feature manual (`features/payments.md`) and the upstream umbrella overview (`architecture/current-state.md`), showing how code changes propagate through the wiki.
-3. **Interactive walkthrough tabs**: switchable views for **Software Engineering (`--profile software`)**, **Research & Analysis (`--profile general`)**, and **Project Maintenance (`update-project` & `doctor`)** with realistic file trees and terminal outputs.
+#### Deliverable 8.4: Retirement of HTML documentation and 3-layer Diátaxis structure
+- Remove stale `docs/whitepaper.html` and `docs/index.html` in favor of pure Markdown Diátaxis documentation (`README.md`, `USER_GUIDE.md`, `ARCHITECTURE.md`), eliminating redundant HTML maintenance and external CDN dependencies.
 
 ---
 
@@ -157,12 +133,14 @@ Create a self-contained, zero-build static web page at `docs/index.html` (deploy
 Because `brain-79` is maintained by a solo builder, manual testing cannot cover every OS, git state, or LLM behavior. Phase 9 builds an automated 4-level battle-testing harness that stress-tests the engine against real-world chaos before `v1.0.0`.
 
 #### Deliverable 9.1: Real multi-OS GitHub Actions matrix (`.github/workflows/ci.yml`)
-- Run `pytest`, `mypy`, `brain79 lint --strict`, and `brain79 doctor` on real runners across **Ubuntu Linux (`ext4`)**, **macOS (`APFS`)**, and **Windows (`NTFS`)** on Python `3.10`, `3.11`, and `3.12`.
+- Run `pytest`, `mypy`, `brain79 lint --strict`, and `brain79 doctor` on real runners across **Ubuntu Linux (`ext4`)**, **macOS (`APFS`)**, and **Windows (`NTFS`)** on Python `3.11`, `3.12`, and `3.13`.
 - Verify native Windows file locking, `%APPDATA%` paths, CRLF handling, and POSIX shell hook execution without relying solely on macOS mocks.
 
 #### Deliverable 9.2: Multiprocess concurrency stress & property-based fuzzing (`tests/test_chaos_and_fuzzing.py`)
 1. **8-worker multiprocess contention test**: spawn 8 concurrent OS processes executing `write_article`, `edit_article`, `navigate --regenerate`, and `session_commit` against the same `.brain-79/` folder simultaneously. Assert zero `JSONDecodeError` in `.navigation_registry.json` or `.drift_manifest.json`, zero leftover `.tmp` files, and 100% lock release.
-2. **Adversarial input fuzzing**: feed malformed YAML, mixed `\r\r\n` line endings, exotic Unicode (RTL scripts, zero-width joiners, emoji slugs), deep cyclic `applies_to` graphs (`A -> B -> C -> A`), and boundary-sized payloads (`20,479` vs `20,481` bytes) into `validate_article`, `parse_frontmatter`, and `migrate_wiki`. Assert that the engine only raises structured `ValidationError` or `FrontmatterError` exceptions—never unhandled `KeyError`, `IndexError`, or `UnicodeDecodeError`.
+2. **Adversarial input fuzzing**: feed malformed YAML, mixed `
+
+` line endings, exotic Unicode (RTL scripts, zero-width joiners, emoji slugs), deep cyclic `applies_to` graphs (`A -> B -> C -> A`), and boundary-sized payloads (`20,479` vs `20,481` bytes) into `validate_article`, `parse_frontmatter`, and `migrate_wiki`. Assert that the engine only raises structured `ValidationError` or `FrontmatterError` exceptions—never unhandled `KeyError`, `IndexError`, or `UnicodeDecodeError`.
 
 #### Deliverable 9.3: The 5-Archetype Multi-Repo Gauntlet (`scripts/run_battle_gauntlet.py` & `tests/test_battle_gauntlet.py`)
 An automated end-to-end gauntlet that builds 5 realistic workspace archetypes in temporary directories and runs a 10-step lifecycle on each:
@@ -185,9 +163,10 @@ An automated end-to-end gauntlet that builds 5 realistic workspace archetypes in
 | **AC-7.1.2** | `v0.9.1` | **Progressive `AGENTS.md` split**: `AGENTS.md` `<= 6,500` bytes with all test anchors and accurate `agy` setup; full reference tables in `SKILL.md`. | `tests/test_init_project.py` |
 | **AC-7.1.3** | `v0.9.1` | **Subdirectory root walk & `init` isolation**: `--project-root .` finds ancestor `.brain-79/`, stops at `.git` boundaries, and `init` stays local to `cwd`. | `tests/test_cli.py` |
 | **AC-7.1.4** | `v0.9.1` | **Doctor & ADR-013 parity**: `doctor` flags missing `.agents/plugins/brain79/`, `doctor --fix` repairs it, and `pytest`/`mypy`/`lint --strict` pass at `v0.9.1`. | `tests/test_project_upgrade_and_doctor.py` |
-| **AC-8.1** | `v0.9.2` | **Zero-clone `brain79 update`**: upgrades via `uv tool` outside a git clone and preserves editable git-pull behavior inside a dev clone. | `tests/test_update.py` |
-| **AC-8.2** | `v0.9.2` | **Honest, B2-clear `README.md` & `ARCHITECTURE.md`**: zero hype claims; positions Karpathy's LLM-wiki pattern; includes real terminal outputs and a full `src/brain79/` module map. | Adversarial doc audit |
-| **AC-8.3** | `v0.9.2` | **Interactive visual web guide (`docs/index.html`)**: zero-build static page with interactive ripple graph, session timeline, and tabbed walkthroughs for GitHub Pages. | Browser & link check |
+| **AC-8.1** | `v0.9.2` | **Zero-clone `brain79 update` & CLI/Python alignment**: standalone installs upgrade via `uv tool install --force git+...`, local dev checkouts preserve `git pull` + `--editable --force .`, `dispatch.py`/`ROOT_HELP`/`doctor.py`/`AGENTS.md` align on `Python >= 3.11` and zero-clone hints. | `tests/test_update.py`, `tests/test_cli.py`, `tests/test_project_upgrade_and_doctor.py` |
+| **AC-8.2** | `v0.9.2` | **Three-layer Diátaxis documentation structure**: human-facing `README.md`, How-To & protocol reference `USER_GUIDE.md`, and technical specifications `ARCHITECTURE.md` with zero hype, ADR-015 sentence case, and version badge parity (`0.9.2`). | `tests/test_version_governance.py`, doc audit |
+| **AC-8.3** | `v0.9.2` | **HTML docs retirement**: `docs/whitepaper.html` and `docs/index.html` removed in favor of pure, zero-dependency Markdown documentation with zero `file:///Users/` paths. | `tests/test_version_governance.py` |
+| **AC-8.4** | `v0.9.2` | **Release & Merkle ripple parity**: `__version__` bumped to `0.9.2`, `CHANGELOG.md` + `changelog/v0-9-2.md` + `AGENTS.md` synced, and all impacted wiki articles updated or verified with zero drift. | `pytest`, `mypy src tests`, `brain79 lint --strict`, `brain79 doctor` |
 | **AC-9.1** | `v0.9.3` | **Multi-OS CI matrix**: `.github/workflows/ci.yml` passes across Ubuntu, macOS, and Windows. | GitHub Actions workflow |
 | **AC-9.2** | `v0.9.3` | **8-process concurrency & fuzzing**: zero file corruption, zero lock leaks, and zero unhandled exceptions under concurrent writes and adversarial fuzz inputs. | `tests/test_chaos_and_fuzzing.py` |
 | **AC-9.3** | `v0.9.3` | **5-Archetype Battle Gauntlet**: all 5 realistic repository archetypes pass their full multi-session lifecycle and scale benchmarks (`< 150ms` at 200 articles / 1,000 files). | `tests/test_battle_gauntlet.py` |

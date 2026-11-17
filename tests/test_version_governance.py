@@ -180,3 +180,23 @@ def test_no_skewed_or_phantom_versions_in_governance_articles() -> None:
             assert "version 2.1.0" not in content, f"{rel_path} still references stale version 2.1.0."
             assert "as of version 2." not in content, f"{rel_path} still references stale 'as of version 2.'."
 
+
+def test_doc_hygiene_no_local_file_urls_and_no_html_docs() -> None:
+    """Verify README.md, USER_GUIDE.md, and ARCHITECTURE.md exist with no local file:///Users/ URLs, and HTML docs do not exist."""
+    docs_to_check = [
+        README_PATH,
+        REPO_ROOT / "USER_GUIDE.md",
+        REPO_ROOT / "ARCHITECTURE.md",
+    ]
+
+    for doc_path in docs_to_check:
+        assert doc_path.exists(), f"Missing doc file: {doc_path}"
+        text = doc_path.read_text(encoding="utf-8")
+        assert "file:///Users/" not in text, f"{doc_path.name} contains hardcoded local path 'file:///Users/'"
+
+    # HTML documentation files are retired in favor of 3-layer Diátaxis Markdown
+    for html_name in ["index.html", "whitepaper.html"]:
+        html_file = REPO_ROOT / "docs" / html_name
+        assert not html_file.exists(), f"docs/{html_name} must not exist"
+
+

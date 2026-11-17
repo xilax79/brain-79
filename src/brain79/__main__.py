@@ -83,7 +83,9 @@ Maintenance & governance:
   navigate              Display or refresh table of contents in INDEX.md
   migrate               Upgrade older documentation files to match current schema
   init                  Initialize a brain-79 memory wiki in the project
-  update                Update wiki templates and schema to the latest version
+  update                Update the installed brain79 CLI tool
+  update-project        Upgrade AGENTS.md, SCHEMA.md, and MCP harnesses in this repo
+  doctor                Run 7-point operational diagnostics and optional --fix
   bootstrap             Analyze an existing project and generate initial documentation templates
 
 Server mode:

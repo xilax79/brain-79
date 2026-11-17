@@ -705,5 +705,37 @@ def test_doctor_flags_missing_agy_plugin_when_skill_or_mcp_missing(tmp_path: Pat
     assert "doctor --fix" in (mcp_check.actionable or "")
 
 
+def test_doctor_python_runtime_below_3_11(tmp_path: Path) -> None:
+    """Test doctor binary_and_environment flags Python runtime < 3.11."""
+    import sys
+    from unittest.mock import patch
+    from brain79.core.doctor import run_doctor
+
+    init_project(tmp_path)
+    with patch.object(sys, "version_info", (3, 10, 8)):
+        report = run_doctor(project_root=tmp_path, wiki_root=tmp_path / ".brain-79")
+
+    bin_check = next(c for c in report.checks if c.category == "binary_and_environment")
+    assert bin_check.status == "error"
+    assert "below minimum requirement 3.11" in bin_check.message
+    assert "3.11" in (bin_check.actionable or "")
+
+
+def test_doctor_missing_binary_actionable_hint(tmp_path: Path) -> None:
+    """Test doctor missing binary hint suggests zero-clone uv tool install."""
+    from unittest.mock import patch
+    from brain79.core.doctor import run_doctor
+
+    init_project(tmp_path)
+    with patch("shutil.which", return_value=None):
+        report = run_doctor(project_root=tmp_path, wiki_root=tmp_path / ".brain-79")
+
+    bin_check = next(c for c in report.checks if c.category == "binary_and_environment")
+    assert bin_check.status == "warning"
+    assert "Executable 'brain79' not found in system PATH." in bin_check.message
+    assert "uv tool install git+https://github.com/xilax79/brain-79.git" in (bin_check.actionable or "")
+
+
+
 
 

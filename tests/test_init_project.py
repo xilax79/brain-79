@@ -353,6 +353,10 @@ def test_agents_manifest_size_and_compatibility_anchors() -> None:
     assert ".agents/plugins/brain79" in template_raw
     assert "agy mcp add" in template_raw or ".agents/plugins/brain79/" in template_raw
 
+    # Zero-clone install instruction (no --editable user hint)
+    assert "--editable" not in template_raw
+    assert "git+https://github.com/xilax79/brain-79.git" in template_raw
+
 
 def test_skill_template_valid_frontmatter_and_content() -> None:
     """Test SKILL.md template has valid YAML frontmatter and comprehensive CLI/MCP reference."""
@@ -397,7 +401,8 @@ def test_sync_project_mcp_configs_directory_collision_guarded(tmp_path: Path, ca
     (plugin_dir / "mcp_config.json").mkdir(parents=True)
     (plugin_dir / "skills" / "brain79-wiki" / "SKILL.md").mkdir(parents=True)
 
-    changed = sync_project_mcp_configs(tmp_path)
+    res = sync_project_mcp_configs(tmp_path)
+    assert ".agents/plugins/brain79/mcp_config.json" not in res
     captured = capsys.readouterr()
     assert "is a directory" in captured.out
 

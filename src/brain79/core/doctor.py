@@ -154,13 +154,13 @@ def run_doctor(
     # 1. binary_and_environment
     binary_path = shutil.which("brain79")
     py_ver = sys.version_info
-    if py_ver < (3, 10):
+    if py_ver < (3, 11):
         checks.append(
             DoctorCheck(
                 category="binary_and_environment",
                 status="error",
-                message=f"Python runtime {py_ver.major}.{py_ver.minor} is below minimum requirement 3.10.",
-                actionable="Upgrade Python to version 3.10 or higher.",
+                message=f"Python runtime {py_ver[0]}.{py_ver[1]} is below minimum requirement 3.11.",
+                actionable="Upgrade Python to version 3.11 or higher.",
             )
         )
     elif not binary_path:
@@ -169,7 +169,7 @@ def run_doctor(
                 category="binary_and_environment",
                 status="warning",
                 message="Executable 'brain79' not found in system PATH.",
-                actionable="Run 'uv tool install --editable .' or ensure binary directory is in PATH.",
+                actionable="Run 'uv tool install git+https://github.com/xilax79/brain-79.git' or 'uv tool ensurepath'.",
             )
         )
     else:
@@ -177,7 +177,7 @@ def run_doctor(
             DoctorCheck(
                 category="binary_and_environment",
                 status="ok",
-                message=f"Binary located at {binary_path} (Python {py_ver.major}.{py_ver.minor}.{py_ver.micro}).",
+                message=f"Binary located at {binary_path} (Python {py_ver[0]}.{py_ver[1]}.{py_ver[2]}).",
             )
         )
 

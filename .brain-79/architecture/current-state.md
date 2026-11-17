@@ -2,9 +2,10 @@
 type: architecture
 summary: high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-11-13
+last_updated: 2026-11-17
 applies_to:
   - README.md
+  - USER_GUIDE.md
   - ARCHITECTURE.md
   - .brain-79/decisions/adr-*.md
   - .brain-79/features/*.md
@@ -12,15 +13,15 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:d8371a8a5a2c0dcc"
-applies_to_count: 31
+applies_to_digest: "sha256:2ecab1a6aa759773"
+applies_to_count: 32
 ---
 
 # Architecture — System current state
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.9.1.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.9.2.
 
 ## Active subsystem topology
 
@@ -51,7 +52,8 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Execution of Phase 8: Zero-Clone Distribution and Context Budget Guardrails (`max_tokens` ceiling on `orient()`, standalone binary distribution).
+- Completion of `v0.9.2` (zero-clone installation via `uv tool`, CLI/Python 3.11+ alignment, 3-layer Diátaxis documentation in `README.md`, `USER_GUIDE.md`, and `ARCHITECTURE.md`, and retirement of HTML docs).
+- Preparation for `v0.9.3` (Phase 9: automated battle-testing, multi-OS CI matrix, chaos fuzzing, and multi-repo gauntlet), specified in [Architecture — Industrial-scale roadmap and adoption evolution](roadmap-industrial-scale.md).
 
 ---
 

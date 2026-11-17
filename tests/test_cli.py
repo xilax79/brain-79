@@ -71,6 +71,31 @@ def test_cli_update_branch_flag_parsed() -> None:
         m.assert_called_once_with(branch_override="develop")
 
 
+def test_cli_update_help_content(capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify brain79 update --help output accurately describes tool updates."""
+    code = run_cli("update", ["--help"])
+    assert code == 0
+    captured = capsys.readouterr()
+    normalized = " ".join(captured.out.split())
+    assert (
+        "Update the installed brain79 CLI tool from upstream Git or local development checkout."
+        in normalized
+    )
+    assert (
+        "Git branch to install or pull from (default: upstream default branch)"
+        in normalized
+    )
+
+
+def test_cli_root_help_mentions_commands() -> None:
+    """Verify ROOT_HELP contains update, update-project, and doctor."""
+    from brain79.__main__ import ROOT_HELP
+
+    assert "update                Update the installed brain79 CLI tool" in ROOT_HELP
+    assert "update-project        Upgrade AGENTS.md, SCHEMA.md, and MCP harnesses in this repo" in ROOT_HELP
+    assert "doctor                Run 7-point operational diagnostics and optional --fix" in ROOT_HELP
+
+
 def test_cli_index(capsys: pytest.CaptureFixture[str]) -> None:
     code = run_cli("index", [])
     assert code == 0

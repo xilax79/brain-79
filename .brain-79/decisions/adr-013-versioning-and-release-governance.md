@@ -10,13 +10,14 @@ applies_to:
   - src/brain79/server.py
   - pyproject.toml
   - README.md
+  - USER_GUIDE.md
   - tests/test_version_governance.py
 related:
   - architecture/roadmap-industrial-scale.md
   - features/version-governance.md
-last_updated: 2026-11-12
-applies_to_digest: "sha256:637c87b4355bd922"
-applies_to_count: 5
+last_updated: 2026-11-17
+applies_to_digest: "sha256:58362a1740ea538c"
+applies_to_count: 6
 ---
 
 # ADR-013 — Architecture — Single-source semantic versioning and mechanical release governance
@@ -65,6 +66,7 @@ We implemented **Phase 5: Single-Source Semantic Versioning and Mechanical Relea
    - Verifies `README.md` version badge parity.
    - Verifies `.brain-79/changelog/` contains an entry with matching `version: <__version__>`.
    - Verifies CLI `-v` and `--version` output matches `brain79 <__version__>`.
+   - Verifies documentation hygiene: zero hardcoded local file paths (`file:///Users/`) across `README.md`, `USER_GUIDE.md`, and `ARCHITECTURE.md`, and confirms retirement of HTML docs (test_doc_hygiene_no_local_file_urls_and_no_html_docs).
 
 ## Consequences
 

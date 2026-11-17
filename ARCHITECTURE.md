@@ -1,203 +1,216 @@
-# Brain-79 Architecture and Technical Specifications
+# Architecture and technical specifications
 
-> **System architecture, design principles, and mechanical runtime invariants.**
-
----
-
-## 1. System overview and the three-class document ontology
-
-`brain-79` separates memory into three distinct document lifecycles governed by an explicit authority decay model (ADR-016, ADR-018):
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                       CLASS 1: IMMUTABLE AUDIT TRAIL                        │
-│                   (decisions/, changelog/, _raw/sessions/)                  │
-│                                                                             │
-│  • Append-only historical truth. Never deleted or compacted.                │
-│  • Chesterton's Fence: past decisions remain permanent rationale.           │
-│  • Decay mechanism: superseded ADRs decay in authority and cost 0 tokens.    │
-└──────────────────────────────────────▲──────────────────────────────────────┘
-                                       │
-┌──────────────────────────────────────┴──────────────────────────────────────┐
-│                       CLASS 2: EVERGREEN LIVING MANUALS                     │
-│                       (features/, architecture/, product/)                  │
-│                                                                             │
-│  • Active truth of the codebase. Timeless capabilities in present tense.    │
-│  • Strict Write-Time size limits: <= 400 lines and <= 20,480 bytes (20 KB). │
-│  • Prohibition of temporal markers (Phase X, Sprint Y, Milestone Z, WIP).   │
-└──────────────────────────────────────▲──────────────────────────────────────┘
-                                       │
-┌──────────────────────────────────────┴──────────────────────────────────────┐
-│                    CLASS 3: EPHEMERAL TRANSITION NOTES                      │
-│                                (handoffs/)                                  │
-│                                                                             │
-│  • Short-term operational bridges between sessions. Perishable by design.   │
-│  • Cryptographic provenance: wiki_digest, code_digest, git_head, git_branch.│
-│  • Authority decay states: fresh, stale, foreign_branch, unverified.        │
-│  • Operational lifecycle: purged on-demand via brain79 handoff-purge.       │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Authority hierarchy and conflict resolution rules
-
-1. **Authority order:** `code and git > wiki > handoff`. Code is physical reality. The wiki is governed system truth. Handoffs are perishable transition notes.
-2. **Authority decay (ADR-016):** when workspace code or wiki content mutates, subsequent handoff evaluations decay from `fresh` to `stale`. In `orient()`, stale handoffs are demoted to historical context, instructing incoming agents to verify current code before executing instructions.
-3. **Chesterton's Fence for ADRs (ADR-018):** Architecture Decision Records are immutable audit artifacts. They are never purged, compacted, or mutated when replaced; they transition to `status: superseded` pointing to the successor ADR (`supersedes:` / `superseded_by:`), retaining past rationale at zero cost in `orient()` ranking.
-4. **Living manual timelessness (ADR-018):** living manuals under `features/`, `architecture/`, and `product/` describe software capabilities evergreenly. Ephemeral project management labels (`(Phase X)`, `Sprint Y`) are mechanically rejected by both synchronous write validation and CI linter checks.
+Technical design, component architecture, and mechanical invariants of `brain-79`.
 
 ---
 
-## 2. Core architectural layers and engines
+## 1. Document ontology and authority model
 
-The system is organized into six isolated layers:
+`brain-79` partitions workspace memory into three distinct document classes with deterministic authority rules:
 
 ```
-                      [ AI agents ]            [ Developers & CI ]
-               (Pi, Claude, Cursor, agy)         (Terminal CLI)
-                             │                         │
-                             ▼                         ▼
-  LAYER 1: INTERFACE   FastMCP stdio server      CLI dispatcher
-                             (server.py)       (cli/dispatch.py)
-                             └──────────┬──────────────┘
-                                        ▼ (1:1 symmetry: 24 CLI, 22 FastMCP)
-  LAYER 2: CONTEXT     3-Signal context ranker & 1-call orientation
-                       (core/orient.py, core/context.py)
-                                        │
-                                        ▼
-  LAYER 3: DRIFT       Merkle leaf manifest & multi-hop DAG engine
-                       (core/drift.py, .drift_manifest.json)
-                                        │
-                                        ▼
-  LAYER 4: COMMIT      4-Phase transactional session commit pipeline
-                       (core/session_commit.py, _transaction.lock)
-                                        │
-                                        ▼
-  LAYER 5: PROTOCOL    Non-destructive upgrader & diagnostic doctor
-                       (core/init_project.py, migration.py, doctor.py)
-                                        │
-                                        ▼
-  LAYER 6: STORAGE     Centralized .locks/ isolation & cross-platform I/O
-                       (core/locks.py, atomic retry, POSIX normalization)
++-----------------------------------------------------------------------------+
+| Class 1: Immutable audit trail                                              |
+| (decisions/, changelog/, _raw/sessions/)                                    |
+| - Append-only records. Never modified or purged.                            |
+| - Chesterton's Fence: superseded ADRs remain permanent rationale.           |
+| - Cost 0 tokens in orient() once superseded.                                |
++--------------------------------------^--------------------------------------+
+                                       |
++--------------------------------------|--------------------------------------+
+| Class 2: Evergreen living manuals                                           |
+| (features/, architecture/, product/)                                        |
+| - Canonical truth of active repository capabilities in the present tense.   |
+| - Strict size limits: <= 400 lines and <= 20,480 bytes (20 KB).             |
+| - Temporal markers (Phase X, Sprint Y, WIP) prohibited by write validation. |
++--------------------------------------^--------------------------------------+
+                                       |
++--------------------------------------|--------------------------------------+
+| Class 3: Ephemeral transition notes                                         |
+| (handoffs/)                                                                 |
+| - Short-term operational bridges between working turns.                     |
+| - Provenance stamping: wiki_digest, code_digest, git_head, git_branch.      |
+| - Authority decay states: fresh, stale, foreign_branch, unverified.         |
+| - Purged on demand via brain79 handoff-purge.                               |
++-----------------------------------------------------------------------------+
 ```
 
-### 1. Interface layer (1:1 symmetry)
-- **FastMCP stdio server (`server.py`):** exposes 22 structured tools via JSON-RPC over stdio. Configures `output_schema=None` to prevent token duplication and suppresses stderr banner noise during initialization.
-- **CLI dispatcher (`cli/dispatch.py`):** provides 24 deterministic subcommands with colored terminal output, machine-readable JSON flags, and POSIX exit codes (`0`, `1`, `2`).
-- **Guaranteed parity (`tests/test_symmetry.py`):** automated tests assert that every CLI command (except setup-only `init` and `update`) maps to an identical MCP tool counterpart with parameter-level signature parity.
+### Authority hierarchy
 
-### 2. 3-signal context and orientation engine (`orient.py`, `context.py`)
-- **Signal 1 (Target binding):** matches exact files and glob patterns declared in `applies_to` frontmatter against active workspace targets. Returns all governing articles without artificial truncation.
-- **Signal 2 (Field-weighted BM25):** scores title, summary, and body text using BM25 with multi-language stop-word filtering.
-- **Signal 3 (1-Hop ADR graph expansion):** follows `related` and `supersedes` graph edges to include governing decisions connected to matched features.
-- **Orientation budget (64 KB ceiling):** `orient()` inlines `INDEX.md`, active handoff state with authority decay evaluation, and top governing articles up to a 64 KB token budget, rendering a Mandatory Reading Manifest if articles exceed the budget.
-- **Passive protocol skew detection:** inspects `AGENTS.md` delimiters and `SCHEMA.md` `schema_version`, alerting when repository templates lag behind the installed binary.
-
-### 3. Merkle drift and multi-hop DAG engine (`drift.py`)
-- **Merkle leaf manifest (`.drift_manifest.json`):** records deterministic SHA-256 digests of all source files governed by `applies_to`. Employs 64 KB streaming chunks with CRLF and UTF-8 BOM normalization.
-- **Single-pass `WorkspaceIndex`:** caches workspace file paths and digests in a single filesystem traversal, eliminating redundant I/O.
-- **Multi-hop transitive propagation:** recursively propagates code mutations up the documentation DAG from leaf feature articles to composite architecture and product umbrella articles.
-
-### 4. 4-phase transactional session commit engine (`session_commit.py`)
-All session finalization executes under `.brain-79/.locks/_transaction.lock`:
-- **Pass 1 (Pre-flight validation):** validates frontmatter, schemas, required sections, and size limits in-memory before mutating disk.
-- **Pass 2a (Anti-sprawl guard):** verifies Jaccard overlap and target subsumption to prevent duplicate article creation.
-- **Pass 2b (Merkle convergence):** computes updated digests for all written and edited articles.
-- **Pass 2c (AST Guard C):** parses Python source code using `ast` to detect public signature changes (functions, classes, arguments), enforcing documentation updates while permitting private refactors.
-- **Pass 2d (Hard Session Ripple Gate):** halts commits if any impacted child or umbrella article in the transitive DAG is left in a drifted state without simultaneous update or verification.
-- **Pass 3 & 4 (Atomic multi-write and handoff):** applies temporary file writes with atomic retry and writes immutable handoff records.
-
-### 5. Non-destructive protocol upgrader and doctor engine (`init_project.py`, `migration.py`, `doctor.py`)
-- **Delimited blocks and progressive disclosure in `AGENTS.md`:** updates core protocol instructions between `<!-- brain79:start v{version} -->` and `<!-- brain79:end -->` while preserving custom persona headers and team project notes. Compacts root rules (`<= 6,500` bytes) and ships detailed operational manuals in the on-demand `brain79-wiki` skill.
-- **Non-destructive `SCHEMA.md` synchronization:** elevates to `schema_version: 2`, preserving custom directory types and trailing extension sections.
-- **Tier 1 portable MCP configuration:** auto-configures `.mcp.json` (Pi, Claude Code, Zed, OpenCode), `.agents/plugins/brain79/` (native Antigravity workspace plugin with on-demand skill), legacy `.agents/mcp_config.json`, and `.cursor/mcp.json` using portable `"command": "brain79"`.
-- **Full-pass wiki reconditioning (`migrate_wiki` v2):** evaluates all articles, auto-completes fields, repairs footer backlinks, normalizes bullet colons, and downgrades incomplete articles to `legacy` status.
-- **Operational diagnostics (`brain79 doctor`):** evaluates 7 health categories in $<50\text{ ms}$ with POSIX exit codes (`0/1/2`), text/JSON formats, and Git-aware `--fix` safety guards.
-
-### 6. Storage, centralized locks, and cross-platform I/O (`locks.py`, `config.py`)
-- **Zero cloud lock-in:** pure Markdown files stored directly in Git.
-- **Centralized lock isolation (`.brain-79/.locks/`):** all inter-process `filelock` instances live exclusively in `.brain-79/.locks/`, eliminating `.lock` files from documentation directories.
-- **Dynamic ancestor root discovery:** resolves project root by climbing upwards to an ancestor `.brain-79/` when `--project-root .` is specified, stopping at nested `.git` boundaries for subproject isolation.
-- **Resilient atomic writes:** writes commit to `.tmp` files and execute `atomic_replace_with_retry()` with exponential backoff on Windows NTFS `PermissionError`.
-- **Cross-platform normalization:** enforces strict POSIX paths (`.as_posix()`), pure LF (`\n`) line endings, and APFS segment-by-segment character casing parity on macOS.
+1. **`code and git > wiki > handoff`**: source code is physical reality. The wiki is governed project truth. Handoffs are perishable transition notes.
+2. **Authority decay**: when governed code or wiki files mutate, subsequent handoff evaluations decay from `fresh` to `stale`. In `orient()`, stale handoffs are demoted to historical context, instructing incoming agents to verify current code before executing instructions.
+3. **Chesterton's Fence for ADRs**: architectural decisions are immutable. When replaced, older ADRs receive `status: superseded` pointing to the successor ADR (`supersedes:` / `superseded_by:`), preserving rationale at zero token cost during orientation.
+4. **Living manual timelessness**: manuals in `features/`, `architecture/`, and `product/` describe current state. Transient project management markers are rejected synchronously at write time.
 
 ---
 
-## 3. Directory layout and roles
+## 2. Interface symmetry (CLI and FastMCP)
+
+`brain-79` provides strict 1:1 parity between terminal subcommands (`24`) and FastMCP server tools (`22`). Automated test suites (`tests/test_symmetry.py`) enforce identical parameter signatures across both interfaces.
+
+| Category | CLI subcommands (24) | FastMCP server tools (22) |
+|:---|:---|:---|
+| **Session & workflow** | `orient`, `session-commit`, `context`, `index`, `ingest` | `brain79_orient`, `brain79_session_commit`, `brain79_context`, `brain79_index`, `brain79_ingest` |
+| **Handoff continuity** | `handoff-write`, `handoff-read`, `handoff-purge` | `brain79_handoff_write`, `brain79_handoff_read`, `brain79_handoff_purge` |
+| **Reading & writing** | `read`, `read-batch`, `write`, `write-many`, `edit`, `list`, `search` | `brain79_read`, `brain79_read_batch`, `brain79_write`, `brain79_write_many`, `brain79_edit`, `brain79_list`, `brain79_search` |
+| **Governance & health** | `lint`, `schema`, `navigate`, `migrate`, `bootstrap`, `doctor`, `update-project` | `brain79_lint`, `brain79_schema`, `brain79_navigate`, `brain79_migrate`, `brain79_bootstrap`, `brain79_doctor`, `brain79_update_project` |
+| **Host CLI only** | `init`, `update` | *N/A (Host setup & self-update operations)* |
+
+---
+
+## 3. Directory layout and storage roles
 
 ```
 .brain-79/
-├── SCHEMA.md                 ← Authoritative schema rules and frontmatter definitions
-├── INDEX.md                  ← Central automated routing table (read first by agents)
-├── .drift_manifest.json      ← Merkle leaf manifest tracking SHA-256 target digests
-├── .navigation_registry.json ← Thread-safe navigation registry for O(1) lookups
-├── .locks/                   ← Centralized mutex directory (excluded from git and search)
-├── handoffs/                 ← Cryptographically stamped session handoffs
-├── product/                  ← Product vision, domain models, and personas
-├── architecture/             ← Subsystem topologies, current state, and roadmaps
-├── features/                 ← Detailed functional living manuals
-├── decisions/                ← Architectural Decision Records (ADRs)
-├── changelog/                ← Versioned release records and consolidated logs
-├── topics/                   ← Research findings, market data, and domain analyses
-└── _raw/                     ← Append-only raw logs (excluded from search and index)
-    ├── sessions/             ← Ingested session summaries
-    └── commits/              ← Raw commit metadata
+├── SCHEMA.md                 <- Authoritative schema rules and frontmatter definitions
+├── INDEX.md                  <- Central automated routing table (read first by agents)
+├── .drift_manifest.json      <- Merkle leaf manifest tracking SHA-256 target digests
+├── .navigation_registry.json <- Thread-safe navigation registry for O(1) lookups
+├── .locks/                   <- Centralized mutex directory (excluded from git and search)
+├── handoffs/                 <- Cryptographically stamped session handoffs
+├── product/                  <- Product vision, domain models, and personas
+├── architecture/             <- Subsystem topologies, current state, and roadmaps
+├── features/                 <- Detailed functional living manuals
+├── decisions/                <- Architectural Decision Records (ADRs)
+├── changelog/                <- Versioned release records and consolidated logs
+├── topics/                   <- Research findings, market data, and domain analyses
+└── _raw/                     <- Append-only raw logs (excluded from search and index)
+    ├── sessions/             <- Ingested session summaries
+    └── commits/              <- Raw commit metadata
 ```
 
 ---
 
-## 4. Key runtime invariants
+## 4. Source code map (`src/brain79/`)
 
-| Component | Invariant | Purpose |
+The implementation comprises 28 Python modules across root, CLI, templates, and core layers:
+
+```
+src/brain79/
+├── __init__.py                 <- Package metadata and single-source __version__ declaration
+├── __main__.py                 <- CLI entrypoint, global flag parser, and FastMCP fallback
+├── config.py                   <- Dynamic ancestor root discovery and path resolution
+├── server.py                   <- FastMCP stdio server registering 22 JSON-RPC tools
+├── cli/
+│   ├── __init__.py             <- Whitelist registration and CLI runner entrypoint
+│   ├── dispatch.py             <- Subcommand argument parsing, POSIX exit codes, and routing
+│   └── io.py                   <- Stdio streaming, stdin ingest, and JSON formatting
+├── templates/
+│   └── __init__.py             <- Package resource loader for protocol and skill templates
+└── core/
+    ├── __init__.py             <- Core package marker
+    ├── bootstrap.py            <- Scan manifest generator and initial wiki scaffolding
+    ├── context.py              <- 3-Signal context search (applies_to, BM25, 1-hop ADR)
+    ├── curate.py               <- Amnesia Test triage and zero-code research persistence
+    ├── doctor.py               <- 7-Point operational diagnostics with Git-guarded --fix
+    ├── drift.py                <- Merkle leaf manifest, SHA-256 streaming, and DAG ripple
+    ├── frontmatter.py          <- YAML frontmatter parsing, validation, and serialization
+    ├── handoff_freshness.py    <- Cryptographic provenance and handoff decay evaluation
+    ├── handoff.py              <- Immutable handoff creation, retrieval, and purging
+    ├── init_project.py         <- Project initialization, AGENTS.md blocks, and MCP harnesses
+    ├── lint_organizational.py  <- Code-fence masked regex linter for decisions and debt
+    ├── lint.py                 <- Structural wiki linter (schemas, links, sections, drift)
+    ├── locks.py                <- Centralized .brain-79/.locks/ file mutexes
+    ├── migration.py            <- Schema v2 transformation and legacy wiki reconditioning
+    ├── navigation.py           <- Thread-safe navigation registry and pure INDEX.md routing
+    ├── orient.py               <- 1-Call cold-start engine (budgeted context assembly)
+    ├── session_commit.py       <- 4-Phase transactional commit pipeline with ripple gates
+    ├── update.py               <- Self-update engine (zero-clone Git and editable dev checkouts)
+    ├── validation.py           <- Synchronous write validation, size caps, and anti-sprawl
+    └── wiki.py                 <- Atomic article I/O (read, write, edit, search) with retry
+```
+
+---
+
+## 5. Verified trace of `orient()` (`src/brain79/core/orient.py`)
+
+When an agent executes `brain79_orient(task, paths)` during cold start, execution proceeds through these sequential steps:
+
+1. **Passive protocol skew detection**:
+   - Inspects `AGENTS.md` for `<!-- brain79:start v{version} -->` and `SCHEMA.md` for `schema_version >= 2`.
+   - Emits non-blocking advisory warnings if repository files lag behind the running binary.
+2. **Table of contents and schema ingest**:
+   - Reads pure routing table from `INDEX.md`.
+   - Appends Active Schema Summary (profile, allowed types, required frontmatter keys) and ADR deficit alerts if decisions lack governing links.
+3. **Filesystem caching (`WorkspaceIndex.build`)**:
+   - Executes a single-pass filesystem crawl caching workspace file paths and SHA-256 digests.
+4. **Handoff retrieval and freshness evaluation**:
+   - Resolves latest handoff via `_resolve_handoff_path("latest")`.
+   - Evaluates cryptographic freshness via `compute_handoff_freshness(wiki_digest, code_digest, git_head, git_branch)`.
+   - Marks handoff as `fresh`, `stale` (workspace drift detected), `foreign_branch` (handoff recorded on another branch), or `unverified` (gitless).
+5. **Git path discovery**:
+   - Runs `git status --porcelain=v1 -z` to discover modified or untracked repository files.
+6. **Code-to-wiki drift detection**:
+   - Invokes `detect_all_drift()` to compute `[DIRECT]` code-level drift (via `applies_to` globs in leaf feature articles) and `[TRANSITIVE]` multi-hop drift (propagated up the DAG to architecture and product umbrella articles).
+7. **3-signal context ranking (`rank_context_articles`)**:
+   - **Signal 1 (Code target binding)**: matches target file paths against `applies_to` frontmatter globs without artificial length truncation.
+   - **Signal 2 (Field-weighted BM25)**: ranks title, summary, and article body against the task description using multi-language stop-word filtering.
+   - **Signal 3 (1-Hop ADR graph expansion)**: expands matched feature articles to include directly linked Architecture Decision Records via `related` and `supersedes` edges.
+8. **Context budget enforcement (`MAX_ORIENT_INLINE_CHARS = 64_000`)**:
+   - Inlines top-ranked governing articles up to the 64 KB inline character ceiling.
+   - If governing articles exceed the budget, renders a structured Mandatory Reading Manifest directing the agent to ingest remaining files via `brain79_read_batch`.
+
+---
+
+## 6. Verified trace of `commit_session()` (`src/brain79/core/session_commit.py`)
+
+Session finalization runs under a centralized process lock (`.brain-79/.locks/_transaction.lock`) via a 4-phase transactional pipeline:
+
+1. **Pass 1 — Pre-flight validation (in-memory)**:
+   - Sets up an in-memory `virtual_fs` overlay.
+   - Validates frontmatter, schemas, required H2 sections, and size limits (<= 20 KB) for all proposed writes and edits.
+   - Rejects missing handoff fields or empty `boot_instruction`.
+   - Requires justification (>= 20 characters) for any article marked in `verified_articles`.
+2. **Lock acquisition**:
+   - Acquires inter-process mutex `.brain-79/.locks/_transaction.lock`.
+3. **Pass 2a — Target integrity and anti-sprawl**:
+   - Verifies all files in `applies_to` exist in the workspace (`applies_to_target_missing`).
+   - Performs Jaccard overlap and containment analysis (`check_anti_sprawl_overlap`), blocking duplicate or overlapping documentation.
+4. **Pass 2b — Merkle convergence**:
+   - Computes SHA-256 digests of virtual file states across two fixed-point iterations until digests stabilize.
+5. **Pass 2c — AST verification & bottom-up verification guards**:
+   - Evaluates `verified_articles` in leaf-then-umbrella order.
+   - **Guard A**: rejects articles not currently in a drifted state.
+   - **Guard B**: rejects verification if the article's own `applies_to` code targets were modified in this turn.
+   - **Guard C (AST signature guard)**: parses Python source code using `ast`. If public functions, classes, or parameter signatures mutated, blocks verification without documentation updates while permitting private refactors.
+6. **Pass 2d — Hard Session Ripple Gate (`unresolved_session_ripple`)**:
+   - Evaluates the transitive documentation DAG.
+   - If any child leaf or composite umbrella article remains in a drifted state without simultaneous update or verification, halts the transaction with an actionable list of unresolved articles.
+7. **Pass 3 — Atomic persistence**:
+   - Writes updated `.drift_manifest.json`.
+   - Records session transcript under `_raw/sessions/`.
+   - Writes all validated articles to disk with `_skip_nav_regen=True`.
+   - Rebuilds `.navigation_registry.json` and `INDEX.md` once in a single thread-safe pass.
+8. **Pass 4 — Handoff persistence and release**:
+   - Writes immutable, timestamped handoff record under `handoffs/`.
+   - Releases transaction lock and returns structured commit receipt.
+
+---
+
+## 7. Storage, concurrency, and cross-platform I/O
+
+- **Plain Markdown storage**: all knowledge persists as human-readable Markdown in Git without external databases.
+- **Centralized lock isolation (`.brain-79/.locks/`)**: file locks live in `.brain-79/.locks/`, preventing `.lock` clutter inside wiki folders.
+- **Windows NTFS retry**: file replacements use `atomic_replace_with_retry()` with exponential backoff to handle transient `PermissionError` file-locking on Windows.
+- **Cross-platform path and text normalization**:
+  - Paths strictly use POSIX format (`.as_posix()`).
+  - Text files use pure LF (`\n`) line endings.
+  - Case-insensitive APFS parity checks on macOS prevent duplicate case collisions.
+  - 64 KB chunked SHA-256 streaming normalizes CRLF and UTF-8 BOM before hashing.
+
+---
+
+## 8. Runtime invariants summary
+
+| Invariant | Scope | Enforcement mechanism |
 |:---|:---|:---|
-| **Handoffs** | **strict immutability** | handoffs use unique timestamped files (`handoff-%Y-%m-%d-%H%M%S-%f.md`). They are never modified in place, maintaining a clean historical audit trail |
-| **Handoffs** | **anti-hallucination guard** | if `pending_work` is empty, the agent is forced to explicitly write in `boot_instruction` that no pending work remains, preventing agents from imagining unfinished tasks |
-| **Living manuals** | **write-time size limit** | living manuals exceeding 400 lines or 20,480 bytes are rejected synchronously at write time, preventing orient token budget exhaustion |
-| **Living manuals** | **temporal decontamination** | milestone markers (`Phase X`, `Sprint Y`) and specification labels on shipped features are rejected across living manuals |
-| **Drift engine** | **Hard Session Ripple Gate** | commits modifying governed source files cannot conclude without updating or verifying all transitively impacted articles |
-| **Drift engine** | **AST Guard C verification** | mutations to public Python function or class signatures trigger strict documentation drift alerts |
-| **Anti-sprawl** | **subsumption prevention** | articles governing file targets already fully covered by sibling articles are blocked from creation |
-| **Wiki I/O** | **path traversal protection** | all file paths are strictly resolved against the repository root using `is_relative_to`, preventing sandbox escapes |
-| **Wiki I/O** | **atomic file mutations** | every write or edit is guarded by a process mutex and executed through atomic temporary file replacement |
-| **Linter** | **link and namespace guards** | absolute paths, broken relative references, or references pointing into `_raw/` fail strict lint checks immediately |
-
----
-
-## 5. Typical lifecycle: the two-call session protocol
-
-```
-1. COLD START (Turn 1)
-   AI agent awakens
-   │
-   └─► Calls brain79_orient(task, paths) ─► Ingests INDEX.md routing table,
-                                             latest handoff state & authority decay evaluation,
-                                             active schema summary, and inlined governing articles & ADRs
-
-2. EXECUTION (Mid-Session)
-   AI agent implements features or fixes bugs in codebase
-   │
-   ├─► Calls brain79_search(query) ──────► Instant ripgrep lookup across wiki
-   ├─► Calls brain79_read(path, sections)► Retrieves specific sections (saves tokens)
-   └─► Calls brain79_read_batch(reqs) ───► Reads multiple articles in 1 turn
-
-3. FINALIZATION (Turn 2 — The Two-Call Protocol)
-   AI agent concludes session atomically
-   │
-   └─► Calls brain79_session_commit(...) ─► All-or-nothing transaction:
-                                             - Pass 1: pre-flight in-memory validation
-                                             - Pass 2a: anti-sprawl subsumption check
-                                             - Pass 2b: Merkle digest convergence
-                                             - Pass 2c: AST Guard C public signature check
-                                             - Pass 2d: Hard Session Ripple Gate
-                                             - Pass 3: atomic article writes and edits
-                                             - Pass 4: cryptographic handoff write
-                                             - Navigation sync & receipt emission
-```
-
----
-
-## 6. Strategic evolution
-
-Phases 0 through 7.1 are complete and active in production as of `v0.9.1`. For the upcoming execution roadmap (Phase 8: zero-clone installation via `uv tool` and visual web guide; Phase 9: automated battle-testing and chaos gauntlet), see:
-- 🗺️ [**Industrial scale roadmap**](.brain-79/architecture/roadmap-industrial-scale.md)
-- 📜 [**Changelog and releases**](CHANGELOG.md)
-- 🏗️ [**System current state**](.brain-79/architecture/current-state.md)
+| **Handoff immutability** | `handoffs/` | Timestamped filenames (`handoff-%Y-%m-%d-%H%M%S-%f.md`). Never overwritten. |
+| **Anti-hallucination work tracking** | `handoffs/` | If `pending_work` is empty, `boot_instruction` must explicitly declare no pending work remains. |
+| **Living manual size cap** | `features/`, `architecture/`, `product/` | Synchronously rejected if exceeding 400 lines or 20,480 bytes. |
+| **Temporal decontamination** | `features/`, `architecture/`, `product/` | Milestone labels (`Phase X`, `Sprint Y`) rejected by write validator and strict linter. |
+| **Hard Session Ripple Gate** | Session finalization | Commits halted if governed code changes leave child or umbrella articles drifted. |
+| **AST Guard C** | Verification bypass | Public signature changes block rubber-stamp verification without documentation updates. |
+| **Anti-sprawl subsumption** | Article creation | Rejects articles whose target scopes are completely contained in existing sibling docs. |
+| **Path traversal containment** | File I/O | All paths validated via `is_relative_to(project_root)` before filesystem access. |
+| **Atomic state replacement** | File mutations | Writes staged to `.tmp` files and committed via atomic rename with retry. |
+| **Strict backlink invariant** | Wiki articles | Every article must terminate with `[← Volver al Índice](../INDEX.md)`. |

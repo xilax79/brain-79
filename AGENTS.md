@@ -1,8 +1,8 @@
-<!-- brain79:start v0.9.1 -->
+<!-- brain79:start v0.9.2 -->
 # Brain-79 AI memory protocol
 
 ## Prerequisites (one-time setup)
-- Ensure `brain79` is in your system PATH (e.g., via `uv tool install --editable .` or `uv tool ensurepath`).
+- Ensure `brain79` is in your system PATH (e.g., via `uv tool install git+https://github.com/xilax79/brain-79.git` or `uv tool ensurepath`).
 - **If using the `pi` CLI**: install the Pi MCP adapter once:
   ```bash
   pi install npm:pi-mcp-adapter

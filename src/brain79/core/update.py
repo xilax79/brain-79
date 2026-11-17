@@ -1,13 +1,44 @@
 """Module for updating brain79 from git repository."""
 
 import importlib.util
+import json
+from pathlib import Path
+import re
 import shutil
 import subprocess
-from pathlib import Path
+import sys
+import urllib.parse
+import urllib.request
+
+UPSTREAM_REPO_URL = "https://github.com/xilax79/brain-79.git"
 
 
 def _find_git_root(brain79_path: Path) -> Path | None:
-    """Find the root directory of the git repository containing brain79."""
+    """Find the root directory of the git repository containing brain79.
+
+    Prevents false-positive matches (such as $HOME/.git dotfiles) when brain79
+    is installed as a standalone tool in site-packages, unless PEP 610 direct_url.json
+    declares an editable install pointing to a local git repository with pyproject.toml.
+    """
+    if "site-packages" in brain79_path.parts or "dist-packages" in brain79_path.parts:
+        try:
+            site_packages_dir = brain79_path.parent.parent
+            for dist_info in site_packages_dir.glob("brain79*.dist-info"):
+                cand = dist_info / "direct_url.json"
+                if cand.is_file():
+                    direct_url = json.loads(cand.read_text(encoding="utf-8"))
+                    dir_info = direct_url.get("dir_info", {})
+                    if dir_info.get("editable") is True:
+                        raw_url = direct_url.get("url", "")
+                        parsed = urllib.parse.urlparse(raw_url)
+                        if parsed.scheme == "file":
+                            target_path = Path(urllib.request.url2pathname(parsed.path))
+                            if (target_path / ".git").exists() and (target_path / "pyproject.toml").exists():
+                                return target_path
+        except Exception:
+            pass
+        return None
+
     for parent in brain79_path.parents:
         if (parent / ".git").exists():
             return parent
@@ -15,7 +46,7 @@ def _find_git_root(brain79_path: Path) -> Path | None:
 
 
 def update_project(branch_override: str | None = None) -> int:
-    """Update brain79 to the latest version from origin.
+    """Update brain79 to the latest version from origin or upstream Git.
 
     Returns:
         int: Exit code (0, 1, 2, 3, 4, or 130).
@@ -35,10 +66,73 @@ def update_project(branch_override: str | None = None) -> int:
             return 1
 
         git_root = _find_git_root(brain79_path)
+
+        # -------------------------------------------------------------
+        # Branch B: Standalone zero-clone install
+        # -------------------------------------------------------------
         if git_root is None:
-            print("[--] brain79 not installed via editable install.")
+            if not shutil.which("uv"):
+                print("[ERR] Missing required binary: 'uv'.")
+                return 4
+
+            if branch_override:
+                if not re.match(r"^[A-Za-z0-9._/-]+$", branch_override):
+                    print(f"[ERR] Invalid branch name: '{branch_override}'.")
+                    return 1
+                target_url = f"git+{UPSTREAM_REPO_URL}@{branch_override}"
+            else:
+                target_url = f"git+{UPSTREAM_REPO_URL}"
+
+            print(f"Updating standalone brain79 install from {target_url}...")
+            try:
+                res = subprocess.run(
+                    ["uv", "tool", "install", "--force", target_url],
+                    capture_output=True,
+                    text=True,
+                    timeout=180,
+                )
+            except subprocess.TimeoutExpired:
+                print("[ERR] Network timeout while updating brain79 from upstream Git.")
+                return 3
+
+            if res.returncode != 0:
+                output = (res.stderr + "\n" + res.stdout).lower()
+                if sys.platform == "win32" and (
+                    "access is denied" in output or "being used by another process" in output
+                ):
+                    print(
+                        "[ERR] Cannot overwrite running executable on Windows.\n"
+                        f"Please close active processes and run 'uv tool install --force {target_url}' from a fresh terminal."
+                    )
+                    return 3
+
+                if any(
+                    kw in output
+                    for kw in [
+                        "could not resolve host",
+                        "connection refused",
+                        "failed to fetch",
+                        "fatal: remote",
+                        "network",
+                        "timed out",
+                    ]
+                ):
+                    print(
+                        f"[ERR] Failed to update from upstream Git: {res.stderr.strip() or res.stdout.strip()}"
+                    )
+                    return 3
+
+                print(f"[ERR] Update failed: {res.stderr.strip() or res.stdout.strip()}")
+                return 1
+
+            print(
+                "[OK] Successfully updated brain79. Run 'brain79 update-project' inside existing repositories to sync templates."
+            )
             return 0
 
+        # -------------------------------------------------------------
+        # Branch A: Local editable git checkout
+        # -------------------------------------------------------------
         print(f"Updating brain79 from: {git_root}")
 
         # Verify binaries
@@ -207,7 +301,7 @@ def update_project(branch_override: str | None = None) -> int:
         # Rebuild package
         try:
             uv_res = subprocess.run(
-                ["uv", "tool", "install", "--force", "."],
+                ["uv", "tool", "install", "--editable", "--force", "."],
                 cwd=git_root,
                 capture_output=True,
                 text=True,
@@ -216,17 +310,19 @@ def update_project(branch_override: str | None = None) -> int:
             if uv_res.returncode != 0:
                 print(
                     "[!] WARNING: Git update succeeded, but environment rebuild failed. "
-                    "Please run 'uv tool install --force .' manually."
+                    "Please run 'uv tool install --editable --force .' manually."
                 )
                 return 1
         except subprocess.TimeoutExpired:
             print(
                 "[!] WARNING: Git update succeeded, but environment rebuild failed. "
-                "Please run 'uv tool install --force .' manually."
+                "Please run 'uv tool install --editable --force .' manually."
             )
             return 1
 
-        print("[OK] Successfully updated brain79.")
+        print(
+            "[OK] Successfully updated brain79. Run 'brain79 update-project' inside existing repositories to sync templates."
+        )
         return 0
 
     except KeyboardInterrupt:

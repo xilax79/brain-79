@@ -131,12 +131,12 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
     elif cmd == "update":
         parser = argparse.ArgumentParser(
             prog="brain79 update",
-            description="Update project templates and schema to match the current brain-79 version.",
+            description="Update the installed brain79 CLI tool from upstream Git or local development checkout.",
         )
         parser.add_argument(
             "--branch",
             default=None,
-            help="Template branch override (auto-detected by default)",
+            help="Git branch to install or pull from (default: upstream default branch)",
         )
         parsed = parser.parse_args(sub_args)
         from brain79.core.update import update_project as update_installation

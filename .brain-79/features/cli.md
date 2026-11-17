@@ -2,8 +2,8 @@
 type: feature
 summary: deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
 status: shipped
-version: 0.9.0
-last_updated: 2026-11-13
+version: 0.9.2
+last_updated: 2026-11-17
 applies_to:
   - src/brain79/cli/dispatch.py
   - src/brain79/cli/io.py
@@ -11,7 +11,7 @@ applies_to:
 related:
   - architecture/symmetry.md
   - architecture/dispatcher.md
-applies_to_digest: "sha256:a56b4ae64cf4a0c2"
+applies_to_digest: "sha256:de8cb35742ae9bb5"
 applies_to_count: 3
 ---
 
@@ -30,7 +30,7 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 | `brain79 init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root`, `--install-git-hooks` / `--no-git-hooks`, `--upgrade`, `--include-desktop` | `0`, `1`, `2` |
 | `brain79 update-project` | Non-destructively upgrade templates, schemas, and MCP harnesses | `[--project-root]`, `[--dry-run]`, `[--commit-transition]`, `[--include-desktop]` | `0`, `1` |
 | `brain79 doctor` | Run 7-point operational diagnostic checks and auto-repair | `[--project-root]`, `[--fix]`, `[--force]`, `[--include-desktop]`, `[--format text\|json]` | `0`, `1`, `2` |
-| `brain79 update` | Update editable installation from upstream git repo | `--branch` | `0`, `1` |
+| `brain79 update` | Update the installed brain79 CLI tool from upstream Git or local development checkout | `[--branch]` | `0`, `1`, `3`, `4` |
 | `brain79 orient` | Collapsed 1-call cold start orientation with inlined governing context | `[--task <t>]`, `[--paths ...]` | `0`, `3` |
 | `brain79 index` | Print `INDEX.md` entry point | None | `0`, `3` |
 | `brain79 schema` | Print schema rules and frontmatter templates | `[--type <type>]` | `0` |

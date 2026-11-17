@@ -1,229 +1,140 @@
-# brain-79: deterministic AI memory engine
+# brain-79
 
-> **Persistent, curated memory for AI coding assistants. Zero hallucination, zero context rot, and sub-second agent orientation.**
-
-[![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-brightgreen.svg)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-594%20passed-success.svg)](tests/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
+
+Persistent memory protocol and mechanical guardrails for AI coding assistants.
+
+`brain-79` implements Andrej Karpathy's **LLM-wiki** pattern. Instead of unmaintained `CLAUDE.md` files or vector databases, the assistant maintains a structured Markdown wiki inside `.brain-79/`. Mechanical validators, SHA-256 Merkle drift tracking, and atomic tools prevent documentation rot.
 
 ---
 
-## The problem: AI memory rot
+## The problem: raw LLM wikis degrade
 
-When AI agents work on software or complex knowledge bases across multiple sessions, two things inevitably happen:
+Language models generate clear documentation in single sessions. Over repeated sessions, unmanaged wikis degrade across four failure modes:
 
-1. **Context amnesia:** every session starts from zero. The agent must re-read dozens of files, burning your token budget just to understand what was done five minutes ago.
-2. **Organic wiki decay:** when agents are asked to write documentation, they invent contradictory conventions, leave broken links, duplicate decisions, and dilute the knowledge base over time.
-
-RAG (retrieval-augmented generation) and vector search help find fragments of text, but **they cannot enforce consistency, structure, or logical order**.
-
----
-
-## The solution: brain-79
-
-`brain-79` provides a **deterministic memory protocol** for AI assistants. It combines the speed of local Markdown files with the strict discipline of mechanical linters, Merkle drift tracking, and atomic transactional tools.
-
-```
-                  ┌────────────────────────────────────────┐
-                  │            AI coding agent             │
-                  │   (Pi, Cursor, Claude, Devin, etc.)    │
-                  └───────────────────┬────────────────────┘
-                                      │ JSON-RPC (FastMCP) or CLI (1:1 symmetry)
-                                      ▼
-                  ┌────────────────────────────────────────┐
-                  │                brain-79                │
-                  │   deterministic AI memory protocol     │
-                  └─────────┬────────────────────┬─────────┘
-                            │                    │
-              Reads & writes│                    │ Mechanical enforcement
-                            ▼                    ▼
-       ┌───────────────────────────────┐  ┌───────────────────────────────┐
-       │       Long-term memory        │  │       Short-term memory       │
-       │    (.brain-79/ - the wiki)    │  │     (.brain-79/handoffs/)     │
-       │  • Product vision & specs     │  │  • Cryptographic provenance   │
-       │  • Architecture & ADRs        │  │  • Authority decay states     │
-       │  • Merkle drift leaf manifest │  │  • Completed vs pending tasks │
-       └───────────────────────────────┘  └───────────────────────────────┘
-```
-
-- **1-call cold-start orientation (`brain79_orient`):** an incoming agent awakens and ingests `INDEX.md`, handoff freshness state, and all governing articles + ADRs of modified workspace files in a single subsecond turn.
-- **Merkle code-to-wiki drift & Hard Ripple Gate:** computes SHA-256 leaf digests across governed source files, propagates transitive drift up the DAG to umbrella articles, and blocks incomplete session commits via the Hard Session Ripple Gate.
-- **Anti-sprawl & AST signature verification:** prevents duplicate documentation via Jaccard/subsumption analysis and uses Python AST inspection to enforce documentation updates whenever public code signatures mutate.
-- **The Amnesia Test (3-way session triage):** guarantees that zero-code domain research (`Type B`) and codebase mutations (`Type C`) are persisted atomically via `brain79_session_commit`, eliminating ephemeral chat loss.
+| Failure mode | Without brain-79 (raw wiki / CLAUDE.md) | With brain-79 (mechanical protocol) |
+|:---|:---|:---|
+| **Startup context amnesia** | Agent dumps thousands of lines into prompt context or misses past project rules. | `brain79 orient` bounds startup context to 64 KB, inlining the index, active handoff, and governing docs. |
+| **Silent code-to-doc drift** | Source code changes; documentation remains stale until human review catches it. | Merkle leaf manifest (`.drift_manifest.json`) tracks source SHA-256 digests and propagates drift up the DAG. |
+| **Wiki sprawl & duplication** | Agents generate redundant files with overlapping scopes. | Anti-sprawl validation performs Jaccard overlap and target subsumption checks at write time. |
+| **Obsolete session notes** | Outdated handoffs describe completed or abandoned tasks. | Cryptographic git provenance stamps handoffs as `fresh`, `stale`, or `foreign_branch`. |
 
 ---
 
-## Quick start in 60 seconds
+## What a session looks like
 
-### Prerequisites and cross-platform installation
+You install brain-79 once per project. After that, you talk to your AI assistant as you always do. The assistant uses brain-79 on its own.
 
-`brain-79` is tested natively across **macOS**, **Linux** (Debian/Ubuntu/Fedora/Arch), and **Windows** (x64/ARM64).
+Say you ask your assistant:
 
-- **Python 3.10+**: runtime environment.
-- **[`uv`](https://docs.astral.sh/uv/)**: fast Python package and tool manager.
-- **Git (v2.25+)**: recommended. Required for software codebases (`--profile software`) to enable automated code drift detection (`documentation_drift_suspected`) and working-tree code freshness hashing (`code_digest`). In non-git directories and general knowledge workspaces (`--profile general`), `brain-79` operates 100% autonomously without git.
+> Add a refund endpoint to the payments module.
 
-#### Step 1: install uv
-- **macOS / Linux:**
-  ```bash
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  ```
-- **Windows (PowerShell):**
-  ```powershell
-  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-  ```
+Here is what happens:
 
-#### Step 2: install brain-79 globally
-Clone the repository and install `brain79` into your global tool environment:
+1. **The assistant reads the project first.** Before it touches any code, it asks brain-79 for context. brain-79 returns the project index, the notes from the last session, and the docs that cover `src/payments.py`. The assistant starts with the right background, not a blank page.
+
+2. **The assistant writes the code.** You work with it as usual.
+
+3. **The assistant updates the docs.** When it finishes, it sends the documentation changes to brain-79. brain-79 checks them before saving.
+
+4. **brain-79 blocks lazy documentation.** Suppose the assistant changed the signature of `refund_transaction` but did not update `features/payments.md`. brain-79 rejects the commit:
+
+   ```
+   Commit Validation Failed:
+   Cannot verify article 'features/payments.md' without documentation
+   update: public function 'refund_transaction' signature changed.
+   ```
+
+   The assistant has to fix the docs before it can finish.
+
+5. **You choose when to save session notes.** If you say "wrap up", the assistant writes a short handoff. The next session starts from it. brain-79 marks the handoff as `stale` if the code changed since then, so the assistant knows not to trust it blindly.
+
+You never call these tools yourself. They run through the Model Context Protocol (MCP), and `brain79 init` sets that up for Claude Desktop, Cursor, Antigravity, and Pi. For the full details, see the [User and protocol guide](USER_GUIDE.md).
+
+## Where you can use it
+
+**In a code repository.** Architecture notes, feature docs, and decisions stay close to the code. Each time the assistant changes public code, brain-79 requires the matching docs to change too.
+
+**In a folder without code.** Run `brain79 init --profile general` to keep research notes, comparisons, and decisions in an organized wiki. It works in folders that are not git repositories.
+
+---
+
+## Quick start
+
+### 1. Install tool globally
+
+Install `brain79` into your user environment with `uv` (requires Python 3.11+):
+
 ```bash
-git clone https://github.com/xilax79/brain-79.git
-cd brain-79
-
-# Universal cross-platform tool installation:
-uv tool install --editable .
+uv tool install git+https://github.com/xilax79/brain-79.git
 ```
+
 Verify the installation:
+
 ```bash
 brain79 --version
 ```
 
-### Initialize in any project
-Go to your project repository and initialize the memory protocol:
-```bash
-cd /path/to/your-project
+### 2. Initialize your repository
 
-# For software engineering projects (default):
+Run `init` in your project root:
+
+```bash
+cd /path/to/project
 brain79 init
-
-# Or for general knowledge, research, or writing projects:
-brain79 init --profile general
 ```
-This automatically sets up:
-- `.brain-79/`: your project's curated knowledge base (articles, decisions, changelog, and handoffs).
-- `AGENTS.md`: versioned protocol block (`<!-- brain79:start v0.9.1 -->`) teaching AI assistants how to orient themselves while preserving your custom notes.
-- **Universal Tier 1 MCP harnesses**: auto-configures `.mcp.json` (Pi, Claude Code, Zed, OpenCode), `.agents/plugins/brain79/` (native Antigravity workspace plugin with on-demand skill), legacy `.agents/mcp_config.json` retention, and `.cursor/mcp.json` (Cursor IDE) using portable execution commands.
-- `.git/hooks/pre-commit`: automated check preventing commits with broken links or unanchored drift, respecting existing hook managers (Husky, Python `pre-commit`, Lefthook).
 
-### Upgrading & diagnosing existing projects
-Keep existing repositories synchronized and healthy as `brain-79` evolves:
+This command creates:
+- `.brain-79/`: repository wiki with `INDEX.md`, `SCHEMA.md`, and `.drift_manifest.json`.
+- `AGENTS.md`: versioned protocol block instructing AI models how to orient.
+- Tier 1 MCP harnesses: `.mcp.json`, `.agents/plugins/brain79/` (Antigravity plugin with skill), and `.cursor/mcp.json`.
+
+For non-code research repositories, pass `--profile general`.
+
+### 3. Verify repository health
+
+Run operational diagnostics:
+
 ```bash
-# Non-destructively upgrade AGENTS.md, SCHEMA.md, MCP harnesses, and recondition legacy articles
-brain79 update-project
-
-# Run 7-point subsecond operational diagnostics
 brain79 doctor
+```
 
-# Auto-repair discovered skew and missing configurations (with Git safety guard)
+To repair missing configurations or template drift safely:
+
+```bash
 brain79 doctor --fix
 ```
 
----
+### Tool updates vs project template updates
 
-## How it works in practice
-
-At its core, `brain-79` gives your AI assistant a permanent, curated memory. Instead of treating each conversation as an isolated chat, your assistant works against a living knowledge base stored directly in your repository.
-
----
-
-### Part 1: the long-term memory (the living knowledge base)
-
-Whenever your assistant works on a task, it navigates a structured knowledge base (`.brain-79/`) that contains the permanent truth of your project: specifications, architectural decisions (ADRs), domain models, and product requirements.
-
-#### Use case A: software engineering (`--profile software`)
-1. **You ask for a feature:** "integrate the Stripe webhook handler."
-2. **The assistant consults the knowledge base:** it calls `brain79_orient` and immediately receives your architecture rules and payment decisions. It already knows your error-handling standards, authentication patterns, and retry expectations without you re-explaining them.
-3. **The assistant builds and records decisions:** if it makes an architectural choice (such as adopting idempotency keys for webhook events), it documents an Architecture Decision Record (ADR) in the wiki.
-4. **The memory stays clean forever:** the mechanical engine verifies that links are valid, Merkle digests match, and structure is compliant. Documentation never rots or drifts out of sync with your code.
-
-#### Use case B: research and complex knowledge projects (`--profile general`)
-1. **You ask for multi-session research:** "analyze competitor pricing models and synthesize recommendations."
-2. **The assistant queries existing knowledge:** it checks topic articles and background context gathered in previous turns, building upon verified facts rather than starting from zero.
-3. **The assistant expands the domain graph:** as new benchmarks or market data are uncovered, it writes structured topic notes and records strategic choices in the knowledge base.
-4. **Permanent asset:** months later, any assistant or team member querying the project can instantly locate why a particular strategy was chosen and what data supported it.
+- **`brain79 update`**: updates the installed CLI binary from upstream Git.
+- **`brain79 update-project`**: synchronizes `AGENTS.md`, `SCHEMA.md`, and MCP harnesses inside an existing repository.
 
 ---
 
-### Part 2: tactical session bridges (on-demand handoffs)
+## Documentation and technical reference
 
-While the wiki stores your project's permanent long-term truth, development often pauses mid-task. For these situations, `brain-79` provides an on-demand, tactical bridge between working turns:
-
-When you want to stop working for the day or switch context, you can simply ask:
-> "Wrap up this session and save a handoff."
-
-The assistant creates a lightweight tactical snapshot containing:
-- a curated summary of work completed in this specific turn,
-- remaining tasks and open technical questions,
-- targeted boot instructions for the next session,
-- cryptographic provenance (`wiki_digest`, `code_digest`, `git_head`, `git_branch`) determining lifecycle freshness (`fresh`, `stale`, `foreign_branch`).
-
-In the next session, `brain79_orient` evaluates handoff freshness dynamically. Zero context amnesia.
+- [User and protocol guide](USER_GUIDE.md): how MCP harnesses connect to your assistant, concrete code-verified workflows, and command reference.
+- [Architecture and technical specifications](ARCHITECTURE.md): system layers, 28-file module map, and runtime invariants.
+- [Changelog](CHANGELOG.md): release history and migration notes.
 
 ---
 
-### Command-line interface (terminal & CI)
-
-You can inspect, search, and audit your project memory directly from your terminal or continuous integration (CI) pipelines via 24 subcommands:
+## Contributing
 
 ```bash
-# See what knowledge the assistant retrieves for a specific task
-brain79 orient --task "integrate Stripe webhook" --paths "src/payments/webhook.py"
-
-# Verify knowledge base health in CI pipelines or pre-commit checks
-brain79 lint --strict --format json
-
-# Run 7-point operational diagnostics
-brain79 doctor
-
-# Search across all project documentation instantly
-brain79 search "idempotency keys"
-
-# Review the latest tactical handoff note (if one was saved)
-brain79 handoff-read latest
-
-# Clean up older session handoffs
-brain79 handoff-purge --dry-run
-```
-
----
-
-## Core principles
-
-| Principle | What it means | Why it matters |
-|:---|:---|:---|
-| **Human and Git first** | plain markdown files in your repository | no proprietary cloud databases, no lock-in. Everything is reviewed in standard Git PRs |
-| **Strict 1:1 symmetry** | every CLI command has an exact MCP equivalent | you and the AI use the exact same mental model across 24 CLI subcommands and 22 MCP tools |
-| **Mechanical validation** | broken links, oversized articles, and schema errors are rejected immediately | prevents documentation from turning into a graveyard of out-of-date notes |
-| **Atomic transactions** | 4-phase transaction pipeline with automated rollback | multiple agents or scripts cannot corrupt files even under unexpected crashes |
-
----
-
-## Documentation and deep dive
-
-- 📘 [**Architecture and technical specifications**](ARCHITECTURE.md): detailed system layers, Merkle drift engine, memory hierarchy, and runtime invariants.
-- 🎯 [**Product vision and design**](.brain-79/product/overview.md): why deterministic memory beats ad-hoc documentation.
-- 🗺️ [**Industrial scale roadmap**](.brain-79/architecture/roadmap-industrial-scale.md): tracking completed core protocol milestones (Phases 0–7) and upcoming zero-clone distribution and context guardrails (Phase 8).
-- 🔄 [**Changelog**](CHANGELOG.md): comprehensive history of versions and release notes.
-
----
-
-## Contributing and development
-
-```bash
-# Clone the repository
 git clone https://github.com/xilax79/brain-79.git
 cd brain-79
 
-# Run test suite (575+ passed tests)
 uv run pytest
-
-# Run linting and type verification
-uv run ruff check .
 uv run mypy src tests
+uv run brain79 lint --strict
 ```
 
 ---
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.

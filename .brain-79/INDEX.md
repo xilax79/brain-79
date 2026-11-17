@@ -18,12 +18,14 @@ last_updated: 2026-11-17
 - [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed phases (0-7) and pre-GA maturation phases (8-9) for visual documentation and automated battle-testing
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
+- [Architecture — Zero-clone distribution, honest documentation, and 3-layer Diátaxis structure](architecture/zero-clone-distribution-and-visual-docs.md) — technical design for zero-clone installation, CLI/Python alignment, and 3-layer Diátaxis documentation
 
 ### Changelog
 - [Changelog — Historical internal development milestones (v1.0.0 through v2.0.2)](changelog/legacy-internal-releases.md) — historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration
 - [Changelog — Release 0.8.1: Living manuals, temporal decontamination, and codebase de-phasing](changelog/v0-8-1.md) — release v0.8.1 — living manuals, temporal decontamination, codebase de-phasing, and three-class document ontology
 - [Changelog — Release 0.9.0: Project upgrade, multi-harness zero-config, and doctor diagnostics](changelog/v0-9-0.md) — release v0.9.0 — project protocol upgrader, delimited AGENTS.md blocks, multi-harness zero-config, and doctor diagnostics
 - [Changelog — Release 0.9.1: Antigravity plugin, progressive disclosure, and root walk](changelog/v0-9-1.md) — release v0.9.1 — Antigravity native plugin, progressive AGENTS.md disclosure, and ancestor root walk
+- [Changelog — Release 0.9.2: Zero-clone installation, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation](changelog/v0-9-2.md) — release v0.9.2 — zero-clone installation, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation
 - [Changelog — Version 0.7.2 — Pre-GA semantic calibration](changelog/v0-7-2.md) — semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release
 - [Changelog — Version 0.8.0 — Transitive drift and ripple guards](changelog/v0-8-0.md) — phase 6.7 release — Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification
 

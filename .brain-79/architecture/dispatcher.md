@@ -2,7 +2,7 @@
 type: architecture
 summary: CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 stability: stable
-last_updated: 2026-11-13
+last_updated: 2026-11-17
 applies_to:
   - src/brain79/__main__.py
   - src/brain79/cli/dispatch.py
@@ -11,7 +11,7 @@ related:
   - architecture/symmetry.md
   - features/cli.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:790e5f395f451d70"
+applies_to_digest: "sha256:85bac2013256ff68"
 applies_to_count: 3
 ---
 

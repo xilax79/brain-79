@@ -4,6 +4,20 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-17
+
+### Added
+- **Zero-clone installation, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation**:
+  - Zero-clone tool updating in `brain79 update` via `uv tool install --force git+https://github.com/xilax79/brain-79.git`, distinguishing standalone `site-packages` installs from local editable checkouts.
+  - Safe dev checkout rebuilding via `uv tool install --editable --force .` and Windows running-executable lock handling.
+  - Aligned minimum Python runtime requirement to 3.11+ across `doctor.py`, `templates/AGENTS.md`, and documentation.
+  - Expanded `ROOT_HELP` in `__main__.py` with `update-project` and `doctor`, and aligned `update` subcommand help.
+  - Three-layer Diátaxis documentation refactoring:
+    - High-clarity, human-facing landing page in `README.md` with Karpathy LLM-wiki positioning, 4-row comparison table, ASCII workflow diagram, and day-to-day usage guide without internal jargon.
+    - Deep user and protocol reference in `USER_GUIDE.md` detailing AGENTS.md + MCP harness integration, 5 concrete code-verified scenarios (cold-start orientation, stale doc protection with AST Guard C and Hard Session Ripple Gate, gitless research, on-demand handoffs with cryptographic provenance, and MCP tool vs CLI symmetry table).
+    - Developer-grade `ARCHITECTURE.md` with complete 28-file source code map, verified step-by-step traces of `orient()` and `commit_session()`, and cross-platform concurrency invariants.
+  - Retired HTML documentation files (`docs/whitepaper.html` and `docs/index.html`) in favor of standard, zero-dependency Markdown documentation.
+
 ## [0.9.1] - 2026-11-16
 
 ### Added

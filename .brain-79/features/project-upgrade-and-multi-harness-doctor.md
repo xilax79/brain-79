@@ -2,7 +2,7 @@
 type: feature
 summary: non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
 status: shipped
-version: 0.9.1
+version: 0.9.2
 allow_overlapping_governance: true
 applies_to:
   - src/brain79/core/init_project.py
@@ -17,8 +17,8 @@ related:
   - architecture/current-state.md
   - features/cross-platform-and-lock-isolation.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
-last_updated: 2026-11-16
-applies_to_digest: "sha256:f3c544d2aad15871"
+last_updated: 2026-11-17
+applies_to_digest: "sha256:160aa7d9bb21a96c"
 applies_to_count: 6
 ---
 
@@ -90,7 +90,7 @@ The project protocol upgrade and multi-harness doctor subsystem provides non-des
 - **Merkle seeding and transition handoffs**: computes `applies_to_digest` and seeds `.drift_manifest.json`. Passing `--commit-transition` generates a maintenance handoff maintaining `fresh` lifecycle state under ADR-016.
 
 ### 6. Subsecond diagnostic engine (`brain79 doctor`)
-- **Seven health checks**: evaluates binary/environment, protocol sync, wiki structure, MCP harnesses, filesystem locks, git hooks, and handoff hygiene in $<50\text{ ms}$.
+- **Seven health checks**: evaluates binary/environment (Python >= 3.11 runtime and zero-clone tool installation), protocol sync, wiki structure, MCP harnesses, filesystem locks, git hooks, and handoff hygiene in $<50\text{ ms}$.
 - **Exit codes and formats**: returns `0` (ok), `2` (warning), or `1` (error) with `--format text` and `--format json` support.
 - **Git-aware repair guard**: refuses `--fix` if uncommitted protocol files exist in Git unless `--force` is supplied.
 

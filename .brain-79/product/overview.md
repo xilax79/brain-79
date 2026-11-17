@@ -1,12 +1,12 @@
 ---
 type: product
 summary: deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
-last_updated: 2026-11-12
+last_updated: 2026-11-17
 applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:79443c243c0c48f7"
+applies_to_digest: "sha256:5597c1fdce77e77d"
 applies_to_count: 11
 ---
 
