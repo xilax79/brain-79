@@ -16,6 +16,7 @@ import multiprocessing as mp
 import os
 from pathlib import Path
 import random
+import re
 import signal
 import sys
 import time
@@ -101,7 +102,40 @@ def _chaos_worker_run(
                 successful_ops.append(art_rel)
 
             elif op_type == 1:
-                # 2. Shared target edit/write with atomic payload
+                # 2. Distinct edit_article on previous write, or write if not present
+                prev_op = op - 1
+                target_rel = f"topics/w{worker_id}-{prev_op}.md"
+                if (w_root / target_rel).is_file():
+                    edit_article(
+                        target_rel,
+                        [{"old_text": f"iteration {prev_op}.", "new_text": f"updated iteration {prev_op}."}],
+                        wiki_root=w_root,
+                        timeout=15.0,
+                    )
+                    successful_ops.append(f"edit:{target_rel}")
+                else:
+                    fallback_content = (
+                        "---\n"
+                        "type: topic\n"
+                        f"summary: Worker {worker_id} edit fallback {op}\n"
+                        "last_updated: 2026-11-17\n"
+                        "---\n\n"
+                        f"# Fallback W{worker_id}\n\n"
+                        "## Overview\n"
+                        f"Fallback content iteration {prev_op}.\n\n"
+                        "---\n\n"
+                        "[← Volver al Índice](../INDEX.md)\n"
+                    )
+                    write_article(target_rel, fallback_content, wiki_root=w_root, timeout=15.0)
+                    successful_ops.append(target_rel)
+
+            elif op_type == 2:
+                # 3. Concurrent navigation regeneration
+                regenerate_index_navigation(w_root)
+                successful_ops.append(f"regen_nav@{worker_id}-{op}")
+
+            elif op_type == 3:
+                # 4. Atomic write on shared target topics/shared.md
                 shared_rel = "topics/shared.md"
                 content = (
                     "---\n"
@@ -117,34 +151,6 @@ def _chaos_worker_run(
                 )
                 write_article(shared_rel, content, wiki_root=w_root, timeout=15.0)
                 successful_ops.append(f"{shared_rel}@{worker_id}-{op}")
-
-            elif op_type == 2:
-                # 3. Concurrent navigation regeneration
-                regenerate_index_navigation(w_root)
-                successful_ops.append(f"regen_nav@{worker_id}-{op}")
-
-            elif op_type == 3:
-                # 4. Transactional commit_session
-                target_rel = f"topics/w{worker_id}-session-{op}.md"
-                content = (
-                    "---\n"
-                    "type: topic\n"
-                    f"summary: Session commit worker {worker_id} op {op}\n"
-                    "last_updated: 2026-11-17\n"
-                    "---\n\n"
-                    f"# Session Topic W{worker_id} Op{op}\n\n"
-                    "## Overview\n"
-                    f"Committed during session by worker {worker_id}.\n\n"
-                    "---\n\n"
-                    "[← Volver al Índice](../INDEX.md)\n"
-                )
-                commit_session(
-                    session_summary=f"Worker {worker_id} session {op}",
-                    writes=[{"path": target_rel, "content": content}],
-                    wiki_root=w_root,
-                    timeout=20.0,
-                )
-                successful_ops.append(target_rel)
 
         except (ValidationError, FrontmatterError, OSError, filelock.Timeout) as exc:
             # Expected structured exceptions under heavy lock timeouts or collisions
@@ -253,7 +259,27 @@ def test_multiprocess_contention_and_invariants(tmp_path: Path) -> None:
             except filelock.Timeout:
                 pytest.fail(f"Lock '{lock_file.name}' was left held after worker termination")
 
-    # --- Assertion 4: Shared article has complete atomic payload (no torn writes) ---
+    # --- Assertion 4: Distinct articles exist & parse; shared article has atomic payload (no torn writes) ---
+    distinct_articles_checked = 0
+    for res in all_results:
+        for item in res["successes"]:
+            if item.startswith("topics/w"):
+                p = w_root / item
+                assert p.is_file(), f"Reported successful article does not exist on disk: {item}"
+                raw = p.read_text(encoding="utf-8")
+                item_meta, _ = parse_frontmatter(raw)
+                assert item_meta.get("type") == "topic", f"Invalid type in {item}"
+                distinct_articles_checked += 1
+            elif item.startswith("edit:topics/w"):
+                rel_p = item[len("edit:"):]
+                p = w_root / rel_p
+                assert p.is_file(), f"Reported edited article does not exist on disk: {rel_p}"
+                raw = p.read_text(encoding="utf-8")
+                item_meta, _ = parse_frontmatter(raw)
+                assert item_meta.get("type") == "topic"
+                distinct_articles_checked += 1
+    assert distinct_articles_checked > 0, "Expected distinct articles written and verified"
+
     shared_path = w_root / "topics" / "shared.md"
     assert shared_path.is_file(), "Shared article must exist"
     shared_content = shared_path.read_text(encoding="utf-8")
@@ -261,6 +287,14 @@ def test_multiprocess_contention_and_invariants(tmp_path: Path) -> None:
     assert meta.get("type") == "topic"
     assert "Shared Topic Under Contention" in body
     assert "[← Volver al Índice](../INDEX.md)" in shared_content
+
+    # Strict check: summary and body must belong to the exact same worker and op
+    m_sum = re.search(r"worker (\d+) op (\d+)", str(meta.get("summary", "")))
+    m_body = re.search(r"worker (\d+) at op (\d+)", body)
+    assert m_sum and m_body, "Shared article missing worker and op identifiers"
+    assert m_sum.groups() == m_body.groups(), (
+        f"TORN WRITE detected in shared.md! Summary has {m_sum.groups()} but body has {m_body.groups()}"
+    )
 
     # --- Assertion 5: Final wiki strict lint passes clean ---
     regenerate_index_navigation(w_root)
@@ -359,6 +393,7 @@ def test_deterministic_fuzzing_corpus(tmp_path: Path, seed: int) -> None:
         "---\nkey:\t\ttabs_value\n---",
         "---\na: &a [*a, *a]\n---",
         "---\nexploit: !!python/object/apply:os.system ['echo pwned']\n---",
+        "---\ntype: topic\ntype: feature\nsummary: duplicate keys\nlast_updated: 2026-11-17\n---\n# Dup\n",
         "---\n" + "\n".join(f"key_{i}: value_{i}" for i in range(5000)) + "\n---",
     ]
     hostile_yaml = rng.choice(yaml_candidates)
@@ -430,6 +465,24 @@ def test_deterministic_fuzzing_corpus(tmp_path: Path, seed: int) -> None:
     assert len(valid_exact.encode("utf-8")) == MAX_ARTICLE_BYTES
     validate_article_content("topics/exact20480.md", valid_exact, wiki_root=w_root)
 
+    # 3-byte character boundary using '€' (3 bytes per character in UTF-8)
+    char_3b = "€"
+    probe_3b = dump_frontmatter(meta_dict, h1 + backlink)
+    base_bytes = len(probe_3b.encode("utf-8"))
+    remaining_bytes = MAX_ARTICLE_BYTES - base_bytes
+    num_3b = remaining_bytes // 3
+    ascii_pad = remaining_bytes % 3
+    valid_exact_3b = dump_frontmatter(meta_dict, h1 + (char_3b * num_3b) + ("y" * ascii_pad) + backlink)
+    assert len(valid_exact_3b.encode("utf-8")) == MAX_ARTICLE_BYTES
+    validate_article_content("topics/exact20480_3b.md", valid_exact_3b, wiki_root=w_root)
+
+    # 20,481 bytes via 3-byte characters
+    invalid_oversized_3b = dump_frontmatter(meta_dict, h1 + (char_3b * num_3b) + ("y" * (ascii_pad + 1)) + backlink)
+    assert len(invalid_oversized_3b.encode("utf-8")) == MAX_ARTICLE_BYTES + 1
+    with pytest.raises(ValidationError) as exc_info:
+        validate_article_content("topics/over20480_3b.md", invalid_oversized_3b, wiki_root=w_root)
+    assert exc_info.value.rule == "article_too_large"
+
     # 20,481 bytes
     invalid_oversized = dump_frontmatter(meta_dict, h1 + ("x" * (needed + 1)) + backlink)
     assert len(invalid_oversized.encode("utf-8")) == MAX_ARTICLE_BYTES + 1
@@ -478,6 +531,21 @@ def test_deterministic_fuzzing_corpus(tmp_path: Path, seed: int) -> None:
     chosen_path = rng.choice(hostile_paths)
     with pytest.raises(ValueError):
         write_article(chosen_path, valid_exact, wiki_root=w_root)
+    assert not (w_root / chosen_path).exists(), f"Rejected path '{chosen_path}' was created on disk!"
+
+    # Symlink escape check
+    outside_file = ws / "outside_target.txt"
+    outside_file.write_text("classified content", encoding="utf-8")
+    escape_link = w_root / "topics" / f"escape_{seed}.md"
+    try:
+        escape_link.symlink_to(outside_file)
+        with pytest.raises(ValueError):
+            read_article(f"topics/escape_{seed}.md", wiki_root=w_root)
+        with pytest.raises(ValueError):
+            write_article(f"topics/escape_{seed}.md", valid_exact, wiki_root=w_root)
+        assert outside_file.read_text(encoding="utf-8") == "classified content", "Outside file was mutated via symlink!"
+    except (OSError, NotImplementedError):
+        pass
 
 
 @pytest.mark.chaos
@@ -717,6 +785,99 @@ def test_environment_fault_keyboard_interrupt_during_pass3(tmp_path: Path, monke
     # Zero orphan temporary files
     assert list(w_root.rglob("*.tmp*")) == []
 
+    # Transaction lock released
+    tx_lock = acquire_wiki_lock(w_root, "_transaction.lock", timeout=0)
+    tx_lock.acquire()
+    tx_lock.release()
+
+
+@pytest.mark.chaos
+def test_fuzz_migrate_wiki_and_corrupt_bytes_on_disk(tmp_path: Path) -> None:
+    """migrate_wiki, read_article, edit_article, and commit_session against hostile/corrupt files on disk."""
+    ws = tmp_path / "hostile_disk_ws"
+    ws.mkdir()
+    init_project(ws, install_git_hooks_flag=False)
+    w_root = ws / ".brain-79"
+
+    # Plant corrupt raw bytes (invalid UTF-8)
+    corrupt_file = w_root / "topics" / "corrupt_utf8.md"
+    corrupt_file.write_bytes(b"\xff\xfe\xfd\x00---not valid utf8")
+
+    # Plant duplicate YAML keys file
+    dup_file = w_root / "topics" / "duplicate_keys.md"
+    dup_file.write_text(
+        "---\ntype: topic\ntype: feature\nsummary: duplicate keys\nlast_updated: 2026-11-17\n---\n# Dup\n",
+        encoding="utf-8",
+    )
+
+    # Plant valid article to verify migration continues past corrupt files
+    valid_file = w_root / "topics" / "valid_art.md"
+    valid_file.write_text(
+        "---\ntype: topic\nsummary: Valid article\nlast_updated: 2026-11-17\n---\n\n# Valid Art\n\n## Overview\nValid.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n",
+        encoding="utf-8",
+    )
+
+    # migrate_wiki must not crash and cleanly report/skip corrupt files
+    report = migrate_wiki(w_root, dry_run=False)
+    assert "corrupt_utf8.md: invalid UTF-8 encoding" in report or "corrupt_utf8.md" in report
+
+    # read_article on corrupt bytes raises ValidationError(rule="invalid_utf8_encoding")
+    with pytest.raises(ValidationError) as exc_info:
+        read_article("topics/corrupt_utf8.md", wiki_root=w_root)
+    assert exc_info.value.rule == "invalid_utf8_encoding"
+
+    # edit_article on corrupt bytes raises ValidationError(rule="invalid_utf8_encoding")
+    with pytest.raises(ValidationError) as exc_info:
+        edit_article("topics/corrupt_utf8.md", [{"old_text": "foo", "new_text": "bar"}], wiki_root=w_root)
+    assert exc_info.value.rule == "invalid_utf8_encoding"
+
+    # commit_session editing corrupt bytes raises ValidationError
+    with pytest.raises(ValidationError):
+        commit_session(
+            session_summary="Edit corrupt article",
+            edits=[{"path": "topics/corrupt_utf8.md", "edits": [{"old_text": "foo", "new_text": "bar"}]}],
+            wiki_root=w_root,
+        )
+
+
+@pytest.mark.chaos
+def test_environment_fault_readonly_directory(tmp_path: Path) -> None:
+    """Read-only wiki directory fault triggers clean rollback, zero orphan tmp, and releases lock."""
+    ws = tmp_path / "readonly_workspace"
+    ws.mkdir()
+    init_project(ws, install_git_hooks_flag=False)
+    w_root = ws / ".brain-79"
+
+    baseline = (
+        "---\ntype: topic\nsummary: Baseline topic\nlast_updated: 2026-11-17\n---\n\n# Baseline\n\n## Overview\nContent.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n"
+    )
+    write_article("topics/baseline.md", baseline, wiki_root=w_root)
+    saved_baseline = (w_root / "topics" / "baseline.md").read_text(encoding="utf-8")
+
+    topics_dir = w_root / "topics"
+    orig_mode = topics_dir.stat().st_mode
+
+    try:
+        # Make topics directory read-only
+        os.chmod(topics_dir, 0o555)
+
+        new_art = baseline.replace("Baseline", "New Article")
+        with pytest.raises((OSError, ValidationError)):
+            commit_session(
+                session_summary="Attempt to write in read-only directory",
+                writes=[{"path": "topics/blocked.md", "content": new_art}],
+                wiki_root=w_root,
+            )
+    finally:
+        # Restore permissions for teardown
+        os.chmod(topics_dir, orig_mode)
+
+    # Rollback assertion: blocked article was not persisted
+    assert not (w_root / "topics" / "blocked.md").exists()
+    # Baseline remained intact
+    assert (w_root / "topics" / "baseline.md").read_text(encoding="utf-8") == saved_baseline
+    # No orphan temporary files
+    assert list(w_root.rglob("*.tmp*")) == []
     # Transaction lock released
     tx_lock = acquire_wiki_lock(w_root, "_transaction.lock", timeout=0)
     tx_lock.acquire()

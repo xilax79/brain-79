@@ -579,11 +579,21 @@ def edit_article(
     if not edits:
         raise ValueError("edits list cannot be empty.")
 
-    target = _safe_resolve(path, wiki_root=wiki_root)
+    w_root = (wiki_root or get_wiki_root()).resolve()
+    target = _safe_resolve(path, wiki_root=w_root)
     if not target.exists() or not target.is_file():
         raise FileNotFoundError(f"Article not found: {path}")
 
-    content = target.read_text(encoding="utf-8").replace("\r\n", "\n")
+    rel_str = target.relative_to(w_root).as_posix()
+    try:
+        content = target.read_text(encoding="utf-8").replace("\r\n", "\n")
+    except UnicodeDecodeError as exc:
+        raise ValidationError(
+            rule="invalid_utf8_encoding",
+            path=rel_str,
+            message=f"File contains invalid UTF-8 bytes: {exc}",
+            actionable="Ensure file is encoded in valid UTF-8.",
+        )
 
     for idx, edit in enumerate(edits):
         old_text = edit.get("old_text") if edit.get("old_text") is not None else edit.get("oldText")

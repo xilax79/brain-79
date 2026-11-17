@@ -43,11 +43,17 @@ def test_init_no_git_hooks_flag(tmp_path: Path) -> None:
     assert not hook_path.exists()
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32" and shutil.which("sh") is None and shutil.which("bash") is None,
-    reason="Windows requires Git Bash (sh or bash) to execute pre-commit hook script",
-)
+def test_posix_sh_available_on_posix_runners() -> None:
+    """Spec: POSIX sh must never be skipped on ubuntu or macos."""
+    if sys.platform in ("linux", "darwin"):
+        assert shutil.which("sh") is not None, "shutil.which('sh') must not be None on Ubuntu or macOS"
+
+
+@pytest.mark.skipif(shutil.which("sh") is None, reason="Requires POSIX sh")
 def test_pre_commit_script_runs_lint_strict(tmp_path: Path) -> None:
+    if sys.platform in ("linux", "darwin"):
+        assert shutil.which("sh") is not None, "POSIX sh must be available on Linux and macOS"
+
     git_dir = tmp_path / ".git"
     git_dir.mkdir()
 
@@ -74,10 +80,8 @@ def test_pre_commit_script_runs_lint_strict(tmp_path: Path) -> None:
     )
 
     # Run the pre-commit script directly or via POSIX shell on Windows
-    if sys.platform == "win32":
-        sh = shutil.which("sh") or shutil.which("bash")
-        cmd = [sh, str(hook_path)] if sh else [str(hook_path)]
-    else:
-        cmd = [str(hook_path)]
+    sh = shutil.which("sh")
+    assert sh is not None
+    cmd = [sh, str(hook_path)] if sys.platform == "win32" else [str(hook_path)]
     res = subprocess.run(cmd, cwd=tmp_path, capture_output=True, text=True)
     assert res.returncode == 0

@@ -16,7 +16,7 @@ related:
   - architecture/defect-backlog.md
   - features/handoff-continuity.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:1b655341d3433c46"
+applies_to_digest: "sha256:233cc635471567d8"
 applies_to_count: 7
 ---
 

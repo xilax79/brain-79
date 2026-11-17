@@ -14,14 +14,16 @@ or validation aborts.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
+from typing import Callable
 
-MODEL = "gemini-3.8-flash:low"
+MODEL = os.environ.get("BRAIN79_SMOKE_MODEL", "gemini-3.8-flash:low")
 
 
 def find_agent_cli() -> str | None:
@@ -36,8 +38,13 @@ def find_agent_cli() -> str | None:
 def get_agent_cmd(prompt: str) -> list[str]:
     """Build command line for running the agent non-interactively."""
     cli = find_agent_cli()
+    model_name, _, thinking_level = MODEL.partition(":")
     if cli == "pi":
-        return ["pi", "--mcp-project-servers", "allow", "--models", MODEL, "-p", prompt]
+        cmd = ["pi", "--mcp-project-servers", "allow", "--model", model_name]
+        if thinking_level:
+            cmd.extend(["--thinking", thinking_level])
+        cmd.extend(["-p", prompt])
+        return cmd
     if cli == "agy":
         return ["agy", "--model", MODEL, "-p", prompt]
     raise RuntimeError("No agent CLI found")
@@ -104,6 +111,73 @@ def check_mcp_zero_retry(session_file: Path) -> list[str]:
     return failures
 
 
+def verify_recovery_in_session(session_file: Path, expected_rule: str) -> bool:
+    """Verify autonomous recovery from rejection:
+    1. First session_commit call failed with expected_rule.
+    2. Second session_commit call succeeded.
+    3. No third attempt occurred.
+    """
+    if not session_file.is_file():
+        return False
+
+    commit_results: list[tuple[bool, str]] = []  # (is_error, text)
+    for line in session_file.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+
+        if d.get("type") == "message" and d.get("message", {}).get("role") == "toolResult":
+            tool_name = str(d["message"].get("toolName", ""))
+            if "session_commit" in tool_name or tool_name.endswith("commit_session"):
+                is_error = bool(d["message"].get("isError", False))
+                content = d["message"].get("content", [])
+                text = content[0].get("text", "") if content else ""
+                has_err = is_error or any(
+                    m in text
+                    for m in ("Commit Validation Failed:", "Validation Error:", "Error:", "Commit Aborted:")
+                )
+                commit_results.append((has_err, text))
+
+    if len(commit_results) != 2:
+        return False
+
+    first_failed, first_text = commit_results[0]
+    second_failed, second_text = commit_results[1]
+
+    return first_failed and (expected_rule in first_text) and not second_failed
+
+
+def run_scenario_with_retries(
+    name: str, runner_fn: Callable[[], bool], max_attempts: int = 3, min_successes: int = 2
+) -> bool:
+    """Run up to max_attempts, passing if at least min_successes succeed."""
+    print(f"\nEvaluating {name} (up to {max_attempts} attempts, requiring >= {min_successes} successes)...")
+    successes = 0
+    for attempt in range(1, max_attempts + 1):
+        print(f"\n--- {name} Attempt {attempt}/{max_attempts} ---")
+        try:
+            if runner_fn():
+                successes += 1
+                print(f"Attempt {attempt}: SUCCESS ({successes}/{min_successes} required)")
+            else:
+                print(f"Attempt {attempt}: FAILED")
+        except Exception as exc:
+            print(f"Attempt {attempt}: EXCEPTION: {exc}")
+
+        if successes >= min_successes:
+            print(f"{name}: PASSED with {successes}/{attempt} successes.")
+            return True
+        remaining = max_attempts - attempt
+        if successes + remaining < min_successes:
+            print(f"{name}: FAILED (cannot reach {min_successes} successes with {remaining} remaining attempts).")
+            return False
+
+    return successes >= min_successes
+
+
 def run_scenario_1() -> bool:
     print("\n" + "=" * 70)
     print("▶ Scenario 1: Zero-code research in --profile general (No Git)")
@@ -124,10 +198,11 @@ def run_scenario_1() -> bool:
             "Document this research into the wiki and conclude the session with a handoff."
         )
 
-        print(f"Running agent in {tmp.name} with model {MODEL}...")
+        agent_cmd = get_agent_cmd(prompt)
+        print(f"Running agent ({find_agent_cli()}) in {tmp.name} with model {MODEL}...")
         t0 = time.time()
         res = subprocess.run(
-            ["pi", "--mcp-project-servers", "allow", "--models", MODEL, "-p", prompt],
+            agent_cmd,
             cwd=tmp,
             capture_output=True,
             text=True,
@@ -181,10 +256,11 @@ def run_scenario_2(tmp: Path) -> None:
         "Update the wiki if needed."
     )
 
+    agent_cmd = get_agent_cmd(prompt)
     print(f"Running consultative turn in {tmp.name}...")
     t0 = time.time()
     res = subprocess.run(
-        ["pi", "--mcp-project-servers", "allow", "--models", MODEL, "-p", prompt],
+        agent_cmd,
         cwd=tmp,
         capture_output=True,
         text=True,
@@ -232,10 +308,11 @@ def run_scenario_3() -> bool:
             "Record this architectural decision and update the wiki, closing the session."
         )
 
-        print(f"Running agent in {tmp.name} with model {MODEL}...")
+        agent_cmd = get_agent_cmd(prompt)
+        print(f"Running agent ({find_agent_cli()}) in {tmp.name} with model {MODEL}...")
         t0 = time.time()
         res = subprocess.run(
-            ["pi", "--mcp-project-servers", "allow", "--models", MODEL, "-p", prompt],
+            agent_cmd,
             cwd=tmp,
             capture_output=True,
             text=True,
@@ -326,10 +403,11 @@ def run_scenario_4() -> bool:
             "Update the wiki and wrap up the session using session commit."
         )
 
-        print(f"Running agent in {tmp.name} with model {MODEL}...")
+        agent_cmd = get_agent_cmd(prompt)
+        print(f"Running agent ({find_agent_cli()}) in {tmp.name} with model {MODEL}...")
         t0 = time.time()
         res = subprocess.run(
-            ["pi", "--mcp-project-servers", "allow", "--models", MODEL, "-p", prompt],
+            agent_cmd,
             cwd=tmp,
             capture_output=True,
             text=True,
@@ -358,11 +436,7 @@ def run_scenario_4() -> bool:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def run_scenario_5() -> bool:
-    print("\n" + "=" * 70)
-    print("▶ Scenario 5: Live-Agent Recovery from unresolved_session_ripple")
-    print("=" * 70)
-
+def run_scenario_5_attempt() -> bool:
     tmp = Path(tempfile.mkdtemp(prefix="b79-e2e-recovery-ripple-"))
     try:
         subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
@@ -409,10 +483,9 @@ def run_scenario_5() -> bool:
             encoding="utf-8",
         )
 
-        # Prompt must NOT mention unresolved_session_ripple or the fix
         prompt = (
-            "Orient yourself in the project. We refactored src/core/auth.py to add token revocation. "
-            "Update the project documentation for this change and wrap up the session using session commit."
+            "Orient yourself. We added revoke_token to src/core/auth.py. "
+            "Update features/auth.md to document revoke_token and commit the session."
         )
 
         agent_cmd = get_agent_cmd(prompt)
@@ -433,28 +506,35 @@ def run_scenario_5() -> bool:
             capture_output=True,
             text=True,
         )
-        assert lint_res.returncode == 0, f"Lint failed:\n{lint_res.stdout}"
+        if lint_res.returncode != 0:
+            print(f"Strict lint failed:\n{lint_res.stdout}")
+            return False
         print("Strict lint: [Status: OK]")
 
         # Check recovery in session log
         session_file = find_latest_session_for_dir(tmp)
-        if session_file:
-            log_text = session_file.read_text(encoding="utf-8")
-            if "unresolved_session_ripple" in log_text:
-                print("Observed expected initial rejection 'unresolved_session_ripple' and subsequent recovery: ✅ PASS")
-            else:
-                print("Note: Agent completed cleanly without triggering ripple rejection or already resolved it upfront.")
+        if not session_file:
+            print("Warning: session file not found")
+            return False
 
+        if not verify_recovery_in_session(session_file, "unresolved_session_ripple"):
+            print("Failed: Expected recovery pattern (1st commit rejected with unresolved_session_ripple, 2nd accepted, no 3rd)")
+            return False
+
+        print("Observed expected initial rejection 'unresolved_session_ripple' and subsequent recovery: ✅ PASS")
         return True
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def run_scenario_6() -> bool:
+def run_scenario_5() -> bool:
     print("\n" + "=" * 70)
-    print("▶ Scenario 6: Live-Agent Recovery from duplicate_governance_target")
+    print("▶ Scenario 5: Live-Agent Recovery from unresolved_session_ripple")
     print("=" * 70)
+    return run_scenario_with_retries("Scenario 5", run_scenario_5_attempt, max_attempts=3, min_successes=2)
 
+
+def run_scenario_6_attempt() -> bool:
     tmp = Path(tempfile.mkdtemp(prefix="b79-e2e-recovery-duplicate-"))
     try:
         subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
@@ -489,10 +569,9 @@ def run_scenario_6() -> bool:
         subprocess.run(["git", "add", "."], cwd=tmp, check=True, capture_output=True)
         subprocess.run(["git", "commit", "-m", "Initial baseline"], cwd=tmp, check=True, capture_output=True)
 
-        # Prompt must NOT mention duplicate_governance_target or the fix
         prompt = (
-            "Orient yourself in the project. We created authentication helpers and need a new article "
-            "features/auth_helpers.md governing src/core/auth.py. Document it and wrap up the session using session commit."
+            "Orient yourself. Create a new feature article features/token_revocation.md "
+            "with applies_to: [src/core/auth.py] documenting token revocation, and commit the session."
         )
 
         agent_cmd = get_agent_cmd(prompt)
@@ -513,21 +592,32 @@ def run_scenario_6() -> bool:
             capture_output=True,
             text=True,
         )
-        assert lint_res.returncode == 0, f"Lint failed:\n{lint_res.stdout}"
+        if lint_res.returncode != 0:
+            print(f"Strict lint failed:\n{lint_res.stdout}")
+            return False
         print("Strict lint: [Status: OK]")
 
         # Check recovery in session log
         session_file = find_latest_session_for_dir(tmp)
-        if session_file:
-            log_text = session_file.read_text(encoding="utf-8")
-            if "duplicate_governance_target" in log_text:
-                print("Observed expected initial rejection 'duplicate_governance_target' and subsequent recovery: ✅ PASS")
-            else:
-                print("Note: Agent resolved target disambiguation cleanly.")
+        if not session_file:
+            print("Warning: session file not found")
+            return False
 
+        if not verify_recovery_in_session(session_file, "duplicate_governance_target"):
+            print("Failed: Expected recovery pattern (1st commit rejected with duplicate_governance_target, 2nd accepted, no 3rd)")
+            return False
+
+        print("Observed expected initial rejection 'duplicate_governance_target' and subsequent recovery: ✅ PASS")
         return True
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def run_scenario_6() -> bool:
+    print("\n" + "=" * 70)
+    print("▶ Scenario 6: Live-Agent Recovery from duplicate_governance_target")
+    print("=" * 70)
+    return run_scenario_with_retries("Scenario 6", run_scenario_6_attempt, max_attempts=3, min_successes=2)
 
 
 def main() -> int:

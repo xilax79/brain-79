@@ -44,6 +44,18 @@ from brain79.core.wiki import (
 )
 
 
+def _safe_read_wiki_text(file_path: Path, rel_str: str) -> str:
+    try:
+        return file_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValidationError(
+            rule="invalid_utf8_encoding",
+            path=rel_str,
+            message=f"File contains invalid UTF-8 bytes: {exc}",
+            actionable="Ensure file is encoded in valid UTF-8.",
+        )
+
+
 def commit_session(
     payload: dict[str, Any] | None = None,
     wiki_root: Path | None = None,
@@ -330,7 +342,7 @@ def commit_session(
             for v_item in verified_articles_in:
                 v_path = normalize_wiki_rel_path(v_item["path"])
                 v_reason = v_item["reason"]
-                v_content = virtual_fs.get(v_path) or (w_root / v_path).read_text(encoding="utf-8")
+                v_content = virtual_fs.get(v_path) or _safe_read_wiki_text(w_root / v_path, v_path)
                 v_meta, _ = parse_frontmatter(v_content)
                 v_applies = v_meta.get("applies_to", [])
                 v_patterns = [str(x) for x in v_applies] if isinstance(v_applies, list) else [str(v_applies)]
@@ -389,7 +401,7 @@ def commit_session(
                             )
 
                 # Verification passed: stamp digest in virtual_fs and manifest_staging
-                v_content = virtual_fs.get(v_path) or (w_root / v_path).read_text(encoding="utf-8")
+                v_content = virtual_fs.get(v_path) or _safe_read_wiki_text(w_root / v_path, v_path)
                 meta_v, body_v = parse_frontmatter(v_content)
                 applies_v = meta_v.get("applies_to", [])
                 pats_v = [str(x) for x in applies_v] if isinstance(applies_v, list) else [str(applies_v)]

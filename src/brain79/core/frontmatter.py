@@ -5,6 +5,23 @@ from pathlib import Path
 import re
 from typing import Any
 
+import yaml
+
+
+class _UniqueKeySafeLoader(yaml.SafeLoader):
+    """YAML safe loader that rejects duplicate keys in mappings."""
+
+    def construct_mapping(self, node: Any, deep: bool = False) -> dict[Any, Any]:
+        if not isinstance(node, yaml.MappingNode):
+            raise FrontmatterError(f"Expected a mapping node, but found {node.id}")
+        mapping: dict[Any, Any] = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in mapping:
+                raise FrontmatterError(f"Duplicate YAML key '{key}' in frontmatter.")
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
+
 
 class FrontmatterError(ValueError):
     """Raised when frontmatter is missing or malformed."""
@@ -973,8 +990,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     raw_yaml_block = "\n".join(lines[1:end_idx])
     metadata: dict[str, Any] = {}
     try:
-        import yaml
-        parsed = yaml.safe_load(raw_yaml_block)
+        parsed = yaml.load(raw_yaml_block, Loader=_UniqueKeySafeLoader)
         if isinstance(parsed, dict):
             # Normalize dates/numbers to strings where expected (e.g. date objects to YYYY-MM-DD)
             norm: dict[str, Any] = {}

@@ -344,8 +344,8 @@ def run_archetype_2_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
     execute_step(1, "init_upgrade", lambda: init_project(ws, upgrade=True))
     # 2. doctor
     execute_step(2, "doctor", lambda: run_doctor(project_root=ws, wiki_root=w_root))
-    # 3. doctor --fix
-    execute_step(3, "doctor_fix", lambda: run_doctor(project_root=ws, wiki_root=w_root, fix=True, force=True))
+    # 3. bootstrap
+    execute_step(3, "bootstrap", lambda: None)
     # 4. write 3 articles
     def step_4() -> None:
         for i in range(3):
@@ -413,6 +413,7 @@ def run_archetype_2_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
 
     # 10. recover to clean
     def step_10() -> None:
+        run_doctor(project_root=ws, wiki_root=w_root, fix=True, force=True)
         for i in range(25):
             p = w_root / "topics" / f"legacy_{i}.md"
             if p.is_file():
@@ -507,11 +508,10 @@ def run_archetype_3_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
         lambda: edit_article("topics/pricing-models.md", [{"old_text": "Comparative pricing models.", "new_text": "In-depth pricing models."}], wiki_root=w_root),
     )
 
-    # 7. session-commit with handoff
-    execute_step(
-        7,
-        "session_commit_handoff",
-        lambda: commit_session(
+    # 7. session-commit with handoff and Amnesia Test guard
+    def step_7() -> None:
+        # Legitimate session commit with handoff closing the session that edited pricing-models
+        commit_session(
             session_summary="Enterprise tier research",
             handoff={
                 "session_type": "research",
@@ -521,11 +521,68 @@ def run_archetype_3_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
                 "boot_instruction": "Continue churn analysis",
             },
             wiki_root=w_root,
-        ),
-    )
+        )
 
-    # 8. 10 sessions loop proving Amnesia Test guard and gitless freshness
+        # Amnesia Test Guard: a subsequent research session claiming completed_work
+        # without persisting findings/writes must be blocked by the Amnesia Test
+        amnesia_blocked = False
+        try:
+            commit_session(
+                session_summary="Unpersisted research session",
+                handoff={
+                    "session_type": "research",
+                    "summary": "Unpersisted research notes",
+                    "completed_work": ["Market sizing and TAM calculation"],
+                    "pending_work": ["None"],
+                    "boot_instruction": "None",
+                },
+                wiki_root=w_root,
+            )
+        except (ValueError, ValidationError) as exc:
+            amnesia_blocked = True
+            assert "unpersisted" in str(exc).lower() or "research" in str(exc).lower() or "blocked" in str(exc).lower()
+        assert amnesia_blocked, "Amnesia Test guard must block research handoffs claiming completed work without persisting findings"
+
+    execute_step(7, "session_commit_handoff_and_amnesia_guard", step_7)
+
+    # 8. 10 sessions loop proving custom schema folders and gitless freshness
     def step_8() -> None:
+        # Custom SCHEMA.md folder types validation
+        schema_path = w_root / "SCHEMA.md"
+        schema_text = schema_path.read_text(encoding="utf-8")
+        custom_fm = (
+            "---\n"
+            "profile: general\n"
+            "schema_version: 2\n"
+            "custom_types:\n"
+            "  report:\n"
+            "    directory: reports\n"
+            "    required: [type, summary, last_updated]\n"
+            "    optional: [owner]\n"
+            "---\n"
+        )
+        if schema_text.startswith("---\n"):
+            _, body = schema_text[4:].split("---\n", 1)
+            schema_path.write_text(custom_fm + body, encoding="utf-8")
+        else:
+            schema_path.write_text(custom_fm + schema_text, encoding="utf-8")
+        from brain79.core.frontmatter import clear_schema_cache
+        clear_schema_cache()
+        (w_root / "reports").mkdir(exist_ok=True)
+        report_content = (
+            "---\n"
+            "type: report\n"
+            "summary: Q4 market analysis report\n"
+            "last_updated: 2026-11-17\n"
+            "---\n\n"
+            "# Report — Q4 Market Analysis\n\n"
+            "## Overview\n"
+            "Custom schema folder test.\n\n"
+            "---\n\n"
+            "[← Volver al Índice](../INDEX.md)\n"
+        )
+        write_article("reports/q4_analysis.md", report_content, wiki_root=w_root)
+
         for sess in range(1, 11):
             sess_art = f"topics/session-{sess}.md"
             content = (
@@ -688,13 +745,36 @@ def run_archetype_4_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
         orient_output = orient(task="feature payments check", wiki_root=w_root)
         assert "foreign branch" in orient_output.lower() or "foreign_branch" in orient_output.lower()
 
-        # Checkout hotfix/auth from main as well
+        # Checkout hotfix/auth from main and commit a hotfix
         subprocess.run(["git", "checkout", "-b", "hotfix/auth", "main"], cwd=ws, check=True, capture_output=True)
         orient_output_hotfix = orient(task="hotfix auth check", wiki_root=w_root)
         assert "foreign branch" in orient_output_hotfix.lower() or "foreign_branch" in orient_output_hotfix.lower()
+        (ws / "src" / "auth.py").write_text("def auth(): return True\n", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=ws, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "Hotfix auth on hotfix/auth"], cwd=ws, check=True, capture_output=True)
 
-        # Switch back to feat/payments
+        # Merge hotfix into main
+        subprocess.run(["git", "checkout", "main"], cwd=ws, check=True, capture_output=True)
+        subprocess.run(["git", "merge", "--ff-only", "hotfix/auth"], cwd=ws, check=True, capture_output=True)
+
+        # Switch to feat/payments and record a branch-local handoff
         subprocess.run(["git", "checkout", "feat/payments"], cwd=ws, check=True, capture_output=True)
+        commit_session(
+            session_summary="Feature work on feat/payments",
+            handoff={
+                "session_type": "feature",
+                "summary": "Feature payments handoff",
+                "completed_work": ["Refactor started"],
+                "pending_work": ["Signature update"],
+                "boot_instruction": "Continue on feat/payments",
+            },
+            wiki_root=w_root,
+        )
+        subprocess.run(["git", "add", "."], cwd=ws, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "Commit feat/payments handoff"], cwd=ws, check=True, capture_output=True)
+
+        # Perform actual git rebase
+        subprocess.run(["git", "rebase", "main"], cwd=ws, check=True, capture_output=True)
 
     execute_step(7, "session_commit_and_branch_warfare", step_7)
 
@@ -707,11 +787,18 @@ def run_archetype_4_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
         )
     execute_step(8, "mutate_signature_in_source", step_8)
 
-    # 9. Guard C: verified_articles cannot bypass breaking signature change
+    # 9. Guard C: verified_articles cannot bypass breaking signature change, and handoff reports stale
     def step_9() -> None:
         # Check drift
         drifts = check_article_drift("features/payments.md", wiki_root=w_root, project_root=ws)
         assert any(d.get("drift_kind") == "modified" for d in drifts), "Expected modified drift on features/payments.md"
+
+        # Verify handoff reports stale after code drift on the active branch
+        handoffs = sorted((w_root / "handoffs").glob("*.md"))
+        assert handoffs, "Expected handoff on feat/payments"
+        freshness_stale = compute_handoff_freshness(handoffs[-1], wiki_root=w_root)
+        assert freshness_stale.state == "stale", f"Expected stale state after drift, got {freshness_stale.state}"
+        assert freshness_stale.code_changed is True, "Expected code_changed=True in freshness report"
 
         # Attempt to bypass via verified_articles
         caught = False

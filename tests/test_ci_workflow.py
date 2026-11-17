@@ -124,13 +124,13 @@ def test_ci_workflow_matrix_cells(workflow_yaml: dict[str, Any]) -> None:
 
     matrix = strategy.get("matrix", {})
     os_list = matrix.get("os", [])
-    python_list = matrix.get("python-version", [])
+    python_list = matrix.get("python", [])
 
     expected_os = {"ubuntu-latest", "macos-latest", "windows-latest"}
     expected_py = {"3.11", "3.12", "3.13"}
 
     assert set(os_list) == expected_os, f"Matrix 'os' mismatch: {os_list}"
-    assert set(python_list) == expected_py, f"Matrix 'python-version' mismatch: {python_list}"
+    assert set(python_list) == expected_py, f"Matrix 'python' mismatch: {python_list}"
 
     total_cells = len(os_list) * len(python_list)
     assert total_cells == 9, f"Expected 9 matrix jobs, found {total_cells}"
