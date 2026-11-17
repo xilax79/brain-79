@@ -135,9 +135,22 @@ def _chaos_worker_run(
                 successful_ops.append(f"regen_nav@{worker_id}-{op}")
 
             elif op_type == 3:
-                # 4. Atomic write on shared target topics/shared.md
+                # 4. Atomic session commit writing distinct target and shared target under contention
+                sess_distinct_rel = f"topics/w{worker_id}-s{op}.md"
                 shared_rel = "topics/shared.md"
-                content = (
+                distinct_content = (
+                    "---\n"
+                    "type: topic\n"
+                    f"summary: Session committed topic from worker {worker_id} op {op}\n"
+                    "last_updated: 2026-11-17\n"
+                    "---\n\n"
+                    f"# Session Topic W{worker_id} Op{op}\n\n"
+                    "## Overview\n"
+                    f"Session committed content by worker {worker_id} at op {op}.\n\n"
+                    "---\n\n"
+                    "[← Volver al Índice](../INDEX.md)\n"
+                )
+                shared_content = (
                     "---\n"
                     "type: topic\n"
                     f"summary: Shared topic payload from worker {worker_id} op {op}\n"
@@ -149,7 +162,16 @@ def _chaos_worker_run(
                     "---\n\n"
                     "[← Volver al Índice](../INDEX.md)\n"
                 )
-                write_article(shared_rel, content, wiki_root=w_root, timeout=15.0)
+                commit_session(
+                    session_summary=f"Worker {worker_id} session {op}",
+                    writes=[
+                        {"path": sess_distinct_rel, "content": distinct_content},
+                        {"path": shared_rel, "content": shared_content},
+                    ],
+                    wiki_root=w_root,
+                    timeout=15.0,
+                )
+                successful_ops.append(sess_distinct_rel)
                 successful_ops.append(f"{shared_rel}@{worker_id}-{op}")
 
         except (ValidationError, FrontmatterError, OSError, filelock.Timeout) as exc:
@@ -461,14 +483,38 @@ def test_deterministic_fuzzing_corpus(tmp_path: Path, seed: int) -> None:
 
     probe = dump_frontmatter(meta_dict, h1 + backlink)
     needed = MAX_ARTICLE_BYTES - len(probe.encode("utf-8"))
+
+    # 20,479 bytes (accepted)
+    valid_20479 = dump_frontmatter(meta_dict, h1 + ("x" * (needed - 1)) + backlink)
+    assert len(valid_20479.encode("utf-8")) == MAX_ARTICLE_BYTES - 1
+    validate_article_content("topics/exact20479.md", valid_20479, wiki_root=w_root)
+
+    # 20,480 bytes (accepted)
     valid_exact = dump_frontmatter(meta_dict, h1 + ("x" * needed) + backlink)
     assert len(valid_exact.encode("utf-8")) == MAX_ARTICLE_BYTES
     validate_article_content("topics/exact20480.md", valid_exact, wiki_root=w_root)
 
-    # 3-byte character boundary using '€' (3 bytes per character in UTF-8)
+    # 20,481 bytes (rejected)
+    invalid_oversized = dump_frontmatter(meta_dict, h1 + ("x" * (needed + 1)) + backlink)
+    assert len(invalid_oversized.encode("utf-8")) == MAX_ARTICLE_BYTES + 1
+    with pytest.raises(ValidationError) as exc_info:
+        validate_article_content("topics/over20480.md", invalid_oversized, wiki_root=w_root)
+    assert exc_info.value.rule == "article_too_large"
+
+    # 3-byte character boundaries using '€' (3 bytes per character in UTF-8)
     char_3b = "€"
     probe_3b = dump_frontmatter(meta_dict, h1 + backlink)
     base_bytes = len(probe_3b.encode("utf-8"))
+
+    # 20,479 bytes via 3-byte characters (accepted)
+    remaining_20479 = (MAX_ARTICLE_BYTES - 1) - base_bytes
+    num_3b_20479 = remaining_20479 // 3
+    ascii_pad_20479 = remaining_20479 % 3
+    valid_20479_3b = dump_frontmatter(meta_dict, h1 + (char_3b * num_3b_20479) + ("y" * ascii_pad_20479) + backlink)
+    assert len(valid_20479_3b.encode("utf-8")) == MAX_ARTICLE_BYTES - 1
+    validate_article_content("topics/exact20479_3b.md", valid_20479_3b, wiki_root=w_root)
+
+    # 20,480 bytes via 3-byte characters (accepted)
     remaining_bytes = MAX_ARTICLE_BYTES - base_bytes
     num_3b = remaining_bytes // 3
     ascii_pad = remaining_bytes % 3
@@ -476,18 +522,11 @@ def test_deterministic_fuzzing_corpus(tmp_path: Path, seed: int) -> None:
     assert len(valid_exact_3b.encode("utf-8")) == MAX_ARTICLE_BYTES
     validate_article_content("topics/exact20480_3b.md", valid_exact_3b, wiki_root=w_root)
 
-    # 20,481 bytes via 3-byte characters
+    # 20,481 bytes via 3-byte characters (rejected)
     invalid_oversized_3b = dump_frontmatter(meta_dict, h1 + (char_3b * num_3b) + ("y" * (ascii_pad + 1)) + backlink)
     assert len(invalid_oversized_3b.encode("utf-8")) == MAX_ARTICLE_BYTES + 1
     with pytest.raises(ValidationError) as exc_info:
         validate_article_content("topics/over20480_3b.md", invalid_oversized_3b, wiki_root=w_root)
-    assert exc_info.value.rule == "article_too_large"
-
-    # 20,481 bytes
-    invalid_oversized = dump_frontmatter(meta_dict, h1 + ("x" * (needed + 1)) + backlink)
-    assert len(invalid_oversized.encode("utf-8")) == MAX_ARTICLE_BYTES + 1
-    with pytest.raises(ValidationError) as exc_info:
-        validate_article_content("topics/over20480.md", invalid_oversized, wiki_root=w_root)
     assert exc_info.value.rule == "article_too_large"
 
     # Line count boundaries: 400 lines (accepted) vs 401 lines (rejected)

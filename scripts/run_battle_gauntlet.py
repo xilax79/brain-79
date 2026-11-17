@@ -37,6 +37,7 @@ if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
 from brain79.config import get_project_root, get_wiki_root, set_project_root
+from brain79.core.bootstrap import run_bootstrap
 from brain79.core.context import get_context
 from brain79.core.doctor import run_doctor
 from brain79.core.drift import WorkspaceIndex, check_article_drift
@@ -159,7 +160,12 @@ def run_archetype_1_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
     # 2. doctor
     execute_step(2, "doctor", lambda: run_doctor(project_root=ws, wiki_root=w_root))
     # 3. bootstrap
-    execute_step(3, "bootstrap", lambda: None)
+    def step_3() -> None:
+        manifest = run_bootstrap(force=True)
+        assert manifest and "Bootstrap Manifest" in manifest
+        assert (w_root / ".bootstrap_state.json").exists()
+
+    execute_step(3, "bootstrap", step_3)
     # 4. write 3 articles
     def step_4() -> None:
         write_article(
@@ -345,7 +351,12 @@ def run_archetype_2_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
     # 2. doctor
     execute_step(2, "doctor", lambda: run_doctor(project_root=ws, wiki_root=w_root))
     # 3. bootstrap
-    execute_step(3, "bootstrap", lambda: None)
+    def step_3() -> None:
+        manifest = run_bootstrap(force=True)
+        assert manifest and "Bootstrap Manifest" in manifest
+        assert (w_root / ".bootstrap_state.json").exists()
+
+    execute_step(3, "bootstrap", step_3)
     # 4. write 3 articles
     def step_4() -> None:
         for i in range(3):
@@ -477,7 +488,12 @@ def run_archetype_3_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
     # 2. doctor
     execute_step(2, "doctor", lambda: run_doctor(project_root=ws, wiki_root=w_root))
     # 3. bootstrap
-    execute_step(3, "bootstrap", lambda: None)
+    def step_3() -> None:
+        manifest = run_bootstrap(force=True)
+        assert manifest and "Bootstrap Manifest" in manifest
+        assert (w_root / ".bootstrap_state.json").exists()
+
+    execute_step(3, "bootstrap", step_3)
 
     # 4. write 3 articles
     def step_4() -> None:
@@ -684,7 +700,12 @@ def run_archetype_4_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
     # 2. doctor
     execute_step(2, "doctor", lambda: run_doctor(project_root=ws, wiki_root=w_root))
     # 3. bootstrap
-    execute_step(3, "bootstrap", lambda: None)
+    def step_3() -> None:
+        manifest = run_bootstrap(force=True)
+        assert manifest and "Bootstrap Manifest" in manifest
+        assert (w_root / ".bootstrap_state.json").exists()
+
+    execute_step(3, "bootstrap", step_3)
 
     # 4. write 3 articles
     def step_4() -> None:
@@ -944,7 +965,12 @@ def run_archetype_5_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
     # 2. doctor
     execute_step(2, "doctor", lambda: run_doctor(project_root=ws, wiki_root=w_root))
     # 3. bootstrap
-    execute_step(3, "bootstrap", lambda: None)
+    def step_3() -> None:
+        manifest = run_bootstrap(force=True)
+        assert manifest and "Bootstrap Manifest" in manifest
+        assert (w_root / ".bootstrap_state.json").exists()
+
+    execute_step(3, "bootstrap", step_3)
     # 4. write 3 articles
     def step_4() -> None:
         for i in range(3):
