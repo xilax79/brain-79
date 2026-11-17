@@ -31,6 +31,12 @@ packages = ["src/brain79"]
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "strict"
+addopts = "--strict-markers"
+markers = [
+    "chaos: stress tests, multiprocess contention, and fault injection",
+    "gauntlet: multi-repo archetype lifecycle and scale tests",
+    "perf: performance and latency benchmark tests",
+]
 
 
 [tool.mypy]

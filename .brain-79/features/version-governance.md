@@ -12,7 +12,7 @@ related:
   - decisions/adr-013-versioning-and-release-governance.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
 last_updated: 2026-11-17
-applies_to_digest: "sha256:9909294a6bd1d6da"
+applies_to_digest: "sha256:00ad71a105075de9"
 applies_to_count: 3
 ---
 

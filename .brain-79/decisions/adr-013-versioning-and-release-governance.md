@@ -16,7 +16,7 @@ related:
   - architecture/roadmap-industrial-scale.md
   - features/version-governance.md
 last_updated: 2026-11-17
-applies_to_digest: "sha256:58362a1740ea538c"
+applies_to_digest: "sha256:8a20e1a444a4979a"
 applies_to_count: 6
 ---
 

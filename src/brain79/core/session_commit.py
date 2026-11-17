@@ -542,35 +542,61 @@ def commit_session(
                 )
 
         # =========================================================================
-        # Pass 3: Disk Persistence (articles, manifest, index)
+        # Pass 3: Disk Persistence (articles, manifest, index) with Rollback Safety
         # =========================================================================
-        save_drift_manifest(w_root, manifest_staging)
+        orig_states: dict[str, str | None] = {}
+        for rel_str in virtual_fs:
+            target_f = w_root / rel_str
+            orig_states[rel_str] = target_f.read_text(encoding="utf-8") if target_f.is_file() else None
 
-        raw_path: str | None = None
-        if session_summary:
-            raw_msg = save_raw_session(session_summary, instructions=instructions or "", wiki_root=w_root)
-            if "_raw/sessions/" in raw_msg:
-                raw_path = "_raw/sessions/" + raw_msg.split("_raw/sessions/")[-1].strip()
+        manifest_file = w_root / ".drift_manifest.json"
+        orig_manifest_text = manifest_file.read_text(encoding="utf-8") if manifest_file.is_file() else None
 
-        for rel_str, content in virtual_fs.items():
-            write_article(
-                rel_str,
-                content,
-                timeout=timeout,
-                force_validation_skip=force_validation_skip,
-                _skip_nav_regen=True,
-                wiki_root=w_root,
+        try:
+            save_drift_manifest(w_root, manifest_staging)
+
+            raw_path: str | None = None
+            if session_summary:
+                raw_msg = save_raw_session(session_summary, instructions=instructions or "", wiki_root=w_root)
+                if "_raw/sessions/" in raw_msg:
+                    raw_path = "_raw/sessions/" + raw_msg.split("_raw/sessions/")[-1].strip()
+
+            for rel_str, content in virtual_fs.items():
+                write_article(
+                    rel_str,
+                    content,
+                    timeout=timeout,
+                    force_validation_skip=force_validation_skip,
+                    _skip_nav_regen=True,
+                    wiki_root=w_root,
+                )
+
+            has_indexable_changes = any(
+                not p.startswith("_raw/") and not p.startswith("handoffs/") and p not in ("SCHEMA.md", "INDEX.md")
+                for p in virtual_fs
             )
+            if has_indexable_changes:
+                try:
+                    regenerate_index_navigation(w_root)
+                except Exception:
+                    pass
+        except BaseException:
+            # Transaction rollback: restore files to pre-commit state
+            for rel_str, orig_content in orig_states.items():
+                target_f = w_root / rel_str
+                if orig_content is None:
+                    target_f.unlink(missing_ok=True)
+                else:
+                    target_f.write_text(orig_content, encoding="utf-8", newline="\n")
 
-        has_indexable_changes = any(
-            not p.startswith("_raw/") and not p.startswith("handoffs/") and p not in ("SCHEMA.md", "INDEX.md")
-            for p in virtual_fs
-        )
-        if has_indexable_changes:
-            try:
-                regenerate_index_navigation(w_root)
-            except Exception:
-                pass
+            if orig_manifest_text is None:
+                manifest_file.unlink(missing_ok=True)
+            else:
+                manifest_file.write_text(orig_manifest_text, encoding="utf-8", newline="\n")
+
+            for tmp_file in w_root.rglob("*.tmp*"):
+                tmp_file.unlink(missing_ok=True)
+            raise
 
         # =========================================================================
         # Pass 4: Post-persistence write_handoff() (guarantees fresh handoff)

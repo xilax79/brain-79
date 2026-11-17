@@ -979,6 +979,8 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
             # Normalize dates/numbers to strings where expected (e.g. date objects to YYYY-MM-DD)
             norm: dict[str, Any] = {}
             for k, v in parsed.items():
+                if not isinstance(k, str):
+                    raise FrontmatterError(f"Frontmatter keys must be strings, got {type(k).__name__}: {k!r}")
                 if isinstance(v, (date, datetime)):
                     norm[k] = v.isoformat()
                 else:

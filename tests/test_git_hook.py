@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
+import shutil
 import subprocess
+import sys
+
+import pytest
 
 from brain79.cli.dispatch import run_cli
 from brain79.config import set_project_root
@@ -39,6 +43,10 @@ def test_init_no_git_hooks_flag(tmp_path: Path) -> None:
     assert not hook_path.exists()
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32" and shutil.which("sh") is None and shutil.which("bash") is None,
+    reason="Windows requires Git Bash (sh or bash) to execute pre-commit hook script",
+)
 def test_pre_commit_script_runs_lint_strict(tmp_path: Path) -> None:
     git_dir = tmp_path / ".git"
     git_dir.mkdir()
@@ -65,6 +73,11 @@ def test_pre_commit_script_runs_lint_strict(tmp_path: Path) -> None:
         capture_output=True,
     )
 
-    # Run the pre-commit script directly
-    res = subprocess.run([str(hook_path)], cwd=tmp_path, capture_output=True, text=True)
+    # Run the pre-commit script directly or via POSIX shell on Windows
+    if sys.platform == "win32":
+        sh = shutil.which("sh") or shutil.which("bash")
+        cmd = [sh, str(hook_path)] if sh else [str(hook_path)]
+    else:
+        cmd = [str(hook_path)]
+    res = subprocess.run(cmd, cwd=tmp_path, capture_output=True, text=True)
     assert res.returncode == 0

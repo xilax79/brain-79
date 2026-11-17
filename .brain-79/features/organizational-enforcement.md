@@ -17,7 +17,7 @@ related:
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - decisions/adr-012-structural-quality-and-drift-detection.md
   - decisions/adr-018-living-manuals-and-temporal-decontamination.md
-applies_to_digest: "sha256:67459ff9fc8382fa"
+applies_to_digest: "sha256:d481c68cb8def9c7"
 applies_to_count: 7
 ---
 

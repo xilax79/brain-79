@@ -20,15 +20,30 @@ from brain79.core.validation import validate_article_content
 # Directories excluded from article listings (raw sources and locks are not wiki articles)
 _EXCLUDED_DIRS = {"_raw", ".locks"}
 
-
-
 _RG_PATH: str | None = shutil.which("rg")
+
+_WINDOWS_RESERVED_NAMES = {
+    "CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+}
 
 
 def _safe_resolve(path: str, wiki_root: Path | None = None) -> Path:
     """Resolve a relative wiki path and verify it stays within the wiki root."""
     w_root = (wiki_root or get_wiki_root()).resolve()
     clean_path = normalize_wiki_rel_path(path)
+
+    # Check Windows reserved names and trailing dots/spaces in path components
+    for part in Path(clean_path).parts:
+        p_obj = Path(part)
+        stem = p_obj.stem
+        if stem.upper() in _WINDOWS_RESERVED_NAMES or part.upper() in _WINDOWS_RESERVED_NAMES:
+            raise ValueError(f"Path '{path}' contains Windows reserved device name '{part}'.")
+        if part not in (".", "..") and stem not in (".", ".."):
+            if part.endswith(".") or part.endswith(" ") or stem.endswith(".") or stem.endswith(" "):
+                raise ValueError(f"Path '{path}' contains forbidden trailing dot or space in '{part}'.")
+
     target = (w_root / clean_path).resolve()
     if not target.is_relative_to(w_root):
         raise ValueError(f"Path '{path}' resolves outside the wiki directory.")
@@ -219,8 +234,16 @@ def read_article(
     if not target.is_file():
         raise ValueError(f"Path is not a file: {path}")
 
-    raw_content = target.read_text(encoding="utf-8").replace("\r\n", "\n")
     rel_path_str = target.relative_to(w_root).as_posix()
+    try:
+        raw_content = target.read_text(encoding="utf-8").replace("\r\n", "\n")
+    except UnicodeDecodeError as exc:
+        raise ValidationError(
+            rule="invalid_utf8_encoding",
+            path=rel_path_str,
+            message=f"File contains invalid UTF-8 bytes: {exc}",
+            actionable="Ensure file is encoded in valid UTF-8.",
+        )
 
     if sections:
         content = extract_sections_from_markdown(raw_content, sections)
@@ -296,6 +319,15 @@ def write_article(
 
     if target.suffix != ".md":
         raise ValueError(f"write_article requires .md paths, got {path}")
+
+    clean_path = normalize_wiki_rel_path(path)
+    if target.exists() and not has_exact_case_path(w_root, clean_path):
+        raise ValidationError(
+            rule="case_collision",
+            path=clean_path,
+            message=f"Case collision: requested path '{clean_path}' differs in character casing from existing file on disk.",
+            actionable="Use the exact case of the existing article or rename it explicitly.",
+        )
 
     rel_path_str = target.relative_to(w_root).as_posix()
     content = validate_article_content(
@@ -610,6 +642,15 @@ def write_many_articles(
         target = _safe_resolve(p, wiki_root=w_root)
         if target.suffix != ".md":
             raise ValueError(f"write_many_articles requires .md paths, got {p}")
+
+        clean_path = normalize_wiki_rel_path(p)
+        if target.exists() and not has_exact_case_path(w_root, clean_path):
+            raise ValidationError(
+                rule="case_collision",
+                path=clean_path,
+                message=f"Case collision: requested path '{clean_path}' differs in character casing from existing file on disk.",
+                actionable="Use the exact case of the existing article or rename it explicitly.",
+            )
 
         rel_path_str = target.relative_to(w_root).as_posix()
         try:

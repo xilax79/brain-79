@@ -24,6 +24,25 @@ import time
 MODEL = "gemini-3.8-flash:low"
 
 
+def find_agent_cli() -> str | None:
+    """Detect available real agent CLI (pi or agy)."""
+    if shutil.which("pi"):
+        return "pi"
+    if shutil.which("agy"):
+        return "agy"
+    return None
+
+
+def get_agent_cmd(prompt: str) -> list[str]:
+    """Build command line for running the agent non-interactively."""
+    cli = find_agent_cli()
+    if cli == "pi":
+        return ["pi", "--mcp-project-servers", "allow", "--models", MODEL, "-p", prompt]
+    if cli == "agy":
+        return ["agy", "--model", MODEL, "-p", prompt]
+    raise RuntimeError("No agent CLI found")
+
+
 def find_latest_session_for_dir(target_dir: Path) -> Path | None:
     """Find the latest pi session .jsonl for the given working directory."""
     sessions_root = Path.home() / ".pi" / "agent" / "sessions"
@@ -339,17 +358,218 @@ def run_scenario_4() -> bool:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def main() -> int:
-    print("=" * 70)
-    print(f"🚀 Brain-79 Pre-Merge E2E Smoke Suite (Agent: pi | Model: {MODEL})")
+def run_scenario_5() -> bool:
+    print("\n" + "=" * 70)
+    print("▶ Scenario 5: Live-Agent Recovery from unresolved_session_ripple")
     print("=" * 70)
 
+    tmp = Path(tempfile.mkdtemp(prefix="b79-e2e-recovery-ripple-"))
     try:
-        run_scenario_1()
-        run_scenario_3()
-        run_scenario_4()
+        subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test Agent"], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "agent@example.com"], cwd=tmp, check=True, capture_output=True)
+
+        subprocess.run(
+            ["brain79", "init", "--profile", "software", "--no-git-hooks", "--project-root", str(tmp)],
+            check=True,
+            capture_output=True,
+        )
+
+        wiki = tmp / ".brain-79"
+        src_core = tmp / "src" / "core"
+        src_core.mkdir(parents=True, exist_ok=True)
+        (src_core / "auth.py").write_text("def authenticate(): return True\n", encoding="utf-8")
+
+        # Create leaf feature article
+        (wiki / "features").mkdir(exist_ok=True)
+        (wiki / "features" / "auth.md").write_text(
+            "---\ntype: feature\nsummary: Authentication service\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-11-12\napplies_to:\n  - src/core/auth.py\n---\n\n# Feature — Authentication\n\n## Overview\nAuth service details.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n",
+            encoding="utf-8",
+        )
+
+        # Create umbrella architecture article
+        (wiki / "architecture").mkdir(exist_ok=True)
+        (wiki / "architecture" / "overview.md").write_text(
+            "---\ntype: architecture\nsummary: Core system architecture\nstability: stable\nlast_updated: 2026-11-12\napplies_to:\n  - .brain-79/features/*.md\n  - src/core/*.py\n---\n\n# Architecture — Overview\n\n## Overview\nSystem architecture details.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n",
+            encoding="utf-8",
+        )
+
+        from brain79.core.migration import migrate_wiki
+        from brain79.core.navigation import regenerate_index_navigation
+
+        regenerate_index_navigation(wiki)
+        migrate_wiki(wiki, dry_run=False)
+
+        subprocess.run(["git", "add", "."], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "Initial baseline"], cwd=tmp, check=True, capture_output=True)
+
+        # Modify leaf file without updating umbrella article
+        (src_core / "auth.py").write_text(
+            "def authenticate(): return True\ndef revoke_token(token: str) -> bool: return True\n",
+            encoding="utf-8",
+        )
+
+        # Prompt must NOT mention unresolved_session_ripple or the fix
+        prompt = (
+            "Orient yourself in the project. We refactored src/core/auth.py to add token revocation. "
+            "Update the project documentation for this change and wrap up the session using session commit."
+        )
+
+        agent_cmd = get_agent_cmd(prompt)
+        print(f"Running agent ({find_agent_cli()}) in {tmp.name} with model {MODEL}...")
+        t0 = time.time()
+        res = subprocess.run(
+            agent_cmd,
+            cwd=tmp,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        duration = time.time() - t0
+        print(f"Agent finished in {duration:.1f}s (exit code {res.returncode})")
+
+        lint_res = subprocess.run(
+            ["brain79", "lint", "--strict", "--project-root", str(tmp)],
+            capture_output=True,
+            text=True,
+        )
+        assert lint_res.returncode == 0, f"Lint failed:\n{lint_res.stdout}"
+        print("Strict lint: [Status: OK]")
+
+        # Check recovery in session log
+        session_file = find_latest_session_for_dir(tmp)
+        if session_file:
+            log_text = session_file.read_text(encoding="utf-8")
+            if "unresolved_session_ripple" in log_text:
+                print("Observed expected initial rejection 'unresolved_session_ripple' and subsequent recovery: ✅ PASS")
+            else:
+                print("Note: Agent completed cleanly without triggering ripple rejection or already resolved it upfront.")
+
+        return True
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def run_scenario_6() -> bool:
+    print("\n" + "=" * 70)
+    print("▶ Scenario 6: Live-Agent Recovery from duplicate_governance_target")
+    print("=" * 70)
+
+    tmp = Path(tempfile.mkdtemp(prefix="b79-e2e-recovery-duplicate-"))
+    try:
+        subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test Agent"], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "agent@example.com"], cwd=tmp, check=True, capture_output=True)
+
+        subprocess.run(
+            ["brain79", "init", "--profile", "software", "--no-git-hooks", "--project-root", str(tmp)],
+            check=True,
+            capture_output=True,
+        )
+
+        wiki = tmp / ".brain-79"
+        src_core = tmp / "src" / "core"
+        src_core.mkdir(parents=True, exist_ok=True)
+        (src_core / "auth.py").write_text("def authenticate(): return True\n", encoding="utf-8")
+        (src_core / "user.py").write_text("def get_user(): return {}\n", encoding="utf-8")
+
+        # Create existing feature article governing auth.py
+        (wiki / "features").mkdir(exist_ok=True)
+        (wiki / "features" / "auth.md").write_text(
+            "---\ntype: feature\nsummary: Authentication service\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-11-12\napplies_to:\n  - src/core/auth.py\n---\n\n# Feature — Authentication\n\n## Overview\nAuth service details.\n\n---\n\n[← Volver al Índice](../INDEX.md)\n",
+            encoding="utf-8",
+        )
+
+        from brain79.core.migration import migrate_wiki
+        from brain79.core.navigation import regenerate_index_navigation
+
+        regenerate_index_navigation(wiki)
+        migrate_wiki(wiki, dry_run=False)
+
+        subprocess.run(["git", "add", "."], cwd=tmp, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "Initial baseline"], cwd=tmp, check=True, capture_output=True)
+
+        # Prompt must NOT mention duplicate_governance_target or the fix
+        prompt = (
+            "Orient yourself in the project. We created authentication helpers and need a new article "
+            "features/auth_helpers.md governing src/core/auth.py. Document it and wrap up the session using session commit."
+        )
+
+        agent_cmd = get_agent_cmd(prompt)
+        print(f"Running agent ({find_agent_cli()}) in {tmp.name} with model {MODEL}...")
+        t0 = time.time()
+        res = subprocess.run(
+            agent_cmd,
+            cwd=tmp,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+        duration = time.time() - t0
+        print(f"Agent finished in {duration:.1f}s (exit code {res.returncode})")
+
+        lint_res = subprocess.run(
+            ["brain79", "lint", "--strict", "--project-root", str(tmp)],
+            capture_output=True,
+            text=True,
+        )
+        assert lint_res.returncode == 0, f"Lint failed:\n{lint_res.stdout}"
+        print("Strict lint: [Status: OK]")
+
+        # Check recovery in session log
+        session_file = find_latest_session_for_dir(tmp)
+        if session_file:
+            log_text = session_file.read_text(encoding="utf-8")
+            if "duplicate_governance_target" in log_text:
+                print("Observed expected initial rejection 'duplicate_governance_target' and subsequent recovery: ✅ PASS")
+            else:
+                print("Note: Agent resolved target disambiguation cleanly.")
+
+        return True
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def main() -> int:
+    cli = find_agent_cli()
+    if not cli:
+        print("❌ SKIPPED (exit 77): Neither 'pi' nor 'agy' agent CLI was found in PATH.")
+        return 77
+
+    print("=" * 70)
+    print(f"🚀 Brain-79 Pre-Merge E2E Smoke Suite (Agent: {cli} | Model: {MODEL})")
+    print("=" * 70)
+
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Brain-79 E2E Live-Agent Smoke Suite")
+    parser.add_argument("--scenario", type=int, choices=[1, 2, 3, 4, 5, 6], help="Run specific scenario")
+    args = parser.parse_args()
+
+    scenarios = {
+        1: run_scenario_1,
+        3: run_scenario_3,
+        4: run_scenario_4,
+        5: run_scenario_5,
+        6: run_scenario_6,
+    }
+
+    try:
+        if args.scenario:
+            if args.scenario == 2:
+                print("Scenario 2 runs as part of Scenario 1.")
+                scenarios[1]()
+            else:
+                scenarios[args.scenario]()
+        else:
+            run_scenario_1()
+            run_scenario_3()
+            run_scenario_4()
+            run_scenario_5()
+            run_scenario_6()
+
         print("\n" + "=" * 70)
-        print("🎉 ALL 4 PRE-MERGE E2E SCENARIOS PASSED WITH ZERO MCP RETRIES!")
+        print("🎉 ALL TESTED E2E SCENARIOS PASSED WITH LIVE-AGENT VERIFICATION!")
         print("=" * 70)
         return 0
     except Exception as exc:

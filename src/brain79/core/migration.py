@@ -89,7 +89,10 @@ def suggest_relocations(wiki_root: Path) -> str:
         if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks"):
             continue
 
-        content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
+        try:
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
+        except UnicodeDecodeError:
+            continue
         if content.startswith("---\n"):
             try:
                 meta, _ = parse_frontmatter(content)
@@ -149,7 +152,11 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
             skipped.append(f"{rel_str}: in _raw/ or .locks/")
             continue
 
-        content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
+        try:
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
+        except UnicodeDecodeError:
+            skipped.append(f"{rel_str}: invalid UTF-8 encoding")
+            continue
         today = datetime.now(UTC).strftime("%Y-%m-%d")
         file_mtime = datetime.fromtimestamp(md_file.stat().st_mtime, UTC).strftime("%Y-%m-%d")
         inferred_type = _infer_type_from_location(rel, schema=schema)
