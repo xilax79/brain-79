@@ -76,9 +76,9 @@
     },
     "architecture/battle-testing-and-chaos-design.md": {
       "count": 8,
-      "digest": "sha256:92c2ca232ee92433",
+      "digest": "sha256:ecc9db593489ae7f",
       "targets": {
-        "scripts/run_e2e_smoke.py": "sha256:1dbb16e05679b0ea",
+        "scripts/run_e2e_smoke.py": "sha256:a0a3f39f8aaff12d",
         "src/brain79/core/drift.py": "sha256:5377710ac0e3f5aa",
         "src/brain79/core/frontmatter.py": "sha256:7b1592afd173d2bb",
         "src/brain79/core/locks.py": "sha256:8d52b7ba702d7ad8",
