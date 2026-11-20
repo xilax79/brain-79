@@ -27,7 +27,7 @@ related:
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
 last_updated: 2026-11-20
-applies_to_digest: "sha256:d15dbbc63d48f98e"
+applies_to_digest: "sha256:69a91662163007e7"
 applies_to_count: 23
 ---
 

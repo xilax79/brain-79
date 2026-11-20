@@ -107,6 +107,19 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             help="Also configure host desktop application configs (Claude Desktop, Windsurf)",
         )
         parser.add_argument(
+            "--no-merge-driver",
+            dest="install_merge_driver",
+            action="store_false",
+            default=True,
+            help="Skip configuring the deterministic INDEX.md Git merge driver",
+        )
+        parser.add_argument(
+            "--enforcement",
+            choices=["strict", "balanced", "advisory"],
+            default="strict",
+            help="Governance enforcement tier in SCHEMA.md (default: strict)",
+        )
+        parser.add_argument(
             "--harnesses",
             default="all",
             metavar="LIST",
@@ -136,6 +149,8 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             upgrade=parsed.upgrade,
             include_desktop=parsed.include_desktop,
             harnesses=selected_harnesses,
+            install_merge_driver=parsed.install_merge_driver,
+            enforcement=parsed.enforcement,
         )
         return 0
 
@@ -682,7 +697,13 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser.add_argument(
             "--strict",
             action="store_true",
-            help="Exit with non-zero code if any critical errors or warnings exist",
+            help="Exit with non-zero code on CRITICAL (and on WARNING under strict enforcement)",
+        )
+        parser.add_argument(
+            "--fail-on-warnings",
+            action="store_true",
+            default=False,
+            help="Exit with non-zero code on WARNING under any enforcement tier",
         )
         parser.add_argument(
             "--format",
@@ -723,8 +744,14 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         else:
             _write_stdout(report)
 
-        if parsed.strict and ("[Status: CRITICAL]" in report or "[Status: WARNING]" in report):
-            return 1
+        if parsed.strict or parsed.fail_on_warnings:
+            from brain79.core.frontmatter import load_active_schema
+
+            tier = load_active_schema(wiki_root).enforcement
+            if "[Status: CRITICAL]" in report:
+                return 1
+            if "[Status: WARNING]" in report and (tier == "strict" or parsed.fail_on_warnings):
+                return 1
 
         return 0
 
@@ -766,10 +793,27 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser.add_argument(
             "--force", action="store_true", help="Force re-run bootstrap even if already initialized"
         )
+        parser.add_argument(
+            "--auto-map",
+            action="store_true",
+            default=False,
+            help="Detect module boundaries and emit zero-overlap applies_to governance proposals",
+        )
+        parser.add_argument(
+            "--max-modules",
+            type=int,
+            default=12,
+            help="Maximum number of auto-mapped module proposals to emit (default: 12)",
+        )
         parsed = parser.parse_args(sub_args)
         from brain79.core.bootstrap import run_bootstrap
 
-        res = run_bootstrap(scope=parsed.scope, force=parsed.force)
+        res = run_bootstrap(
+            scope=parsed.scope,
+            force=parsed.force,
+            auto_map=parsed.auto_map,
+            max_modules=parsed.max_modules,
+        )
         if res.startswith("[--]"):
             sys.stderr.write(res + "\n")
             return 1
@@ -786,21 +830,54 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             action="store_true",
             help="Regenerate Quick navigation table in INDEX.md from registry",
         )
+        parser.add_argument(
+            "--rebuild",
+            action="store_true",
+            help="Rebuild .navigation_registry.json from Markdown files on disk before rendering",
+        )
+        parser.add_argument(
+            "--merge-driver",
+            nargs=3,
+            metavar=("BASE", "OURS", "THEIRS"),
+            default=None,
+            help="Run deterministic 3-way INDEX.md Git merge driver on BASE OURS THEIRS files",
+        )
         parsed = parser.parse_args(sub_args)
+        if parsed.merge_driver is not None:
+            from pathlib import Path
+            from brain79.core.navigation import merge_index_files
+
+            base_p, ours_p, theirs_p = (Path(p) for p in parsed.merge_driver)
+            if not (base_p.is_file() and ours_p.is_file() and theirs_p.is_file()):
+                sys.stderr.write("Error: --merge-driver requires three existing input files (BASE OURS THEIRS).\n")
+                return 2
+            wiki_root_opt: Path | None = None
+            try:
+                from brain79.config import get_wiki_root
+
+                candidate_w = get_wiki_root()
+                if candidate_w.is_dir():
+                    wiki_root_opt = candidate_w
+            except Exception:
+                wiki_root_opt = None
+            return merge_index_files(base_p, ours_p, theirs_p, wiki_root=wiki_root_opt)
+
         from brain79.config import get_wiki_root
         from brain79.core.navigation import (
             generate_quick_navigation,
+            rebuild_navigation_registry,
             regenerate_index_navigation,
         )
 
         wiki_root = get_wiki_root()
         if parsed.regenerate:
-            res = regenerate_index_navigation(wiki_root)
+            res = regenerate_index_navigation(wiki_root, rebuild=parsed.rebuild)
             _write_stdout(res)
             return 0
-        else:
-            _write_stdout(generate_quick_navigation(wiki_root))
-            return 0
+        if parsed.rebuild:
+            rebuild_navigation_registry(wiki_root, persist=True)
+        _write_stdout(generate_quick_navigation(wiki_root))
+        return 0
 
     elif cmd == "migrate":
         parser = argparse.ArgumentParser(

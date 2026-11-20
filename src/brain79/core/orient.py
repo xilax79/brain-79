@@ -130,6 +130,7 @@ def orient(
 
         active_schema = load_active_schema(w_root)
         sections.append(f"- **Profile:** `{active_schema.profile}`")
+        sections.append(f"- **Enforcement:** `{active_schema.enforcement}`")
         sections.append("- **Managed Directories:**")
         for loc, tname in sorted(active_schema.location_to_type.items()):
             tcfg = active_schema.types.get(tname, {})

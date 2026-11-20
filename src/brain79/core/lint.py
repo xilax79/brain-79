@@ -262,8 +262,22 @@ def lint_wiki(wiki_root: Path | None = None) -> str:
     orphans = sorted(list(all_rel_files - visited))
 
     # Run organizational checks
-    from brain79.core.lint_organizational import lint_organizational
+    from brain79.core.frontmatter import load_active_schema
+    from brain79.core.lint_organizational import OrganizationalIssue, lint_organizational
+
+    active_schema = load_active_schema(w_root)
     org_issues = lint_organizational(w_root)
+    for sw in active_schema.schema_warnings:
+        org_issues.append(
+            OrganizationalIssue(
+                rule="invalid_schema_enforcement",
+                path="SCHEMA.md",
+                line=None,
+                severity="warning",
+                message=sw,
+                actionable="Set 'enforcement' in .brain-79/SCHEMA.md to 'strict', 'balanced', or 'advisory'.",
+            )
+        )
 
     org_errors = [i for i in org_issues if i.severity == "error"]
     org_warnings = [i for i in org_issues if i.severity == "warning"]
@@ -282,6 +296,7 @@ def lint_wiki(wiki_root: Path | None = None) -> str:
         structural_errors=structural_errors,
         orphans=orphans,
         org_issues=org_issues,
+        enforcement=active_schema.enforcement,
     )
 
 
@@ -293,10 +308,11 @@ def _format_report(
     structural_errors: list[tuple[str, str]],
     orphans: list[str],
     org_issues: list[OrganizationalIssue] | None = None,
+    enforcement: str = "strict",
 ) -> str:
     lines: list[str] = [
         "# Brain-79 Lint Report",
-        f"[Status: {status}] [timeout_reached: {str(timeout_reached).lower()}]",
+        f"[Status: {status}] [timeout_reached: {str(timeout_reached).lower()}] [Enforcement: {enforcement}]",
         "",
     ]
 

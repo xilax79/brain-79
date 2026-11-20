@@ -38,6 +38,95 @@ WIKI_DIRS_GENERAL = [
 
 TEMPLATE_FILES = ["SCHEMA.md", "INDEX.md"]
 
+DERIVED_STATE_GITIGNORE_ENTRIES: tuple[str, ...] = (
+    ".locks/",
+    "*.lock",
+    "*.tmp",
+    "*.tmp.*",
+    ".navigation_registry.json",
+    ".drift_manifest.json",
+    ".bootstrap_state.json",
+)
+
+
+def sync_wiki_gitignore(wiki_root: Path, dry_run: bool = False) -> tuple[bool, str]:
+    """Idempotently ensure .brain-79/.gitignore ignores locks, temp files, and derived JSON caches.
+
+    Preserves any custom user lines and comments already present in .brain-79/.gitignore.
+    """
+    gi_path = wiki_root / ".gitignore"
+    existing_lines: list[str] = []
+    if gi_path.is_file():
+        existing_lines = gi_path.read_text(encoding="utf-8").splitlines()
+
+    existing_stripped = {ln.strip() for ln in existing_lines if ln.strip()}
+    missing = [entry for entry in DERIVED_STATE_GITIGNORE_ENTRIES if entry not in existing_stripped]
+
+    if not missing and gi_path.is_file():
+        return False, ".brain-79/.gitignore is already up-to-date"
+
+    new_lines = list(existing_lines)
+    new_lines.extend(missing)
+    new_content = "\n".join(new_lines) + "\n"
+
+    if not dry_run:
+        wiki_root.mkdir(parents=True, exist_ok=True)
+        gi_path.write_text(new_content, encoding="utf-8", newline="\n")
+
+    return True, f"updated .brain-79/.gitignore (+{len(missing)} derived-state entries)"
+
+
+MERGE_DRIVER_NAME = "Brain-79 deterministic INDEX.md merge driver"
+MERGE_DRIVER_CMD = "brain79 navigate --merge-driver %O %A %B"
+GITATTRIBUTES_LINE = "INDEX.md merge=brain79-index"
+
+
+def sync_git_merge_driver(
+    project_root: Path,
+    *,
+    install: bool = True,
+    dry_run: bool = False,
+) -> tuple[bool, str]:
+    """Idempotently configure .brain-79/.gitattributes and local Git merge driver for INDEX.md."""
+    wiki_root = project_root / ".brain-79"
+    ga_path = wiki_root / ".gitattributes"
+    changed = False
+    actions: list[str] = []
+
+    # 1. Ensure .brain-79/.gitattributes contains INDEX.md merge=brain79-index
+    existing_lines: list[str] = []
+    if ga_path.is_file():
+        existing_lines = ga_path.read_text(encoding="utf-8").splitlines()
+    if GITATTRIBUTES_LINE not in {ln.strip() for ln in existing_lines}:
+        changed = True
+        actions.append("updated .brain-79/.gitattributes")
+        if not dry_run:
+            wiki_root.mkdir(parents=True, exist_ok=True)
+            new_lines = list(existing_lines) + [GITATTRIBUTES_LINE]
+            ga_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8", newline="\n")
+
+    # 2. Configure local .git/config merge driver if inside a Git repository and install=True
+    if install:
+        from brain79.core.git_ops import git_config_get_local, git_config_set_local
+        from brain79.core.handoff_freshness import is_git_workspace
+
+        if is_git_workspace(project_root):
+            try:
+                curr_name = git_config_get_local(project_root, "merge.brain79-index.name")
+                curr_driver = git_config_get_local(project_root, "merge.brain79-index.driver")
+                if curr_name != MERGE_DRIVER_NAME or curr_driver != MERGE_DRIVER_CMD:
+                    changed = True
+                    actions.append("configured local git merge.brain79-index driver")
+                    if not dry_run:
+                        git_config_set_local(project_root, "merge.brain79-index.name", MERGE_DRIVER_NAME)
+                        git_config_set_local(project_root, "merge.brain79-index.driver", MERGE_DRIVER_CMD)
+            except Exception:
+                pass
+
+    if not changed:
+        return False, "INDEX.md git merge driver is already configured"
+    return True, "; ".join(actions)
+
 PRE_COMMIT_HOOK_SCRIPT = """#!/usr/bin/env bash
 # brain-79 pre-commit hook: validate wiki changes via lint --strict
 set -e
@@ -449,6 +538,7 @@ def update_project(
 
     manifest_updated, m_msg = sync_agents_manifest(project_root, dry_run=dry_run)
     schema_updated, s_msg = sync_schema_file(wiki_root, dry_run=dry_run)
+    gitignore_updated, gi_msg = sync_wiki_gitignore(wiki_root, dry_run=dry_run)
     mcp_configs = sync_project_mcp_configs(
         project_root,
         include_desktop=include_desktop,
@@ -466,6 +556,7 @@ def update_project(
         instruction_harnesses.extend(inst_adapter.sync(project_root, dry_run=dry_run))
 
     git_hook_updated, g_msg = sync_git_hooks(project_root, dry_run=dry_run)
+    merge_driver_updated, md_msg = sync_git_merge_driver(project_root, install=True, dry_run=dry_run)
     migration_report = migrate_wiki(wiki_root, dry_run=dry_run)
 
     transition_ref = None
@@ -491,9 +582,13 @@ def update_project(
         "dry_run": dry_run,
         "manifest_updated": manifest_updated,
         "schema_updated": schema_updated,
+        "gitignore_updated": gitignore_updated,
+        "gitignore": gi_msg,
         "mcp_configs": mcp_configs,
         "instruction_harnesses": instruction_harnesses,
         "git_hook": g_msg,
+        "merge_driver_updated": merge_driver_updated,
+        "merge_driver": md_msg,
         "migration_report": migration_report,
         "transition_handoff": transition_ref,
     }
@@ -507,6 +602,8 @@ def init_project(
     upgrade: bool = False,
     include_desktop: bool = False,
     harnesses: list[str] | None = None,
+    install_merge_driver: bool = True,
+    enforcement: str = "strict",
 ) -> None:
     """Bootstrap .brain-79/ in a project directory and register MCP configurations."""
     wiki_root = project_root / ".brain-79"
@@ -526,6 +623,10 @@ def init_project(
     profile_clean = profile.strip().lower()
     if profile_clean not in ("software", "general"):
         raise ValueError(f"Unknown profile '{profile}'. Choose 'software' or 'general'.")
+
+    enforcement_clean = enforcement.strip().lower()
+    if enforcement_clean not in ("strict", "balanced", "advisory"):
+        raise ValueError(f"Unknown enforcement tier '{enforcement}'. Choose 'strict', 'balanced', or 'advisory'.")
 
     # In software profile, auto-initialize git repository if not already in a git worktree
     if profile_clean == "software" and auto_git_init:
@@ -557,6 +658,11 @@ def init_project(
     schema_template_name = "SCHEMA_GENERAL.md" if profile_clean == "general" else "SCHEMA.md"
     schema_content = (pkg_templates / schema_template_name).read_text(encoding="utf-8")
     schema_content = schema_content.replace("YYYY-MM-DD", today)
+    if enforcement_clean != "strict":
+        if "enforcement: strict" in schema_content:
+            schema_content = schema_content.replace("enforcement: strict", f"enforcement: {enforcement_clean}", 1)
+        else:
+            schema_content = schema_content.replace("schema_version: 2\n", f"schema_version: 2\nenforcement: {enforcement_clean}\n", 1)
     (wiki_root / "SCHEMA.md").write_text(schema_content, encoding="utf-8", newline="\n")
 
     # INDEX template
@@ -564,8 +670,8 @@ def init_project(
     index_content = index_content.replace("YYYY-MM-DD", today)
     (wiki_root / "INDEX.md").write_text(index_content, encoding="utf-8", newline="\n")
 
-    # Ignore lock and temporary files in wiki_root
-    (wiki_root / ".gitignore").write_text(".locks/\n*.lock\n*.tmp\n", encoding="utf-8", newline="\n")
+    # Ignore lock, temporary, and derived JSON cache files in wiki_root
+    sync_wiki_gitignore(wiki_root)
     cleanup_legacy_inline_locks(wiki_root)
 
     # Synchronize selected (or all registered) harness adapters via core/harnesses registry
@@ -578,8 +684,9 @@ def init_project(
     if include_desktop:
         sync_project_mcp_configs(project_root, include_desktop=True, targets=set())
 
-    # Configure git pre-commit hook
+    # Configure git pre-commit hook and INDEX.md merge driver
     sync_git_hooks(project_root, install=install_git_hooks_flag)
+    sync_git_merge_driver(project_root, install=install_merge_driver)
 
     print(f"Initialized .brain-79/ at {wiki_root}")
     print("Configured Tier 1 MCP harnesses: .mcp.json, .agents/mcp_config.json, .agents/plugins/brain79/, .cursor/mcp.json")

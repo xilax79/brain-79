@@ -133,6 +133,8 @@ def run_doctor(
                 fixed.append(f"Synchronized native instruction harnesses: {', '.join(up_res['instruction_harnesses'])}")
             if up_res.get("git_hook") and "updated" in str(up_res["git_hook"]):
                 fixed.append("Installed/updated git pre-commit hook")
+            if up_res.get("merge_driver_updated"):
+                fixed.append("Configured INDEX.md git merge driver (.gitattributes & .git/config)")
             mig_rep = migrate_wiki(w_root, dry_run=False)
             if "Changes (0)" not in mig_rep:
                 fixed.append("Reconditioned legacy wiki articles via migrate_wiki")
@@ -254,12 +256,26 @@ def run_doctor(
                     protocol_act = "Run 'brain79 update-project' or 'brain79 doctor --fix' to sync native harness blocks."
             protocol_msg.append(h_issue.rstrip("."))
 
+    # Check active enforcement tier and any schema warnings (R-4.1 / R-4.3)
+    active_enforcement = "strict"
+    try:
+        schema_for_proto = load_active_schema(w_root)
+        active_enforcement = schema_for_proto.enforcement
+        for sw in schema_for_proto.schema_warnings:
+            if protocol_status != "error":
+                protocol_status = "warning"
+            protocol_msg.append(sw.rstrip("."))
+            if not protocol_act:
+                protocol_act = "Set 'enforcement' in .brain-79/SCHEMA.md to 'strict', 'balanced', or 'advisory'."
+    except Exception:
+        pass
+
     if not protocol_msg:
         checks.append(
             DoctorCheck(
                 category="protocol_sync",
                 status="ok",
-                message=f"AGENTS.md and SCHEMA.md synchronized with brain79 v{__version__}.",
+                message=f"AGENTS.md and SCHEMA.md synchronized with brain79 v{__version__} (enforcement: {active_enforcement}).",
             )
         )
     else:
@@ -267,7 +283,7 @@ def run_doctor(
             DoctorCheck(
                 category="protocol_sync",
                 status=protocol_status,
-                message="; ".join(protocol_msg) + ".",
+                message="; ".join(protocol_msg) + f" (enforcement: {active_enforcement}).",
                 actionable=protocol_act,
             )
         )
@@ -569,6 +585,107 @@ def run_doctor(
                         message=f"Latest handoff '{latest.name}' is {freshness.state} ({count} total handoffs).",
                     )
                 )
+
+    # 8. derived_state_tracking (R-1.1)
+    derived_cache_names = (
+        ".navigation_registry.json",
+        ".drift_manifest.json",
+        ".bootstrap_state.json",
+    )
+    if is_git_workspace(p_root):
+        try:
+            from brain79.core.git_ops import git_ls_files
+
+            tracked_files = set(git_ls_files(p_root, include_others=False, timeout=5.0))
+            try:
+                wiki_rel = w_root.relative_to(p_root).as_posix()
+            except ValueError:
+                wiki_rel = ".brain-79"
+            tracked_derived = [
+                f"{wiki_rel}/{name}"
+                for name in derived_cache_names
+                if f"{wiki_rel}/{name}" in tracked_files
+            ]
+            if tracked_derived:
+                rm_cmd = "git rm --cached " + " ".join(tracked_derived)
+                checks.append(
+                    DoctorCheck(
+                        category="derived_state_tracking",
+                        status="warning",
+                        message=f"Derived JSON cache(s) tracked in Git: {', '.join(tracked_derived)}.",
+                        actionable=f"Untrack derived caches with '{rm_cmd}' and run 'brain79 update-project' to sync .brain-79/.gitignore.",
+                    )
+                )
+            else:
+                checks.append(
+                    DoctorCheck(
+                        category="derived_state_tracking",
+                        status="ok",
+                        message="No derived JSON caches tracked in Git.",
+                    )
+                )
+        except Exception as e:
+            checks.append(
+                DoctorCheck(
+                    category="derived_state_tracking",
+                    status="info",
+                    message=f"Could not inspect Git tracked derived caches: {e}",
+                )
+            )
+    else:
+        checks.append(
+            DoctorCheck(
+                category="derived_state_tracking",
+                status="ok",
+                message="Workspace outside Git; derived state tracking check skipped.",
+            )
+        )
+
+    # 9. git_merge_driver (R-2.3)
+    if is_git_workspace(p_root):
+        from brain79.core.git_ops import git_config_get_local
+        from brain79.core.init_project import GITATTRIBUTES_LINE, MERGE_DRIVER_CMD
+
+        ga_file = w_root / ".gitattributes"
+        has_ga = ga_file.is_file() and GITATTRIBUTES_LINE in {
+            ln.strip() for ln in ga_file.read_text(encoding="utf-8").splitlines()
+        }
+        try:
+            configured_driver = git_config_get_local(p_root, "merge.brain79-index.driver")
+        except Exception:
+            configured_driver = None
+
+        missing_parts: list[str] = []
+        if not has_ga:
+            missing_parts.append(".brain-79/.gitattributes entry missing")
+        if not configured_driver:
+            missing_parts.append("local git merge.brain79-index.driver not configured")
+
+        if missing_parts:
+            checks.append(
+                DoctorCheck(
+                    category="git_merge_driver",
+                    status="warning",
+                    message="; ".join(missing_parts) + ".",
+                    actionable="Run 'brain79 update-project' or 'brain79 doctor --fix' to configure the INDEX.md Git merge driver.",
+                )
+            )
+        else:
+            checks.append(
+                DoctorCheck(
+                    category="git_merge_driver",
+                    status="ok",
+                    message="Deterministic INDEX.md Git merge driver configured.",
+                )
+            )
+    else:
+        checks.append(
+            DoctorCheck(
+                category="git_merge_driver",
+                status="ok",
+                message="Workspace outside Git; INDEX.md merge driver check skipped.",
+            )
+        )
 
     # Delegate harness diagnostics through core/harnesses registry (R-4.2)
     from brain79.core.harnesses import diagnose_all_harnesses

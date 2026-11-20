@@ -4,6 +4,7 @@ summary: implementation specification and acceptance criteria for team-safe Git 
 stability: experimental
 allow_overlapping_governance: true
 applies_to:
+  - src/brain79/core/auto_map.py
   - src/brain79/core/navigation.py
   - src/brain79/core/drift.py
   - src/brain79/core/bootstrap.py
@@ -27,8 +28,8 @@ related:
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
 last_updated: 2026-11-20
-applies_to_digest: "sha256:9372a2e831a95829"
-applies_to_count: 12
+applies_to_digest: "sha256:b5d4c85284428696"
+applies_to_count: 13
 ---
 
 # Architecture — Team-safe Git collaboration and low-friction onboarding

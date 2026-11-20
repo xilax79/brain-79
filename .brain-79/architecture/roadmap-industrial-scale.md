@@ -66,10 +66,11 @@ Detailed specifications for shipped phases live in their dedicated architecture 
 - **[x] Phase 9 (`v0.10.0`)**: automated battle-testing, multi-OS CI matrix, chaos fuzzing, 5-archetype gauntlet, and transactional rollback.
 - **[x] Phase 10 (`v0.11.0`)**: core architectural refactoring and hardening (`OrderedFileLock`, full Pass 3 rollback, `core/git_ops.py`, fail-closed guardrails, symlink/CLI security, `core/ast_guards/`, `core/harnesses/`, `--mcp-profile`, `ProjectContext`). Specification: [core-refactoring-and-hardening-design.md](core-refactoring-and-hardening-design.md).
 - **[x] Phase 11 (`v0.12.0`)**: public release readiness and friction removal (English-first backlinks, native Claude/Cursor MDC/Copilot instruction adapters, `core` 8-tool MCP default, honest `README.md` limitations, Windows CI `orient()` hot-path optimization). Specification: [public-release-readiness-design.md](public-release-readiness-design.md).
+- **[x] Phase 12 (`v0.13.0`)**: team-safe Git collaboration and low-friction onboarding (git-ignored derived caches with deterministic zero-masking rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map` with zero-overlap proposals, and configurable `strict`/`balanced`/`advisory` enforcement tiers). Specification: [team-collaboration-and-onboarding-design.md](team-collaboration-and-onboarding-design.md).
 
 ---
 
-## Strategic evolution roadmap (`v0.13.0` onward)
+## Strategic evolution roadmap (`v0.14.0` onward)
 
 ```
 +-----------------------------------------------------------------------------------+
@@ -77,9 +78,9 @@ Detailed specifications for shipped phases live in their dedicated architecture 
 +-----------------------------------------------------------------------------------+
 | Phase 11 (P0): Public release readiness & friction removal (v0.12.0)              | [x] Done
 +-----------------------------------------------------------------------------------+
-| Phase 12 (P1): Team-safe Git collaboration & low-friction onboarding (v0.13.0)    | [ ] Next
+| Phase 12 (P1): Team-safe Git collaboration & low-friction onboarding (v0.13.0)    | [x] Done
 +-----------------------------------------------------------------------------------+
-| Phase 13 (P1): Polyglot AST guards & hybrid local retrieval (v0.14.0)             | [ ] Planned
+| Phase 13 (P1): Polyglot AST guards & hybrid local retrieval (v0.14.0)             | [ ] Next
 +-----------------------------------------------------------------------------------+
 | Phase 14 (P2): Passive agent lifecycle hooks, CI PR gate & observability (v0.15.0)| [ ] Planned
 +-----------------------------------------------------------------------------------+
@@ -95,7 +96,7 @@ Detailed specifications for shipped phases live in their dedicated architecture 
 |---|---|---|---|
 | **Pre-P0** | Phase 10 | `v0.11.0` (Done) | Fixed concurrency/rollback/security defects and decomposed monoliths for phases 11–15. |
 | **P0** | Phase 11 | `v0.12.0` (Done) | Removed immediate public-launch blockers and reduced per-turn token tax. |
-| **P1** | Phase 12 | `v0.13.0` | Eliminate multi-developer Git merge conflicts and ease brownfield adoption. |
+| **P1** | Phase 12 | `v0.13.0` (Done) | Eliminated multi-developer Git merge conflicts and eased brownfield adoption. |
 | **P1** | Phase 13 | `v0.14.0` | Extend AST protection beyond Python and upgrade local search quality. |
 | **P2** | Phase 14 | `v0.15.0` | Enforce protocol via native agent hooks, PR gates, and human observability. |
 | **P2** | Phase 15 | `v0.16.0` | Support concurrent multi-agent worktrees, publish benchmarks, and release to PyPI. |

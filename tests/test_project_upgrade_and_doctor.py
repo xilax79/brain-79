@@ -448,7 +448,7 @@ def test_doctor_7_checks_clean_environment_exit_code_0(tmp_path: Path) -> None:
     report = run_doctor(project_root=tmp_path, wiki_root=w_root)
     assert report.status == "ok"
     assert report.exit_code == 0
-    assert len(report.checks) == 7
+    assert len(report.checks) == 9
     cats = {c.category for c in report.checks}
     assert cats == {
         "binary_and_environment",
@@ -458,6 +458,8 @@ def test_doctor_7_checks_clean_environment_exit_code_0(tmp_path: Path) -> None:
         "locks_and_filesystem",
         "git_hooks",
         "handoff_hygiene",
+        "derived_state_tracking",
+        "git_merge_driver",
     }
 
 
@@ -575,7 +577,7 @@ def test_doctor_json_and_text_formatting(tmp_path: Path) -> None:
     assert "status" in d
     assert "exit_code" in d
     assert "checks" in d
-    assert len(d["checks"]) == 7
+    assert len(d["checks"]) == 9
 
     text = report.format_text()
     assert "# Brain-79 Doctor Diagnostic Report" in text

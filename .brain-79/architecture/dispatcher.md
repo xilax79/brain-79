@@ -11,7 +11,7 @@ related:
   - architecture/symmetry.md
   - features/cli.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:8866992e7149907c"
+applies_to_digest: "sha256:3752776e3d479ad6"
 applies_to_count: 3
 ---
 

@@ -13,7 +13,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:bf429801cd6f804e"
+applies_to_digest: "sha256:0647a42dba68d2e8"
 applies_to_count: 32
 ---
 
@@ -21,7 +21,7 @@ applies_to_count: 32
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.12.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.13.0.
 
 ## Active subsystem topology
 
@@ -36,7 +36,7 @@ This document maintains a high-level summary of the repository's current archite
 | **Organizational Linter & Schema Engine** | `src/brain79/core/lint_organizational.py`, `src/brain79/core/validation.py`, `src/brain79/core/frontmatter.py` | [Feature — Wiki organizational enforcement](../features/organizational-enforcement.md), [ADR-018](../decisions/adr-018-living-manuals-and-temporal-decontamination.md) |
 | **Cross-Platform Lock & Scoped Context** | `src/brain79/core/locks.py`, `src/brain79/config.py` | [Feature — Cross-platform portability and centralized lock isolation](../features/cross-platform-and-lock-isolation.md), [ADR-014](../decisions/adr-014-centralized-locks-and-cross-platform-io.md) |
 | **Handoff Continuity & Freshness** | `src/brain79/core/handoff.py`, `src/brain79/core/handoff_freshness.py` | [Feature — Short-term handoff continuity](../features/handoff-continuity.md), [ADR-016](../decisions/adr-016-handoff-freshness-and-authority-decay.md) |
-| **Project Protocol Upgrade & Harness Registry** | `src/brain79/core/init_project.py`, `src/brain79/core/doctor.py`, `src/brain79/core/harnesses/`, `src/brain79/core/migration.py` | [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md) |
+| **Project Protocol Upgrade & Harness Registry** | `src/brain79/core/init_project.py`, `src/brain79/core/doctor.py`, `src/brain79/core/harnesses/`, `src/brain79/core/migration.py`, `src/brain79/core/auto_map.py` | [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md), [Architecture — Team-safe Git collaboration and low-friction onboarding](team-collaboration-and-onboarding-design.md) |
 
 > For the historical sequence of developmental milestones and releases, refer to [Architecture — Industrial-scale roadmap and adoption evolution](roadmap-industrial-scale.md) and [Changelog — Historical internal development milestones](../changelog/legacy-internal-releases.md).
 
@@ -53,8 +53,8 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Completion of `v0.12.0` (public release readiness and friction removal: English-first backlink standardization, native Claude/Cursor MDC/Copilot instruction adapters with `--harnesses`, `core` 8-tool default MCP profile, honest `README.md` limitations, and Windows CI `orient()` hot-path optimization).
-- Next up: `v0.13.0` (team-safe Git collaboration and low-friction brownfield onboarding).
+- Completion of `v0.13.0` (team-safe Git collaboration and low-friction onboarding: git-ignored derived JSON caches with deterministic zero-masking rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map` with zero-overlap proposals, and configurable `strict`/`balanced`/`advisory` enforcement tiers).
+- Next up: `v0.14.0` (polyglot AST guards and hybrid local retrieval).
 
 ---
 

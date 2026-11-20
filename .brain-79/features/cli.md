@@ -11,7 +11,7 @@ applies_to:
 related:
   - architecture/symmetry.md
   - architecture/dispatcher.md
-applies_to_digest: "sha256:8cc731b7412aafe3"
+applies_to_digest: "sha256:7f55e0e4f7643ac7"
 applies_to_count: 3
 ---
 

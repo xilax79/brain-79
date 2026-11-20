@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 import json
+import os
 from pathlib import Path
 import re
 from typing import Any
@@ -21,17 +22,111 @@ def _get_lock(wiki_root: Path) -> filelock.FileLock:
     return acquire_wiki_lock(wiki_root, REGISTRY_FILENAME, timeout=5.0)
 
 
-def load_registry(wiki_root: Path) -> dict[str, Any]:
-    """Load navigation registry. Returns empty structure if missing/corrupt."""
+_EXCLUDED_SCAN_DIRS: frozenset[str] = frozenset({"_raw", ".locks", "handoffs"})
+_EXCLUDED_SCAN_FILES: frozenset[str] = frozenset({"INDEX.md", "SCHEMA.md"})
+
+
+def _scan_indexable_md_files(wiki_root: Path) -> list[tuple[str, Path]]:
+    """Return sorted (rel_posix_path, abs_path) pairs for all indexable .md files (followlinks=False)."""
+    if not wiki_root.is_dir():
+        return []
+    found: list[tuple[str, Path]] = []
+    for dirpath, dirnames, filenames in os.walk(wiki_root, followlinks=False):
+        rel_dir = Path(dirpath).relative_to(wiki_root)
+        # Prune excluded top-level directories
+        if not rel_dir.parts:
+            dirnames[:] = sorted(d for d in dirnames if d not in _EXCLUDED_SCAN_DIRS)
+        else:
+            dirnames[:] = sorted(dirnames)
+        for fname in sorted(filenames):
+            if not fname.endswith(".md"):
+                continue
+            full_path = Path(dirpath) / fname
+            if full_path.is_symlink():
+                continue
+            rel_posix_path = full_path.relative_to(wiki_root).as_posix()
+            if rel_posix_path in _EXCLUDED_SCAN_FILES:
+                continue
+            found.append((rel_posix_path, full_path))
+    found.sort(key=lambda item: item[0])
+    return found
+
+
+def _build_registry_from_disk(wiki_root: Path) -> dict[str, Any]:
+    """Scan indexable .md files on disk and construct a deterministic navigation registry dict."""
+    articles: list[dict[str, Any]] = []
+    now_iso = datetime.now(UTC).isoformat()
+
+    for rel_path, full_path in _scan_indexable_md_files(wiki_root):
+        try:
+            content = full_path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+
+        title, summary = extract_title_and_summary(content)
+        try:
+            graph_meta = extract_graph_metadata(content, rel_path=rel_path)
+        except Exception:
+            graph_meta = {}
+
+        parts = Path(rel_path).parts
+        section = parts[0].strip().lower() if len(parts) > 1 else "root"
+        if not section:
+            section = "root"
+
+        entry: dict[str, Any] = {
+            "path": rel_path,
+            "title": title or rel_path,
+            "summary": summary,
+            "section": section,
+            "registered_at": now_iso,
+        }
+        if graph_meta.get("applies_to"):
+            entry["applies_to"] = graph_meta["applies_to"]
+        if graph_meta.get("related"):
+            entry["related"] = graph_meta["related"]
+        if graph_meta.get("supersedes"):
+            entry["supersedes"] = graph_meta["supersedes"]
+        if graph_meta.get("outgoing_links"):
+            entry["outgoing_links"] = graph_meta["outgoing_links"]
+
+        articles.append(entry)
+
+    articles.sort(key=lambda a: str(a.get("path", "")))
+    return {"articles": articles}
+
+
+def rebuild_navigation_registry(wiki_root: Path, *, persist: bool = True) -> dict[str, Any]:
+    """Deterministically rebuild .navigation_registry.json from Markdown files on disk.
+
+    Scans .md files excluding _raw/, .locks/, handoffs/, INDEX.md, SCHEMA.md (followlinks=False),
+    sorts by path ascending, and atomically persists under _registry.lock when persist=True.
+    Gracefully returns the in-memory registry on read-only filesystems (PermissionError/OSError).
+    """
+    registry = _build_registry_from_disk(wiki_root)
+    if persist:
+        try:
+            lock = _get_lock(wiki_root)
+            with lock:
+                _save_registry_unlocked(wiki_root, registry)
+        except (PermissionError, OSError):
+            pass
+    return registry
+
+
+def load_registry(wiki_root: Path, *, persist: bool = False) -> dict[str, Any]:
+    """Load navigation registry, auto-rebuilding from disk if missing/corrupt and .md files exist."""
     registry_path = wiki_root / REGISTRY_FILENAME
-    if not registry_path.exists():
-        return {"articles": []}
-    try:
-        data = json.loads(registry_path.read_text(encoding="utf-8"))
-        if isinstance(data, dict) and "articles" in data and isinstance(data["articles"], list):
-            return data
-    except (OSError, json.JSONDecodeError):
-        pass
+    if registry_path.exists():
+        try:
+            data = json.loads(registry_path.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and "articles" in data and isinstance(data["articles"], list):
+                return data
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    if _scan_indexable_md_files(wiki_root):
+        return rebuild_navigation_registry(wiki_root, persist=persist)
     return {"articles": []}
 
 
@@ -158,10 +253,11 @@ def register_article(
         registry = load_registry(wiki_root)
         articles = registry.get("articles", [])
 
-        # Avoid updating registered_at if content metadata has not changed
+        # Avoid updating registered_at if content metadata has not changed and registry exists on disk
         existing = next((a for a in articles if a.get("path") == path), None)
         if (
-            existing is not None
+            (wiki_root / REGISTRY_FILENAME).is_file()
+            and existing is not None
             and existing.get("title") == (title or path)
             and existing.get("summary") == summary
             and existing.get("section") == norm_section
@@ -337,7 +433,7 @@ def generate_quick_navigation(wiki_root: Path) -> str:
     return _render_quick_navigation(registry)
 
 
-def regenerate_index_navigation(wiki_root: Path) -> str:
+def regenerate_index_navigation(wiki_root: Path, *, rebuild: bool = False) -> str:
     """Regenerate Quick navigation section in INDEX.md from navigation registry (atomic & locked).
 
     Follows the global lock hierarchy:
@@ -353,7 +449,14 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
     # Self-heal registry & drift manifest under _registry.lock, then write INDEX.md under INDEX.md.lock
     lock_reg = _get_lock(wiki_root)
     with lock_reg:
-        registry = load_registry(wiki_root)
+        if rebuild:
+            registry = _build_registry_from_disk(wiki_root)
+            try:
+                _save_registry_unlocked(wiki_root, registry)
+            except (PermissionError, OSError):
+                pass
+        else:
+            registry = load_registry(wiki_root)
         articles = registry.get("articles", [])
         cleaned: list[dict[str, Any]] = []
         registry_mutated = False
@@ -450,3 +553,203 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
 
     cleanup_legacy_inline_locks(wiki_root)
     return "INDEX.md Quick navigation regenerated."
+
+
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_NAV_LINK_RE = re.compile(r"^- \[.*?\]\(([^)]+)\)")
+
+
+def _parse_index_for_merge(text: str) -> tuple[dict[str, Any], str, dict[str, tuple[str, str]]]:
+    """Parse INDEX.md into (frontmatter_dict, preamble_text, nav_entries[path -> (section_lower, bullet_line)])."""
+    from brain79.core.frontmatter import parse_frontmatter
+
+    norm = text.replace("\r\n", "\n")
+    meta: dict[str, Any] = {}
+    body = norm
+    if norm.startswith("---\n") or norm == "---":
+        try:
+            meta, body = parse_frontmatter(norm)
+        except Exception:
+            meta = {}
+            body = norm
+
+    # Split body at `## Quick navigation`
+    m_nav = re.search(r"(?m)^## Quick navigation\s*$", body)
+    if not m_nav:
+        return meta, body.strip(), {}
+
+    preamble = body[: m_nav.start()].strip()
+    nav_block = body[m_nav.end() :]
+    # Stop if another H2 follows Quick navigation
+    m_next_h2 = re.search(r"(?m)^## ", nav_block)
+    if m_next_h2:
+        nav_block = nav_block[: m_next_h2.start()]
+
+    entries: dict[str, tuple[str, str]] = {}
+    current_section = "root"
+    for raw_line in nav_block.splitlines():
+        line = raw_line.strip()
+        if line.startswith("### "):
+            header = line[4:].strip().lower()
+            current_section = "root" if header == "general" else header
+        elif line.startswith("- ["):
+            m_link = _NAV_LINK_RE.match(line)
+            if m_link:
+                rel_p = m_link.group(1).strip()
+                entries[rel_p] = (current_section, line)
+
+    return meta, preamble, entries
+
+
+def _render_merged_quick_nav(entries: dict[str, tuple[str, str]]) -> str:
+    """Render merged Quick navigation entries canonically matching _render_quick_navigation()."""
+    by_section: dict[str, list[tuple[str, str]]] = {}
+    for path_str, (sec, bullet) in entries.items():
+        norm_sec = (sec or "root").strip().lower() or "root"
+        if path_str.startswith("handoffs/") or norm_sec == "handoffs":
+            continue
+        # Extract display title for sorting (matches _render_quick_navigation sorting by title)
+        m_title = re.match(r"^- \[([^\]]*)\]", bullet)
+        sort_key = m_title.group(1) if m_title else path_str
+        by_section.setdefault(norm_sec, []).append((sort_key, bullet))
+
+    lines = ["## Quick navigation", ""]
+    if not by_section:
+        lines.append("*No registered articles.*")
+        return "\n".join(lines)
+
+    for section_name in sorted(by_section.keys()):
+        header_name = "General" if section_name == "root" else section_name.capitalize()
+        lines.append(f"### {header_name}")
+        for _, bullet in sorted(by_section[section_name], key=lambda item: (item[0], item[1])):
+            lines.append(bullet)
+        lines.append("")
+    return "\n".join(lines).rstrip()
+
+
+def _reextract_entry_from_disk(wiki_root: Path, rel_path: str) -> tuple[str, str] | None:
+    """Re-extract (section_lower, bullet_line) from wiki_root / rel_path if present on disk."""
+    target = wiki_root / rel_path
+    if not target.is_file():
+        return None
+    try:
+        content = target.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    title, summary = extract_title_and_summary(content)
+    parts = Path(rel_path).parts
+    section = parts[0].strip().lower() if len(parts) > 1 else "root"
+    title_safe = _escape_markdown(title or rel_path)
+    summary_part = f" — {_escape_markdown(summary)}" if summary else ""
+    bullet = f"- [{title_safe}]({rel_path}){summary_part}"
+    return (section or "root", bullet)
+
+
+def merge_index_files(
+    base_path: Path,
+    ours_path: Path,
+    theirs_path: Path,
+    *,
+    wiki_root: Path | None = None,
+) -> int:
+    """Deterministic 3-way Git merge driver for INDEX.md (%O, %A, %B).
+
+    Writes the merged result atomically to `ours_path` with LF line endings.
+    Returns 0 on clean merge, 1 on preamble conflict (with standard Git conflict markers).
+    Operates purely on the three input files without requiring .navigation_registry.json or .locks/.
+    """
+    from brain79.core.frontmatter import dump_frontmatter
+
+    base_meta, base_pre, base_nav = _parse_index_for_merge(base_path.read_text(encoding="utf-8"))
+    ours_meta, ours_pre, ours_nav = _parse_index_for_merge(ours_path.read_text(encoding="utf-8"))
+    theirs_meta, theirs_pre, theirs_nav = _parse_index_for_merge(theirs_path.read_text(encoding="utf-8"))
+
+    # 1. Merge frontmatter
+    merged_meta: dict[str, Any] = {}
+    all_keys = set(base_meta.keys()) | set(ours_meta.keys()) | set(theirs_meta.keys())
+    for k in sorted(all_keys):
+        if k in ("type", "last_updated"):
+            continue
+        b_v = base_meta.get(k)
+        o_v = ours_meta.get(k)
+        t_v = theirs_meta.get(k)
+        if o_v == t_v:
+            if o_v is not None:
+                merged_meta[k] = o_v
+        elif o_v == b_v:
+            if t_v is not None:
+                merged_meta[k] = t_v
+        else:
+            if o_v is not None:
+                merged_meta[k] = o_v
+
+    merged_meta["type"] = "navigation"
+    o_date = str(ours_meta.get("last_updated", "")).strip()
+    t_date = str(theirs_meta.get("last_updated", "")).strip()
+    valid_dates = [d for d in (o_date, t_date) if _ISO_DATE_RE.match(d)]
+    if valid_dates:
+        merged_meta["last_updated"] = max(valid_dates)
+    elif o_date:
+        merged_meta["last_updated"] = o_date
+    elif t_date:
+        merged_meta["last_updated"] = t_date
+
+    # 2. Merge preamble (3-way)
+    preamble_conflict = False
+    if ours_pre == theirs_pre or theirs_pre == base_pre:
+        merged_pre = ours_pre
+    elif ours_pre == base_pre:
+        merged_pre = theirs_pre
+    else:
+        preamble_conflict = True
+        merged_pre = f"<<<<<<< ours\n{ours_pre}\n=======\n{theirs_pre}\n>>>>>>> theirs"
+
+    # 3. Merge Quick navigation entries (3-way)
+    merged_nav: dict[str, tuple[str, str]] = {}
+    all_paths = set(base_nav.keys()) | set(ours_nav.keys()) | set(theirs_nav.keys())
+    for p in sorted(all_paths):
+        b_e = base_nav.get(p)
+        o_e = ours_nav.get(p)
+        t_e = theirs_nav.get(p)
+
+        if o_e == t_e:
+            if o_e is not None:
+                merged_nav[p] = o_e
+        elif o_e == b_e:
+            # Ours unchanged -> take theirs (including deletion if t_e is None)
+            if t_e is not None:
+                merged_nav[p] = t_e
+        elif t_e == b_e:
+            # Theirs unchanged -> take ours (including deletion if o_e is None)
+            if o_e is not None:
+                merged_nav[p] = o_e
+        else:
+            # Both sides diverged on this entry
+            if o_e is None and t_e is not None:
+                merged_nav[p] = t_e
+            elif t_e is None and o_e is not None:
+                merged_nav[p] = o_e
+            else:
+                reextracted = _reextract_entry_from_disk(wiki_root, p) if wiki_root is not None else None
+                if reextracted is not None:
+                    merged_nav[p] = reextracted
+                elif o_e is not None:
+                    merged_nav[p] = o_e
+
+    rendered_nav = _render_merged_quick_nav(merged_nav)
+    body_parts = [part for part in (merged_pre, rendered_nav) if part]
+    final_body = "\n\n".join(body_parts) + "\n"
+    final_content = dump_frontmatter(merged_meta, final_body)
+
+    tmp_path = create_temp_path(ours_path)
+    try:
+        tmp_path.write_text(final_content, encoding="utf-8", newline="\n")
+        atomic_replace_with_retry(tmp_path, ours_path)
+    finally:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+    return 1 if preamble_conflict else 0

@@ -586,6 +586,8 @@ def brain79_context(
 def brain79_bootstrap(
     scope: str | None = None,
     force: bool = False,
+    auto_map: bool = False,
+    max_modules: int = 12,
     tool: str | None = None,
     args: dict[str, Any] | None = None,
 ) -> str:
@@ -595,21 +597,31 @@ def brain79_bootstrap(
     Args:
         scope: Optional comma-separated list of relative paths to focus on.
         force: If True, re-runs even if bootstrap was already executed.
+        auto_map: If True, detects module boundaries and appends zero-overlap applies_to proposals.
+        max_modules: Maximum number of auto-mapped module proposals to emit (default: 12).
     """
     if args:
         unpacked = _unpack_nested_args(args)
         scope = unpacked.get("scope", scope)
         force = unpacked.get("force", force)
+        auto_map = unpacked.get("auto_map", auto_map)
+        max_modules = unpacked.get("max_modules", max_modules)
     try:
         from brain79.core.bootstrap import run_bootstrap
 
-        return run_bootstrap(scope=scope, force=force)
+        return run_bootstrap(
+            scope=scope,
+            force=force,
+            auto_map=auto_map,
+            max_modules=max_modules,
+        )
     except (OSError, ValueError) as exc:
         return f"Bootstrap Error: {exc}"
 
 
 def brain79_navigate(
     regenerate: bool = False,
+    rebuild: bool = False,
     tool: str | None = None,
     args: dict[str, Any] | None = None,
 ) -> str:
@@ -621,21 +633,25 @@ def brain79_navigate(
 
     Args:
         regenerate: If True, regenerates INDEX.md Quick navigation section from registry.
+        rebuild: If True, rebuilds .navigation_registry.json from Markdown files on disk first.
     """
     if args:
         unpacked = _unpack_nested_args(args)
         regenerate = unpacked.get("regenerate", regenerate)
+        rebuild = unpacked.get("rebuild", rebuild)
     try:
         from brain79.core.navigation import (
             generate_quick_navigation,
+            rebuild_navigation_registry,
             regenerate_index_navigation,
         )
 
         wiki_root = get_wiki_root()
         if regenerate:
-            return regenerate_index_navigation(wiki_root)
-        else:
-            return generate_quick_navigation(wiki_root)
+            return regenerate_index_navigation(wiki_root, rebuild=rebuild)
+        if rebuild:
+            rebuild_navigation_registry(wiki_root, persist=True)
+        return generate_quick_navigation(wiki_root)
     except (OSError, ValueError, FileNotFoundError) as exc:
         return f"Navigation Error: {exc}"
 

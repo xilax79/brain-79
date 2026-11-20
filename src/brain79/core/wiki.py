@@ -344,6 +344,8 @@ def write_article(
         or rel_path_str.startswith("handoffs/")
     )
 
+    downgraded_warnings: list[str] = []
+
     # Single-file target check, anti-sprawl, and digest stamping
     if not _skip_nav_regen and not is_special and not force_validation_skip:
         from brain79.config import get_project_root
@@ -357,17 +359,25 @@ def write_article(
             INACTIVE_STATUSES,
             PRE_IMPLEMENTATION_STATUSES,
             dump_frontmatter,
+            load_active_schema,
             parse_frontmatter,
         )
         from brain79.core.validation import check_anti_sprawl_overlap
 
+        enforcement = load_active_schema(w_root).enforcement
         p_root = (w_root.parent or get_project_root()).resolve()
         ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs={rel_path_str: content})
         meta, body = parse_frontmatter(content)
 
-        # Anti-sprawl check on new articles
+        # Anti-sprawl check on new articles (strict/balanced=BLOCK, advisory=WARN)
         if not target.exists():
-            check_anti_sprawl_overlap(meta, rel_path_str, wiki_root=w_root, workspace_index=ws_index)
+            try:
+                check_anti_sprawl_overlap(meta, rel_path_str, wiki_root=w_root, workspace_index=ws_index)
+            except ValidationError as exc:
+                if enforcement == "advisory" and exc.rule in ("anti_sprawl_overlap_violation", "duplicate_governance_target"):
+                    downgraded_warnings.append(f"[{exc.rule}] {exc.message}")
+                else:
+                    raise
 
         status = str(meta.get("status", "")).lower()
         stability = str(meta.get("stability", "")).lower()
@@ -381,12 +391,17 @@ def write_article(
                 for pat in patterns:
                     matches = ws_index.find_matching_files([pat])
                     if not matches:
-                        raise ValidationError(
-                            rule="applies_to_target_missing",
-                            path=rel_path_str,
-                            message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
-                            actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
-                        )
+                        if enforcement in ("balanced", "advisory"):
+                            downgraded_warnings.append(
+                                f"[applies_to_target_missing] applies_to pattern '{pat}' does not match any file in workspace index."
+                            )
+                        else:
+                            raise ValidationError(
+                                rule="applies_to_target_missing",
+                                path=rel_path_str,
+                                message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
+                                actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
+                            )
 
             master_digest, count, targets_map = compute_applies_to_manifest(
                 patterns,
@@ -471,6 +486,9 @@ def write_article(
     except Exception:
         pass
 
+    if downgraded_warnings:
+        warn_block = "\n".join(f"- Warning: {w}" for w in downgraded_warnings)
+        return f"Written: {rel_path_str}\n{warn_block}"
     return f"Written: {rel_path_str}"
 
 
@@ -695,7 +713,11 @@ def write_many_articles(
         ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=virtual_fs)
 
         # Validate applies_to_target_missing and anti-sprawl overlap
+        from brain79.core.frontmatter import load_active_schema
         from brain79.core.validation import check_anti_sprawl_overlap
+
+        enforcement = load_active_schema(w_root).enforcement
+        batch_downgraded_warnings: list[str] = []
         for rel_p, val_c in validated_contents:
             try:
                 meta, body = parse_frontmatter(val_c)
@@ -704,9 +726,15 @@ def write_many_articles(
                 non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
 
                 if not (w_root / rel_p).is_file():
-                    check_anti_sprawl_overlap(
-                        meta, rel_p, wiki_root=w_root, workspace_index=ws_index, overlay_fs=virtual_fs
-                    )
+                    try:
+                        check_anti_sprawl_overlap(
+                            meta, rel_p, wiki_root=w_root, workspace_index=ws_index, overlay_fs=virtual_fs
+                        )
+                    except ValidationError as exc:
+                        if enforcement == "advisory" and exc.rule in ("anti_sprawl_overlap_violation", "duplicate_governance_target"):
+                            batch_downgraded_warnings.append(f"[{exc.rule}] ({rel_p}) {exc.message}")
+                        else:
+                            raise
 
                 if status not in non_active and stability not in non_active:
                     applies = meta.get("applies_to")
@@ -715,12 +743,17 @@ def write_many_articles(
                         for pat in patterns:
                             matches = ws_index.find_matching_files([pat])
                             if not matches:
-                                raise ValidationError(
-                                    rule="applies_to_target_missing",
-                                    path=rel_p,
-                                    message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
-                                    actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
-                                )
+                                if enforcement in ("balanced", "advisory"):
+                                    batch_downgraded_warnings.append(
+                                        f"[applies_to_target_missing] ({rel_p}) applies_to pattern '{pat}' does not match any file in workspace index."
+                                    )
+                                else:
+                                    raise ValidationError(
+                                        rule="applies_to_target_missing",
+                                        path=rel_p,
+                                        message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
+                                        actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
+                                    )
             except ValidationError:
                 raise
             except Exception:
@@ -786,7 +819,11 @@ def write_many_articles(
         except Exception:
             pass
 
-    return f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced · lint OK"
+    base_msg = f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced · lint OK"
+    if batch_downgraded_warnings:
+        warn_block = "\n".join(f"- Warning: {w}" for w in batch_downgraded_warnings)
+        return f"{base_msg}\n{warn_block}"
+    return base_msg
 
 
 def list_articles(

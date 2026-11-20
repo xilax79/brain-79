@@ -6,6 +6,19 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-20
+
+### Added
+- **Team-safe Git collaboration and low-friction onboarding (Phase 12)**:
+  - **Merge-conflict-free derived state**: added `sync_wiki_gitignore()` in `init_project.py` to git-ignore `.navigation_registry.json`, `.drift_manifest.json`, and `.bootstrap_state.json` while preserving custom `.gitignore` lines; added `derived_state_tracking` check in `doctor.py`; added deterministic `rebuild_navigation_registry()` (`brain79 navigate --rebuild` / `brain79_navigate(rebuild=True)`) and zero-masking `rebuild_drift_manifest()` with full Guard A/C parity when `.drift_manifest.json` is absent.
+  - **Deterministic `INDEX.md` Git merge driver**: implemented 3-way `merge_index_files()` and `brain79 navigate --merge-driver %O %A %B` wired via `.brain-79/.gitattributes` and local `.git/config` (`sync_git_merge_driver()`, `--no-merge-driver` opt-out on `init`, `git_merge_driver` check + `doctor --fix` repair).
+  - **Brownfield onboarding (`bootstrap --auto-map`)**: added stdlib-only `core/auto_map.py` (`analyze_repository_boundaries()`) detecting `pyproject.toml`, `package.json`, `Cargo.toml`, and `go.mod` boundaries (including nested `src/` layouts), ranking by Git churn (`git_recent_file_churn()`), and guaranteeing strictly zero pairwise `applies_to` overlap; exposed `--auto-map`/`--max-modules` on CLI and `auto_map`/`max_modules` on `brain79_bootstrap`.
+  - **Configurable enforcement tiers (`strict` / `balanced` / `advisory`)**: added declarative `enforcement:` in `SCHEMA.md` and `ActiveSchema` (default `strict`, safe fallback with warning on invalid values), `--enforcement` on `brain79 init`, tier-aware guard downgrades across `session_commit.py` and `wiki.py`, `[Enforcement: <tier>]` in `lint`, tier-aware `lint --strict` + `--fail-on-warnings`, and tier visibility in `orient()` and `doctor`.
+
+### Migration notes
+- Run `brain79 update-project` in existing repositories to update `.brain-79/.gitignore`, configure `.brain-79/.gitattributes` and the local `INDEX.md` Git merge driver, and sync templates to `v0.13.0`.
+- If `.brain-79/.navigation_registry.json`, `.brain-79/.drift_manifest.json`, or `.brain-79/.bootstrap_state.json` were previously tracked in Git, untrack them with `git rm --cached .brain-79/.navigation_registry.json .brain-79/.drift_manifest.json .brain-79/.bootstrap_state.json` (verified by `brain79 doctor`).
+
 ## [0.12.0] - 2026-11-20
 
 ### Added

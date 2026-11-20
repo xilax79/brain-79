@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
@@ -385,6 +385,9 @@ def _sanitize_backlink_label(raw: Any) -> str:
     return cleaned
 
 
+VALID_ENFORCEMENT_TIERS: tuple[str, ...] = ("strict", "balanced", "advisory")
+
+
 @dataclass
 class ActiveSchema:
     """Represents a validated, resolved wiki schema profile and custom types."""
@@ -395,6 +398,8 @@ class ActiveSchema:
     supports_technical_debt_leakage: bool = True
     required_sections: dict[str, list[Any]] = field(default_factory=dict)
     backlink_label: str = DEFAULT_BACKLINK_LABEL
+    enforcement: Literal["strict", "balanced", "advisory"] = "strict"
+    schema_warnings: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.backlink_label = _sanitize_backlink_label(self.backlink_label)
@@ -442,6 +447,8 @@ def load_active_schema(wiki_root: Path | None = None) -> ActiveSchema:
     profile = "software"
     custom_types: dict[str, Any] = {}
     backlink_label = DEFAULT_BACKLINK_LABEL
+    enforcement: Literal["strict", "balanced", "advisory"] = "strict"
+    schema_warnings: list[str] = []
 
     if schema_file.exists():
         try:
@@ -454,9 +461,23 @@ def load_active_schema(wiki_root: Path | None = None) -> ActiveSchema:
                         custom_types = meta["custom_types"]
                     if "backlink_label" in meta:
                         backlink_label = _sanitize_backlink_label(meta.get("backlink_label"))
+                    if "enforcement" in meta and meta.get("enforcement") is not None:
+                        raw_enf = str(meta.get("enforcement")).strip().lower()
+                        if raw_enf == "strict":
+                            enforcement = "strict"
+                        elif raw_enf == "balanced":
+                            enforcement = "balanced"
+                        elif raw_enf == "advisory":
+                            enforcement = "advisory"
+                        else:
+                            enforcement = "strict"
+                            schema_warnings.append(
+                                f"Invalid enforcement tier '{meta.get('enforcement')}' in SCHEMA.md; falling back to 'strict'. Valid values: strict, balanced, advisory."
+                            )
         except Exception:
             profile = "software"
             backlink_label = DEFAULT_BACKLINK_LABEL
+            enforcement = "strict"
 
     # Base profile selection
     if profile == "general":
@@ -500,6 +521,8 @@ def load_active_schema(wiki_root: Path | None = None) -> ActiveSchema:
         location_to_type=base_loc,
         supports_technical_debt_leakage=supports_td,
         backlink_label=backlink_label,
+        enforcement=enforcement,
+        schema_warnings=schema_warnings,
     )
     _SCHEMA_CACHE[cache_key] = active
     return active

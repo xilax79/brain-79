@@ -34,6 +34,7 @@ last_updated: 2026-11-20
 - [Changelog — Version 0.8.0 — Transitive drift and ripple guards](changelog/v0-8-0.md) — phase 6.7 release — Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification
 - [Changelog — release 0.10.0: automated battle-testing, chaos fuzzing, and multi-repo gauntlet](changelog/v0-10-0.md) — release v0.10.0 — automated battle-testing, chaos fuzzing, and multi-repo gauntlet
 - [Changelog — v0.12.0](changelog/v0-12-0.md) — release notes for v0.12.0 (Phase 11 public release readiness, English backlinks, native harnesses, core MCP default, and Windows CI latency recovery)
+- [Changelog — v0.13.0](changelog/v0-13-0.md) — release notes for v0.13.0 (Phase 12 team-safe Git collaboration, INDEX.md merge driver, bootstrap --auto-map, and configurable enforcement tiers)
 - [Release v0.11.0 — Core refactoring and hardening](changelog/v0-11-0.md) — core architectural refactoring, concurrency hardening, centralized Git layer, security fixes, and modular decomposition
 
 ### Decisions

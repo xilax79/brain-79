@@ -30,6 +30,7 @@ from brain79.core.frontmatter import (
     PRE_IMPLEMENTATION_STATUSES,
     ValidationError,
     dump_frontmatter,
+    load_active_schema,
     parse_frontmatter,
 )
 from brain79.core.git_ops import GitError, GitTimeoutError, NotAGitRepoError, git_dirty_paths
@@ -280,6 +281,10 @@ def commit_session(
     # Pass 2: Transaction Lock, Target Check, Anti-Sprawl, Digest Stamping,
     #         Bottom-Up Verification & Hard Session Ripple Gate
     # =========================================================================
+    active_schema = load_active_schema(w_root)
+    enforcement = active_schema.enforcement
+    downgraded_warnings: list[str] = []
+
     tx_lock = acquire_wiki_lock(w_root, "_transaction.lock", timeout=timeout)
     with tx_lock:
         ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=virtual_fs)
@@ -301,17 +306,28 @@ def commit_session(
                     for pat in patterns:
                         matches = ws_index.find_matching_files([pat])
                         if not matches:
-                            raise ValidationError(
-                                rule="applies_to_target_missing",
-                                path=rel_str,
-                                message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
-                                actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
-                            )
+                            if enforcement in ("balanced", "advisory"):
+                                downgraded_warnings.append(
+                                    f"[applies_to_target_missing] ({rel_str}) applies_to pattern '{pat}' does not match any file in workspace index."
+                                )
+                            else:
+                                raise ValidationError(
+                                    rule="applies_to_target_missing",
+                                    path=rel_str,
+                                    message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
+                                    actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
+                                )
 
             if rel_str in written_article_keys and not (w_root / rel_str).is_file():
-                check_anti_sprawl_overlap(
-                    meta, rel_str, w_root, overlay_fs=virtual_fs, workspace_index=ws_index
-                )
+                try:
+                    check_anti_sprawl_overlap(
+                        meta, rel_str, w_root, overlay_fs=virtual_fs, workspace_index=ws_index
+                    )
+                except ValidationError as exc:
+                    if enforcement == "advisory" and exc.rule in ("anti_sprawl_overlap_violation", "duplicate_governance_target"):
+                        downgraded_warnings.append(f"[{exc.rule}] ({rel_str}) {exc.message}")
+                    else:
+                        raise
 
         # Pass 2b: Fixed-point digest convergence in memory (2 iterations)
         touched_keys = list(written_article_keys) + list(edited_article_keys)
@@ -379,32 +395,60 @@ def commit_session(
                 for d in drifts:
                     kind = d.get("drift_kind", "")
                     tgt = d.get("target_file", "")
-                    # Guard B: Umbrella bypass forbidden
+                    # Guard B: Umbrella bypass forbidden (strict/balanced=BLOCK, advisory=WARN)
                     if kind == "transitive" or tgt.startswith(f"{wiki_rel}/") or (tgt.startswith(".brain-79/") and tgt.endswith(".md")):
-                        raise ValidationError(
-                            rule="verified_article_umbrella_bypass_forbidden",
-                            path=v_path,
-                            message=f"Cannot verify umbrella article '{v_path}': it has unresolved drift targeting intra-wiki articles ({d.get('message', kind)}).",
-                            actionable="Resolve the underlying child article drift first or update the umbrella article in writes/edits.",
-                        )
-                    # Guard A: Structural change forbidden
-                    if kind in ("added", "deleted", "missing"):
-                        raise ValidationError(
-                            rule="verified_article_structural_change_forbidden",
-                            path=v_path,
-                            message=f"Cannot verify article '{v_path}': governed files were added, deleted, or missing ({kind}: {tgt}). Real documentation update required.",
-                            actionable="Update the article content in writes/edits to document added/deleted files instead of using verified_articles.",
-                        )
-                    # Guard C: AST public signature diff check
-                    if kind == "modified" and tgt.endswith(".py"):
-                        has_change, desc = has_public_python_api_changes(p_root, tgt, v_path, wiki_root=w_root)
-                        if has_change:
+                        msg_b = f"Cannot verify umbrella article '{v_path}': it has unresolved drift targeting intra-wiki articles ({d.get('message', kind)})."
+                        if enforcement == "advisory":
+                            downgraded_warnings.append(f"[verified_article_umbrella_bypass_forbidden] {msg_b}")
+                        else:
                             raise ValidationError(
-                                rule="verified_article_public_signature_changed",
+                                rule="verified_article_umbrella_bypass_forbidden",
                                 path=v_path,
-                                message=f"Cannot verify article '{v_path}' without documentation update: {desc}.",
-                                actionable="Update the article content in writes or edits to document the public API changes.",
+                                message=msg_b,
+                                actionable="Resolve the underlying child article drift first or update the umbrella article in writes/edits.",
                             )
+                    # Guard A: Structural change forbidden (strict/balanced=BLOCK, advisory=WARN)
+                    if kind in ("added", "deleted", "missing"):
+                        msg_a = f"Cannot verify article '{v_path}': governed files were added, deleted, or missing ({kind}: {tgt}). Real documentation update required."
+                        if enforcement == "advisory":
+                            downgraded_warnings.append(f"[verified_article_structural_change_forbidden] {msg_a}")
+                        else:
+                            raise ValidationError(
+                                rule="verified_article_structural_change_forbidden",
+                                path=v_path,
+                                message=msg_a,
+                                actionable="Update the article content in writes/edits to document added/deleted files instead of using verified_articles.",
+                            )
+                    # Guard C: AST public signature diff check (strict=BLOCK, balanced/advisory=WARN)
+                    if kind == "modified":
+                        fallback_tgts = d.get("fallback_targets")
+                        targets_to_check = (
+                            [str(t) for t in fallback_tgts]
+                            if isinstance(fallback_tgts, list) and fallback_tgts
+                            else [tgt]
+                        )
+                        for py_tgt in targets_to_check:
+                            if py_tgt.endswith(".py"):
+                                try:
+                                    has_change, desc = has_public_python_api_changes(
+                                        p_root, py_tgt, v_path, wiki_root=w_root
+                                    )
+                                except ValidationError as exc:
+                                    if enforcement == "advisory":
+                                        downgraded_warnings.append(f"[{exc.rule}] ({v_path}) {exc.message}")
+                                        continue
+                                    raise
+                                if has_change:
+                                    msg_c = f"Cannot verify article '{v_path}' without documentation update: {desc}."
+                                    if enforcement in ("balanced", "advisory"):
+                                        downgraded_warnings.append(f"[verified_article_public_signature_changed] {msg_c}")
+                                    else:
+                                        raise ValidationError(
+                                            rule="verified_article_public_signature_changed",
+                                            path=v_path,
+                                            message=msg_c,
+                                            actionable="Update the article content in writes or edits to document the public API changes.",
+                                        )
 
                 # Verification passed: stamp digest in virtual_fs and manifest_staging
                 v_content = virtual_fs.get(v_path) or _safe_read_wiki_text(w_root / v_path, v_path)
@@ -462,12 +506,18 @@ def commit_session(
                 except NotAGitRepoError:
                     dirty_git_paths = set()
                 except (GitTimeoutError, GitError, OSError, UnicodeDecodeError) as exc:
-                    raise ValidationError(
-                        rule="git_status_verification_failed",
-                        path="session_commit",
-                        message=f"Operational Git error while checking working-tree ripple: {exc}",
-                        actionable="Resolve the Git error or pass allow_partial_ripple=True if intentionally deferring ripple verification.",
-                    ) from exc
+                    if enforcement == "advisory":
+                        downgraded_warnings.append(
+                            f"[git_status_verification_failed] Operational Git error while checking working-tree ripple: {exc}"
+                        )
+                        dirty_git_paths = set()
+                    else:
+                        raise ValidationError(
+                            rule="git_status_verification_failed",
+                            path="session_commit",
+                            message=f"Operational Git error while checking working-tree ripple: {exc}",
+                            actionable="Resolve the Git error or pass allow_partial_ripple=True if intentionally deferring ripple verification.",
+                        ) from exc
 
             session_ripple_articles: set[str] = set()
             touched_wiki_articles = set(written_article_keys) | set(edited_article_keys)
@@ -532,12 +582,20 @@ def commit_session(
 
             if session_ripple_articles:
                 sorted_ripples = sorted(session_ripple_articles)
-                raise ValidationError(
-                    rule="unresolved_session_ripple",
-                    path=sorted_ripples[0],
-                    message=f"Holistic update required: your session changes impacted governing/umbrella article(s) {sorted_ripples}, which remain drifted. Update their prose in 'edits' (or include eligible internal code refactors in 'verified_articles') within this same session_commit.",
-                    actionable="Include the impacted articles in writes or edits, or verify non-breaking leaf refactors in verified_articles, or pass allow_partial_ripple=True if intentionally deferring.",
+                ripple_msg = (
+                    f"Holistic update required: your session changes impacted governing/umbrella article(s) {sorted_ripples}, "
+                    "which remain drifted. Update their prose in 'edits' (or include eligible internal code refactors in "
+                    "'verified_articles') within this same session_commit."
                 )
+                if enforcement in ("balanced", "advisory"):
+                    downgraded_warnings.append(f"[unresolved_session_ripple] {ripple_msg}")
+                else:
+                    raise ValidationError(
+                        rule="unresolved_session_ripple",
+                        path=sorted_ripples[0],
+                        message=ripple_msg,
+                        actionable="Include the impacted articles in writes or edits, or verify non-breaking leaf refactors in verified_articles, or pass allow_partial_ripple=True if intentionally deferring.",
+                    )
 
         # =========================================================================
         # Pass 3: Disk Persistence (articles, manifest, index) with Rollback Safety
@@ -647,7 +705,7 @@ def commit_session(
                 handoff_path = "handoffs/" + handoff_msg.split("handoffs/")[-1].strip()
 
     # Collect health diagnostics
-    all_warnings: list[str] = list(nav_warnings)
+    all_warnings: list[str] = list(downgraded_warnings) + list(nav_warnings)
     for rel_str in virtual_fs:
         try:
             content = (w_root / rel_str).read_text(encoding="utf-8")
@@ -658,6 +716,7 @@ def commit_session(
     health_status = "degraded" if nav_regen_failed else ("warnings" if all_warnings else "ok")
     return {
         "success": True,
+        "enforcement": enforcement,
         "session_raw_path": raw_path,
         "written_articles": written_article_keys,
         "edited_articles": edited_article_keys,

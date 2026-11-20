@@ -560,7 +560,12 @@ You have received a project scan manifest. Follow these steps exactly:
     return manifest
 
 
-def run_bootstrap(scope: str | None = None, force: bool = False) -> str:
+def run_bootstrap(
+    scope: str | None = None,
+    force: bool = False,
+    auto_map: bool = False,
+    max_modules: int = 12,
+) -> str:
     """Scan project and return a structured manifest for wiki bootstrapping."""
     wiki_root = get_wiki_root()
 
@@ -605,6 +610,12 @@ def run_bootstrap(scope: str | None = None, force: bool = False) -> str:
         project_type,
         warnings,
     )
+
+    if auto_map:
+        from brain79.core.auto_map import analyze_repository_boundaries, render_auto_map_section
+
+        am_report = analyze_repository_boundaries(project_root, max_modules=max_modules)
+        manifest = manifest.rstrip() + "\n\n" + render_auto_map_section(am_report) + "\n"
 
     existing_articles = _count_wiki_articles(wiki_root)
     try:

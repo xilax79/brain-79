@@ -1,3 +1,7 @@
 .locks/
 *.lock
 *.tmp
+*.tmp.*
+.navigation_registry.json
+.drift_manifest.json
+.bootstrap_state.json

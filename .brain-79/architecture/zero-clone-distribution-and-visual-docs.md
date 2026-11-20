@@ -22,7 +22,7 @@ related:
   - decisions/adr-015-sentence-case-first-policy.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
 last_updated: 2026-11-17
-applies_to_digest: "sha256:51b08e1808aee76c"
+applies_to_digest: "sha256:0d646181dcf5e699"
 applies_to_count: 8
 ---
 

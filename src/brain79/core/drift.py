@@ -642,19 +642,126 @@ def compute_applies_to_manifest(
     return master_digest, len(targets), targets
 
 
-def load_drift_manifest(wiki_root: Path) -> dict[str, Any]:
-    """Load .drift_manifest.json from wiki_root safely."""
+def rebuild_drift_manifest(
+    wiki_root: Path,
+    project_root: Path | None = None,
+    *,
+    persist: bool = True,
+    workspace_index: WorkspaceIndex | None = None,
+) -> dict[str, Any]:
+    """Deterministically hydrate .drift_manifest.json from active Markdown articles without masking drift.
+
+    Zero-masking invariant: an article's `targets` map is hydrated ONLY when its current
+    computed digest matches its frontmatter `applies_to_digest`. When `curr_digest != stored_digest`,
+    the article is omitted from the manifest so real drift remains visible.
+    """
+    w_root = wiki_root.resolve()
+    p_root = (project_root or w_root.parent or get_project_root()).resolve()
+    ws_index = workspace_index or WorkspaceIndex.build(p_root, w_root)
+
+    manifest: dict[str, Any] = {"version": "1.0", "articles": {}}
+    non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+
+    if w_root.is_dir():
+        for md_file in sorted(w_root.rglob("*.md")):
+            if md_file.is_symlink():
+                continue
+            try:
+                rel = md_file.relative_to(w_root)
+                rel_str = rel.as_posix()
+                if rel_str in ("INDEX.md", "SCHEMA.md") or rel.parts[0] in ("_raw", ".locks", "handoffs"):
+                    continue
+            except ValueError:
+                continue
+
+            try:
+                content = md_file.read_text(encoding="utf-8")
+                meta, _ = parse_frontmatter(content)
+            except Exception:
+                continue
+
+            status = str(meta.get("status", "")).lower()
+            stability = str(meta.get("stability", "")).lower()
+            if status in non_active or stability in non_active:
+                continue
+
+            applies_val = meta.get("applies_to")
+            stored_digest = meta.get("applies_to_digest")
+            if not applies_val or not stored_digest:
+                continue
+
+            patterns = (
+                [applies_val] if isinstance(applies_val, str) else [str(x) for x in applies_val if x]
+            )
+            if not patterns:
+                continue
+
+            curr_digest, curr_count, curr_targets = compute_applies_to_manifest(
+                patterns,
+                p_root,
+                w_root,
+                exclude_self_path=rel_str,
+                workspace_index=ws_index,
+            )
+
+            # Zero-masking invariant: hydrate ONLY when curr_digest == stored_digest
+            if curr_digest is not None and curr_digest == stored_digest:
+                manifest["articles"][rel_str] = {
+                    "digest": curr_digest,
+                    "count": curr_count,
+                    "targets": curr_targets,
+                }
+
+    if persist:
+        try:
+            save_drift_manifest(w_root, manifest)
+        except (PermissionError, OSError):
+            pass
+
+    return manifest
+
+
+def load_drift_manifest(
+    wiki_root: Path,
+    *,
+    auto_rebuild: bool = False,
+    persist: bool = True,
+    project_root: Path | None = None,
+    workspace_index: WorkspaceIndex | None = None,
+) -> dict[str, Any]:
+    """Load .drift_manifest.json from wiki_root safely, optionally rebuilding on demand."""
     manifest_file = wiki_root / ".drift_manifest.json"
     if not manifest_file.is_file():
+        if auto_rebuild:
+            return rebuild_drift_manifest(
+                wiki_root,
+                project_root=project_root,
+                persist=persist,
+                workspace_index=workspace_index,
+            )
         return {"version": "1.0", "articles": {}}
     try:
         data = json.loads(manifest_file.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
+            if auto_rebuild:
+                return rebuild_drift_manifest(
+                    wiki_root,
+                    project_root=project_root,
+                    persist=persist,
+                    workspace_index=workspace_index,
+                )
             return {"version": "1.0", "articles": {}}
         if "articles" not in data or not isinstance(data["articles"], dict):
             data["articles"] = {}
         return data
     except Exception:
+        if auto_rebuild:
+            return rebuild_drift_manifest(
+                wiki_root,
+                project_root=project_root,
+                persist=persist,
+                workspace_index=workspace_index,
+            )
         return {"version": "1.0", "articles": {}}
 
 
@@ -805,7 +912,13 @@ def check_article_drift(
     if workspace_index is None:
         workspace_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=overlay_fs)
     if manifest_data is None:
-        manifest_data = load_drift_manifest(w_root)
+        manifest_data = load_drift_manifest(
+            w_root,
+            auto_rebuild=True,
+            persist=False,
+            project_root=p_root,
+            workspace_index=workspace_index,
+        )
 
     if rel_article in workspace_index.drift_cache and not _visited:
         return workspace_index.drift_cache[rel_article]
@@ -867,14 +980,33 @@ def check_article_drift(
                     "message": "governed files missing: pattern matched 0 files in active article",
                 })
         else:
-            # Contingency fallback when manifest_targets is absent
+            # Contingency fallback when manifest_targets is absent (R-1.4)
             if curr_digest != stored_digest:
-                rep_target = sorted(curr_targets.keys())[0] if curr_targets else patterns[0]
+                stored_count_raw = meta.get("applies_to_count")
+                stored_count: int | None = None
+                if stored_count_raw is not None:
+                    try:
+                        stored_count = int(stored_count_raw)
+                    except (TypeError, ValueError):
+                        stored_count = None
+
+                if curr_count == 0:
+                    fallback_kind = "missing"
+                elif stored_count is not None and curr_count > stored_count:
+                    fallback_kind = "added"
+                elif stored_count is not None and curr_count < stored_count:
+                    fallback_kind = "deleted"
+                else:
+                    fallback_kind = "modified"
+
+                sorted_targets = sorted(curr_targets.keys())
+                rep_target = sorted_targets[0] if sorted_targets else patterns[0]
                 drifts.append({
                     "article_path": rel_article,
                     "target_file": rep_target,
                     "workspace_file": rep_target,
-                    "drift_kind": "modified",
+                    "drift_kind": fallback_kind,
+                    "fallback_targets": sorted_targets,
                     "message": f"governed targets digest changed ({stored_digest} -> {curr_digest})",
                 })
     else:
@@ -958,7 +1090,13 @@ def detect_all_drift(
             p_root, w_root, overlay_fs=overlay_fs, git_cache=git_cache
         )
     if manifest_data is None:
-        manifest_data = load_drift_manifest(w_root)
+        manifest_data = load_drift_manifest(
+            w_root,
+            auto_rebuild=True,
+            persist=False,
+            project_root=p_root,
+            workspace_index=workspace_index,
+        )
 
     files = md_files if md_files is not None else sorted(w_root.rglob("*.md"))
     all_drifts: list[dict[str, Any]] = []

@@ -299,10 +299,18 @@ def git_diff_names(
     return [line.strip() for line in res.stdout.splitlines() if line.strip()]
 
 
-def git_ls_files(cwd: Path, *, timeout: float = 2.0) -> list[str]:
-    """Return tracked and non-ignored untracked workspace paths via `ls-files -z`."""
+def git_ls_files(
+    cwd: Path,
+    *,
+    include_others: bool = True,
+    timeout: float = 2.0,
+) -> list[str]:
+    """Return tracked (and optionally non-ignored untracked) workspace paths via `ls-files -z`."""
+    args = ["-c", "core.quotepath=false", "ls-files", "-z", "--cached"]
+    if include_others:
+        args.extend(["--others", "--exclude-standard"])
     res = run_git_bytes(
-        ["-c", "core.quotepath=false", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        args,
         cwd=cwd,
         timeout=timeout,
         check_repo=True,
@@ -391,3 +399,65 @@ def git_pull_ff_only(
     _validate_git_ref_arg(remote, "remote")
     _validate_git_ref_arg(branch, "branch")
     return run_git(["pull", "--ff-only", remote, branch], cwd=cwd, timeout=timeout, check_repo=False)
+
+
+def git_config_get_local(
+    cwd: Path,
+    key: str,
+    *,
+    timeout: float = 5.0,
+) -> str | None:
+    """Read a repository-local Git config key (`git config --local --get`). Returns None if unset."""
+    _validate_git_ref_arg(key, "config key")
+    res = run_git(["config", "--local", "--get", key], cwd=cwd, timeout=timeout, check_repo=True)
+    if res.returncode != 0:
+        return None
+    val = res.stdout.strip()
+    return val if val else None
+
+
+def git_config_set_local(
+    cwd: Path,
+    key: str,
+    value: str,
+    *,
+    timeout: float = 5.0,
+) -> None:
+    """Set a repository-local Git config key (`git config --local`). Never uses shell=True."""
+    _validate_git_ref_arg(key, "config key")
+    res = run_git(["config", "--local", key, value], cwd=cwd, timeout=timeout, check_repo=True)
+    if res.returncode != 0:
+        raise GitError(res.stderr.strip() or f"git config --local {key} failed (rc={res.returncode})")
+
+
+def git_recent_file_churn(
+    cwd: Path,
+    *,
+    max_commits: int = 200,
+    timeout: float = 5.0,
+) -> dict[str, int]:
+    """Count recent commit touches per file via `git log -n <N> --name-only --pretty=format:`.
+
+    Raises NotAGitRepoError outside Git repositories; returns {} on zero-commit repositories.
+    """
+    n = max(1, int(max_commits))
+    res = run_git(
+        ["-c", "core.quotepath=false", "log", "-n", str(n), "--name-only", "--pretty=format:"],
+        cwd=cwd,
+        timeout=timeout,
+        check_repo=True,
+    )
+    if res.returncode != 0:
+        stderr_lower = res.stderr.lower()
+        if "does not have any commits yet" in stderr_lower or "your current branch" in stderr_lower:
+            return {}
+        if _is_not_a_git_repo_stderr(res.stderr):
+            raise NotAGitRepoError(res.stderr.strip())
+        return {}
+
+    counts: dict[str, int] = {}
+    for raw_line in res.stdout.splitlines():
+        cleaned = normalize_posix_input(raw_line).lstrip("/")
+        if cleaned:
+            counts[cleaned] = counts.get(cleaned, 0) + 1
+    return counts

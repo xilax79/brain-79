@@ -92,3 +92,28 @@ def test_session_commit_parameter_symmetry() -> None:
     assert core_sig.parameters["allow_partial_ripple"].default is False
     assert core_sig.parameters["verified_articles"].default is None
 
+
+def test_bootstrap_and_navigate_parameter_symmetry() -> None:
+    """Phase 12 AC-12.10: bootstrap (auto_map, max_modules) and navigate (rebuild) maintain CLI/MCP/core parity."""
+    import inspect
+    from brain79.core.bootstrap import run_bootstrap
+    from brain79.core.navigation import regenerate_index_navigation
+    from brain79.server import brain79_bootstrap, brain79_navigate
+
+    # 1. bootstrap
+    mcp_bs = inspect.signature(brain79_bootstrap)
+    core_bs = inspect.signature(run_bootstrap)
+    assert "auto_map" in mcp_bs.parameters and "auto_map" in core_bs.parameters
+    assert mcp_bs.parameters["auto_map"].default is False
+    assert core_bs.parameters["auto_map"].default is False
+    assert "max_modules" in mcp_bs.parameters and "max_modules" in core_bs.parameters
+    assert mcp_bs.parameters["max_modules"].default == 12
+    assert core_bs.parameters["max_modules"].default == 12
+
+    # 2. navigate
+    mcp_nav = inspect.signature(brain79_navigate)
+    core_nav = inspect.signature(regenerate_index_navigation)
+    assert "rebuild" in mcp_nav.parameters and "rebuild" in core_nav.parameters
+    assert mcp_nav.parameters["rebuild"].default is False
+    assert core_nav.parameters["rebuild"].default is False
+

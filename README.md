@@ -1,6 +1,6 @@
 # brain-79
 
-[![Version](https://img.shields.io/badge/version-0.12.0-blue.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-0.13.0-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 
@@ -116,7 +116,14 @@ brain79 doctor --fix
 ### Tool updates vs project template updates
 
 - **`brain79 update`**: updates the installed CLI binary from upstream Git.
-- **`brain79 update-project`**: synchronizes `AGENTS.md`, `SCHEMA.md`, and MCP harnesses inside an existing repository.
+- **`brain79 update-project`**: synchronizes `AGENTS.md`, `SCHEMA.md`, `.brain-79/.gitignore`, `.brain-79/.gitattributes`, the local `INDEX.md` Git merge driver, and MCP/instruction harnesses inside an existing repository.
+
+### Team-safe Git collaboration and brownfield onboarding
+
+- **Merge-conflict-free derived state**: `.navigation_registry.json`, `.drift_manifest.json`, and `.bootstrap_state.json` are git-ignored via `.brain-79/.gitignore` and reconstructed deterministically on demand (`brain79 navigate --regenerate --rebuild`).
+- **Deterministic `INDEX.md` Git merge driver**: `brain79 init` and `brain79 update-project` configure `.brain-79/.gitattributes` and local `.git/config` with `brain79 navigate --merge-driver %O %A %B` so concurrent PRs touching `INDEX.md` merge cleanly without manual conflict resolution.
+- **Brownfield auto-mapping**: `brain79 bootstrap --auto-map --max-modules N` (and MCP `brain79_bootstrap(auto_map=True)`) detects package manifests (`pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`), ranks modules by Git churn, and emits pairwise zero-overlap `applies_to` governance proposals.
+- **Configurable enforcement tiers**: set `enforcement: strict | balanced | advisory` in `.brain-79/SCHEMA.md` (or pass `brain79 init --enforcement <tier>`). Use `brain79 lint --strict --fail-on-warnings` to fail CI on warnings under any tier.
 
 ---
 
@@ -127,7 +134,7 @@ brain79 doctor --fix
 - **Python 3.11+ and `uv` runtime**: requires Python 3.11+ (typically installed via `uv tool install`) rather than a single standalone native binary.
 - **Python-only AST Guard C**: public signature drift verification currently inspects Python ASTs (`core/ast_guards/`). Polyglot Tree-sitter support for TypeScript, Go, and Rust is planned as an optional extra.
 - **Agent protocol adherence**: outside of Git pre-commit hooks (`brain79 lint --strict`), runtime compliance relies on the AI client following instruction files (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/brain79.mdc`, `.github/copilot-instructions.md`) and calling MCP tools. Passive lifecycle hooks and a dedicated CI PR gate are planned.
-- **Multi-developer Git merge collisions**: concurrent PRs that modify `INDEX.md` or derived JSON caches (`.navigation_registry.json`, `.drift_manifest.json`) can produce merge conflicts until Phase 12 introduces merge-friendly/derived-cache separation.
+- **Local Git merge driver setup per clone**: while `.brain-79/.gitattributes` and `.brain-79/.gitignore` are committed to Git, each developer clone must run `brain79 update-project` (or `brain79 doctor --fix`) once to register the local `merge.brain79-index.driver` in `.git/config`.
 - **Deterministic retrieval vs. semantic embeddings**: `brain79_orient` and `brain79_context` use deterministic path matching, weighted TF-IDF, and 1-hop ADR graph traversal with zero external model calls. This guarantees speed, offline reproducibility, and zero API cost, at the trade-off of not performing dense semantic vector search.
 
 ---
