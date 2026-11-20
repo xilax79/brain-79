@@ -254,10 +254,10 @@
     },
     "features/handoff-continuity.md": {
       "count": 2,
-      "digest": "sha256:792ee8d260df7270",
+      "digest": "sha256:9595375ec874839c",
       "targets": {
         "src/brain79/core/handoff.py": "sha256:4b4a330a2546fb23",
-        "src/brain79/core/handoff_freshness.py": "sha256:000eff7dd868461d"
+        "src/brain79/core/handoff_freshness.py": "sha256:e98d882f9865f9e3"
       }
     },
     "features/mcp-server.md": {

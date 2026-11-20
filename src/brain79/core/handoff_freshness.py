@@ -78,9 +78,13 @@ def is_git_workspace(project_root: Path) -> bool:
             if top_path == p_resolve:
                 return True
             # In a monorepo / subproject: top_path is an ancestor.
-            # But if project_root is inside a pytest temporary directory (.pytest_tmp or pytest_tmp),
-            # this is an ephemeral test directory, NOT a member of the outer repo!
-            if any(part.startswith(".pytest") or part.startswith("pytest") for part in p_resolve.parts):
+            # But if a pytest temporary directory lies between top_path and project_root,
+            # top_path is an outer repo outside the temporary test directory and project_root is an ephemeral non-git dir!
+            try:
+                rel_parts = p_resolve.relative_to(top_path).parts
+            except ValueError:
+                return False
+            if any(part.startswith(".pytest") or part.startswith("pytest") for part in rel_parts):
                 return False
             return True
     except Exception:
