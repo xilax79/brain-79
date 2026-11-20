@@ -331,6 +331,9 @@ def test_multiprocess_contention_and_invariants(tmp_path: Path) -> None:
 @pytest.mark.skipif(sys.platform == "win32", reason="SIGKILL crash test is POSIX only")
 def test_sigkill_lock_recovery(tmp_path: Path) -> None:
     """SIGKILL a worker holding a lock; next operation completes within lock timeout with zero orphans."""
+    if sys.platform == "win32":
+        pytest.skip("SIGKILL crash test is POSIX only")
+
     ctx = mp.get_context("spawn")
     ws = tmp_path / "workspace"
     ws.mkdir()
