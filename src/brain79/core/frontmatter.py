@@ -5,6 +5,23 @@ from pathlib import Path
 import re
 from typing import Any
 
+import yaml
+
+
+class _UniqueKeySafeLoader(yaml.SafeLoader):
+    """YAML safe loader that rejects duplicate keys in mappings."""
+
+    def construct_mapping(self, node: Any, deep: bool = False) -> dict[Any, Any]:
+        if not isinstance(node, yaml.MappingNode):
+            raise FrontmatterError(f"Expected a mapping node, but found {node.id}")
+        mapping: dict[Any, Any] = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in mapping:
+                raise FrontmatterError(f"Duplicate YAML key '{key}' in frontmatter.")
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
+
 
 class FrontmatterError(ValueError):
     """Raised when frontmatter is missing or malformed."""
@@ -479,9 +496,9 @@ ALLOWED_UNKNOWN_KEYS: set[str] = {
 def infer_type_for_path(path: str, schema: ActiveSchema | None = None) -> str | None:
     """Infer expected frontmatter type from relative file path."""
     active_loc = schema.location_to_type if schema else load_active_schema().location_to_type
-    rel = Path(path)
+    rel = Path(path).as_posix()
     for prefix, expected_type in active_loc.items():
-        if str(rel) == prefix or str(rel).startswith(prefix + "/"):
+        if rel == prefix or rel.startswith(prefix + "/"):
             return expected_type
     return None
 
@@ -973,12 +990,13 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     raw_yaml_block = "\n".join(lines[1:end_idx])
     metadata: dict[str, Any] = {}
     try:
-        import yaml
-        parsed = yaml.safe_load(raw_yaml_block)
+        parsed = yaml.load(raw_yaml_block, Loader=_UniqueKeySafeLoader)
         if isinstance(parsed, dict):
             # Normalize dates/numbers to strings where expected (e.g. date objects to YYYY-MM-DD)
             norm: dict[str, Any] = {}
             for k, v in parsed.items():
+                if not isinstance(k, str):
+                    raise FrontmatterError(f"Frontmatter keys must be strings, got {type(k).__name__}: {k!r}")
                 if isinstance(v, (date, datetime)):
                     norm[k] = v.isoformat()
                 else:

@@ -37,7 +37,7 @@ How-to workflows, MCP communication protocol, and operational reference for `bra
    - `.mcp.json`: standard project-level MCP definition for Claude Desktop and generic clients.
    - `.agents/plugins/brain79/`: native workspace plugin with on-demand skill documentation for Antigravity (`agy`).
    - `.cursor/mcp.json`: workspace configuration for Cursor.
-2. **Instruction anchoring (`AGENTS.md`)**: `brain79 init` inserts a version-delimited comment block (`<!-- brain79:start v0.9.2 -->` ... `<!-- brain79:end -->`). The block instructs assistants to execute a two-call workflow:
+2. **Instruction anchoring (`AGENTS.md`)**: `brain79 init` inserts a version-delimited comment block (`<!-- brain79:start v0.10.0 -->` ... `<!-- brain79:end -->`). The block instructs assistants to execute a two-call workflow:
    - Call `brain79_orient` once at session start before reading or editing code.
    - Call `brain79_session_commit` atomically at the end of the session to commit documentation updates.
 3. **Transport**: the assistant communicates with `brain-79` via standard input/output (`stdio`) JSON-RPC messages managed by `FastMCP`.

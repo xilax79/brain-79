@@ -192,8 +192,44 @@ Content
             set_project_root(orig_root)
 
 
+def calibrate_gauntlet_budgets() -> dict[str, float]:
+    """Measure in-process median of 5 runs after warm-up for gauntlet targets."""
+    from scripts.run_battle_gauntlet import (
+        _measure_median,
+        build_archetype_1,
+        build_archetype_5,
+    )
+    from brain79.core.doctor import run_doctor
+    from brain79.core.drift import WorkspaceIndex
+    from brain79.core.lint import lint_wiki
+    from brain79.core.orient import orient
+
+    results = {}
+    with tempfile.TemporaryDirectory(prefix="b79-bench-arch1-") as t1:
+        p1 = Path(t1)
+        build_archetype_1(p1)
+        w1 = p1 / ".brain-79"
+        med_arch1_index = _measure_median(lambda: WorkspaceIndex.build(p1, w1), runs=5)
+        results["arch1_workspace_index_build_ms"] = round(med_arch1_index, 2)
+
+    with tempfile.TemporaryDirectory(prefix="b79-bench-arch5-") as t5:
+        p5 = Path(t5)
+        build_archetype_5(p5)
+        w5 = p5 / ".brain-79"
+        med_orient = _measure_median(lambda: orient(task="scale query", paths=["src/mod_0/file_0.py"], wiki_root=w5), runs=5)
+        med_lint = _measure_median(lambda: lint_wiki(wiki_root=w5), runs=5)
+        med_doctor = _measure_median(lambda: run_doctor(project_root=p5, wiki_root=w5), runs=5)
+        results["arch5_orient_ms"] = round(med_orient, 2)
+        results["arch5_lint_strict_ms"] = round(med_lint, 2)
+        results["arch5_doctor_ms"] = round(med_doctor, 2)
+
+    return results
+
+
 def main():
     print("=== Running Baseline Profiling ===")
+    gauntlet_budgets = calibrate_gauntlet_budgets()
+    print("Gauntlet calibration timings (ms):", json.dumps(gauntlet_budgets, indent=2))
     current = benchmark_current_wiki()
     print("Current wiki timings (ms):", json.dumps(current, indent=2))
 

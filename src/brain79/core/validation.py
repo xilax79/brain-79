@@ -109,6 +109,24 @@ def validate_article_content(
     content = _normalize_content(content)
     rel_path = path.strip("/")
 
+    # Check NUL bytes and unicode encodability (no lone surrogates)
+    if "\x00" in content:
+        raise ValidationError(
+            rule="null_bytes_forbidden",
+            path=rel_path,
+            message="Article contains forbidden NUL bytes.",
+            actionable="Remove NUL bytes from article content.",
+        )
+    try:
+        content.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ValidationError(
+            rule="encoding_error",
+            path=rel_path,
+            message=f"Article contains unencodable unicode or surrogate characters: {exc}",
+            actionable="Ensure content is valid UTF-8 without lone surrogates.",
+        )
+
     # Exempt files: SCHEMA.md and anything under _raw/
     if rel_path == "SCHEMA.md" or rel_path.startswith("_raw/"):
         return content

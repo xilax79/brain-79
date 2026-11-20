@@ -13,7 +13,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:2ecab1a6aa759773"
+applies_to_digest: "sha256:4efd263a26c91850"
 applies_to_count: 32
 ---
 
@@ -21,7 +21,7 @@ applies_to_count: 32
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.9.2.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.10.0.
 
 ## Active subsystem topology
 
@@ -52,8 +52,8 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Completion of `v0.9.2` (zero-clone installation via `uv tool`, CLI/Python 3.11+ alignment, 3-layer Diátaxis documentation in `README.md`, `USER_GUIDE.md`, and `ARCHITECTURE.md`, and retirement of HTML docs).
-- Preparation for `v0.9.3` (Phase 9: automated battle-testing, multi-OS CI matrix, chaos fuzzing, and multi-repo gauntlet), specified in [Architecture — Industrial-scale roadmap and adoption evolution](roadmap-industrial-scale.md).
+- Completion of `v0.10.0` (Phase 9: automated battle-testing, 9-cell multi-OS CI matrix, chaos fuzzing, 5-archetype gauntlet, transactional rollback, and live-agent recovery smoke).
+- Continuous performance and reliability monitoring across heterogeneous repository archetypes.
 
 ---
 

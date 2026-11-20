@@ -4,6 +4,19 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-17
+
+### Added
+- **Automated battle-testing, chaos fuzzing, and multi-repo gauntlet (Phase 9)**:
+  - Cross-platform 9-cell GitHub Actions CI matrix across Ubuntu, macOS, and Windows runners for Python 3.11, 3.12, and 3.13 (`.github/workflows/ci.yml`) with pinned action tags and `.gitattributes` line-ending standardization.
+  - Comprehensive real-OS platform tests (`tests/test_cross_platform_and_locks.py`) asserting Windows reserved name rejection, case collision detection on case-insensitive filesystems, path whitespace/unicode handling, and CRLF drift hashing parity.
+  - Multiprocess concurrency stress testing with 8 worker processes and `Barrier(8)` under contention, validating zero JSON state corruption, zero orphan temporary files, atomic lock release, and zero torn writes (`tests/test_chaos_and_fuzzing.py`).
+  - POSIX SIGKILL process crash lock recovery.
+  - Deterministic stdlib fuzzing across 6 corpus classes (YAML shapes, encodings, surrogates, boundary sizes, forbidden paths, and cyclic graphs).
+  - Transactional Pass 3 session commits with filesystem snapshot and automatic all-or-nothing rollback on `BaseException` (`KeyboardInterrupt`, `ENOSPC`).
+  - Five-archetype multi-repo battle gauntlet runner (`scripts/run_battle_gauntlet.py`) and test suite (`tests/test_battle_gauntlet.py`) executing a rigid 10-step lifecycle across dirty monorepos, chaotic legacy wikis, gitless research, branch warfare with AST Guard C, and scale benchmarks (200 articles, 1,000 files) with calibrated in-process latency ceilings.
+  - Live-agent recovery smoke testing in `scripts/run_e2e_smoke.py` covering scenarios 5 (`unresolved_session_ripple`) and 6 (`duplicate_governance_target`) with model policy enforcement (`gemini-3.8-flash:low`) and exit code 77 skip behavior.
+
 ## [0.9.2] - 2026-11-17
 
 ### Added

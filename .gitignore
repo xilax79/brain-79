@@ -32,6 +32,8 @@ dist/
 # Locks & Tmp
 *.md.lock
 *.md.tmp
+.pytest_tmp/
+pytest_tmp/
 
 # Ephemeral prompt manifests
 .pi/

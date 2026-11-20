@@ -71,10 +71,25 @@ def is_git_workspace(project_root: Path) -> bool:
     if (project_root / ".git").exists():
         return True
     try:
-        out = _run_git(["rev-parse", "--is-inside-work-tree"], cwd=project_root)
-        return out.lower() == "true"
+        toplevel = _run_git(["rev-parse", "--show-toplevel"], cwd=project_root)
+        if toplevel:
+            top_path = Path(toplevel).resolve()
+            p_resolve = project_root.resolve()
+            if top_path == p_resolve:
+                return True
+            # In a monorepo / subproject: top_path is an ancestor.
+            # But if a pytest temporary directory lies between top_path and project_root,
+            # top_path is an outer repo outside the temporary test directory and project_root is an ephemeral non-git dir!
+            try:
+                rel_parts = p_resolve.relative_to(top_path).parts
+            except ValueError:
+                return False
+            if any(part.startswith(".pytest") or part.startswith("pytest") for part in rel_parts):
+                return False
+            return True
     except Exception:
-        return False
+        pass
+    return False
 
 
 def get_git_branch(project_root: Path) -> str:

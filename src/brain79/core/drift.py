@@ -42,6 +42,8 @@ _IGNORED_DIRS: frozenset[str] = frozenset({
     "build",
     ".pytest_cache",
     ".mypy_cache",
+    ".pytest_tmp",
+    "pytest_tmp",
 })
 
 _FILE_HASH_CACHE: dict[tuple[str, int, int], str] = {}
@@ -242,34 +244,36 @@ class WorkspaceIndex:
         all_paths: set[str] = set()
 
         is_git_ok = False
-        try:
-            res = subprocess.run(
-                ["git", "-c", "core.quotepath=false", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-                cwd=str(p_root),
-                capture_output=True,
-                check=False,
-                timeout=2.0,
-            )
-            if res.returncode == 0:
-                is_git_ok = True
-                for raw_path in res.stdout.split(b"\x00"):
-                    if not raw_path:
-                        continue
-                    p_str = raw_path.decode("utf-8", errors="replace").strip()
-                    if not p_str:
-                        continue
-                    disk_target = p_root / p_str
-                    if disk_target.is_dir():
-                        for child in disk_target.rglob("*"):
-                            if child.is_file() and not _is_ignored(child, p_root, allow_brain79=True):
-                                try:
-                                    all_paths.add(rel_posix(child, p_root))
-                                except ValueError:
-                                    pass
-                    else:
-                        all_paths.add(p_str)
-        except Exception:
-            is_git_ok = False
+        from brain79.core.handoff_freshness import is_git_workspace
+        if is_git_workspace(p_root):
+            try:
+                res = subprocess.run(
+                    ["git", "-c", "core.quotepath=false", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+                    cwd=str(p_root),
+                    capture_output=True,
+                    check=False,
+                    timeout=2.0,
+                )
+                if res.returncode == 0:
+                    is_git_ok = True
+                    for raw_path in res.stdout.split(b"\x00"):
+                        if not raw_path:
+                            continue
+                        p_str = raw_path.decode("utf-8", errors="replace").strip()
+                        if not p_str:
+                            continue
+                        disk_target = p_root / p_str
+                        if disk_target.is_dir():
+                            for child in disk_target.rglob("*"):
+                                if child.is_file() and not _is_ignored(child, p_root, allow_brain79=True):
+                                    try:
+                                        all_paths.add(rel_posix(child, p_root))
+                                    except ValueError:
+                                        pass
+                        else:
+                            all_paths.add(p_str)
+            except Exception:
+                is_git_ok = False
 
         if not is_git_ok:
             if p_root.exists():

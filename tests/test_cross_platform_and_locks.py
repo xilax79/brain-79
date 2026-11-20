@@ -12,7 +12,9 @@ Covers all 5 pillars deterministically on local environment without CI:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -20,7 +22,7 @@ import pytest
 from brain79.config import set_project_root
 from brain79.core.context import get_context
 from brain79.core.drift import find_matching_workspace_files
-from brain79.core.frontmatter import parse_frontmatter
+from brain79.core.frontmatter import ValidationError, parse_frontmatter
 from brain79.core.handoff import purge_handoffs, write_handoff
 from brain79.core.init_project import PRE_COMMIT_HOOK_SCRIPT, init_project
 from brain79.core.lint import lint_wiki
@@ -605,4 +607,148 @@ def test_static_analysis_zero_relative_to_string_casts() -> None:
                     ):
                         violations.append(f"{py_file.name}:{node.lineno}: str(...relative_to(...))")
     assert violations == [], f"Found forbidden str(...relative_to(...)) calls: {violations}"
+
+
+# ==============================================================================
+# DELIVERABLE 9.1: Real-OS Platform Tests (No Mocks)
+# ==============================================================================
+
+
+@pytest.mark.skipif(
+    sys.platform not in ("darwin", "win32"),
+    reason="Case collision test requires case-insensitive filesystem (APFS on macOS, NTFS on Windows)",
+)
+def test_case_collision_rejected_on_case_insensitive_fs(wiki_env: tuple[Path, Path]) -> None:
+    """Writing Topics/A.md after topics/a.md is rejected with case_collision, never silently duplicated."""
+    _, wiki_root = wiki_env
+
+    # 1. Create canonical lowercase article
+    content_a = (
+        "---\n"
+        "type: decision\n"
+        "summary: Decision Alpha\n"
+        "status: accepted\n"
+        "deciders: Team\n"
+        "date: 2026-11-17\n"
+        "last_updated: 2026-11-17\n"
+        "---\n\n"
+        "# ADR-010: Decision Alpha\n\n"
+        "## Status\nAccepted\n\n"
+        "## Context\nContext\n\n"
+        "## Decision\nDecision\n\n"
+        "## Consequences\nConsequences\n\n"
+        "---\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
+    )
+    write_article("decisions/adr-010.md", content_a, wiki_root=wiki_root)
+
+    # 2. Attempt to write with mismatched character casing
+    content_b = content_a.replace("Decision Alpha", "Decision Beta")
+    with pytest.raises(ValidationError) as exc_info:
+        write_article("Decisions/ADR-010.md", content_b, wiki_root=wiki_root)
+
+    assert exc_info.value.rule == "case_collision"
+
+    # Verify no second file was created
+    decisions_dir = wiki_root / "decisions"
+    existing_files = [f.name for f in decisions_dir.iterdir() if f.is_file() and not f.name.endswith(".lock")]
+    assert "adr-010.md" in existing_files
+    assert len([f for f in existing_files if f.lower() == "adr-010.md"]) == 1
+
+
+def test_path_with_spaces_and_non_ascii_project_root_works(tmp_path: Path) -> None:
+    """End-to-end operations succeed when project root contains spaces and non-ASCII characters."""
+    unicode_root = tmp_path / "Espacio y Tildes — áéíóú 79"
+    unicode_root.mkdir()
+
+    init_project(unicode_root, install_git_hooks_flag=False)
+    wiki_root = unicode_root / ".brain-79"
+    assert wiki_root.is_dir()
+
+    article_content = (
+        "---\n"
+        "type: decision\n"
+        "summary: Non-ASCII workspace path test\n"
+        "status: accepted\n"
+        "deciders: Team\n"
+        "date: 2026-11-17\n"
+        "last_updated: 2026-11-17\n"
+        "---\n\n"
+        "# ADR-001: Path Verification\n\n"
+        "## Status\nAccepted\n\n"
+        "## Context\nVerifying path robustness.\n\n"
+        "## Decision\nEnsure all APIs handle unicode paths.\n\n"
+        "## Consequences\nReliable cross-platform execution.\n\n"
+        "---\n\n"
+        "[← Volver al Índice](../INDEX.md)\n"
+    )
+    written = write_article("decisions/adr-001.md", article_content, wiki_root=wiki_root)
+    assert "decisions/adr-001.md" in written
+
+    read_back = read_article("decisions/adr-001.md", wiki_root=wiki_root)
+    assert "ADR-001: Path Verification" in read_back
+
+    # Execute strict lint on unicode root
+    report = lint_wiki(wiki_root=wiki_root)
+    assert "[CRITICAL] Broken Local Links (0)" in report
+    assert "[CRITICAL] Namespace Violations (0)" in report
+
+
+def test_crlf_working_tree_input_yields_same_drift_digest_as_lf(tmp_path: Path) -> None:
+    """compute_file_content_digest yields identical hash for LF and CRLF file content."""
+    from brain79.core.drift import compute_file_content_digest
+
+    content_lf = b"def calculate_total(a: int, b: int) -> int:\n    return a + b\n"
+    content_crlf = b"def calculate_total(a: int, b: int) -> int:\r\n    return a + b\r\n"
+
+    lf_file = tmp_path / "func_lf.py"
+    crlf_file = tmp_path / "func_crlf.py"
+    lf_file.write_bytes(content_lf)
+    crlf_file.write_bytes(content_crlf)
+
+    digest_lf = compute_file_content_digest(lf_file)
+    digest_crlf = compute_file_content_digest(crlf_file)
+
+    assert digest_lf is not None
+    assert digest_crlf is not None
+    assert digest_lf == digest_crlf, f"Digests must match: LF={digest_lf} CRLF={digest_crlf}"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only real handle concurrency test")
+def test_win32_atomic_replace_succeeds_while_handle_open_briefly(tmp_path: Path) -> None:
+    """On Windows, atomic_replace_with_retry succeeds when a reader handle closes within retries."""
+    import threading
+    import time
+
+    src = tmp_path / "source.tmp"
+    dst = tmp_path / "dest.txt"
+    src.write_text("updated content", encoding="utf-8")
+    dst.write_text("initial content", encoding="utf-8")
+
+    # Open a handle with read-share mode in a thread and hold it briefly
+    handle_closed = threading.Event()
+
+    def hold_handle() -> None:
+        with open(dst, "r", encoding="utf-8"):
+            time.sleep(0.04)
+        handle_closed.set()
+
+    t = threading.Thread(target=hold_handle)
+    t.start()
+
+    # atomic_replace_with_retry retries with delay to allow transient handle to release
+    atomic_replace_with_retry(src, dst, retries=10, delay=0.01)
+    t.join(timeout=2.0)
+
+    assert dst.read_text(encoding="utf-8") == "updated content"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows-only %APPDATA% path test")
+def test_win32_appdata_branch_exercised_with_real_variable(tmp_path: Path) -> None:
+    """On Windows, init_project desktop integration resolves real %APPDATA% without crashing."""
+    from brain79.core.init_project import sync_project_mcp_configs
+
+    assert "APPDATA" in os.environ, "%APPDATA% must be set in Windows environment"
+    changed = sync_project_mcp_configs(tmp_path, include_desktop=True, dry_run=True)
+    assert isinstance(changed, list)
 

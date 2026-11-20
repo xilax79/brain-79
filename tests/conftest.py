@@ -11,7 +11,10 @@ def clean_env() -> Generator[None, None, None]:
     to_delete = [
         k
         for k in os.environ
-        if k.startswith("BRAIN79_") or k.startswith("FASTMCP_")
+        if (
+            (k.startswith("BRAIN79_") and k not in ("BRAIN79_PERF_FACTOR", "BRAIN79_FUZZ_SEED"))
+            or k.startswith("FASTMCP_")
+        )
     ]
     saved = {k: os.environ[k] for k in to_delete}
     for k in to_delete:
@@ -25,7 +28,10 @@ def clean_env() -> Generator[None, None, None]:
     current = [
         k
         for k in os.environ
-        if k.startswith("BRAIN79_") or k.startswith("FASTMCP_")
+        if (
+            (k.startswith("BRAIN79_") and k not in ("BRAIN79_PERF_FACTOR", "BRAIN79_FUZZ_SEED"))
+            or k.startswith("FASTMCP_")
+        )
     ]
     for k in current:
         if k not in saved:

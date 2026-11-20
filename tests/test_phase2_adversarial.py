@@ -126,7 +126,7 @@ We store data securely using encryption on the device.
     ranked = rank_context_articles(task="encryption", top_n=2)
     assert len(ranked) >= 2
     # Article A (in H1 & H2) MUST have a strictly higher score than Article B
-    assert str(ranked[0][1].relative_to(adversarial_wiki)) == "architecture/crypto.md"
+    assert ranked[0][1].relative_to(adversarial_wiki).as_posix() == "architecture/crypto.md"
 
 
 def test_defect_3_relative_markdown_links_normalized_from_subfolder(adversarial_wiki: Path) -> None:
@@ -195,7 +195,7 @@ Token details.
     # User passes task containing the file path, but paths=None
     ranked = rank_context_articles(task="Fix bug in src/auth/jwt.py", paths=None, top_n=2)
     assert len(ranked) >= 1
-    assert str(ranked[0][1].relative_to(adversarial_wiki)) == "architecture/token-spec.md"
+    assert ranked[0][1].relative_to(adversarial_wiki).as_posix() == "architecture/token-spec.md"
     assert any("path:" in reason for reason in ranked[0][2])
 
 

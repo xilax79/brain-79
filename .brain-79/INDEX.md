@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-17
+last_updated: 2026-11-20
 ---
 
 # Project index
@@ -10,8 +10,12 @@ last_updated: 2026-11-17
 
 ## Quick navigation
 
+### Changelog
+- [Changelog — Release 0.10.0: Automated battle-testing, chaos fuzzing, and multi-repo gauntlet](changelog/v0-10-0.md) — release v0.10.0 — automated battle-testing, chaos fuzzing, and multi-repo gauntlet
+
 ### Architecture
 - [Architecture — Antigravity (agy) plugin initialization and progressive disclosure](architecture/agy-init-and-plugin-design.md) — technical specification for zero-config Antigravity (agy) plugin initialization, progressive AGENTS.md disclosure, and ancestor root resolution
+- [Architecture — Battle-testing, chaos fuzzing, and multi-repo gauntlet](architecture/battle-testing-and-chaos-design.md) — implementation contract for v0.10.0 battle-testing, covering the multi-OS CI matrix, chaos and fuzz tests, the five-archetype gauntlet, live-agent recovery smoke, failure catalog, and acceptance gates
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)

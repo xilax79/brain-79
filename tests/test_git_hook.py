@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
+import shutil
 import subprocess
+import sys
+
+import pytest
 
 from brain79.cli.dispatch import run_cli
 from brain79.config import set_project_root
@@ -39,7 +43,17 @@ def test_init_no_git_hooks_flag(tmp_path: Path) -> None:
     assert not hook_path.exists()
 
 
+def test_posix_sh_available_on_posix_runners() -> None:
+    """Spec: POSIX sh must never be skipped on ubuntu or macos."""
+    if sys.platform in ("linux", "darwin"):
+        assert shutil.which("sh") is not None, "shutil.which('sh') must not be None on Ubuntu or macOS"
+
+
+@pytest.mark.skipif(shutil.which("sh") is None, reason="Requires POSIX sh")
 def test_pre_commit_script_runs_lint_strict(tmp_path: Path) -> None:
+    if sys.platform in ("linux", "darwin"):
+        assert shutil.which("sh") is not None, "POSIX sh must be available on Linux and macOS"
+
     git_dir = tmp_path / ".git"
     git_dir.mkdir()
 
@@ -65,6 +79,9 @@ def test_pre_commit_script_runs_lint_strict(tmp_path: Path) -> None:
         capture_output=True,
     )
 
-    # Run the pre-commit script directly
-    res = subprocess.run([str(hook_path)], cwd=tmp_path, capture_output=True, text=True)
+    # Run the pre-commit script directly or via POSIX shell on Windows
+    sh = shutil.which("sh")
+    assert sh is not None
+    cmd = [sh, str(hook_path)] if sys.platform == "win32" else [str(hook_path)]
+    res = subprocess.run(cmd, cwd=tmp_path, capture_output=True, text=True)
     assert res.returncode == 0
