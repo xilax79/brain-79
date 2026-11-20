@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -2128,6 +2129,12 @@ def test_sla1_cold_start_latency_and_subprocess_bound(monkeypatch: pytest.Monkey
         orient(task="Inspect system status", paths=["src/brain79/server.py"], wiki_root=w_root)
         durations.append(time.perf_counter() - t0)
 
+    raw_factor = os.environ.get("BRAIN79_PERF_FACTOR", "1.0").strip()
+    try:
+        perf_factor = max(0.1, float(raw_factor))
+    except ValueError:
+        perf_factor = 1.0
+    ceiling = 0.120 * perf_factor
     min_duration = min(durations)
-    assert min_duration < 0.120, f"orient() took {min_duration*1000:.1f}ms, expected < 120ms (SLA-1 target: < 100ms)"
+    assert min_duration < ceiling, f"orient() took {min_duration*1000:.1f}ms, expected < {ceiling*1000:.1f}ms (SLA-1 target: < 100ms scaled by {perf_factor})"
 

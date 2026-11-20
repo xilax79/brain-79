@@ -22,6 +22,7 @@ import sys
 import time
 from typing import Any
 import unicodedata
+from unittest.mock import patch
 
 import filelock
 import pytest
@@ -39,6 +40,7 @@ from brain79.core.lint import lint_wiki
 from brain79.core.locks import (
     LOCKS_DIRNAME,
     acquire_wiki_lock,
+    atomic_replace_with_retry,
     get_lock_path,
 )
 from brain79.core.migration import migrate_wiki
@@ -897,19 +899,39 @@ def test_environment_fault_readonly_directory(tmp_path: Path) -> None:
     orig_mode = topics_dir.stat().st_mode
 
     try:
-        # Make topics directory read-only
-        os.chmod(topics_dir, 0o555)
-
         new_art = baseline.replace("Baseline", "New Article")
-        with pytest.raises((OSError, ValidationError)):
-            commit_session(
-                session_summary="Attempt to write in read-only directory",
-                writes=[{"path": "topics/blocked.md", "content": new_art}],
-                wiki_root=w_root,
-            )
+        if sys.platform == "win32":
+            # On Windows CRT, os.chmod on directories does not prevent file creation.
+            # Simulate read-only directory fault via PermissionError fault injection on write.
+            orig_atomic = atomic_replace_with_retry
+
+            def mock_atomic(src_p: Path, dst_p: Path) -> None:
+                if "blocked.md" in dst_p.name:
+                    raise PermissionError(13, "Access is denied: 'topics\\\\blocked.md'")
+                orig_atomic(src_p, dst_p)
+
+            with patch("brain79.core.wiki.atomic_replace_with_retry", side_effect=mock_atomic), \
+                 patch("brain79.core.session_commit.atomic_replace_with_retry", side_effect=mock_atomic):
+                with pytest.raises((OSError, ValidationError)):
+                    commit_session(
+                        session_summary="Attempt to write in read-only directory",
+                        writes=[{"path": "topics/blocked.md", "content": new_art}],
+                        wiki_root=w_root,
+                    )
+        else:
+            # Make topics directory read-only
+            os.chmod(topics_dir, 0o555)
+
+            with pytest.raises((OSError, ValidationError)):
+                commit_session(
+                    session_summary="Attempt to write in read-only directory",
+                    writes=[{"path": "topics/blocked.md", "content": new_art}],
+                    wiki_root=w_root,
+                )
     finally:
         # Restore permissions for teardown
-        os.chmod(topics_dir, orig_mode)
+        if sys.platform != "win32":
+            os.chmod(topics_dir, orig_mode)
 
     # Rollback assertion: blocked article was not persisted
     assert not (w_root / "topics" / "blocked.md").exists()

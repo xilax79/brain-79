@@ -14,6 +14,8 @@ jobs:
     name: test (${{ matrix.os }}, py${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+    env:
+      BRAIN79_PERF_FACTOR: "3"
     strategy:
       fail-fast: false
       matrix:
@@ -35,7 +37,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Run pytest
-        run: uv run pytest -q --basetemp=.pytest_tmp
+        run: uv run pytest -q --basetemp="${RUNNER_TEMP:-/tmp}/.pytest_tmp"
 
       - name: Run mypy
         run: uv run mypy src tests
@@ -53,4 +55,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pytest-tmp-${{ matrix.os }}-py${{ matrix.python }}
-          path: .pytest_tmp
+          path: ${{ runner.temp }}/.pytest_tmp

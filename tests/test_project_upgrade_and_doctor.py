@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import subprocess
 import pytest
 
 from brain79 import __version__
@@ -11,6 +12,15 @@ from brain79.core.init_project import (
     sync_schema_file,
     update_project,
 )
+
+
+def _init_git_repo(path: Path) -> None:
+    import subprocess
+    subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "checkout", "-B", "main"], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "CI Tester"], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "ci@example.com"], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=path, check=True, capture_output=True)
 
 
 def test_sync_agents_manifest_clean_upgrade_preserves_custom_headers_and_notes(tmp_path: Path) -> None:
@@ -422,7 +432,7 @@ def test_doctor_7_checks_clean_environment_exit_code_0(tmp_path: Path) -> None:
     from brain79.core.doctor import run_doctor
 
     # Setup git repo
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _init_git_repo(tmp_path)
     init_project(tmp_path)
     w_root = tmp_path / ".brain-79"
 
@@ -452,10 +462,9 @@ def test_doctor_7_checks_clean_environment_exit_code_0(tmp_path: Path) -> None:
 
 
 def test_doctor_protocol_skew_warning_exit_code_2(tmp_path: Path) -> None:
-    import subprocess
     from brain79.core.doctor import run_doctor
 
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _init_git_repo(tmp_path)
     init_project(tmp_path)
     w_root = tmp_path / ".brain-79"
 
@@ -492,10 +501,9 @@ def test_doctor_critical_failure_exit_code_1(tmp_path: Path) -> None:
 
 
 def test_doctor_fix_dirty_git_safety_guard(tmp_path: Path) -> None:
-    import subprocess
     from brain79.core.doctor import run_doctor
 
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _init_git_repo(tmp_path)
     init_project(tmp_path)
     w_root = tmp_path / ".brain-79"
 
@@ -525,10 +533,9 @@ def test_doctor_fix_dirty_git_safety_guard(tmp_path: Path) -> None:
 
 
 def test_doctor_fix_heals_skew_to_exit_code_0(tmp_path: Path) -> None:
-    import subprocess
     from brain79.core.doctor import run_doctor
 
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _init_git_repo(tmp_path)
     init_project(tmp_path)
     w_root = tmp_path / ".brain-79"
 
@@ -612,10 +619,9 @@ def test_doctor_detects_invalid_or_corrupt_agy_plugin_files(tmp_path: Path) -> N
 
 def test_doctor_fix_dirty_tree_guard_includes_agents_plugins(tmp_path: Path) -> None:
     """Test doctor --fix checks .agents/plugins/brain79 in dirty tree guard."""
-    import subprocess
     from brain79.core.doctor import run_doctor
 
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _init_git_repo(tmp_path)
     init_project(tmp_path)
     w_root = tmp_path / ".brain-79"
 
@@ -640,10 +646,9 @@ def test_doctor_fix_dirty_tree_guard_includes_agents_plugins(tmp_path: Path) -> 
 def test_doctor_fix_repairs_missing_agy_plugin(tmp_path: Path) -> None:
     """Test doctor --fix repairs missing .agents/plugins/brain79 files."""
     import shutil
-    import subprocess
     from brain79.core.doctor import run_doctor
 
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    _init_git_repo(tmp_path)
     init_project(tmp_path)
     w_root = tmp_path / ".brain-79"
 

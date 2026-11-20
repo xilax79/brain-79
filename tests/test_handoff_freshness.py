@@ -30,6 +30,7 @@ from brain79.core.wiki import write_article
 def _setup_git_repo(path: Path) -> None:
     """Initialize a git repo with user configuration."""
     subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "checkout", "-B", "main"], cwd=path, check=True, capture_output=True)
     subprocess.run(
         ["git", "config", "user.name", "Tester"],
         cwd=path,
@@ -38,6 +39,12 @@ def _setup_git_repo(path: Path) -> None:
     )
     subprocess.run(
         ["git", "config", "user.email", "tester@example.com"],
+        cwd=path,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "commit.gpgsign", "false"],
         cwd=path,
         check=True,
         capture_output=True,
@@ -838,6 +845,10 @@ def test_adversarial_round2_2_monorepo_subfolder_diff_with_relative(tmp_path: Pa
 def test_adversarial_round2_3_git_repo_with_zero_commits_is_fresh(tmp_path: Path) -> None:
     """Finding 3 (Round 2): A git repo with git init but zero commits must not falsely degrade to unverified."""
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "checkout", "-B", "main"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "tester@example.com"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "config", "commit.gpgsign", "false"], cwd=tmp_path, check=True, capture_output=True)
     wiki_root = tmp_path / ".brain-79"
     wiki_root.mkdir()
     (wiki_root / "handoffs").mkdir()

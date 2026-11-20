@@ -225,7 +225,7 @@ def test_10_mcp_handler_response_type(temp_project: Path) -> None:
     assert "# Context Retrieval Report" in response
 
 
-def test_11_json_parse_resilience() -> None:
+def test_11_json_parse_resilience(tmp_path: Path) -> None:
     """Test 11: Resiliencia ante Excepciones de Parseo JSON."""
     fake_stdout = "\n".join(
         [
@@ -241,7 +241,7 @@ def test_11_json_parse_resilience() -> None:
     mock_proc = MagicMock()
     mock_proc.stdout = fake_stdout
 
-    tmp_file = Path("/tmp/dummy_test11.txt")
+    tmp_file = tmp_path / "dummy_test11.txt"
     tmp_file.write_text("/path/valid.md\n", encoding="utf-8")
 
     try:

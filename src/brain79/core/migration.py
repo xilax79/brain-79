@@ -72,8 +72,9 @@ _TYPE_DEFAULTS: dict[str, dict[str, str]] = {
 def _infer_type_from_location(rel_path: Path, schema: ActiveSchema | None = None) -> str | None:
     """Infer frontmatter type from relative file location using active schema."""
     loc_map = schema.location_to_type if schema else LOCATION_TO_TYPE
+    rel_posix = rel_path.as_posix()
     for location_prefix, expected_type in loc_map.items():
-        if str(rel_path) == location_prefix or str(rel_path).startswith(location_prefix + "/"):
+        if rel_posix == location_prefix or rel_posix.startswith(location_prefix + "/"):
             return expected_type
     return None
 

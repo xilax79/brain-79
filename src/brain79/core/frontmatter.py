@@ -496,9 +496,9 @@ ALLOWED_UNKNOWN_KEYS: set[str] = {
 def infer_type_for_path(path: str, schema: ActiveSchema | None = None) -> str | None:
     """Infer expected frontmatter type from relative file path."""
     active_loc = schema.location_to_type if schema else load_active_schema().location_to_type
-    rel = Path(path)
+    rel = Path(path).as_posix()
     for prefix, expected_type in active_loc.items():
-        if str(rel) == prefix or str(rel).startswith(prefix + "/"):
+        if rel == prefix or rel.startswith(prefix + "/"):
             return expected_type
     return None
 

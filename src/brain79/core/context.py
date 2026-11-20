@@ -226,6 +226,7 @@ def _search_keyword_python(kw: str, snapshot: list[Path]) -> dict[Path, int]:
             content = p.read_text(encoding="utf-8", errors="ignore")
             count = len(pattern.findall(content))
             if count > 0:
+                matches[p] = count
                 matches[p.resolve()] = count
         except Exception:
             continue

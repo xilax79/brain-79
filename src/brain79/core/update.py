@@ -40,6 +40,10 @@ def _find_git_root(brain79_path: Path) -> Path | None:
         return None
 
     for parent in brain79_path.parents:
+        if (parent / "pyproject.toml").exists():
+            if (parent / ".git").exists():
+                return parent
+            return None
         if (parent / ".git").exists():
             return parent
     return None
