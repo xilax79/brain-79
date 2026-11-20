@@ -13,7 +13,7 @@ related:
   - decisions/adr-008-pure-index-routing-table.md
   - architecture/roadmap-industrial-scale.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:e226e69b82863b8e"
+applies_to_digest: "sha256:642d13386570b09d"
 applies_to_count: 3
 ---
 
@@ -59,4 +59,4 @@ We introduced the **1-Call Cold Start Protocol (`brain79_orient` / `brain79 orie
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

@@ -44,4 +44,4 @@ Additionally, navigating between wiki articles and the central index when inspec
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

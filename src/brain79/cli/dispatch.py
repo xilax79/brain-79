@@ -106,6 +106,12 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             default=False,
             help="Also configure host desktop application configs (Claude Desktop, Windsurf)",
         )
+        parser.add_argument(
+            "--harnesses",
+            default="all",
+            metavar="LIST",
+            help="Comma-separated harnesses to install (default: all; e.g. agents,claude,cursor,copilot,agy,mcp)",
+        )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
         from brain79 import config
@@ -117,6 +123,11 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             target_root = config._project_root
         else:
             target_root = Path.cwd().resolve()
+        selected_harnesses = (
+            None
+            if parsed.harnesses.strip().lower() == "all"
+            else [h.strip() for h in parsed.harnesses.split(",") if h.strip()]
+        )
         init_project(
             target_root,
             install_git_hooks_flag=parsed.install_git_hooks,
@@ -124,6 +135,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             auto_git_init=parsed.auto_git_init,
             upgrade=parsed.upgrade,
             include_desktop=parsed.include_desktop,
+            harnesses=selected_harnesses,
         )
         return 0
 

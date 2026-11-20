@@ -1,6 +1,6 @@
 # brain-79
 
-[![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-0.12.0-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 
@@ -87,11 +87,17 @@ brain79 init
 ```
 
 This command creates:
-- `.brain-79/`: repository wiki with `INDEX.md`, `SCHEMA.md`, and `.drift_manifest.json`.
-- `AGENTS.md`: versioned protocol block instructing AI models how to orient.
+- `.brain-79/`: repository wiki with `INDEX.md`, `SCHEMA.md`, and `.drift_manifest.json` (articles default to English `[← Back to Index](../INDEX.md)` footers; customize via `backlink_label:` in `SCHEMA.md`).
+- Native instruction harnesses with non-destructive `<!-- brain79:start vX.Y.Z -->` / `<!-- brain79:end -->` blocks: `AGENTS.md`, `CLAUDE.md` (Claude Code), `.cursor/rules/brain79.mdc` (Cursor MDC), and `.github/copilot-instructions.md` (GitHub Copilot).
 - Tier 1 MCP harnesses: `.mcp.json`, `.agents/plugins/brain79/` (Antigravity plugin with skill), and `.cursor/mcp.json`.
 
-For non-code research repositories, pass `--profile general`.
+To install only a subset of harnesses, pass `--harnesses` (for example, `brain79 init --harnesses agents,claude`). For non-code research repositories, pass `--profile general`.
+
+### MCP tool profiles (`core` default vs `full`)
+
+By default, the FastMCP server starts in the compact **`core` profile** exposing 8 hot-path tools (`brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`) to minimize per-turn LLM schema token overhead.
+
+To expose all 22 tools (including administrative operations such as `migrate`, `doctor`, `bootstrap`, and `update-project`), pass `--mcp-profile full` or set `BRAIN79_MCP_PROFILE=full` (or invoke any command directly via the symmetric `brain79 <command>` CLI).
 
 ### 3. Verify repository health
 
@@ -111,6 +117,18 @@ brain79 doctor --fix
 
 - **`brain79 update`**: updates the installed CLI binary from upstream Git.
 - **`brain79 update-project`**: synchronizes `AGENTS.md`, `SCHEMA.md`, and MCP harnesses inside an existing repository.
+
+---
+
+## Limitations and trade-offs
+
+`brain-79` is a pre-GA (`0.y.z`) developer tool built around explicit trade-offs:
+
+- **Python 3.11+ and `uv` runtime**: requires Python 3.11+ (typically installed via `uv tool install`) rather than a single standalone native binary.
+- **Python-only AST Guard C**: public signature drift verification currently inspects Python ASTs (`core/ast_guards/`). Polyglot Tree-sitter support for TypeScript, Go, and Rust is planned as an optional extra.
+- **Agent protocol adherence**: outside of Git pre-commit hooks (`brain79 lint --strict`), runtime compliance relies on the AI client following instruction files (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/brain79.mdc`, `.github/copilot-instructions.md`) and calling MCP tools. Passive lifecycle hooks and a dedicated CI PR gate are planned.
+- **Multi-developer Git merge collisions**: concurrent PRs that modify `INDEX.md` or derived JSON caches (`.navigation_registry.json`, `.drift_manifest.json`) can produce merge conflicts until Phase 12 introduces merge-friendly/derived-cache separation.
+- **Deterministic retrieval vs. semantic embeddings**: `brain79_orient` and `brain79_context` use deterministic path matching, weighted TF-IDF, and 1-hop ADR graph traversal with zero external model calls. This guarantees speed, offline reproducibility, and zero API cost, at the trade-off of not performing dense semantic vector search.
 
 ---
 

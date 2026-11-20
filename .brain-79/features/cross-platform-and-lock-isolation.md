@@ -49,4 +49,4 @@ Deterministic unit tests simulate foreign OS behaviors without requiring remote 
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

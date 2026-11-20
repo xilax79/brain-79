@@ -63,30 +63,33 @@ def _resolve_git_dir(project_root: Path) -> Path | None:
     return None
 
 
-def is_git_workspace(project_root: Path) -> bool:
+def is_git_workspace(project_root: Path, git_cache: Any = None) -> bool:
     """Check if project root is inside a git working directory."""
+    resolved = project_root.resolve()
+    if git_cache is not None and resolved in git_cache.is_git_repo_by_root:
+        return bool(git_cache.is_git_repo_by_root[resolved])
+    result = False
     if (project_root / ".git").exists():
-        return True
-    try:
-        toplevel = _run_git(["rev-parse", "--show-toplevel"], cwd=project_root)
-        if toplevel:
-            top_path = Path(toplevel).resolve()
-            p_resolve = project_root.resolve()
-            if top_path == p_resolve:
-                return True
-            # In a monorepo / subproject: top_path is an ancestor.
-            # But if a pytest temporary directory lies between top_path and project_root,
-            # top_path is an outer repo outside the temporary test directory and project_root is an ephemeral non-git dir!
-            try:
-                rel_parts = p_resolve.relative_to(top_path).parts
-            except ValueError:
-                return False
-            if any(part.startswith(".pytest") or part.startswith("pytest") for part in rel_parts):
-                return False
-            return True
-    except Exception:
-        pass
-    return False
+        result = True
+    else:
+        try:
+            toplevel = _run_git(["rev-parse", "--show-toplevel"], cwd=project_root)
+            if toplevel:
+                top_path = Path(toplevel).resolve()
+                if top_path == resolved:
+                    result = True
+                else:
+                    try:
+                        rel_parts = resolved.relative_to(top_path).parts
+                        if not any(part.startswith(".pytest") or part.startswith("pytest") for part in rel_parts):
+                            result = True
+                    except ValueError:
+                        result = False
+        except Exception:
+            result = False
+    if git_cache is not None:
+        git_cache.is_git_repo_by_root[resolved] = result
+    return result
 
 
 def get_git_branch(project_root: Path) -> str:
@@ -329,6 +332,7 @@ def compute_handoff_freshness(
     handoff_path: Path,
     wiki_root: Path | None = None,
     workspace_index: Any = None,
+    git_cache: Any = None,
 ) -> HandoffFreshness:
     """Evaluate handoff freshness and calculate authority decay indicators deterministically."""
     if wiki_root is None:

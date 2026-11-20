@@ -38,4 +38,4 @@ We chose to implement CommonMark code-fence masking (`_mask_code_fences`) prior 
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

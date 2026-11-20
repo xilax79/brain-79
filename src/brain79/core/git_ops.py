@@ -52,11 +52,12 @@ class GitBytesResult:
 
 @dataclass
 class GitSessionCache:
-    """Optional per-session cache for HEAD, per-path commit, and blob lookups."""
+    """Optional per-session cache for HEAD, per-path commit, repo status, and blob lookups."""
 
     head_by_root: dict[tuple[Path, str], str] = field(default_factory=dict)
     last_commit_by_key: dict[tuple[Path, str, str], str | None] = field(default_factory=dict)
     blob_by_key: dict[tuple[Path, str, str], str | None] = field(default_factory=dict)
+    is_git_repo_by_root: dict[Path, bool] = field(default_factory=dict)
 
 
 def _is_not_a_git_repo_stderr(stderr_text: str) -> bool:

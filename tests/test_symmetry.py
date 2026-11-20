@@ -1,33 +1,48 @@
 import pytest
 
 from brain79.cli.dispatch import WHITELIST
-from brain79.server import mcp
+from brain79.server import ADMIN_TOOLS, CORE_TOOLS, create_mcp_server, mcp
 
 
 @pytest.mark.asyncio
 async def test_mcp_cli_symmetry() -> None:
-    """Validate static symmetry: mcp_tools ⊆ cli_subs and cli_subs - mcp_tools == {'init', 'update'}."""
+    """Validate static symmetry for both full (22 tools) and default core (8 tools) profiles."""
+    full_server = create_mcp_server(profile="full")
     try:
-        tools = await mcp.list_tools()
-        mcp_tool_names = {
-            t.name.removeprefix("brain79_").replace("_", "-") for t in tools
+        full_tools = await full_server.list_tools()
+        full_tool_names = {
+            t.name.removeprefix("brain79_").replace("_", "-") for t in full_tools
         }
 
         cli_subs = set(WHITELIST)
 
         assert len(cli_subs) == 24, f"Expected 24 CLI subcommands, got {len(cli_subs)}"
-        assert len(mcp_tool_names) == 22, f"Expected 22 MCP tools, got {len(mcp_tool_names)}"
-        assert mcp_tool_names.issubset(cli_subs), (
-            f"MCP tools {mcp_tool_names - cli_subs} not present in CLI subcommands"
+        assert len(full_tool_names) == 22, f"Expected 22 MCP full tools, got {len(full_tool_names)}"
+        assert full_tool_names.issubset(cli_subs), (
+            f"MCP tools {full_tool_names - cli_subs} not present in CLI subcommands"
         )
-        assert cli_subs - mcp_tool_names == {"init", "update"}, (
-            f"Unexpected difference between CLI and MCP: {cli_subs - mcp_tool_names}"
+        assert cli_subs - full_tool_names == {"init", "update"}, (
+            f"Unexpected difference between CLI and MCP: {cli_subs - full_tool_names}"
         )
+
+        # Default module-level mcp uses core profile (8 hot-path tools), all present in full
+        core_tools = await mcp.list_tools()
+        core_raw_names = {t.name for t in core_tools}
+        core_tool_names = {
+            t.name.removeprefix("brain79_").replace("_", "-") for t in core_tools
+        }
+        assert len(CORE_TOOLS) == 8
+        assert len(ADMIN_TOOLS) == 14
+        assert CORE_TOOLS.isdisjoint(ADMIN_TOOLS)
+        assert len(CORE_TOOLS | ADMIN_TOOLS) == 22
+        assert core_raw_names == CORE_TOOLS
+        assert core_tool_names.issubset(full_tool_names)
     finally:
-        if hasattr(mcp, "close") and callable(getattr(mcp, "close")):
-            res = mcp.close()
-            if hasattr(res, "__await__"):
-                await res
+        for srv in (full_server, mcp):
+            if hasattr(srv, "close") and callable(getattr(srv, "close")):
+                res = srv.close()
+                if hasattr(res, "__await__"):
+                    await res
 
 
 def test_update_project_and_doctor_parameter_symmetry() -> None:

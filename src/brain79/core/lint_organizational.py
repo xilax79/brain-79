@@ -7,6 +7,7 @@ from brain79.config import get_wiki_root
 from brain79.core.drift import WorkspaceIndex
 from brain79.core.frontmatter import (
     INACTIVE_STATUSES,
+    LEGACY_BACKLINK_MARKERS,
     PRE_IMPLEMENTATION_STATUSES,
     ValidationError,
     load_active_schema,
@@ -566,12 +567,9 @@ def check_article_backlinks(
     files = md_files if md_files is not None else _filter_md_files(wiki_root)
     issues: list[OrganizationalIssue] = []
 
-    backlink_markers = (
-        "[← volver al índice]",
-        "[← return to index]",
-        "[← back to index]",
-        "[volver al índice]",
-    )
+    schema = load_active_schema(wiki_root)
+    active_label = schema.backlink_label
+    backlink_markers = tuple(dict.fromkeys((f"[{active_label}]".lower(), *LEGACY_BACKLINK_MARKERS)))
 
     for md_file in files:
         rel = md_file.relative_to(wiki_root)
@@ -608,7 +606,7 @@ def check_article_backlinks(
                         line=None,
                         severity="warning",
                         message=f"Article '{rel_str}' is missing backlink navigation footer to INDEX.md.",
-                        actionable="Add `[← Volver al Índice](../INDEX.md)` at the end of the article, or rewrite via brain79 to auto-inject it.",
+                        actionable=f"Add `[{active_label}](../INDEX.md)` at the end of the article, or rewrite via brain79 to auto-inject it.",
                     )
                 )
         except Exception:

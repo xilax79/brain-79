@@ -129,4 +129,4 @@ All notable changes to `brain-79` v1.0.0 release cycle.
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

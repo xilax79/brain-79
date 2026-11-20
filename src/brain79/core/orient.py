@@ -153,14 +153,22 @@ def orient(
     except Exception:
         pass
 
-    # Operation-scoped WorkspaceIndex (built once per orient invocation)
+    # Operation-scoped WorkspaceIndex and shared GitSessionCache (built once per orient invocation)
     from brain79.core.drift import WorkspaceIndex, detect_all_drift
-    ws = WorkspaceIndex.build(p_root, w_root)
+    from brain79.core.git_ops import GitSessionCache
+
+    git_cache = GitSessionCache()
+    ws = WorkspaceIndex.build(p_root, w_root, git_cache=git_cache)
 
     # 3. Latest Handoff
     try:
         target_handoff = _resolve_handoff_path("latest", wiki_root=w_root)
-        freshness = compute_handoff_freshness(target_handoff, wiki_root=w_root, workspace_index=ws)
+        freshness = compute_handoff_freshness(
+            target_handoff,
+            wiki_root=w_root,
+            workspace_index=ws,
+            git_cache=git_cache,
+        )
         handoff_content, has_promotion_pending = read_handoff(
             "latest",
             wiki_root=w_root,
@@ -224,7 +232,12 @@ def orient(
             effective_paths.append(dp)
 
     # Unconditional drift detection across entire wiki
-    all_drifts = detect_all_drift(wiki_root=w_root, project_root=p_root, workspace_index=ws)
+    all_drifts = detect_all_drift(
+        wiki_root=w_root,
+        project_root=p_root,
+        workspace_index=ws,
+        git_cache=git_cache,
+    )
 
     seen_drifts: set[tuple[str, str, str]] = set()
     drift_alerts: list[str] = []

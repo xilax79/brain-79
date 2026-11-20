@@ -9,7 +9,7 @@ applies_to:
 related:
   - architecture/symmetry.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:9978c2ac4f68bd5b"
+applies_to_digest: "sha256:b1aa39194d224513"
 applies_to_count: 1
 ---
 
@@ -62,4 +62,4 @@ In an AI assistant session:
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

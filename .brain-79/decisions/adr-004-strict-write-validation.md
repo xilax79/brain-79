@@ -47,4 +47,4 @@ We chose to enforce synchronous, write-time validation in `brain79_write` / `bra
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

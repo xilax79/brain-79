@@ -55,7 +55,7 @@ Global options:
   -h, --help            Show this help message and exit
   -v, --version         Show installed version and exit
   --project-root PATH   Target project directory (default: current working directory)
-  --mcp-profile MODE    MCP server tool profile: 'core' or 'full' (default: full)
+  --mcp-profile MODE    MCP server tool profile: 'core' (8 tools) or 'full' (22 tools) (default: core; env: BRAIN79_MCP_PROFILE)
   --debug               Print full error tracebacks for troubleshooting
 
 Session & workflow:
@@ -97,8 +97,8 @@ Server mode:
 
 
 def _extract_mcp_profile(args: list[str]) -> tuple[Literal["core", "full"], list[str]]:
-    """Extract --mcp-profile <core|full> or --mcp-profile=<core|full> from CLI args."""
-    profile: Literal["core", "full"] = "full"
+    """Extract --mcp-profile <core|full> with precedence: CLI flag > BRAIN79_MCP_PROFILE > 'core'."""
+    cli_profile: Literal["core", "full"] | None = None
     remaining: list[str] = []
     i = 0
     while i < len(args):
@@ -107,31 +107,46 @@ def _extract_mcp_profile(args: list[str]) -> tuple[Literal["core", "full"], list
             if i + 1 >= len(args):
                 sys.stderr.write("Error: --mcp-profile requires a value ('core' or 'full').\n")
                 sys.exit(2)
-            raw = args[i + 1]
+            raw = args[i + 1].strip().lower()
             if raw not in ("core", "full"):
-                sys.stderr.write(f"Error: Invalid --mcp-profile '{raw}'. Expected 'core' or 'full'.\n")
+                sys.stderr.write(f"Error: Invalid --mcp-profile '{args[i + 1]}'. Expected 'core' or 'full'.\n")
                 sys.exit(2)
-            profile = "core" if raw == "core" else "full"
+            cli_profile = "core" if raw == "core" else "full"
             i += 2
         elif arg.startswith("--mcp-profile="):
-            raw = arg.split("=", 1)[1]
+            raw_orig = arg.split("=", 1)[1]
+            raw = raw_orig.strip().lower()
             if raw not in ("core", "full"):
-                sys.stderr.write(f"Error: Invalid --mcp-profile '{raw}'. Expected 'core' or 'full'.\n")
+                sys.stderr.write(f"Error: Invalid --mcp-profile '{raw_orig}'. Expected 'core' or 'full'.\n")
                 sys.exit(2)
-            profile = "core" if raw == "core" else "full"
+            cli_profile = "core" if raw == "core" else "full"
             i += 1
         else:
             remaining.append(arg)
             i += 1
-    return profile, remaining
+
+    if cli_profile is not None:
+        return cli_profile, remaining
+
+    env_raw = os.environ.get("BRAIN79_MCP_PROFILE")
+    if env_raw is not None and env_raw.strip() != "":
+        env_clean = env_raw.strip().lower()
+        if env_clean not in ("core", "full"):
+            sys.stderr.write(
+                f"Error: Invalid BRAIN79_MCP_PROFILE '{env_raw}'. Expected 'core' or 'full'.\n"
+            )
+            sys.exit(2)
+        return ("core" if env_clean == "core" else "full"), remaining
+
+    return "core", remaining
 
 
-def _cmd_serve(project_root: Path | None, mcp_profile: Literal["core", "full"] = "full") -> None:
+def _cmd_serve(project_root: Path | None, mcp_profile: Literal["core", "full"] = "core") -> None:
     from brain79 import config
 
     if project_root is not None:
         config.set_project_root(project_root)
-    if mcp_profile == "full":
+    if mcp_profile == "core":
         from brain79.server import mcp
 
         mcp.run()
@@ -153,7 +168,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # 1. No subcommand or arguments -> FastMCP stdio server fallback (ADR-001)
     if not filtered:
-        if mcp_profile == "full":
+        if mcp_profile == "core":
             _cmd_serve(project_root)
         else:
             _cmd_serve(project_root, mcp_profile=mcp_profile)

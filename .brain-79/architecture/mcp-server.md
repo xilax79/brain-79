@@ -9,7 +9,7 @@ applies_to:
 related:
   - architecture/symmetry.md
   - features/mcp-server.md
-applies_to_digest: "sha256:11048f19606e8f55"
+applies_to_digest: "sha256:b064e7cba315e5c7"
 applies_to_count: 2
 ---
 
@@ -64,4 +64,4 @@ During shutdown or client disconnection, `FastMCP` closes associated file descri
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

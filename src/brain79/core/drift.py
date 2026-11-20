@@ -231,6 +231,7 @@ class WorkspaceIndex:
         known_dirs: set[str],
         known_wiki_prefixes: set[str],
         overlay_fs: dict[str, str] | None = None,
+        git_cache: Any = None,
     ) -> None:
         self.project_root = project_root
         self.wiki_root = wiki_root
@@ -238,8 +239,31 @@ class WorkspaceIndex:
         self.known_dirs = known_dirs
         self.known_wiki_prefixes = known_wiki_prefixes
         self.overlay_fs = overlay_fs or {}
+        self.git_cache = git_cache
         self.drift_cache: dict[str, list[dict[str, Any]]] = {}
         self._pattern_cache: dict[str, list[str]] = {}
+        self._contained_path_cache: dict[str, Path | None] = {}
+
+    def resolve_contained_path(self, rel_posix_path: str) -> Path:
+        """Resolve and memoize a contained workspace path, rejecting escapes outside project_root."""
+        if rel_posix_path in self._contained_path_cache:
+            cached = self._contained_path_cache[rel_posix_path]
+            if cached is None:
+                raise ValueError(
+                    f"Path '{rel_posix_path}' resolves outside project root '{self.project_root}'."
+                )
+            return cached
+        try:
+            resolved = _resolve_contained_path(
+                self.project_root,
+                rel_posix_path,
+                resolved_root=self.project_root,
+            )
+            self._contained_path_cache[rel_posix_path] = resolved
+            return resolved
+        except ValueError:
+            self._contained_path_cache[rel_posix_path] = None
+            raise
 
     @classmethod
     def build(
@@ -247,6 +271,7 @@ class WorkspaceIndex:
         project_root: Path,
         wiki_root: Path,
         overlay_fs: dict[str, str] | None = None,
+        git_cache: Any = None,
     ) -> "WorkspaceIndex":
         p_root = project_root.resolve()
         w_root = wiki_root.resolve()
@@ -260,7 +285,7 @@ class WorkspaceIndex:
 
         is_git_ok = False
         from brain79.core.handoff_freshness import is_git_workspace
-        if is_git_workspace(p_root):
+        if is_git_workspace(p_root, git_cache=git_cache):
             try:
                 ls_paths = git_ls_files(p_root, timeout=2.0)
                 is_git_ok = True
@@ -344,6 +369,7 @@ class WorkspaceIndex:
             known_dirs=known_dirs,
             known_wiki_prefixes=known_wiki_prefixes,
             overlay_fs=overlay_fs,
+            git_cache=git_cache,
         )
 
     def find_matching_files(self, patterns: list[str]) -> list[str]:
@@ -529,13 +555,18 @@ def compute_wiki_article_digest(content: str) -> str:
         return "sha256:" + hashlib.sha256(norm).hexdigest()[:16]
 
 
-def _resolve_contained_path(project_root: Path, rel_posix_path: str) -> Path:
+def _resolve_contained_path(
+    project_root: Path,
+    rel_posix_path: str,
+    *,
+    resolved_root: Path | None = None,
+) -> Path:
     """Resolve `project_root / rel_posix_path` and verify it remains strictly inside `project_root`.
 
     Raises ValueError if the resolved path (including symlink targets or `..` traversals)
     escapes `project_root`.
     """
-    p_root = project_root.resolve()
+    p_root = resolved_root if resolved_root is not None else project_root.resolve()
     candidate = (p_root / rel_posix_path).resolve()
     if not candidate.is_relative_to(p_root):
         raise ValueError(
@@ -589,7 +620,7 @@ def compute_applies_to_manifest(
                 d = compute_file_content_digest(None, content_bytes=content_overlay.encode("utf-8"))
         else:
             try:
-                disk_p = _resolve_contained_path(p_root, p)
+                disk_p = ws_index.resolve_contained_path(p)
             except ValueError:
                 continue
             if p.startswith(f"{wiki_rel}/") and p.endswith(".md"):
@@ -916,13 +947,16 @@ def detect_all_drift(
     workspace_index: WorkspaceIndex | None = None,
     overlay_fs: dict[str, str] | None = None,
     manifest_data: dict[str, Any] | None = None,
+    git_cache: Any = None,
 ) -> list[dict[str, Any]]:
     """Detect documentation drift across all active articles in the wiki."""
     w_root = (wiki_root or get_wiki_root()).resolve()
     p_root = (project_root or w_root.parent or get_project_root()).resolve()
 
     if workspace_index is None:
-        workspace_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=overlay_fs)
+        workspace_index = WorkspaceIndex.build(
+            p_root, w_root, overlay_fs=overlay_fs, git_cache=git_cache
+        )
     if manifest_data is None:
         manifest_data = load_drift_manifest(w_root)
 

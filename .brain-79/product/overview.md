@@ -6,7 +6,7 @@ applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:eb9eacdca01b7203"
+applies_to_digest: "sha256:1f4976fb1572e1a3"
 applies_to_count: 11
 ---
 
@@ -41,4 +41,4 @@ LLMs maintain wikis that degrade organically:
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

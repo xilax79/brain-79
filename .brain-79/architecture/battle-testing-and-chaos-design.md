@@ -21,7 +21,7 @@ related:
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
 last_updated: 2026-11-20
-applies_to_digest: "sha256:1265c016151e4647"
+applies_to_digest: "sha256:1c526042d64ee0d9"
 applies_to_count: 8
 ---
 
@@ -150,4 +150,4 @@ Gate for `v0.10.0` (all required): the 5-cell L-shaped CI matrix is green on the
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

@@ -851,31 +851,48 @@ def brain79_doctor(
 
 CORE_TOOLS: frozenset[str] = frozenset({
     "brain79_orient",
-    "brain79_index",
+    "brain79_session_commit",
     "brain79_read",
     "brain79_read_batch",
-    "brain79_schema",
-    "brain79_write",
     "brain79_edit",
-    "brain79_write_many",
-    "brain79_list",
+    "brain79_context",
     "brain79_search",
     "brain79_lint",
-    "brain79_session_commit",
-    "brain79_handoff_read",
-    "brain79_handoff_write",
 })
 
 ADMIN_TOOLS: frozenset[str] = frozenset({
+    "brain79_index",
+    "brain79_schema",
+    "brain79_write",
+    "brain79_write_many",
+    "brain79_list",
     "brain79_ingest",
+    "brain79_handoff_read",
+    "brain79_handoff_write",
     "brain79_handoff_purge",
-    "brain79_context",
     "brain79_bootstrap",
     "brain79_navigate",
     "brain79_migrate",
     "brain79_update_project",
     "brain79_doctor",
 })
+
+_CORE_INSTRUCTIONS = (
+    "brain79 is a per-project AI memory system running in the compact 'core' MCP profile (8 hot-path tools). "
+    "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation "
+    "(including INDEX.md, active schema summary, latest handoff, and governing articles). "
+    "Use brain79_session_commit(writes?, edits?, handoff?) to apply article writes, edits, and handoffs atomically, "
+    "and brain79_lint() to verify wiki health. "
+    "For administrative operations (migrate, doctor, bootstrap, update-project), run the symmetric CLI `brain79 <command>` "
+    "or start the server with `--mcp-profile full` / `BRAIN79_MCP_PROFILE=full`."
+)
+
+_FULL_INSTRUCTIONS = (
+    "brain79 is a per-project AI memory system running in the 'full' MCP profile (22 tools). "
+    "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation. "
+    "Call brain79_schema() before writing or updating articles to inspect exact frontmatter rules, "
+    "and prefer brain79_session_commit() for atomic end-of-session updates."
+)
 
 _ALL_TOOL_FUNCS = (
     brain79_orient,
@@ -903,7 +920,7 @@ _ALL_TOOL_FUNCS = (
 )
 
 
-def create_mcp_server(profile: Literal["core", "full"] = "full") -> FastMCP:
+def create_mcp_server(profile: Literal["core", "full"] = "core") -> FastMCP:
     """Create a configured FastMCP server instance for the requested tool profile."""
     if profile not in ("core", "full"):
         raise ValueError(f"Invalid MCP profile: {profile!r}. Expected 'core' or 'full'.")
@@ -911,11 +928,7 @@ def create_mcp_server(profile: Literal["core", "full"] = "full") -> FastMCP:
     server = FastMCP(
         "brain79",
         version=__version__,
-        instructions=(
-            "brain79 is a per-project AI memory system. "
-            "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation. "
-            "Call brain79_schema() before writing or updating articles to inspect exact frontmatter rules."
-        ),
+        instructions=_CORE_INSTRUCTIONS if profile == "core" else _FULL_INSTRUCTIONS,
     )
     allowed = CORE_TOOLS if profile == "core" else (CORE_TOOLS | ADMIN_TOOLS)
     for fn in _ALL_TOOL_FUNCS:
@@ -924,4 +937,4 @@ def create_mcp_server(profile: Literal["core", "full"] = "full") -> FastMCP:
     return server
 
 
-mcp = create_mcp_server(profile="full")
+mcp = create_mcp_server(profile="core")

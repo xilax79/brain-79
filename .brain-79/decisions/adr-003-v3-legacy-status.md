@@ -40,4 +40,4 @@ We chose to implement a progressive migration mechanism (`brain79 migrate`) that
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

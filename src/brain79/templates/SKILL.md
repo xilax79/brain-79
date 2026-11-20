@@ -9,8 +9,8 @@ description: Comprehensive operational manual and command reference for the brai
 
 > [!IMPORTANT]
 > Prefer **MCP tools** when the brain79 MCP server is connected (most reliable).
-> If MCP is not available, fall back to the **CLI** (`brain79 <subcommand>`). Both
-> interfaces are 1:1 symmetric. Use whatever works in your environment.
+> The MCP server defaults to the compact `core` profile (8 hot-path tools: `brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`).
+> For administrative tools, use the symmetric **CLI** (`brain79 <subcommand>`) or start the MCP server with `--mcp-profile full` / `BRAIN79_MCP_PROFILE=full` (all 22 tools).
 
 ### Core wiki operations (MCP preferred, CLI fallback)
 
@@ -81,7 +81,7 @@ degradation. Always run these checks before declaring wiki work complete.
 
 When creating or updating wiki articles via `brain79_write`, `brain79_edit`, or `brain79_write_many`:
 1. **Frontmatter summary**: provide a concise one-line `summary:` in YAML frontmatter (e.g. `summary: one-line explanation of the article`). This summary is indexed directly into `INDEX.md` Quick navigation.
-2. **Back-navigation**: include a backlink at the end of the article (`[← Volver al Índice](../INDEX.md)`) for seamless reading in VS Code, Obsidian, and GitHub.
+2. **Back-navigation**: include a backlink at the end of the article (`[← Back to Index](../INDEX.md)`, configurable via `backlink_label:` in `SCHEMA.md`) for seamless reading in VS Code, Obsidian, and GitHub.
 
 ### When fixing wiki issues (workflow)
 

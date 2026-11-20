@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed foundation (phases 0-10) and prioritized evolution phases (11-15) for public launch, team collaboration, polyglot guards, and PyPI release
+summary: project roadmap covering completed foundation (phases 0-11) and prioritized evolution phases (12-15) for team collaboration, polyglot guards, and PyPI release
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -25,8 +25,10 @@ related:
   - architecture/agy-init-and-plugin-design.md
   - architecture/battle-testing-and-chaos-design.md
   - architecture/core-refactoring-and-hardening-design.md
+  - architecture/public-release-readiness-design.md
+  - architecture/team-collaboration-and-onboarding-design.md
 last_updated: 2026-11-20
-applies_to_digest: "sha256:e78810519fc44da4"
+applies_to_digest: "sha256:6ba5881a8671db9a"
 applies_to_count: 9
 ---
 
@@ -62,19 +64,20 @@ Detailed specifications for shipped phases live in their dedicated architecture 
 - **[x] Phase 7.1 (`v0.9.1`)**: native `agy` plugin, progressive disclosure `AGENTS.md`/`SKILL.md`, ancestor root walk, doctor checks.
 - **[x] Phase 8 (`v0.9.2`)**: zero-clone install via `uv tool`, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation structure.
 - **[x] Phase 9 (`v0.10.0`)**: automated battle-testing, multi-OS CI matrix, chaos fuzzing, 5-archetype gauntlet, and transactional rollback.
-- **[x] Phase 10 (`v0.11.0`)**: core architectural refactoring and hardening (`OrderedFileLock`, full Pass 3 rollback, `core/git_ops.py`, fail-closed guardrails, symlink/CLI security, `core/ast_guards/`, `core/harnesses/`, `--mcp-profile`, `ProjectContext`).
+- **[x] Phase 10 (`v0.11.0`)**: core architectural refactoring and hardening (`OrderedFileLock`, full Pass 3 rollback, `core/git_ops.py`, fail-closed guardrails, symlink/CLI security, `core/ast_guards/`, `core/harnesses/`, `--mcp-profile`, `ProjectContext`). Specification: [core-refactoring-and-hardening-design.md](core-refactoring-and-hardening-design.md).
+- **[x] Phase 11 (`v0.12.0`)**: public release readiness and friction removal (English-first backlinks, native Claude/Cursor MDC/Copilot instruction adapters, `core` 8-tool MCP default, honest `README.md` limitations, Windows CI `orient()` hot-path optimization). Specification: [public-release-readiness-design.md](public-release-readiness-design.md).
 
 ---
 
-## Strategic evolution roadmap (`v0.12.0` onward)
+## Strategic evolution roadmap (`v0.13.0` onward)
 
 ```
 +-----------------------------------------------------------------------------------+
 | Phase 10 (Pre-P0): Core architectural refactoring & hardening (v0.11.0)           | [x] Done
 +-----------------------------------------------------------------------------------+
-| Phase 11 (P0): Public release readiness & friction removal (v0.12.0)              | [ ] Next
+| Phase 11 (P0): Public release readiness & friction removal (v0.12.0)              | [x] Done
 +-----------------------------------------------------------------------------------+
-| Phase 12 (P1): Team-safe Git collaboration & low-friction onboarding (v0.13.0)    | [ ] Planned
+| Phase 12 (P1): Team-safe Git collaboration & low-friction onboarding (v0.13.0)    | [ ] Next
 +-----------------------------------------------------------------------------------+
 | Phase 13 (P1): Polyglot AST guards & hybrid local retrieval (v0.14.0)             | [ ] Planned
 +-----------------------------------------------------------------------------------+
@@ -91,7 +94,7 @@ Detailed specifications for shipped phases live in their dedicated architecture 
 | Priority | Phase | Target version | Primary objective |
 |---|---|---|---|
 | **Pre-P0** | Phase 10 | `v0.11.0` (Done) | Fixed concurrency/rollback/security defects and decomposed monoliths for phases 11–15. |
-| **P0** | Phase 11 | `v0.12.0` | Remove immediate public-launch blockers and reduce per-turn token tax. |
+| **P0** | Phase 11 | `v0.12.0` (Done) | Removed immediate public-launch blockers and reduced per-turn token tax. |
 | **P1** | Phase 12 | `v0.13.0` | Eliminate multi-developer Git merge conflicts and ease brownfield adoption. |
 | **P1** | Phase 13 | `v0.14.0` | Extend AST protection beyond Python and upgrade local search quality. |
 | **P2** | Phase 14 | `v0.15.0` | Enforce protocol via native agent hooks, PR gates, and human observability. |
@@ -100,6 +103,8 @@ Detailed specifications for shipped phases live in their dedicated architecture 
 ---
 
 ## Phase 11 (`v0.12.0`) — Public release readiness and friction removal (P0)
+
+Detailed specification and acceptance criteria: [public-release-readiness-design.md](public-release-readiness-design.md).
 
 Goal: remove every avoidable adoption blocker before announcing `brain-79` publicly as a preview release.
 
@@ -111,6 +116,8 @@ Goal: remove every avoidable adoption blocker before announcing `brain-79` publi
 ---
 
 ## Phase 12 (`v0.13.0`) — Team-safe Git collaboration and low-friction onboarding (P1)
+
+Detailed specification and acceptance criteria: [team-collaboration-and-onboarding-design.md](team-collaboration-and-onboarding-design.md).
 
 Goal: make `brain-79` practical for multi-developer teams on parallel branches and fast to adopt on existing large codebases.
 
@@ -160,4 +167,4 @@ Every phase in this roadmap is achievable **incrementally on the existing Python
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

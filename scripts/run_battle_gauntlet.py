@@ -281,7 +281,7 @@ def build_archetype_2(ws: Path) -> dict[str, Any]:
             f"Unformatted legacy body text number {i}.\n\n"
             f"[Broken Link](missing_{i}.md)\n\n"
             "---\n\n"
-            "[← Volver al Índice](../INDEX.md)\n"
+            "[← Back to Index](../INDEX.md)\n"
         )
         path = w_root / "topics" / f"legacy_{i}.md"
         path.write_text(body, encoding="utf-8")
@@ -600,7 +600,7 @@ def run_archetype_3_lifecycle(ws: Path, perf_factor: float = 1.0) -> list[dict[s
             "## Overview\n"
             "Custom schema folder test.\n\n"
             "---\n\n"
-            "[← Volver al Índice](../INDEX.md)\n"
+            "[← Back to Index](../INDEX.md)\n"
         )
         write_article("reports/q4_analysis.md", report_content, wiki_root=w_root)
 
@@ -917,7 +917,7 @@ def build_archetype_5(ws: Path) -> dict[str, Any]:
             "## Overview\n"
             f"Scale benchmark document {i}.\n\n"
             "---\n\n"
-            "[← Volver al Índice](../INDEX.md)\n"
+            "[← Back to Index](../INDEX.md)\n"
         )
         writes_batch.append({"path": f"{d}/art_{i}.md", "content": content})
 

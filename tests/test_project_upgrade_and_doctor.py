@@ -302,7 +302,7 @@ def test_migrate_wiki_v2_repairs_backlink_colons_and_summary_on_existing_frontma
     assert "features/existing-feat.md" in report
 
     new_content = article.read_text(encoding="utf-8")
-    assert "[← Volver al Índice](../INDEX.md)" in new_content
+    assert "[← Back to Index](../INDEX.md)" in new_content
     assert "- **Field**: Value with colon inside bold." in new_content
     assert "summary: raw un-sanitized summary" in new_content
 
@@ -380,11 +380,11 @@ def test_migrate_wiki_v2_root_article_never_gets_parent_index_backlink(tmp_path:
     migrate_wiki(w_root)
 
     direct_content = direct_root.read_text(encoding="utf-8")
-    assert "[← Volver al Índice](INDEX.md)" in direct_content
+    assert "[← Back to Index](INDEX.md)" in direct_content
     assert "../INDEX.md" not in direct_content
 
     sub_content = sub_file.read_text(encoding="utf-8")
-    assert "[← Volver al Índice](../INDEX.md)" in sub_content
+    assert "[← Back to Index](../INDEX.md)" in sub_content
     assert "../../INDEX.md" not in sub_content
 
 
@@ -541,9 +541,11 @@ def test_doctor_fix_heals_skew_to_exit_code_0(tmp_path: Path) -> None:
 
     # Simulate older project committed without .cursor
     cursor_cfg = tmp_path / ".cursor" / "mcp.json"
-    if cursor_cfg.exists():
-        cursor_cfg.unlink()
-        (tmp_path / ".cursor").rmdir()
+    cursor_dir = tmp_path / ".cursor"
+    if cursor_dir.exists():
+        import shutil
+
+        shutil.rmtree(cursor_dir)
 
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(

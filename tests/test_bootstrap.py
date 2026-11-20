@@ -598,7 +598,8 @@ def test_resolve_scope_paths_nonexistent_returns_warning(project: Path) -> None:
 def test_mcp_tool_registered() -> None:
     import asyncio
 
-    tools = asyncio.run(server_module.mcp.list_tools())
+    full_server = server_module.create_mcp_server(profile="full")
+    tools = asyncio.run(full_server.list_tools())
     tool_names = [t.name for t in tools]
     assert "brain79_bootstrap" in tool_names
 

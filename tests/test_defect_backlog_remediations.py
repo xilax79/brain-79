@@ -22,7 +22,7 @@ def test_init_general_profile_has_no_broken_links(tmp_path: Path) -> None:
     schema_content = (wiki_root / "SCHEMA.md").read_text(encoding="utf-8")
 
     assert "../INDEX.md" not in schema_content, "SCHEMA.md at root should link to INDEX.md, not ../INDEX.md"
-    assert "[← Volver al Índice](INDEX.md)" in schema_content
+    assert "[← Back to Index](INDEX.md)" in schema_content
 
     # Strict linting must be completely OK out of the box
     set_project_root(tmp_path)

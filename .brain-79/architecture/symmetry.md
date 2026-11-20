@@ -11,7 +11,7 @@ related:
   - architecture/current-state.md
   - features/cli.md
   - features/mcp-server.md
-applies_to_digest: "sha256:603549443430cf7d"
+applies_to_digest: "sha256:9b196098e628245c"
 applies_to_count: 3
 ---
 
@@ -64,4 +64,4 @@ To ensure safety across both interfaces, destructive actions default to dry-run 
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

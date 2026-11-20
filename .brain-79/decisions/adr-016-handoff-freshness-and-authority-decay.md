@@ -45,4 +45,4 @@ Establish that **a handoff is a perishable transition note, not a permanent sour
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

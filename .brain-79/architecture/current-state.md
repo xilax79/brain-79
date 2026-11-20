@@ -13,7 +13,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:3b970eab59b826d1"
+applies_to_digest: "sha256:bf429801cd6f804e"
 applies_to_count: 32
 ---
 
@@ -21,7 +21,7 @@ applies_to_count: 32
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.11.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.12.0.
 
 ## Active subsystem topology
 
@@ -53,9 +53,9 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Completion of `v0.11.0` (Phase 10: core architectural refactoring and hardening — ordered lock hierarchy, TOCTOU elimination, full Pass 3 rollback, centralized `core/git_ops.py`, fail-closed guardrails, security containment, `core/ast_guards/`, `core/harnesses/`, `create_mcp_server(profile=...)`, and `ContextVar`-backed `ProjectContext`).
-- Next up: Phase 11 (`v0.12.0`, P0 — public release readiness and friction removal).
+- Completion of `v0.12.0` (public release readiness and friction removal: English-first backlink standardization, native Claude/Cursor MDC/Copilot instruction adapters with `--harnesses`, `core` 8-tool default MCP profile, honest `README.md` limitations, and Windows CI `orient()` hot-path optimization).
+- Next up: `v0.13.0` (team-safe Git collaboration and low-friction brownfield onboarding).
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

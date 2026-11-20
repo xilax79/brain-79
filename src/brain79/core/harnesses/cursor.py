@@ -17,7 +17,7 @@ class CursorAdapter:
     def sync(self, project_root: Path) -> list[str]:
         from brain79.core.init_project import sync_project_mcp_configs
 
-        sync_project_mcp_configs(project_root)
+        sync_project_mcp_configs(project_root, targets={"cursor"})
         return [".cursor/mcp.json"]
 
     def diagnose(self, project_root: Path) -> list[str]:

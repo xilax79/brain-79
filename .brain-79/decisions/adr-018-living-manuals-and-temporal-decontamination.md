@@ -64,4 +64,4 @@ Standalone changelog articles (`vX-Y-Z.md`) are maintained for active releases w
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

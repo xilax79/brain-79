@@ -22,7 +22,7 @@ related:
   - decisions/adr-015-sentence-case-first-policy.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
 last_updated: 2026-11-17
-applies_to_digest: "sha256:c40e6b31f0f4a4d8"
+applies_to_digest: "sha256:51b08e1808aee76c"
 applies_to_count: 8
 ---
 
@@ -177,4 +177,4 @@ Execute sequentially on a new feature branch:
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

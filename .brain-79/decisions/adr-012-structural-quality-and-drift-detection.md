@@ -18,7 +18,7 @@ related:
   - decisions/adr-011-session-commit-and-batch-reading.md
   - architecture/roadmap-industrial-scale.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:ca4a91352cfaf2a8"
+applies_to_digest: "sha256:f4b4dc39b90c5784"
 applies_to_count: 6
 ---
 
@@ -68,4 +68,4 @@ We implemented **Phase 4: Structural Article Quality & Deterministic Drift Detec
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

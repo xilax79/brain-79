@@ -11,7 +11,7 @@ applies_to:
 related:
   - architecture/symmetry.md
   - architecture/dispatcher.md
-applies_to_digest: "sha256:de8cb35742ae9bb5"
+applies_to_digest: "sha256:8cc731b7412aafe3"
 applies_to_count: 3
 ---
 
@@ -72,4 +72,4 @@ brain79 lint --strict --format json
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

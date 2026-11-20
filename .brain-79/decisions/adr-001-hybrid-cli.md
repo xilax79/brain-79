@@ -39,4 +39,4 @@ We chose to implement `brain-79` as a dual-mode hybrid tool:
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

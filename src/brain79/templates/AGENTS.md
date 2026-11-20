@@ -21,7 +21,7 @@
 - **Handoff freshness and authority decay**: a handoff is a perishable transition note, not a source of truth. If a handoff is marked as stale (due to subsequent wiki or code changes) or comes from another branch, treat its pending work and boot instruction as historical context; verify against current code and governing articles before executing instructions.
 
 ## Tools and execution protocol
-- **MCP preferred, CLI fallback**: prefer MCP tools (`brain79_*`) when connected; use symmetric CLI commands (`brain79 <subcommand>`) as fallback.
+- **MCP preferred, CLI fallback**: prefer MCP tools (`brain79_*`) when connected; use symmetric CLI commands (`brain79 <subcommand>`) as fallback. The MCP server defaults to the compact `core` profile (8 hot-path tools); pass `--mcp-profile full` or set `BRAIN79_MCP_PROFILE=full` to expose all 22 tools.
 - **Two-call session workflow**:
   1. Cold start: `brain79_orient(task?, paths?)`.
   2. Final wrap-up: apply writes, edits, and handoffs atomically via `brain79_session_commit(writes=[...], handoff={...})`.
@@ -34,7 +34,7 @@
 2. **Visual and structural clarity**: prefer structured comparisons, concise bullet points, and clean ASCII diagrams over dense text. Use clear H2/H3 section hierarchies.
 3. **Dual-audience rule (human and agent symbiosis)**: plain English reduces entropy for LLMs and guarantees human auditability in PRs.
 4. **Pure index invariant**: `INDEX.md` is an automated routing table, not a freeform scratchpad. Never write hardcoded roadmaps directly inside `INDEX.md`.
-5. **Summary and navigation invariants**: every wiki article must declare an explicit, one-line `summary:` in frontmatter and conclude with `[← Volver al Índice](../INDEX.md)`.
+5. **Summary and navigation invariants**: every wiki article must declare an explicit, one-line `summary:` in frontmatter and conclude with `[← Back to Index](../INDEX.md)` (configurable via `backlink_label:` in `SCHEMA.md`).
 6. **Session knowledge triage and persistence protocol (the Amnesia Test, No-Op Idempotence, and Zero-Modification Rule)**:
    - When asked to update the wiki or wrap up, evaluate using **the Amnesia Test**: *"If this session context were wiped right now, would valuable research findings, domain analysis, forecasts, decisions, or implementation context be lost?"*
    - Classify into three categories:

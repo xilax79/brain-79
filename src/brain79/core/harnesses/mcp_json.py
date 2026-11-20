@@ -17,7 +17,7 @@ class McpJsonAdapter:
     def sync(self, project_root: Path) -> list[str]:
         from brain79.core.init_project import sync_project_mcp_configs
 
-        sync_project_mcp_configs(project_root)
+        sync_project_mcp_configs(project_root, targets={"mcp_json"})
         return [".mcp.json"]
 
     def diagnose(self, project_root: Path) -> list[str]:

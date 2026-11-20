@@ -36,4 +36,4 @@ Adopt a strict **Sentence case first** policy across the entire project, its int
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

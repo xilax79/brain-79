@@ -2,7 +2,23 @@
 
 All notable changes to `brain-79` will be documented in this file.
 
+> **Pre-GA versioning policy (ADR-017)**: `brain-79` follows SemVer 2.0.0 §4 pre-GA (`0.y.z`) versioning while maturing toward `1.0.0` General Availability. Minor bumps (`0.y.0`) may introduce controlled protocol or default changes documented with explicit migration notes below.
+
 ## [Unreleased]
+
+## [0.12.0] - 2026-11-20
+
+### Added
+- **Public release readiness and friction removal (Phase 11)**:
+  - **English-first backlink standardization**: replaced the hardcoded Spanish footer with `[← Back to Index](../INDEX.md)` (`DEFAULT_BACKLINK_LABEL`), added optional `backlink_label:` customization in `.brain-79/SCHEMA.md`, preserved backward-compatible recognition of legacy Spanish footers in `lint` and `validate_article_content()`, and enabled deterministic idempotent canonicalization in `migrate_wiki()`.
+  - **Native multi-harness instruction adapters**: extracted shared delimited block engine (`core/harnesses/_delimited.py`), added compact instruction template (`HARNESS_COMPACT.md`), and registered `ClaudeCodeAdapter` (`CLAUDE.md`), `CursorRulesAdapter` (`.cursor/rules/brain79.mdc` with `alwaysApply: true`), and `CopilotAdapter` (`.github/copilot-instructions.md`). Added `--harnesses` selective installation on `brain79 init` and wired full diagnostics and dirty-tree guards into `brain79 doctor`.
+  - **MCP tool surface compaction (`core` default)**: compacted `CORE_TOOLS` to 8 hot-path tools and switched the default FastMCP server profile from `full` (22 tools) to `core` (~64% schema reduction per turn), with `BRAIN79_MCP_PROFILE` env var support, CLI `--mcp-profile` precedence, and profile-tailored server instructions.
+  - **Honest positioning**: added `## Limitations and trade-offs` and updated MCP profile / native harness guides in `README.md`.
+  - **Windows CI `orient()` hot-path optimization**: memoized contained path resolution in `WorkspaceIndex`, replaced `copy.deepcopy()` in `_PARSE_CACHE` with a lightweight YAML primitive cloner, and shared `GitSessionCache` across `orient()` sub-calls.
+
+### Migration notes
+- **MCP profile default changed to `core` (8 tools)**: clients requiring all 22 MCP tools should start the server with `brain79 --mcp-profile full` or set `BRAIN79_MCP_PROFILE=full`, or use the symmetric CLI (`brain79 <command>`) for administrative tasks.
+- **English backlinks and native harnesses**: run `brain79 update-project` in existing repositories to migrate legacy `[← Volver al Índice]` footers to `[← Back to Index]` and sync `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/brain79.mdc`, and `.github/copilot-instructions.md` non-destructively.
 
 ## [0.11.0] - 2026-11-20
 

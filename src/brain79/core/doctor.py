@@ -93,6 +93,9 @@ def run_doctor(
                     p_root,
                     paths=[
                         "AGENTS.md",
+                        "CLAUDE.md",
+                        ".cursor/rules/brain79.mdc",
+                        ".github/copilot-instructions.md",
                         ".brain-79",
                         ".mcp.json",
                         ".agents/mcp_config.json",
@@ -126,6 +129,8 @@ def run_doctor(
                 fixed.append("Synchronized SCHEMA.md to schema_version 2")
             if up_res.get("mcp_configs"):
                 fixed.append(f"Configured MCP harnesses: {', '.join(up_res['mcp_configs'])}")
+            if up_res.get("instruction_harnesses"):
+                fixed.append(f"Synchronized native instruction harnesses: {', '.join(up_res['instruction_harnesses'])}")
             if up_res.get("git_hook") and "updated" in str(up_res["git_hook"]):
                 fixed.append("Installed/updated git pre-commit hook")
             mig_rep = migrate_wiki(w_root, dry_run=False)
@@ -233,6 +238,21 @@ def run_doctor(
         except Exception as e:
             protocol_status = "error"
             protocol_msg.append(f"Could not parse SCHEMA.md: {e}")
+
+    # Also diagnose active native instruction harnesses (CLAUDE.md, .cursor/rules/brain79.mdc, .github/copilot-instructions.md)
+    from brain79.core.harnesses import diagnose_all_harnesses
+
+    all_harness_diags = diagnose_all_harnesses(p_root)
+    for h_name in ("claude_code", "cursor_rules", "copilot"):
+        for h_issue in all_harness_diags.get(h_name, []):
+            if "corrupted_harness_delimiters" in h_issue:
+                protocol_status = "error"
+                protocol_act = "Restore delimiters or repair the corrupted harness file."
+            elif protocol_status != "error":
+                protocol_status = "warning"
+                if not protocol_act:
+                    protocol_act = "Run 'brain79 update-project' or 'brain79 doctor --fix' to sync native harness blocks."
+            protocol_msg.append(h_issue.rstrip("."))
 
     if not protocol_msg:
         checks.append(

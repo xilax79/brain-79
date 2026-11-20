@@ -15,7 +15,7 @@ related:
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - architecture/roadmap-industrial-scale.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:903eef44f6c014e9"
+applies_to_digest: "sha256:b930f7ec11b84a4e"
 applies_to_count: 4
 ---
 
@@ -67,4 +67,4 @@ We introduced **Phase 3: Zero-Turn Session Execution**, completing the Two-Call 
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

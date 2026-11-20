@@ -17,7 +17,7 @@ related:
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - decisions/adr-012-structural-quality-and-drift-detection.md
   - decisions/adr-018-living-manuals-and-temporal-decontamination.md
-applies_to_digest: "sha256:20b8d3403e63cf0c"
+applies_to_digest: "sha256:c646993b099ec71e"
 applies_to_count: 7
 ---
 
@@ -63,4 +63,4 @@ brain79 lint --suggest-extract
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

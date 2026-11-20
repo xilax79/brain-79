@@ -80,8 +80,8 @@ Handles user auth tokens.
 """
     write_article("features/auth.md", content)
     saved = read_article("features/auth.md")
-    assert "[← Volver al Índice](../INDEX.md)" in saved
-    assert "\n---\n\n[← Volver al Índice](../INDEX.md)" in saved
+    assert "[← Back to Index](../INDEX.md)" in saved
+    assert "\n---\n\n[← Back to Index](../INDEX.md)" in saved
 
 
 def test_backlink_idempotency(clean_project: Path) -> None:
@@ -113,7 +113,7 @@ def test_backlink_nested_subfolders() -> None:
     """Nested subfolders compute correct relative path depth to INDEX.md."""
     body = "# Deep Nested\n\n## Overview\nDeep section."
     normalized = normalize_backlink_footer(body, "features/sub/deep/doc.md")
-    assert "[← Volver al Índice](../../../INDEX.md)" in normalized
+    assert "[← Back to Index](../../../INDEX.md)" in normalized
 
 
 def test_backlink_exclusion_rules() -> None:
@@ -146,7 +146,7 @@ Feature 1 details.
     ]
     write_many_articles(batch)
     saved = read_article("features/f1.md")
-    assert "[← Volver al Índice](../INDEX.md)" in saved
+    assert "[← Back to Index](../INDEX.md)" in saved
 
     edit_article(
         "features/f1.md",
@@ -154,7 +154,7 @@ Feature 1 details.
     )
     edited = read_article("features/f1.md")
     assert "Feature 1 updated details." in edited
-    assert edited.count("[← Volver al Índice]") == 1
+    assert edited.count("[← Back to Index]") == 1
 
 
 # ==============================================================================
@@ -185,12 +185,12 @@ def test_generate_document_skeleton_and_schema_docs() -> None:
     assert "## Context" in skeleton
     assert "## Decision" in skeleton
     assert "## Consequences" in skeleton
-    assert "[← Volver al Índice](../INDEX.md)" in skeleton
+    assert "[← Back to Index](../INDEX.md)" in skeleton
 
     feature_skel = generate_document_skeleton("feature")
     assert "type: feature" in feature_skel
     assert "## Overview" in feature_skel
-    assert "[← Volver al Índice](../INDEX.md)" in feature_skel
+    assert "[← Back to Index](../INDEX.md)" in feature_skel
 
     docs = get_schema_documentation("decision")
     assert "Document Skeleton:" in docs
@@ -492,7 +492,7 @@ Stripe payment processing.
     assert result["health_status"] == "ok"
 
     saved = read_article("features/billing.md")
-    assert "[← Volver al Índice](../INDEX.md)" in saved
+    assert "[← Back to Index](../INDEX.md)" in saved
 
 
 # ==============================================================================
@@ -506,7 +506,7 @@ def test_adversarial_defect_1_backlink_tail_outside_code_fence() -> None:
     body_with_code = """# Guide
 
 ```markdown
-Use [← Volver al Índice](../INDEX.md) at the end.
+Use [← Back to Index](../INDEX.md) at the end.
 ```
 
 ## Overview
@@ -514,13 +514,13 @@ Content here.
 """
     normalized = normalize_backlink_footer(body_with_code, "features/guide.md")
     # Must append the real footer at the end outside the fence
-    assert normalized.rstrip().endswith("[← Volver al Índice](../INDEX.md)")
-    assert normalized.count("[← Volver al Índice]") == 2  # one in code block, one at tail
+    assert normalized.rstrip().endswith("[← Back to Index](../INDEX.md)")
+    assert normalized.count("[← Back to Index]") == 2  # one in code block, one at tail
 
     # 2. Short single-line body gets backlink
     single_line = "# Auth Feature"
     norm_single = normalize_backlink_footer(single_line, "features/auth.md")
-    assert "[← Volver al Índice](../INDEX.md)" in norm_single
+    assert "[← Back to Index](../INDEX.md)" in norm_single
 
 
 def test_adversarial_defect_2_wall_of_text_and_word_boundaries(clean_project: Path) -> None:

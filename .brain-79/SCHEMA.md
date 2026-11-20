@@ -82,8 +82,10 @@ Articles in subdirectories (`product/`, `architecture/`, `features/`, `decisions
 ```markdown
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)
 ```
+
+To customize the backlink label for this repository, declare optional `backlink_label: "← Return to Hub"` in the YAML frontmatter of `SCHEMA.md`.
 
 ### Document structural skeletons and required sections
 

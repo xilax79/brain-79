@@ -15,7 +15,7 @@ related:
   - features/project-upgrade-and-multi-harness-doctor.md
   - decisions/adr-013-versioning-and-release-governance.md
 last_updated: 2026-11-16
-applies_to_digest: "sha256:dc28ce6364a85553"
+applies_to_digest: "sha256:557d554469f81d87"
 applies_to_count: 6
 ---
 
@@ -154,4 +154,4 @@ Update `src/brain79/core/doctor.py` to validate and repair the `agy` plugin alon
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

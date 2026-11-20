@@ -60,6 +60,10 @@ last_updated: YYYY-MM-DD
 ---
 ```
 
+### Back-navigation links
+
+Subdirectory articles automatically conclude with a backlink to `INDEX.md` (default label: `← Back to Index`). To customize the label for this workspace, declare optional `backlink_label: "← Return to Hub"` in the YAML frontmatter of `SCHEMA.md`.
+
 ---
 
-[← Volver al Índice](INDEX.md)
+[← Back to Index](INDEX.md)

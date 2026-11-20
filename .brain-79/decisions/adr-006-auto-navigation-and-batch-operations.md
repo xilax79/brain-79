@@ -44,4 +44,4 @@ Furthermore, handoff transitional files were being mistakenly registered into `.
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

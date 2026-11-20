@@ -16,7 +16,7 @@ related:
   - architecture/defect-backlog.md
   - features/handoff-continuity.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:f61674610e89f324"
+applies_to_digest: "sha256:b87f40b526652af0"
 applies_to_count: 7
 ---
 
@@ -52,4 +52,4 @@ In `handoff.py` and `session_commit.py`, attempting to finalize a session of typ
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

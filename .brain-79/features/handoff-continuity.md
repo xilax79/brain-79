@@ -10,7 +10,7 @@ applies_to:
 related:
   - decisions/adr-002-immutable-handoffs.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
-applies_to_digest: "sha256:e1f0355d17de7ab8"
+applies_to_digest: "sha256:ee9f52bfcb991188"
 applies_to_count: 2
 ---
 
@@ -69,4 +69,4 @@ brain79 handoff-purge --apply
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

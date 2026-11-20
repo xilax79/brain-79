@@ -223,7 +223,8 @@ def validate_article_content(
         active_s = None
 
     meta = autofill_deterministic_fields(meta, rel_path, body=body, schema=active_s)
-    body = normalize_backlink_footer(body, rel_path)
+    active_backlink_label = active_s.backlink_label if active_s else None
+    body = normalize_backlink_footer(body, rel_path, backlink_label=active_backlink_label)
     body = normalize_bullet_colons(body)
     content = dump_frontmatter(meta, body)
     validate_frontmatter(meta, rel_path, schema=active_s)

@@ -11,7 +11,7 @@ related:
   - architecture/symmetry.md
   - features/cli.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:d3e3a570a4f996e9"
+applies_to_digest: "sha256:8866992e7149907c"
 applies_to_count: 3
 ---
 
@@ -56,4 +56,4 @@ Subcommand execution maps exceptions to deterministic POSIX exit codes:
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

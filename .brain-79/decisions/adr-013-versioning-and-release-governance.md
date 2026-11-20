@@ -16,7 +16,7 @@ related:
   - architecture/roadmap-industrial-scale.md
   - features/version-governance.md
 last_updated: 2026-11-17
-applies_to_digest: "sha256:b57d1781d4290a5a"
+applies_to_digest: "sha256:928a272fb19e44de"
 applies_to_count: 6
 ---
 
@@ -77,4 +77,4 @@ We implemented **Phase 5: Single-Source Semantic Versioning and Mechanical Relea
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

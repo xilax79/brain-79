@@ -45,4 +45,4 @@ We chose to transform `INDEX.md` into an exclusively automated routing table (*P
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

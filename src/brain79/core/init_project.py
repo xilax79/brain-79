@@ -61,10 +61,11 @@ def install_git_hooks(project_root: Path, install: bool = True) -> None:
     sync_git_hooks(project_root, install=install)
 
 
-AGENTS_START_REGEX = re.compile(
-    r"<!--\s*brain79:start(?:\s+v?([0-9]+\.[0-9]+\.[0-9]+))?\s*-->", re.IGNORECASE
+from brain79.core.harnesses._delimited import (
+    DELIMITED_END_REGEX as AGENTS_END_REGEX,
+    DELIMITED_START_REGEX as AGENTS_START_REGEX,
+    sync_delimited_file,
 )
-AGENTS_END_REGEX = re.compile(r"<!--\s*brain79:end\s*-->", re.IGNORECASE)
 
 
 def sync_agents_manifest(
@@ -81,70 +82,16 @@ def sync_agents_manifest(
     rendered_template = template_raw.replace("{{VERSION}}", active_version)
 
     manifest_path = project_root / "AGENTS.md"
-    if not manifest_path.exists():
-        if not dry_run:
-            manifest_path.write_text(rendered_template, encoding="utf-8", newline="\n")
-        return True, f"created AGENTS.md with delimited protocol block v{active_version}"
-
-    content = manifest_path.read_text(encoding="utf-8")
-    starts = list(AGENTS_START_REGEX.finditer(content))
-    ends = list(AGENTS_END_REGEX.finditer(content))
-
-    if (
-        len(starts) > 1
-        or len(ends) > 1
-        or len(starts) != len(ends)
-        or (starts and ends and starts[0].start() > ends[0].start())
-    ):
-        raise ValueError(
-            "corrupted_agents_manifest_delimiters: AGENTS.md contains mismatched, multiple, or malformed brain79 delimiters. "
-            "Restore markers or remove the damaged block."
-        )
-
-    temp_start = AGENTS_START_REGEX.search(rendered_template)
-    temp_end = AGENTS_END_REGEX.search(rendered_template)
-    if not temp_start or not temp_end:
-        managed_block = rendered_template
-    else:
-        managed_block = rendered_template[temp_start.start() : temp_end.end()]
-
-    if starts and ends:
-        start_m = starts[0]
-        end_m = ends[-1]
-        prefix = content[: start_m.start()]
-        suffix = content[end_m.end() :]
-        new_content = prefix + managed_block + suffix
-        if new_content == content:
-            return False, "AGENTS.md is already up-to-date"
-        if not dry_run:
-            manifest_path.write_text(new_content, encoding="utf-8", newline="\n")
-        return True, f"updated AGENTS.md to v{active_version}"
-
-    # Unmarked legacy AGENTS.md
-    header_pos = content.find("# Brain-79 AI memory protocol")
-    if header_pos != -1:
-        prefix = content[:header_pos]
-        notes_pos = content.find("## Project notes", header_pos)
-        if notes_pos != -1:
-            suffix = content[notes_pos:]
-        else:
-            suffix = ""
-
-        if prefix and not prefix.endswith("\n\n"):
-            prefix = prefix.rstrip() + "\n\n"
-        if suffix and not suffix.startswith("\n"):
-            suffix = "\n\n" + suffix.lstrip("\n")
-
-        new_content = prefix + managed_block + suffix
-        if not dry_run:
-            manifest_path.write_text(new_content, encoding="utf-8", newline="\n")
-        return True, f"wrapped legacy AGENTS.md in delimited protocol block v{active_version}"
-
-    # Markerless and headerless: append delimited block to bottom
-    new_content = content.rstrip() + "\n\n" + managed_block + "\n"
-    if not dry_run:
-        manifest_path.write_text(new_content, encoding="utf-8", newline="\n")
-    return True, f"appended delimited protocol block v{active_version} to AGENTS.md"
+    return sync_delimited_file(
+        manifest_path,
+        rendered_template,
+        full_initial_content=rendered_template,
+        dry_run=dry_run,
+        legacy_header="# Brain-79 AI memory protocol",
+        legacy_notes_header="## Project notes",
+        version=active_version,
+        error_code="corrupted_agents_manifest_delimiters",
+    )
 
 
 def sync_schema_file(wiki_root: Path, dry_run: bool = False) -> tuple[bool, str]:
@@ -195,214 +142,220 @@ def sync_project_mcp_configs(
     include_desktop: bool = False,
     desktop_config_dir: Path | None = None,
     dry_run: bool = False,
+    targets: set[str] | None = None,
 ) -> list[str]:
     """Configure portable Tier 1 MCP configs and opt-in Tier 2 desktop integrations."""
     changed: list[str] = []
+    active_targets = {"mcp_json", "antigravity", "cursor"} if targets is None else targets
 
     # 1. .mcp.json (Universal / Pi / Claude Code / Zed / OpenCode)
-    mcp_file = project_root / ".mcp.json"
-    mcp_data: dict[str, Any] = {}
-    if mcp_file.is_file():
-        try:
-            mcp_data = json.loads(mcp_file.read_text(encoding="utf-8"))
-            if not isinstance(mcp_data, dict):
-                print(f"⚠️ Warning: {mcp_file} is not a JSON object. Backing up to {mcp_file}.bak")
+    if "mcp_json" in active_targets:
+        mcp_file = project_root / ".mcp.json"
+        mcp_data: dict[str, Any] = {}
+        if mcp_file.is_file():
+            try:
+                mcp_data = json.loads(mcp_file.read_text(encoding="utf-8"))
+                if not isinstance(mcp_data, dict):
+                    print(f"⚠️ Warning: {mcp_file} is not a JSON object. Backing up to {mcp_file}.bak")
+                    if not dry_run:
+                        mcp_file.rename(mcp_file.with_suffix(".json.bak"))
+                    mcp_data = {}
+            except json.JSONDecodeError as e:
+                print(f"⚠️ Warning: Existing {mcp_file} is invalid JSON ({e}).")
+                print(f"  Backing up to {mcp_file.with_suffix('.json.bak')} and creating fresh config.")
                 if not dry_run:
                     mcp_file.rename(mcp_file.with_suffix(".json.bak"))
                 mcp_data = {}
-        except json.JSONDecodeError as e:
-            print(f"⚠️ Warning: Existing {mcp_file} is invalid JSON ({e}).")
-            print(f"  Backing up to {mcp_file.with_suffix('.json.bak')} and creating fresh config.")
-            if not dry_run:
-                mcp_file.rename(mcp_file.with_suffix(".json.bak"))
-            mcp_data = {}
-        except Exception:
-            if not dry_run:
-                mcp_file.rename(mcp_file.with_suffix(".json.bak"))
-            mcp_data = {}
-    elif mcp_file.is_dir():
-        print(f"⚠️ Warning: {mcp_file} exists and is a directory. Skipping .mcp.json generation.")
+            except Exception:
+                if not dry_run:
+                    mcp_file.rename(mcp_file.with_suffix(".json.bak"))
+                mcp_data = {}
+        elif mcp_file.is_dir():
+            print(f"⚠️ Warning: {mcp_file} exists and is a directory. Skipping .mcp.json generation.")
 
-    if not mcp_file.is_dir():
-        if "mcpServers" not in mcp_data or not isinstance(mcp_data["mcpServers"], dict):
-            mcp_data["mcpServers"] = {}
-        mcp_data["mcpServers"]["brain79"] = {
-            "command": "brain79",
-            "args": ["--project-root", "."],
-            "toolPrefix": "none",
-        }
-        new_raw = json.dumps(mcp_data, indent=2) + "\n"
-        old_raw = mcp_file.read_text(encoding="utf-8") if mcp_file.is_file() else None
-        if old_raw != new_raw:
-            if not dry_run:
-                mcp_file.write_text(new_raw, encoding="utf-8", newline="\n")
-            changed.append(".mcp.json")
+        if not mcp_file.is_dir():
+            if "mcpServers" not in mcp_data or not isinstance(mcp_data["mcpServers"], dict):
+                mcp_data["mcpServers"] = {}
+            mcp_data["mcpServers"]["brain79"] = {
+                "command": "brain79",
+                "args": ["--project-root", "."],
+                "toolPrefix": "none",
+            }
+            new_raw = json.dumps(mcp_data, indent=2) + "\n"
+            old_raw = mcp_file.read_text(encoding="utf-8") if mcp_file.is_file() else None
+            if old_raw != new_raw:
+                if not dry_run:
+                    mcp_file.write_text(new_raw, encoding="utf-8", newline="\n")
+                changed.append(".mcp.json")
 
     # 2. .agents/mcp_config.json (Antigravity agy)
-    agents_dir = project_root / ".agents"
-    if not dry_run:
-        agents_dir.mkdir(exist_ok=True)
-    agents_file = agents_dir / "mcp_config.json"
-    agents_data: dict[str, Any] = {}
-    if agents_file.is_file():
-        try:
-            agents_data = json.loads(agents_file.read_text(encoding="utf-8"))
-            if not isinstance(agents_data, dict):
+    if "antigravity" in active_targets:
+        agents_dir = project_root / ".agents"
+        if not dry_run:
+            agents_dir.mkdir(exist_ok=True)
+        agents_file = agents_dir / "mcp_config.json"
+        agents_data: dict[str, Any] = {}
+        if agents_file.is_file():
+            try:
+                agents_data = json.loads(agents_file.read_text(encoding="utf-8"))
+                if not isinstance(agents_data, dict):
+                    if not dry_run:
+                        agents_file.rename(agents_file.with_suffix(".json.bak"))
+                    agents_data = {}
+            except Exception:
                 if not dry_run:
                     agents_file.rename(agents_file.with_suffix(".json.bak"))
                 agents_data = {}
-        except Exception:
-            if not dry_run:
-                agents_file.rename(agents_file.with_suffix(".json.bak"))
-            agents_data = {}
 
-    if "mcpServers" not in agents_data or not isinstance(agents_data["mcpServers"], dict):
-        agents_data["mcpServers"] = {}
-    agents_data["mcpServers"]["brain79"] = {
-        "command": "brain79",
-        "args": ["--project-root", "."],
-    }
-    new_raw = json.dumps(agents_data, indent=2) + "\n"
-    old_raw = agents_file.read_text(encoding="utf-8") if agents_file.is_file() else None
-    if old_raw != new_raw:
-        if not dry_run:
-            agents_dir.mkdir(exist_ok=True)
-            agents_file.write_text(new_raw, encoding="utf-8", newline="\n")
-        changed.append(".agents/mcp_config.json")
-
-    # 3. .cursor/mcp.json (Cursor IDE)
-    cursor_dir = project_root / ".cursor"
-    if not dry_run:
-        cursor_dir.mkdir(exist_ok=True)
-    cursor_file = cursor_dir / "mcp.json"
-    cursor_data: dict[str, Any] = {}
-    if cursor_file.is_file():
-        try:
-            cursor_data = json.loads(cursor_file.read_text(encoding="utf-8"))
-            if not isinstance(cursor_data, dict):
-                if not dry_run:
-                    cursor_file.rename(cursor_file.with_suffix(".json.bak"))
-                cursor_data = {}
-        except Exception:
-            if not dry_run:
-                cursor_file.rename(cursor_file.with_suffix(".json.bak"))
-            cursor_data = {}
-
-    if "mcpServers" not in cursor_data or not isinstance(cursor_data["mcpServers"], dict):
-        cursor_data["mcpServers"] = {}
-    cursor_data["mcpServers"]["brain79"] = {
-        "command": "brain79",
-        "args": ["--project-root", "."],
-    }
-    new_raw = json.dumps(cursor_data, indent=2) + "\n"
-    old_raw = cursor_file.read_text(encoding="utf-8") if cursor_file.is_file() else None
-    if old_raw != new_raw:
-        if not dry_run:
-            cursor_dir.mkdir(exist_ok=True)
-            cursor_file.write_text(new_raw, encoding="utf-8", newline="\n")
-        changed.append(".cursor/mcp.json")
-
-    # 4. .agents/plugins/brain79/ (Native Antigravity agy workspace plugin)
-    plugin_dir = project_root / ".agents" / "plugins" / "brain79"
-    skill_dir = plugin_dir / "skills" / "brain79-wiki"
-
-    # 4a. plugin.json
-    plugin_file = plugin_dir / "plugin.json"
-    plugin_data: dict[str, Any] = {}
-    if plugin_file.is_dir():
-        print(f"⚠️ Warning: {plugin_file} exists and is a directory. Skipping plugin.json generation.")
-    else:
-        if plugin_file.is_file():
-            try:
-                plugin_data = json.loads(plugin_file.read_text(encoding="utf-8"))
-                if not isinstance(plugin_data, dict):
-                    if not dry_run:
-                        plugin_file.replace(plugin_file.with_suffix(".json.bak"))
-                    plugin_data = {}
-            except Exception:
-                if not dry_run:
-                    plugin_file.replace(plugin_file.with_suffix(".json.bak"))
-                plugin_data = {}
-
-        if not plugin_data.get("name"):
-            plugin_data["name"] = "brain79"
-
-        p_new_raw = json.dumps(plugin_data, indent=2) + "\n"
-        p_old_raw = plugin_file.read_text(encoding="utf-8") if plugin_file.is_file() else None
-        if p_old_raw != p_new_raw:
-            if not dry_run:
-                plugin_dir.mkdir(parents=True, exist_ok=True)
-                plugin_file.write_text(p_new_raw, encoding="utf-8", newline="\n")
-            changed.append(".agents/plugins/brain79/plugin.json")
-
-    # 4b. mcp_config.json
-    plugin_mcp_file = plugin_dir / "mcp_config.json"
-    plugin_mcp_data: dict[str, Any] = {}
-    if plugin_mcp_file.is_dir():
-        print(f"⚠️ Warning: {plugin_mcp_file} exists and is a directory. Skipping mcp_config.json generation.")
-    else:
-        if plugin_mcp_file.is_file():
-            try:
-                plugin_mcp_data = json.loads(plugin_mcp_file.read_text(encoding="utf-8"))
-                if not isinstance(plugin_mcp_data, dict):
-                    if not dry_run:
-                        plugin_mcp_file.replace(plugin_mcp_file.with_suffix(".json.bak"))
-                    plugin_mcp_data = {}
-            except Exception:
-                if not dry_run:
-                    plugin_mcp_file.replace(plugin_mcp_file.with_suffix(".json.bak"))
-                plugin_mcp_data = {}
-
-        if "mcpServers" not in plugin_mcp_data or not isinstance(plugin_mcp_data["mcpServers"], dict):
-            plugin_mcp_data["mcpServers"] = {}
-        plugin_mcp_data["mcpServers"]["brain79"] = {
+        if "mcpServers" not in agents_data or not isinstance(agents_data["mcpServers"], dict):
+            agents_data["mcpServers"] = {}
+        agents_data["mcpServers"]["brain79"] = {
             "command": "brain79",
             "args": ["--project-root", "."],
         }
-        pm_new_raw = json.dumps(plugin_mcp_data, indent=2) + "\n"
-        pm_old_raw = plugin_mcp_file.read_text(encoding="utf-8") if plugin_mcp_file.is_file() else None
-        if pm_old_raw != pm_new_raw:
+        new_raw = json.dumps(agents_data, indent=2) + "\n"
+        old_raw = agents_file.read_text(encoding="utf-8") if agents_file.is_file() else None
+        if old_raw != new_raw:
             if not dry_run:
-                plugin_dir.mkdir(parents=True, exist_ok=True)
-                plugin_mcp_file.write_text(pm_new_raw, encoding="utf-8", newline="\n")
-            changed.append(".agents/plugins/brain79/mcp_config.json")
+                agents_dir.mkdir(exist_ok=True)
+                agents_file.write_text(new_raw, encoding="utf-8", newline="\n")
+            changed.append(".agents/mcp_config.json")
 
-    # 4c. skills/brain79-wiki/SKILL.md
-    skill_file = skill_dir / "SKILL.md"
-    if skill_file.is_dir():
-        print(f"⚠️ Warning: {skill_file} exists and is a directory. Skipping SKILL.md generation.")
-    else:
-        from brain79 import __version__
+    # 3. .cursor/mcp.json (Cursor IDE)
+    if "cursor" in active_targets:
+        cursor_dir = project_root / ".cursor"
+        if not dry_run:
+            cursor_dir.mkdir(exist_ok=True)
+        cursor_file = cursor_dir / "mcp.json"
+        cursor_data: dict[str, Any] = {}
+        if cursor_file.is_file():
+            try:
+                cursor_data = json.loads(cursor_file.read_text(encoding="utf-8"))
+                if not isinstance(cursor_data, dict):
+                    if not dry_run:
+                        cursor_file.rename(cursor_file.with_suffix(".json.bak"))
+                    cursor_data = {}
+            except Exception:
+                if not dry_run:
+                    cursor_file.rename(cursor_file.with_suffix(".json.bak"))
+                cursor_data = {}
 
-        pkg_templates = resources.files("brain79.templates")
-        skill_template = (pkg_templates / "SKILL.md").read_text(encoding="utf-8")
-        skill_rendered = skill_template.replace("{{VERSION}}", __version__)
-        skill_old = skill_file.read_text(encoding="utf-8") if skill_file.is_file() else None
-        if skill_old != skill_rendered:
+        if "mcpServers" not in cursor_data or not isinstance(cursor_data["mcpServers"], dict):
+            cursor_data["mcpServers"] = {}
+        cursor_data["mcpServers"]["brain79"] = {
+            "command": "brain79",
+            "args": ["--project-root", "."],
+        }
+        new_raw = json.dumps(cursor_data, indent=2) + "\n"
+        old_raw = cursor_file.read_text(encoding="utf-8") if cursor_file.is_file() else None
+        if old_raw != new_raw:
             if not dry_run:
-                skill_dir.mkdir(parents=True, exist_ok=True)
-                skill_file.write_text(skill_rendered, encoding="utf-8", newline="\n")
-            changed.append(".agents/plugins/brain79/skills/brain79-wiki/SKILL.md")
+                cursor_dir.mkdir(exist_ok=True)
+                cursor_file.write_text(new_raw, encoding="utf-8", newline="\n")
+            changed.append(".cursor/mcp.json")
+
+    # 4. .agents/plugins/brain79/ (Native Antigravity agy workspace plugin)
+    if "antigravity" in active_targets:
+        plugin_dir = project_root / ".agents" / "plugins" / "brain79"
+        skill_dir = plugin_dir / "skills" / "brain79-wiki"
+
+        # 4a. plugin.json
+        plugin_file = plugin_dir / "plugin.json"
+        plugin_data: dict[str, Any] = {}
+        if plugin_file.is_dir():
+            print(f"⚠️ Warning: {plugin_file} exists and is a directory. Skipping plugin.json generation.")
+        else:
+            if plugin_file.is_file():
+                try:
+                    plugin_data = json.loads(plugin_file.read_text(encoding="utf-8"))
+                    if not isinstance(plugin_data, dict):
+                        if not dry_run:
+                            plugin_file.replace(plugin_file.with_suffix(".json.bak"))
+                        plugin_data = {}
+                except Exception:
+                    if not dry_run:
+                        plugin_file.replace(plugin_file.with_suffix(".json.bak"))
+                    plugin_data = {}
+
+            if not plugin_data.get("name"):
+                plugin_data["name"] = "brain79"
+
+            p_new_raw = json.dumps(plugin_data, indent=2) + "\n"
+            p_old_raw = plugin_file.read_text(encoding="utf-8") if plugin_file.is_file() else None
+            if p_old_raw != p_new_raw:
+                if not dry_run:
+                    plugin_dir.mkdir(parents=True, exist_ok=True)
+                    plugin_file.write_text(p_new_raw, encoding="utf-8", newline="\n")
+                changed.append(".agents/plugins/brain79/plugin.json")
+
+        # 4b. mcp_config.json
+        plugin_mcp_file = plugin_dir / "mcp_config.json"
+        plugin_mcp_data: dict[str, Any] = {}
+        if plugin_mcp_file.is_dir():
+            print(f"⚠️ Warning: {plugin_mcp_file} exists and is a directory. Skipping mcp_config.json generation.")
+        else:
+            if plugin_mcp_file.is_file():
+                try:
+                    plugin_mcp_data = json.loads(plugin_mcp_file.read_text(encoding="utf-8"))
+                    if not isinstance(plugin_mcp_data, dict):
+                        if not dry_run:
+                            plugin_mcp_file.replace(plugin_mcp_file.with_suffix(".json.bak"))
+                        plugin_mcp_data = {}
+                except Exception:
+                    if not dry_run:
+                        plugin_mcp_file.replace(plugin_mcp_file.with_suffix(".json.bak"))
+                    plugin_mcp_data = {}
+
+            if "mcpServers" not in plugin_mcp_data or not isinstance(plugin_mcp_data["mcpServers"], dict):
+                plugin_mcp_data["mcpServers"] = {}
+            plugin_mcp_data["mcpServers"]["brain79"] = {
+                "command": "brain79",
+                "args": ["--project-root", "."],
+            }
+            pm_new_raw = json.dumps(plugin_mcp_data, indent=2) + "\n"
+            pm_old_raw = plugin_mcp_file.read_text(encoding="utf-8") if plugin_mcp_file.is_file() else None
+            if pm_old_raw != pm_new_raw:
+                if not dry_run:
+                    plugin_dir.mkdir(parents=True, exist_ok=True)
+                    plugin_mcp_file.write_text(pm_new_raw, encoding="utf-8", newline="\n")
+                changed.append(".agents/plugins/brain79/mcp_config.json")
+
+        # 4c. skills/brain79-wiki/SKILL.md
+        skill_file = skill_dir / "SKILL.md"
+        if skill_file.is_dir():
+            print(f"⚠️ Warning: {skill_file} exists and is a directory. Skipping SKILL.md generation.")
+        else:
+            from brain79 import __version__
+
+            pkg_templates = resources.files("brain79.templates")
+            skill_template = (pkg_templates / "SKILL.md").read_text(encoding="utf-8")
+            skill_rendered = skill_template.replace("{{VERSION}}", __version__)
+            skill_old = skill_file.read_text(encoding="utf-8") if skill_file.is_file() else None
+            if skill_old != skill_rendered:
+                if not dry_run:
+                    skill_dir.mkdir(parents=True, exist_ok=True)
+                    skill_file.write_text(skill_rendered, encoding="utf-8", newline="\n")
+                changed.append(".agents/plugins/brain79/skills/brain79-wiki/SKILL.md")
 
     # Tier 2 (Desktop configs, opt-in)
     if include_desktop:
-        targets: list[Path] = []
+        desktop_targets: list[Path] = []
         if desktop_config_dir:
-            targets.append(desktop_config_dir / "claude_desktop_config.json")
-            targets.append(desktop_config_dir / "mcp_config.json")
+            desktop_targets.append(desktop_config_dir / "claude_desktop_config.json")
+            desktop_targets.append(desktop_config_dir / "mcp_config.json")
         else:
             home = Path.home()
             if sys.platform == "darwin":
-                targets.append(home / "Library/Application Support/Claude/claude_desktop_config.json")
+                desktop_targets.append(home / "Library/Application Support/Claude/claude_desktop_config.json")
             elif sys.platform == "win32":
                 appdata = os.environ.get("APPDATA")
                 if appdata:
-                    targets.append(Path(appdata) / "Claude/claude_desktop_config.json")
+                    desktop_targets.append(Path(appdata) / "Claude/claude_desktop_config.json")
             else:
-                targets.append(home / ".config/Claude/claude_desktop_config.json")
-            targets.append(home / ".codeium/windsurf/mcp_config.json")
+                desktop_targets.append(home / ".config/Claude/claude_desktop_config.json")
+            desktop_targets.append(home / ".codeium/windsurf/mcp_config.json")
 
-        for cfg in targets:
+        for cfg in desktop_targets:
             if ".gemini" in cfg.parts:
                 continue
             if cfg.parent.exists():
@@ -502,6 +455,16 @@ def update_project(
         desktop_config_dir=desktop_config_dir,
         dry_run=dry_run,
     )
+    from brain79.core.harnesses import (
+        ClaudeCodeAdapter,
+        CopilotAdapter,
+        CursorRulesAdapter,
+    )
+
+    instruction_harnesses: list[str] = []
+    for inst_adapter in (ClaudeCodeAdapter(), CursorRulesAdapter(), CopilotAdapter()):
+        instruction_harnesses.extend(inst_adapter.sync(project_root, dry_run=dry_run))
+
     git_hook_updated, g_msg = sync_git_hooks(project_root, dry_run=dry_run)
     migration_report = migrate_wiki(wiki_root, dry_run=dry_run)
 
@@ -529,6 +492,7 @@ def update_project(
         "manifest_updated": manifest_updated,
         "schema_updated": schema_updated,
         "mcp_configs": mcp_configs,
+        "instruction_harnesses": instruction_harnesses,
         "git_hook": g_msg,
         "migration_report": migration_report,
         "transition_handoff": transition_ref,
@@ -542,6 +506,7 @@ def init_project(
     auto_git_init: bool = True,
     upgrade: bool = False,
     include_desktop: bool = False,
+    harnesses: list[str] | None = None,
 ) -> None:
     """Bootstrap .brain-79/ in a project directory and register MCP configurations."""
     wiki_root = project_root / ".brain-79"
@@ -603,17 +568,15 @@ def init_project(
     (wiki_root / ".gitignore").write_text(".locks/\n*.lock\n*.tmp\n", encoding="utf-8", newline="\n")
     cleanup_legacy_inline_locks(wiki_root)
 
-    # Synchronize all registered Tier 1 (and custom) harness adapters via core/harnesses registry
-    from brain79.core.harnesses import get_harness_adapters
+    # Synchronize selected (or all registered) harness adapters via core/harnesses registry
+    from brain79.core.harnesses import resolve_harness_selection
 
-    mcp_synced = False
-    for adapter in get_harness_adapters():
-        if adapter.name in ("mcp_json", "antigravity", "cursor"):
-            if not mcp_synced:
-                sync_project_mcp_configs(project_root, include_desktop=include_desktop)
-                mcp_synced = True
-        else:
-            adapter.sync(project_root)
+    selected_adapters = resolve_harness_selection(harnesses)
+    for adapter in selected_adapters:
+        adapter.sync(project_root)
+
+    if include_desktop:
+        sync_project_mcp_configs(project_root, include_desktop=True, targets=set())
 
     # Configure git pre-commit hook
     sync_git_hooks(project_root, install=install_git_hooks_flag)

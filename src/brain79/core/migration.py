@@ -229,7 +229,12 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
                     meta["status"] = "legacy"
 
         # Paso C: Normalización mecánica del cuerpo (Tier 1)
-        body = normalize_backlink_footer(body, rel_str)
+        body = normalize_backlink_footer(
+            body,
+            rel_str,
+            backlink_label=schema.backlink_label,
+            canonicalize_legacy=True,
+        )
         body = normalize_bullet_colons(body)
 
         # Paso D: Sembrado Merkle de applies_to

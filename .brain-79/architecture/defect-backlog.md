@@ -14,7 +14,7 @@ related:
   - features/cross-platform-and-lock-isolation.md
   - features/transitive-drift-and-ripple-guards.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:3afdc1af7300b9ff"
+applies_to_digest: "sha256:7c457eb4917d74cd"
 applies_to_count: 5
 ---
 
@@ -121,4 +121,4 @@ The following historical issues were fully resolved and verified in prior milest
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

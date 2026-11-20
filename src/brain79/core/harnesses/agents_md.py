@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from brain79.core.harnesses._delimited import diagnose_delimited_file
+
 
 class AgentsMdAdapter:
     """HarnessAdapter for root AGENTS.md delimited protocol block."""
@@ -20,10 +22,8 @@ class AgentsMdAdapter:
         return ["AGENTS.md"]
 
     def diagnose(self, project_root: Path) -> list[str]:
-        agents_md = project_root / "AGENTS.md"
-        if not agents_md.is_file():
-            return ["AGENTS.md is missing."]
-        text = agents_md.read_text(encoding="utf-8", errors="replace")
-        if "<!-- brain79:start" not in text or "<!-- brain79:end -->" not in text:
-            return ["AGENTS.md is missing the delimited brain79 protocol block."]
-        return []
+        return diagnose_delimited_file(
+            project_root / "AGENTS.md",
+            rel_label="AGENTS.md",
+            required=True,
+        )

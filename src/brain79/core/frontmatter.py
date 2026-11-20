@@ -364,6 +364,27 @@ TYPE_SCHEMA = SOFTWARE_PROFILE_SCHEMA
 LOCATION_TO_TYPE = SOFTWARE_LOCATION_TO_TYPE
 
 
+# Backlink standardization defaults
+DEFAULT_BACKLINK_LABEL = "← Back to Index"
+LEGACY_BACKLINK_MARKERS: tuple[str, ...] = (
+    "[← back to index]",
+    "[← return to index]",
+    "[← volver al índice]",
+    "[volver al índice]",
+)
+_BACKLINK_LINK_RE = re.compile(r"\[[^\]]*\]\([^)]*\)")
+
+
+def _sanitize_backlink_label(raw: Any) -> str:
+    """Validate and sanitize an optional backlink_label, falling back safely."""
+    if not isinstance(raw, str):
+        return DEFAULT_BACKLINK_LABEL
+    cleaned = raw.strip()
+    if not cleaned or any(ch in cleaned for ch in ("\n", "\r", "[", "]")):
+        return DEFAULT_BACKLINK_LABEL
+    return cleaned
+
+
 @dataclass
 class ActiveSchema:
     """Represents a validated, resolved wiki schema profile and custom types."""
@@ -373,8 +394,10 @@ class ActiveSchema:
     location_to_type: dict[str, str]
     supports_technical_debt_leakage: bool = True
     required_sections: dict[str, list[Any]] = field(default_factory=dict)
+    backlink_label: str = DEFAULT_BACKLINK_LABEL
 
     def __post_init__(self) -> None:
+        self.backlink_label = _sanitize_backlink_label(self.backlink_label)
         if not self.required_sections:
             self.required_sections = {
                 t: list(cfg.get("required_sections", []))
@@ -418,6 +441,7 @@ def load_active_schema(wiki_root: Path | None = None) -> ActiveSchema:
     # Resolve schema profile from SCHEMA.md frontmatter or fallback
     profile = "software"
     custom_types: dict[str, Any] = {}
+    backlink_label = DEFAULT_BACKLINK_LABEL
 
     if schema_file.exists():
         try:
@@ -428,8 +452,11 @@ def load_active_schema(wiki_root: Path | None = None) -> ActiveSchema:
                     profile = meta.get("profile", "software").strip().lower()
                     if "custom_types" in meta and isinstance(meta["custom_types"], dict):
                         custom_types = meta["custom_types"]
+                    if "backlink_label" in meta:
+                        backlink_label = _sanitize_backlink_label(meta.get("backlink_label"))
         except Exception:
             profile = "software"
+            backlink_label = DEFAULT_BACKLINK_LABEL
 
     # Base profile selection
     if profile == "general":
@@ -472,6 +499,7 @@ def load_active_schema(wiki_root: Path | None = None) -> ActiveSchema:
         types=base_types,
         location_to_type=base_loc,
         supports_technical_debt_leakage=supports_td,
+        backlink_label=backlink_label,
     )
     _SCHEMA_CACHE[cache_key] = active
     return active
@@ -707,7 +735,7 @@ def generate_document_skeleton(target_type: str, schema: ActiveSchema | None = N
     if is_subfolder:
         lines.append("---")
         lines.append("")
-        lines.append("[← Volver al Índice](../INDEX.md)")
+        lines.append(f"[{active.backlink_label}](../INDEX.md)")
         lines.append("")
 
     return "\n".join(lines).strip() + "\n"
@@ -736,14 +764,26 @@ def _mask_code_fences_text(content: str) -> str:
     return "\n".join(masked)
 
 
-def normalize_backlink_footer(body: str, rel_path: str) -> str:
+def normalize_backlink_footer(
+    body: str,
+    rel_path: str,
+    *,
+    backlink_label: str | None = None,
+    canonicalize_legacy: bool = False,
+) -> str:
     """Ensure standard backlink navigation footer exists at the tail of articles.
 
     INDEX.md, SCHEMA.md, and anything under _raw/ or handoffs/ are excluded from backlink injection.
-    Root files (e.g. root-overview.md) receive [← Volver al Índice](INDEX.md).
-    Subfolder files receive relative traversal [← Volver al Índice](../INDEX.md).
+    Root files (e.g. root-overview.md) receive [{label}](INDEX.md).
+    Subfolder files receive relative traversal [{label}](../INDEX.md).
     Existing backlinks referencing ../INDEX.md inside root files are rewritten to INDEX.md.
+    When canonicalize_legacy=True, recognized legacy markers in the tail are rewritten to
+    [{label}]({rel_to_index}) without duplicating horizontal rules.
     """
+    label = _sanitize_backlink_label(backlink_label) if backlink_label is not None else DEFAULT_BACKLINK_LABEL
+    active_marker = f"[{label}]".lower()
+    backlink_markers = tuple(dict.fromkeys((active_marker, *LEGACY_BACKLINK_MARKERS)))
+
     clean_rel = rel_path.strip().lstrip("/")
     parts = Path(clean_rel).parts
     is_root_file = len(parts) <= 1 or clean_rel in ("INDEX.md", "SCHEMA.md")
@@ -757,12 +797,6 @@ def normalize_backlink_footer(body: str, rel_path: str) -> str:
         non_empty_indices = [i for i, line in enumerate(masked_lines) if line.strip()]
         tail_indices = non_empty_indices[-5:] if non_empty_indices else []
 
-        backlink_markers = (
-            "[← volver al índice]",
-            "[← return to index]",
-            "[← back to index]",
-            "[volver al índice]",
-        )
         for idx in tail_indices:
             m_line = masked_lines[idx].lower()
             if any(marker in m_line for marker in backlink_markers) and "](../index.md)" in m_line:
@@ -780,33 +814,43 @@ def normalize_backlink_footer(body: str, rel_path: str) -> str:
         return body
 
     rel_to_index = "INDEX.md" if is_root_file else ("../" * (len(parts) - 1)) + "INDEX.md"
+    canonical_link = f"[{label}]({rel_to_index})"
 
     # Check if backlink is already present at the tail of the document outside code fences
     masked = _mask_code_fences_text(body)
     masked_lines = masked.splitlines()
+    body_lines = body.splitlines()
     non_empty_indices = [i for i, line in enumerate(masked_lines) if line.strip()]
     tail_indices = non_empty_indices[-5:] if non_empty_indices else []
 
-    backlink_markers = (
-        "[← volver al índice]",
-        "[← return to index]",
-        "[← back to index]",
-        "[volver al índice]",
-    )
-
-    tail_lines = [masked_lines[i].strip().lower() for i in tail_indices] if tail_indices else []
-    has_tail_backlink = any(
-        any(marker in line for marker in backlink_markers)
-        for line in tail_lines
-    )
-    if has_tail_backlink:
+    matched_tail_indices = [
+        idx
+        for idx in tail_indices
+        if any(marker in masked_lines[idx].strip().lower() for marker in backlink_markers)
+    ]
+    if matched_tail_indices:
+        if canonicalize_legacy:
+            changed = False
+            for idx in matched_tail_indices:
+                original_line = body_lines[idx]
+                updated_line = _BACKLINK_LINK_RE.sub(
+                    lambda m: canonical_link
+                    if any(m.group(0).lower().startswith(marker) for marker in backlink_markers)
+                    else m.group(0),
+                    original_line,
+                )
+                if updated_line != original_line:
+                    body_lines[idx] = updated_line
+                    changed = True
+            if changed:
+                return "\n".join(body_lines) + ("\n" if body.endswith("\n") else "")
         return body
 
     body_rstrip = body.rstrip()
     if body_rstrip.endswith("---"):
-        return f"{body_rstrip}\n\n[← Volver al Índice]({rel_to_index})\n"
+        return f"{body_rstrip}\n\n{canonical_link}\n"
     else:
-        return f"{body_rstrip}\n\n---\n\n[← Volver al Índice]({rel_to_index})\n"
+        return f"{body_rstrip}\n\n---\n\n{canonical_link}\n"
 _BULLET_COLON_RE = re.compile(
     r"^(\s*(?:[-*+]|\d+\.)\s+)\*\*([^*:\n]+?)(:?)\*\*(:?)\s+(.*)$"
 )
@@ -950,6 +994,32 @@ _PARSE_CACHE_MAX = 2048
 _PARSE_CACHE: dict[str, tuple[dict[str, Any], str]] = {}
 
 
+def _clone_yaml_value(val: Any, _memo: dict[int, Any] | None = None) -> Any:
+    """Lightweight cycle-safe recursive cloner for primitive YAML structures."""
+    if val is None or isinstance(val, (str, int, float, bool, date, datetime)):
+        return val
+    obj_id = id(val)
+    if _memo is not None and obj_id in _memo:
+        return _memo[obj_id]
+    if isinstance(val, dict):
+        if _memo is None:
+            _memo = {}
+        out_dict: dict[Any, Any] = {}
+        _memo[obj_id] = out_dict
+        for k, v in val.items():
+            out_dict[k] = _clone_yaml_value(v, _memo)
+        return out_dict
+    if isinstance(val, list):
+        if _memo is None:
+            _memo = {}
+        out_list: list[Any] = []
+        _memo[obj_id] = out_list
+        for item in val:
+            out_list.append(_clone_yaml_value(item, _memo))
+        return out_list
+    return copy.deepcopy(val)
+
+
 def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     """Parse line-based frontmatter from markdown content.
 
@@ -967,7 +1037,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     """
     if content in _PARSE_CACHE:
         cached_meta, cached_body = _PARSE_CACHE[content]
-        return copy.deepcopy(cached_meta), cached_body
+        return _clone_yaml_value(cached_meta), cached_body
 
     content = _normalize_content(content)
     if not content.startswith("---\n") and content != "---":
@@ -1013,7 +1083,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     body = "\n".join(lines[end_idx + 1:]).lstrip("\n")
     if len(_PARSE_CACHE) >= _PARSE_CACHE_MAX:
         _PARSE_CACHE.pop(next(iter(_PARSE_CACHE)))
-    _PARSE_CACHE[content] = (copy.deepcopy(metadata), body)
+    _PARSE_CACHE[content] = (_clone_yaml_value(metadata), body)
     return metadata, body
 
 

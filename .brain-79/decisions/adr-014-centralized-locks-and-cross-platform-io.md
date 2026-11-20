@@ -49,4 +49,4 @@ Prior to Phase 6, `brain-79` suffered from two categories of filesystem issues:
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

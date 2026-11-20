@@ -20,7 +20,7 @@ class AntigravityAdapter:
     def sync(self, project_root: Path) -> list[str]:
         from brain79.core.init_project import sync_project_mcp_configs
 
-        sync_project_mcp_configs(project_root)
+        sync_project_mcp_configs(project_root, targets={"antigravity"})
         return [".agents/mcp_config.json", ".agents/plugins/brain79/"]
 
     def diagnose(self, project_root: Path) -> list[str]:

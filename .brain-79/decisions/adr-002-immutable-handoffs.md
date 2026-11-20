@@ -37,4 +37,4 @@ We chose to enforce strict immutability for session handoffs:
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)

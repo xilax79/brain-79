@@ -36,4 +36,4 @@ We recalibrate the active package version from `2.0.2` to `0.7.2`:
 
 ---
 
-[← Volver al Índice](../INDEX.md)
+[← Back to Index](../INDEX.md)
