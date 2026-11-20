@@ -386,3 +386,210 @@ def test_escape_markdown_in_summaries(setup_wiki_root: Path) -> None:
     nav = generate_quick_navigation(wiki_root)
     assert "\\[brackets\\]" in nav
     assert "\\*\\*bold\\*\\*" in nav
+
+
+# =============================================================================
+# Phase 10 Stage 1: AC-10.1 & AC-10.2
+# =============================================================================
+
+
+def test_register_article_normalizes_section_case(setup_wiki_root: Path) -> None:
+    """AC-10.1: register_article normalizes section keys to lowercase."""
+    wiki_root = setup_wiki_root / ".brain-79"
+    register_article(wiki_root, "changelog/v0-1-0.md", "v0.1.0", "First release", "Changelog")
+    register_article(wiki_root, "changelog/v0-2-0.md", "v0.2.0", "Second release", "changelog")
+
+    reg = load_registry(wiki_root)
+    sections = [a["section"] for a in reg["articles"]]
+    assert sections == ["changelog", "changelog"]
+
+    nav = generate_quick_navigation(wiki_root)
+    assert nav.count("### Changelog") == 1
+
+
+def test_generate_quick_navigation_normalizes_mixed_case_registry(setup_wiki_root: Path) -> None:
+    """AC-10.1: generate_quick_navigation collapses mixed-case sections into one header."""
+    import json
+
+    wiki_root = setup_wiki_root / ".brain-79"
+    reg_path = wiki_root / ".navigation_registry.json"
+    reg_path.write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "path": "changelog/v0-1-0.md",
+                        "title": "v0.1.0",
+                        "summary": "First release",
+                        "section": "Changelog",
+                    },
+                    {
+                        "path": "changelog/v0-2-0.md",
+                        "title": "v0.2.0",
+                        "summary": "Second release",
+                        "section": "changelog",
+                    },
+                ]
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    nav = generate_quick_navigation(wiki_root)
+    assert nav.count("### Changelog") == 1
+    assert "- [v0.1.0](changelog/v0-1-0.md)" in nav
+    assert "- [v0.2.0](changelog/v0-2-0.md)" in nav
+
+
+def test_regenerate_index_navigation_self_heals_mixed_case_sections(setup_wiki_root: Path) -> None:
+    """AC-10.1: regenerate_index_navigation self-heals mixed-case sections in registry and INDEX.md."""
+    import json
+
+    wiki_root = setup_wiki_root / ".brain-79"
+    (wiki_root / "changelog").mkdir(parents=True, exist_ok=True)
+    (wiki_root / "changelog" / "v0-1-0.md").write_text("# v0.1.0\nFirst release\n", encoding="utf-8")
+    (wiki_root / "changelog" / "v0-2-0.md").write_text("# v0.2.0\nSecond release\n", encoding="utf-8")
+
+    reg_path = wiki_root / ".navigation_registry.json"
+    reg_path.write_text(
+        json.dumps(
+            {
+                "articles": [
+                    {
+                        "path": "changelog/v0-1-0.md",
+                        "title": "v0.1.0",
+                        "summary": "First release",
+                        "section": "Changelog",
+                    },
+                    {
+                        "path": "changelog/v0-2-0.md",
+                        "title": "v0.2.0",
+                        "summary": "Second release",
+                        "section": "changelog",
+                    },
+                ]
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    regenerate_index_navigation(wiki_root)
+
+    healed_reg = load_registry(wiki_root)
+    assert all(a["section"] == "changelog" for a in healed_reg["articles"])
+
+    index_content = (wiki_root / "INDEX.md").read_text(encoding="utf-8")
+    assert index_content.count("### Changelog") == 1
+
+
+def test_lock_hierarchy_enforces_global_order(setup_wiki_root: Path) -> None:
+    """AC-10.2: Lock hierarchy enforces _transaction -> _registry -> _drift_manifest -> INDEX.md."""
+    from brain79.core.locks import LOCK_HIERARCHY, acquire_wiki_lock
+
+    assert LOCK_HIERARCHY == (
+        "_transaction.lock",
+        "_registry.lock",
+        "_drift_manifest.lock",
+        "INDEX.md.lock",
+    )
+
+    wiki_root = setup_wiki_root / ".brain-79"
+
+    # Valid order succeeds
+    with acquire_wiki_lock(wiki_root, "_transaction.lock"):
+        with acquire_wiki_lock(wiki_root, ".navigation_registry.json"):
+            with acquire_wiki_lock(wiki_root, ".drift_manifest.json"):
+                with acquire_wiki_lock(wiki_root, "INDEX.md"):
+                    pass
+
+    # Reverse order raises RuntimeError
+    with acquire_wiki_lock(wiki_root, "INDEX.md"):
+        with pytest.raises(RuntimeError, match="Lock hierarchy violation"):
+            with acquire_wiki_lock(wiki_root, ".navigation_registry.json"):
+                pass
+
+
+def test_ordered_file_lock_double_release_and_force_release_safety(setup_wiki_root: Path) -> None:
+    """R-1.2: Double-release on unacquired lock and force=True reentrant release maintain accurate tracking."""
+    from brain79.core.locks import acquire_wiki_lock
+
+    wiki_root = setup_wiki_root / ".brain-79"
+
+    # 1. Double-release on an unacquired lock must not corrupt another held lock's tracking
+    index_lock_1 = acquire_wiki_lock(wiki_root, "INDEX.md")
+    index_lock_2 = acquire_wiki_lock(wiki_root, "INDEX.md")
+    with index_lock_1:
+        # Releasing an unacquired lock instance must be a no-op on _HELD_LOCKS
+        index_lock_2.release()
+        # index_lock_1 is still tracked, so acquiring lower-rank _registry.lock must still fail
+        with pytest.raises(RuntimeError, match="Lock hierarchy violation"):
+            with acquire_wiki_lock(wiki_root, ".navigation_registry.json"):
+                pass
+
+    # 2. Reentrant acquire + force=True release must clear all entries for that lock instance
+    idx_lock = acquire_wiki_lock(wiki_root, "INDEX.md")
+    idx_lock.acquire()
+    idx_lock.acquire()
+    idx_lock.release(force=True)
+    # After force release, acquiring _registry.lock must succeed
+    with acquire_wiki_lock(wiki_root, ".navigation_registry.json"):
+        pass
+
+
+def test_regenerate_index_navigation_no_unlocked_read_window(setup_wiki_root: Path) -> None:
+    """AC-10.2: regenerate_index_navigation holds locks in order with zero unlocked read window."""
+    from unittest.mock import patch
+
+    import brain79.core.navigation as nav_mod
+
+    wiki_root = setup_wiki_root / ".brain-79"
+    (wiki_root / "features").mkdir(parents=True, exist_ok=True)
+    (wiki_root / "features" / "f1.md").write_text("# Feature 1\nSummary 1\n", encoding="utf-8")
+    register_article(wiki_root, "features/f1.md", "Feature 1", "Summary 1", "features")
+
+    events: list[str] = []
+    real_acquire = nav_mod.acquire_wiki_lock
+    real_load = nav_mod.load_registry
+
+    class _RecordingLock:
+        def __init__(self, inner: object, name: str) -> None:
+            self._inner = inner
+            self._name = name
+
+        def __enter__(self) -> object:
+            events.append(f"acquire:{self._name}")
+            return self._inner.__enter__()  # type: ignore[attr-defined]
+
+        def __exit__(self, *args: object) -> object:
+            events.append(f"release:{self._name}")
+            return self._inner.__exit__(*args)  # type: ignore[attr-defined]
+
+    def _wrapped_acquire(w_root: Path, rel_path: str, timeout: float = 10.0) -> object:
+        return _RecordingLock(real_acquire(w_root, rel_path, timeout=timeout), rel_path)
+
+    def _wrapped_load(w_root: Path) -> dict[str, object]:
+        events.append("load_registry")
+        return real_load(w_root)
+
+    with (
+        patch.object(nav_mod, "acquire_wiki_lock", side_effect=_wrapped_acquire),
+        patch.object(nav_mod, "load_registry", side_effect=_wrapped_load),
+    ):
+        regenerate_index_navigation(wiki_root)
+
+    # Every load_registry must happen while .navigation_registry.json lock is held
+    reg_held = False
+    for ev in events:
+        if ev == "acquire:.navigation_registry.json":
+            reg_held = True
+        elif ev == "release:.navigation_registry.json":
+            reg_held = False
+        elif ev == "load_registry":
+            assert reg_held, f"Unlocked load_registry detected in sequence: {events}"
+
+    # INDEX.md lock must be acquired before releasing .navigation_registry.json lock
+    assert events.index("acquire:INDEX.md") < events.index("release:.navigation_registry.json"), (
+        f"Unlocked window between registry release and INDEX.md lock: {events}"
+    )

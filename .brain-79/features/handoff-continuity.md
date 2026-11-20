@@ -10,7 +10,7 @@ applies_to:
 related:
   - decisions/adr-002-immutable-handoffs.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
-applies_to_digest: "sha256:9595375ec874839c"
+applies_to_digest: "sha256:e1f0355d17de7ab8"
 applies_to_count: 2
 ---
 

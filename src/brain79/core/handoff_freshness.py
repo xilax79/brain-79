@@ -37,14 +37,11 @@ _EXCLUDED_WIKI_FILES = ("INDEX.md", ".navigation_registry.json", ".drift_manifes
 
 def _run_git(args: list[str], cwd: Path, timeout: float = 3.0) -> str:
     """Execute a git command with strict timeout and clean failure handling."""
-    res = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        check=True,
-    )
+    from brain79.core.git_ops import GitError, run_git
+
+    res = run_git(args, cwd=cwd, timeout=timeout, check_repo=False)
+    if res.returncode != 0:
+        raise GitError(res.stderr.strip() or f"git {' '.join(args)} failed (rc={res.returncode})")
     return res.stdout.strip()
 
 
@@ -276,16 +273,9 @@ def compute_code_digest(
 
         file_hashes: list[tuple[str, str]] = []
         if existing_files:
-            proc = subprocess.run(
-                ["git", "hash-object", "--stdin-paths"],
-                input="\n".join(existing_files) + "\n",
-                cwd=project_root,
-                capture_output=True,
-                text=True,
-                timeout=3.0,
-                check=True,
-            )
-            hashes = [h.strip() for h in proc.stdout.splitlines() if h.strip()]
+            from brain79.core.git_ops import git_hash_object_stdin_paths
+
+            hashes = git_hash_object_stdin_paths(project_root, existing_files, timeout=3.0)
             if len(hashes) != len(existing_files):
                 return "unknown"
             for f, h in zip(existing_files, hashes):

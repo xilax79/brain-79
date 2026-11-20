@@ -569,12 +569,9 @@ def init_project(
             from brain79.core.handoff_freshness import is_git_workspace
             if not is_git_workspace(project_root):
                 try:
-                    subprocess.run(
-                        ["git", "init"],
-                        cwd=project_root,
-                        check=True,
-                        capture_output=True,
-                    )
+                    from brain79.core.git_ops import git_init
+
+                    git_init(project_root)
                 except Exception:
                     pass
 
@@ -606,11 +603,17 @@ def init_project(
     (wiki_root / ".gitignore").write_text(".locks/\n*.lock\n*.tmp\n", encoding="utf-8", newline="\n")
     cleanup_legacy_inline_locks(wiki_root)
 
-    # Deploy AGENTS.md manifest with versioned delimited protocol block
-    sync_agents_manifest(project_root)
+    # Synchronize all registered Tier 1 (and custom) harness adapters via core/harnesses registry
+    from brain79.core.harnesses import get_harness_adapters
 
-    # Configure Tier 1 portable MCP registrations (.mcp.json, .agents, .cursor)
-    sync_project_mcp_configs(project_root, include_desktop=include_desktop)
+    mcp_synced = False
+    for adapter in get_harness_adapters():
+        if adapter.name in ("mcp_json", "antigravity", "cursor"):
+            if not mcp_synced:
+                sync_project_mcp_configs(project_root, include_desktop=include_desktop)
+                mcp_synced = True
+        else:
+            adapter.sync(project_root)
 
     # Configure git pre-commit hook
     sync_git_hooks(project_root, install=install_git_hooks_flag)

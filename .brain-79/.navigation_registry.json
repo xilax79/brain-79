@@ -99,13 +99,6 @@
       "registered_at": "2026-11-12T18:42:41.746255+00:00"
     },
     {
-      "path": "features/cross-platform-and-lock-isolation.md",
-      "title": "Feature \u2014 Cross-platform portability and centralized lock isolation",
-      "summary": "centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests",
-      "section": "features",
-      "registered_at": "2026-11-12T20:08:46.909858+00:00"
-    },
-    {
       "path": "changelog/legacy-internal-releases.md",
       "title": "Changelog \u2014 Historical internal development milestones (v1.0.0 through v2.0.2)",
       "summary": "historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration",
@@ -150,27 +143,6 @@
       ]
     },
     {
-      "path": "architecture/agy-init-and-plugin-design.md",
-      "title": "Architecture \u2014 Antigravity (agy) plugin initialization and progressive disclosure",
-      "summary": "technical specification for zero-config Antigravity (agy) plugin initialization, progressive AGENTS.md disclosure, and ancestor root resolution",
-      "section": "architecture",
-      "registered_at": "2026-11-17T00:54:04.682004+00:00"
-    },
-    {
-      "path": "architecture/mcp-server.md",
-      "title": "Architecture \u2014 MCP server",
-      "summary": "FastMCP server architecture, logging suppression, tool definitions, and lifecycle management",
-      "section": "architecture",
-      "registered_at": "2026-11-17T00:54:04.704221+00:00"
-    },
-    {
-      "path": "architecture/symmetry.md",
-      "title": "Architecture \u2014 CLI and MCP symmetry",
-      "summary": "enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools",
-      "section": "architecture",
-      "registered_at": "2026-11-17T00:54:04.707991+00:00"
-    },
-    {
       "path": "changelog/v0-8-0.md",
       "title": "Changelog \u2014 Version 0.8.0 \u2014 Transitive drift and ripple guards",
       "summary": "phase 6.7 release \u2014 Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification",
@@ -178,60 +150,11 @@
       "registered_at": "2026-11-17T00:54:04.711522+00:00"
     },
     {
-      "path": "decisions/adr-011-session-commit-and-batch-reading.md",
-      "title": "ADR-011 \u2014 Two-call session protocol: 1-call atomic session commit and section-projected batch reading",
-      "summary": "1-call atomic session finalization and section-projected batch reading",
-      "section": "decisions",
-      "registered_at": "2026-11-17T00:54:04.722213+00:00"
-    },
-    {
-      "path": "features/mcp-server.md",
-      "title": "Feature \u2014 FastMCP integration",
-      "summary": "model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication",
-      "section": "features",
-      "registered_at": "2026-11-17T00:54:04.733420+00:00"
-    },
-    {
       "path": "changelog/v0-9-1.md",
       "title": "Changelog \u2014 Release 0.9.1: Antigravity plugin, progressive disclosure, and root walk",
       "summary": "release v0.9.1 \u2014 Antigravity native plugin, progressive AGENTS.md disclosure, and ancestor root walk",
       "section": "changelog",
       "registered_at": "2026-11-17T00:55:38.093187+00:00"
-    },
-    {
-      "path": "architecture/roadmap-industrial-scale.md",
-      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
-      "summary": "project roadmap covering completed phases (0-7) and pre-GA maturation phases (8-9) for visual documentation and automated battle-testing",
-      "section": "architecture",
-      "registered_at": "2026-11-17T15:49:38.527284+00:00",
-      "applies_to": [
-        ".brain-79/features/*.md"
-      ],
-      "related": [
-        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
-        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
-        "decisions/adr-011-session-commit-and-batch-reading.md",
-        "decisions/adr-012-structural-quality-and-drift-detection.md",
-        "decisions/adr-013-versioning-and-release-governance.md",
-        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
-        "decisions/adr-015-sentence-case-first-policy.md",
-        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
-        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
-        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
-        "features/version-governance.md",
-        "features/cross-platform-and-lock-isolation.md",
-        "features/session-triage-and-research-persistence.md",
-        "features/handoff-continuity.md",
-        "features/transitive-drift-and-ripple-guards.md",
-        "features/project-upgrade-and-multi-harness-doctor.md",
-        "architecture/defect-backlog.md",
-        "architecture/agy-init-and-plugin-design.md"
-      ],
-      "outgoing_links": [
-        "architecture/agy-init-and-plugin-design.md",
-        "architecture/zero-clone-distribution-and-visual-docs.md",
-        "INDEX.md"
-      ]
     },
     {
       "path": "features/cli.md",
@@ -283,17 +206,10 @@
       ]
     },
     {
-      "path": "decisions/adr-013-versioning-and-release-governance.md",
-      "title": "ADR-013 \u2014 Architecture \u2014 Single-source semantic versioning and mechanical release governance",
-      "summary": "single-source semantic versioning via Hatchling, FastMCP version handshake exposure, and automated release parity testing",
-      "section": "decisions",
-      "registered_at": "2026-11-17T19:58:15.136079+00:00"
-    },
-    {
       "path": "changelog/v0-10-0.md",
       "title": "Changelog \u2014 Release 0.10.0: Automated battle-testing, chaos fuzzing, and multi-repo gauntlet",
       "summary": "release v0.10.0 \u2014 automated battle-testing, chaos fuzzing, and multi-repo gauntlet",
-      "section": "Changelog",
+      "section": "changelog",
       "registered_at": "2026-11-17T20:02:01.018384+00:00"
     },
     {
@@ -309,26 +225,6 @@
       "related": [
         "decisions/adr-002-immutable-handoffs.md",
         "decisions/adr-016-handoff-freshness-and-authority-decay.md"
-      ],
-      "outgoing_links": [
-        "INDEX.md"
-      ]
-    },
-    {
-      "path": "features/version-governance.md",
-      "title": "Feature \u2014 Versioning and release governance",
-      "summary": "single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks",
-      "section": "features",
-      "registered_at": "2026-11-20T15:30:58.583179+00:00",
-      "applies_to": [
-        "src/brain79/__init__.py",
-        "pyproject.toml",
-        "src/brain79/core/update.py"
-      ],
-      "related": [
-        "architecture/roadmap-industrial-scale.md",
-        "decisions/adr-013-versioning-and-release-governance.md",
-        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md"
       ],
       "outgoing_links": [
         "INDEX.md"
@@ -508,33 +404,192 @@
       ]
     },
     {
-      "path": "architecture/zero-clone-distribution-and-visual-docs.md",
-      "title": "Architecture \u2014 Zero-clone distribution, honest documentation, and 3-layer Di\u00e1taxis structure",
-      "summary": "technical design for zero-clone installation, CLI/Python alignment, and 3-layer Di\u00e1taxis documentation",
-      "section": "architecture",
-      "registered_at": "2026-11-20T15:30:58.598563+00:00",
+      "path": "features/cross-platform-and-lock-isolation.md",
+      "title": "Feature \u2014 Cross-platform portability and centralized lock isolation",
+      "summary": "centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests",
+      "section": "features",
+      "registered_at": "2026-11-20T19:29:43.298151+00:00",
       "applies_to": [
-        "src/brain79/core/update.py",
-        "src/brain79/cli/dispatch.py",
-        "src/brain79/__main__.py",
+        "src/brain79/core/locks.py",
+        "src/brain79/config.py"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "decisions/adr-011-session-commit-and-batch-reading.md",
+      "title": "ADR-011 \u2014 Two-call session protocol: 1-call atomic session commit and section-projected batch reading",
+      "summary": "1-call atomic session finalization and section-projected batch reading",
+      "section": "decisions",
+      "registered_at": "2026-11-20T19:29:43.306627+00:00",
+      "applies_to": [
+        "src/brain79/core/session_commit.py",
+        "src/brain79/core/wiki.py",
+        "src/brain79/server.py",
+        "src/brain79/cli/dispatch.py"
+      ],
+      "related": [
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-006-auto-navigation-and-batch-operations.md",
+        "architecture/roadmap-industrial-scale.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/agy-init-and-plugin-design.md",
+      "title": "Architecture \u2014 Antigravity (agy) plugin initialization and progressive disclosure",
+      "summary": "technical specification for zero-config Antigravity (agy) plugin initialization, progressive AGENTS.md disclosure, and ancestor root resolution",
+      "section": "architecture",
+      "registered_at": "2026-11-20T19:40:53.069681+00:00",
+      "applies_to": [
+        "src/brain79/core/init_project.py",
         "src/brain79/core/doctor.py",
-        "src/brain79/templates/AGENTS.md",
-        "README.md",
-        "ARCHITECTURE.md",
-        "USER_GUIDE.md"
+        "src/brain79/config.py",
+        "src/brain79/__main__.py",
+        "src/brain79/cli/dispatch.py",
+        "src/brain79/templates/AGENTS.md"
+      ],
+      "related": [
+        "architecture/roadmap-industrial-scale.md",
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "decisions/adr-013-versioning-and-release-governance.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/core-refactoring-and-hardening-design.md",
+      "title": "Architecture \u2014 Core refactoring and hardening",
+      "summary": "implementation specification and acceptance criteria for core architectural refactoring, concurrency hardening, security fixes, and modular decomposition prior to public release",
+      "section": "architecture",
+      "registered_at": "2026-11-20T19:50:58.483798+00:00",
+      "applies_to": [
+        "src/brain79/core/navigation.py",
+        "src/brain79/core/locks.py",
+        "src/brain79/core/session_commit.py",
+        "src/brain79/core/git_ops.py",
+        "src/brain79/core/ast_guards/**",
+        "src/brain79/core/harnesses/**",
+        "src/brain79/core/drift.py",
+        "src/brain79/core/frontmatter.py",
+        "src/brain79/core/init_project.py",
+        "src/brain79/core/update.py",
+        "src/brain79/server.py",
+        "src/brain79/config.py"
       ],
       "related": [
         "architecture/roadmap-industrial-scale.md",
         "architecture/current-state.md",
-        "features/version-governance.md",
-        "features/cli.md",
-        "features/project-upgrade-and-multi-harness-doctor.md",
+        "architecture/mcp-server.md",
+        "architecture/dispatcher.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "features/transitive-drift-and-ripple-guards.md",
         "decisions/adr-013-versioning-and-release-governance.md",
-        "decisions/adr-015-sentence-case-first-policy.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
         "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md"
       ],
       "outgoing_links": [
-        "architecture/roadmap-industrial-scale.md",
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/mcp-server.md",
+      "title": "Architecture \u2014 MCP server",
+      "summary": "FastMCP server architecture, logging suppression, tool definitions, and lifecycle management",
+      "section": "architecture",
+      "registered_at": "2026-11-20T19:50:58.585041+00:00",
+      "applies_to": [
+        "src/brain79/server.py",
+        "src/brain79/__main__.py"
+      ],
+      "related": [
+        "architecture/symmetry.md",
+        "features/mcp-server.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/symmetry.md",
+      "title": "Architecture \u2014 CLI and MCP symmetry",
+      "summary": "enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools",
+      "section": "architecture",
+      "registered_at": "2026-11-20T19:50:58.586754+00:00",
+      "applies_to": [
+        "src/brain79/cli/dispatch.py",
+        "src/brain79/server.py",
+        "tests/test_symmetry.py"
+      ],
+      "related": [
+        "architecture/current-state.md",
+        "features/cli.md",
+        "features/mcp-server.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "features/mcp-server.md",
+      "title": "Feature \u2014 FastMCP integration",
+      "summary": "model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication",
+      "section": "features",
+      "registered_at": "2026-11-20T19:50:58.594005+00:00",
+      "applies_to": [
+        "src/brain79/server.py"
+      ],
+      "related": [
+        "architecture/symmetry.md",
+        "architecture/mcp-server.md"
+      ],
+      "outgoing_links": [
+        "INDEX.md"
+      ]
+    },
+    {
+      "path": "architecture/zero-clone-distribution-and-visual-docs.md",
+      "title": "Architecture \u2014 Zero-clone distribution, honest documentation, and 3-layer Di\u00e1taxis structure",
+      "summary": "technical design for zero-clone installation, CLI/Python alignment, and 3-layer Di\u00e1taxis documentation",
+      "section": "architecture",
+      "registered_at": "2026-11-20T19:59:04.006615+00:00"
+    },
+    {
+      "path": "decisions/adr-013-versioning-and-release-governance.md",
+      "title": "ADR-013 \u2014 Architecture \u2014 Single-source semantic versioning and mechanical release governance",
+      "summary": "single-source semantic versioning via Hatchling, FastMCP version handshake exposure, and automated release parity testing",
+      "section": "decisions",
+      "registered_at": "2026-11-20T19:59:04.014468+00:00"
+    },
+    {
+      "path": "features/version-governance.md",
+      "title": "Feature \u2014 Versioning and release governance",
+      "summary": "single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks",
+      "section": "features",
+      "registered_at": "2026-11-20T19:59:04.021552+00:00"
+    },
+    {
+      "path": "product/overview.md",
+      "title": "Brain-79 \u2014 Product vision",
+      "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
+      "section": "product",
+      "registered_at": "2026-11-20T19:59:04.024279+00:00"
+    },
+    {
+      "path": "changelog/v0-11-0.md",
+      "title": "Release v0.11.0 \u2014 Core refactoring and hardening",
+      "summary": "core architectural refactoring, concurrency hardening, centralized Git layer, security fixes, and modular decomposition",
+      "section": "changelog",
+      "registered_at": "2026-11-20T19:59:04.141704+00:00",
+      "outgoing_links": [
         "INDEX.md"
       ]
     },
@@ -543,7 +598,7 @@
       "title": "Architecture \u2014 System current state",
       "summary": "high-level overview of system architecture, active milestones, runtime invariants, and roadmap",
       "section": "architecture",
-      "registered_at": "2026-11-20T15:30:58.600124+00:00",
+      "registered_at": "2026-11-20T20:44:42.140709+00:00",
       "applies_to": [
         "README.md",
         "USER_GUIDE.md",
@@ -565,6 +620,7 @@
         "features/transitive-drift-and-ripple-guards.md",
         "decisions/adr-011-session-commit-and-batch-reading.md",
         "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "architecture/core-refactoring-and-hardening-design.md",
         "features/organizational-enforcement.md",
         "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
         "features/cross-platform-and-lock-isolation.md",
@@ -578,15 +634,35 @@
       ]
     },
     {
-      "path": "product/overview.md",
-      "title": "Brain-79 \u2014 Product vision",
-      "summary": "deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.",
-      "section": "product",
-      "registered_at": "2026-11-20T15:30:58.601461+00:00",
+      "path": "architecture/roadmap-industrial-scale.md",
+      "title": "Architecture \u2014 Industrial-scale roadmap and adoption evolution",
+      "summary": "project roadmap covering completed foundation (phases 0-10) and prioritized evolution phases (11-15) for public launch, team collaboration, polyglot guards, and PyPI release",
+      "section": "architecture",
+      "registered_at": "2026-11-20T20:44:42.143255+00:00",
       "applies_to": [
-        ".brain-79/SCHEMA.md",
-        ".brain-79/features/*.md",
-        "src/brain79/__init__.py"
+        ".brain-79/features/*.md"
+      ],
+      "related": [
+        "decisions/adr-009-declarative-schema-and-dual-ontologies.md",
+        "decisions/adr-010-orient-and-3-signal-context-ranking.md",
+        "decisions/adr-011-session-commit-and-batch-reading.md",
+        "decisions/adr-012-structural-quality-and-drift-detection.md",
+        "decisions/adr-013-versioning-and-release-governance.md",
+        "decisions/adr-014-centralized-locks-and-cross-platform-io.md",
+        "decisions/adr-015-sentence-case-first-policy.md",
+        "decisions/adr-016-handoff-freshness-and-authority-decay.md",
+        "decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md",
+        "decisions/adr-018-living-manuals-and-temporal-decontamination.md",
+        "features/version-governance.md",
+        "features/cross-platform-and-lock-isolation.md",
+        "features/session-triage-and-research-persistence.md",
+        "features/handoff-continuity.md",
+        "features/transitive-drift-and-ripple-guards.md",
+        "features/project-upgrade-and-multi-harness-doctor.md",
+        "architecture/defect-backlog.md",
+        "architecture/agy-init-and-plugin-design.md",
+        "architecture/battle-testing-and-chaos-design.md",
+        "architecture/core-refactoring-and-hardening-design.md"
       ],
       "outgoing_links": [
         "INDEX.md"

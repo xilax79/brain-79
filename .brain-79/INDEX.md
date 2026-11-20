@@ -10,28 +10,28 @@ last_updated: 2026-11-20
 
 ## Quick navigation
 
-### Changelog
-- [Changelog — Release 0.10.0: Automated battle-testing, chaos fuzzing, and multi-repo gauntlet](changelog/v0-10-0.md) — release v0.10.0 — automated battle-testing, chaos fuzzing, and multi-repo gauntlet
-
 ### Architecture
 - [Architecture — Antigravity (agy) plugin initialization and progressive disclosure](architecture/agy-init-and-plugin-design.md) — technical specification for zero-config Antigravity (agy) plugin initialization, progressive AGENTS.md disclosure, and ancestor root resolution
 - [Architecture — Battle-testing, chaos fuzzing, and multi-repo gauntlet](architecture/battle-testing-and-chaos-design.md) — implementation contract for v0.10.0 battle-testing, covering the multi-OS CI matrix, chaos and fuzz tests, the five-archetype gauntlet, live-agent recovery smoke, failure catalog, and acceptance gates
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
+- [Architecture — Core refactoring and hardening](architecture/core-refactoring-and-hardening-design.md) — implementation specification and acceptance criteria for core architectural refactoring, concurrency hardening, security fixes, and modular decomposition prior to public release
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed phases (0-7) and pre-GA maturation phases (8-9) for visual documentation and automated battle-testing
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-10) and prioritized evolution phases (11-15) for public launch, team collaboration, polyglot guards, and PyPI release
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 - [Architecture — Zero-clone distribution, honest documentation, and 3-layer Diátaxis structure](architecture/zero-clone-distribution-and-visual-docs.md) — technical design for zero-clone installation, CLI/Python alignment, and 3-layer Diátaxis documentation
 
 ### Changelog
 - [Changelog — Historical internal development milestones (v1.0.0 through v2.0.2)](changelog/legacy-internal-releases.md) — historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration
+- [Changelog — Release 0.10.0: Automated battle-testing, chaos fuzzing, and multi-repo gauntlet](changelog/v0-10-0.md) — release v0.10.0 — automated battle-testing, chaos fuzzing, and multi-repo gauntlet
 - [Changelog — Release 0.8.1: Living manuals, temporal decontamination, and codebase de-phasing](changelog/v0-8-1.md) — release v0.8.1 — living manuals, temporal decontamination, codebase de-phasing, and three-class document ontology
 - [Changelog — Release 0.9.0: Project upgrade, multi-harness zero-config, and doctor diagnostics](changelog/v0-9-0.md) — release v0.9.0 — project protocol upgrader, delimited AGENTS.md blocks, multi-harness zero-config, and doctor diagnostics
 - [Changelog — Release 0.9.1: Antigravity plugin, progressive disclosure, and root walk](changelog/v0-9-1.md) — release v0.9.1 — Antigravity native plugin, progressive AGENTS.md disclosure, and ancestor root walk
 - [Changelog — Release 0.9.2: Zero-clone installation, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation](changelog/v0-9-2.md) — release v0.9.2 — zero-clone installation, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation
 - [Changelog — Version 0.7.2 — Pre-GA semantic calibration](changelog/v0-7-2.md) — semantic versioning recalibration to 0.7.2 for pre-GA maturation prior to public PyPI release
 - [Changelog — Version 0.8.0 — Transitive drift and ripple guards](changelog/v0-8-0.md) — phase 6.7 release — Merkle drift detection, transitive DAG propagation, Hard Session Ripple Gate, Anti-Sprawl Guard, and AST signature verification
+- [Release v0.11.0 — Core refactoring and hardening](changelog/v0-11-0.md) — core architectural refactoring, concurrency hardening, centralized Git layer, security fixes, and modular decomposition
 
 ### Decisions
 - [ADR-001 — Architecture — Dual-mode hybrid CLI and MCP server interface](decisions/adr-001-hybrid-cli.md) — dual-mode hybrid binary combining standalone CLI dispatcher with FastMCP stdio server

@@ -407,3 +407,56 @@ def test_sync_project_mcp_configs_directory_collision_guarded(tmp_path: Path, ca
     assert "is a directory" in captured.out
 
 
+
+
+def test_harness_adapter_registry_drives_tier1_harnesses(tmp_path: Path) -> None:
+    """AC-10.11: core.harnesses registry exposes all Tier 1 adapters with detect/sync/diagnose."""
+    from brain79.core.harnesses import HarnessAdapter, get_harness_adapters
+
+    adapters = get_harness_adapters()
+    names = {a.name for a in adapters}
+    assert {"agents_md", "mcp_json", "cursor", "antigravity"}.issubset(names)
+    for adapter in adapters:
+        assert isinstance(adapter, HarnessAdapter)
+        sub = tmp_path / adapter.name
+        sub.mkdir()
+        # Before sync, not detected on an empty directory
+        assert adapter.detect(sub) is False
+        synced = adapter.sync(sub)
+        assert isinstance(synced, list)
+        assert adapter.detect(sub) is True
+        diag = adapter.diagnose(sub)
+        assert isinstance(diag, list)
+
+
+def test_custom_harness_adapter_invoked_by_init_and_doctor(tmp_path: Path) -> None:
+    """AC-10.11: Custom HarnessAdapter registered via register_harness_adapter is invoked by init_project and run_doctor."""
+    from brain79.core.doctor import run_doctor
+    from brain79.core.harnesses import _HARNESS_ADAPTERS, register_harness_adapter
+
+    events: list[str] = []
+
+    class _CustomAdapter:
+        name: str = "custom_test_harness"
+
+        def detect(self, project_root: Path) -> bool:
+            return True
+
+        def sync(self, project_root: Path) -> list[str]:
+            events.append("sync")
+            return ["custom.cfg"]
+
+        def diagnose(self, project_root: Path) -> list[str]:
+            events.append("diagnose")
+            return []
+
+    original_adapters = list(_HARNESS_ADAPTERS)
+    register_harness_adapter(_CustomAdapter())
+    try:
+        init_project(tmp_path, install_git_hooks_flag=False)
+        assert "sync" in events
+
+        run_doctor(project_root=tmp_path, wiki_root=tmp_path / ".brain-79")
+        assert "diagnose" in events
+    finally:
+        _HARNESS_ADAPTERS[:] = original_adapters

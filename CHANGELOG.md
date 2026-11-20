@@ -4,6 +4,27 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-20
+
+### Added
+- **Core architectural refactoring, concurrency hardening, security fixes, and modular decomposition (Phase 10)**:
+  - **Stage 1 — Correctness, concurrency, and transactional integrity**:
+    - Lowercase section normalization and mixed-case self-healing in `core/navigation.py`, eliminating duplicate `INDEX.md` headers.
+    - Documented and enforced global lock hierarchy (`_transaction.lock` -> `_registry.lock` -> `_drift_manifest.lock` -> `INDEX.md.lock`) via `OrderedFileLock` in `core/locks.py`, and eliminated the unlocked read window (TOCTOU) in `regenerate_index_navigation()`.
+    - Complete Pass 3 rollback coverage in `core/session_commit.py` (`.navigation_registry.json`, `INDEX.md`, `_raw/sessions/`), transaction-scoped temp cleanup via `transaction_temp_scope()` / `create_temp_path()` (preserving unrelated worker `.tmp` files), and explicit `health_status: "degraded"` reporting when navigation regeneration fails.
+  - **Stage 2 — Centralized Git layer and error-handling hardening**:
+    - Consolidated all `git` subprocess invocations across the codebase into `src/brain79/core/git_ops.py` with typed helpers, `GitResult`, `NotAGitRepoError`, `GitTimeoutError`, `-c core.quotepath=false`, `--` pathspec termination, and optional `GitSessionCache`.
+    - Eliminated silent fail-open paths in AST Guard C (`core/drift.py`) and Pass 2d (`core/session_commit.py`), failing closed with `ValidationError` on operational errors while cleanly handling non-git workspaces.
+    - Deep-copy safe `_PARSE_CACHE` in `core/frontmatter.py` preventing nested dict/list mutation poisoning.
+  - **Stage 3 — Security hardening**:
+    - Enforced repository containment (`candidate.resolve().is_relative_to(project_root)`) before reading governed targets in AST verification and drift manifest hashing, rejecting escaping symlinks and `../` traversals.
+    - Blocked Git option injection (`branch_override` / `remote` / `branch` starting with `-`) in `core/update.py` and `core/git_ops.py`.
+  - **Stage 4 — Modular decomposition for roadmap extensibility**:
+    - Extracted pluggable AST inspector subsystem (`core/ast_guards/`) with `LanguageInspector` protocol, `SignatureDiff`, `PythonInspector` (with `GitSessionCache` HEAD/blob reuse), and extension registry.
+    - Extracted declarative Tier 1 harness adapter registry (`core/harnesses/`) driving `init_project.py` and `doctor.py`.
+    - Refactored `server.py` into configurable `create_mcp_server(profile="core"|"full")` with `CORE_TOOLS` (14) and `ADMIN_TOOLS` (8), wired to `--mcp-profile <core|full>` in `__main__.py`.
+    - Added immutable `ProjectContext` backed by `contextvars.ContextVar` in `config.py` for isolated multi-worktree async/threaded execution.
+
 ## [0.10.0] - 2026-11-17
 
 ### Added

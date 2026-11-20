@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from fastmcp import FastMCP
 
@@ -17,15 +17,6 @@ from brain79.core.frontmatter import ValidationError
 logging.getLogger("fastmcp").setLevel(logging.WARNING)
 logging.getLogger("mcp").setLevel(logging.WARNING)
 
-mcp = FastMCP(
-    "brain79",
-    version=__version__,
-    instructions=(
-        "brain79 is a per-project AI memory system. "
-        "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation. "
-        "Call brain79_schema() before writing or updating articles to inspect exact frontmatter rules."
-    ),
-)
 
 
 def _unpack_nested_args(args: dict[str, Any] | None) -> dict[str, Any]:
@@ -38,7 +29,6 @@ def _unpack_nested_args(args: dict[str, Any] | None) -> dict[str, Any]:
     return dict(args)
 
 
-@mcp.tool(output_schema=None)
 def brain79_orient(
     task: str | None = None,
     paths: list[str] | None = None,
@@ -69,7 +59,6 @@ def brain79_orient(
     return orient(task=task, paths=paths, max_articles=max_articles)
 
 
-@mcp.tool(output_schema=None)
 def brain79_index(
     tool: str | None = None,
     args: dict[str, Any] | None = None,
@@ -81,7 +70,6 @@ def brain79_index(
     return wiki_ops.get_index()
 
 
-@mcp.tool(output_schema=None)
 def brain79_read(
     path: str = "",
     sections: list[str] | None = None,
@@ -107,7 +95,6 @@ def brain79_read(
         return f"Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_read_batch(
     requests: list[dict[str, Any]] | None = None,
     tool: str | None = None,
@@ -146,7 +133,6 @@ def brain79_read_batch(
         return f"Error reading batch: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_schema(
     target_type: str | None = None,
     type: str | None = None,
@@ -180,7 +166,6 @@ def brain79_schema(
     return get_schema_documentation(effective_type, schema=active_schema)
 
 
-@mcp.tool(output_schema=None)
 def brain79_write(
     path: str = "",
     content: str = "",
@@ -217,7 +202,6 @@ def brain79_write(
         return f"Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_edit(
     path: str = "",
     edits: list[dict[str, str]] | None = None,
@@ -256,7 +240,6 @@ def brain79_edit(
         return f"Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_write_many(
     articles: list[dict[str, str]] | None = None,
     force_validation_skip: bool = False,
@@ -288,7 +271,6 @@ def brain79_write_many(
         return f"Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_list(
     section: str | None = None,
     tool: str | None = None,
@@ -311,7 +293,6 @@ def brain79_list(
     return "\n".join(articles)
 
 
-@mcp.tool(output_schema=None)
 def brain79_search(
     query: str = "",
     tool: str | None = None,
@@ -339,7 +320,6 @@ def brain79_search(
     return "\n".join(lines)
 
 
-@mcp.tool(output_schema=None)
 def brain79_ingest(
     session_summary: str = "",
     instructions: str | None = None,
@@ -370,7 +350,6 @@ def brain79_ingest(
     return f"Session saved to: {saved_path}\n\n{guide}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_handoff_write(
     session_type: str = "",
     previous_handoff_ref: str = "latest",
@@ -502,7 +481,6 @@ def brain79_handoff_write(
         return f"Validation Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_handoff_read(
     handoff_ref: str = "latest",
     tool: str | None = None,
@@ -538,7 +516,6 @@ def brain79_handoff_read(
         return f"Error reading handoff: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_handoff_purge(
     apply: bool = False,
     tool: str | None = None,
@@ -569,7 +546,6 @@ def brain79_handoff_purge(
         return f"Handoff Purge Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_lint(
     tool: str | None = None,
     args: dict[str, Any] | None = None,
@@ -583,7 +559,6 @@ def brain79_lint(
     return lint_ops.lint_wiki()
 
 
-@mcp.tool(output_schema=None)
 def brain79_context(
     task: str = "",
     top_n: int = 3,
@@ -608,7 +583,6 @@ def brain79_context(
     return context_ops.get_context(task=task, top_n=top_n, paths=paths)
 
 
-@mcp.tool(output_schema=None)
 def brain79_bootstrap(
     scope: str | None = None,
     force: bool = False,
@@ -634,7 +608,6 @@ def brain79_bootstrap(
         return f"Bootstrap Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_navigate(
     regenerate: bool = False,
     tool: str | None = None,
@@ -667,7 +640,6 @@ def brain79_navigate(
         return f"Navigation Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_session_commit(
     writes: list[dict[str, str]] | None = None,
     edits: list[dict[str, Any]] | None = None,
@@ -762,7 +734,6 @@ def brain79_session_commit(
         return f"Commit Aborted: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_migrate(
     dry_run: bool = True,
     tool: str | None = None,
@@ -785,7 +756,6 @@ def brain79_migrate(
         return f"Migration Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_update_project(
     dry_run: bool = False,
     commit_transition: bool = False,
@@ -834,7 +804,6 @@ def brain79_update_project(
         return f"Project Upgrade Error: {exc}"
 
 
-@mcp.tool(output_schema=None)
 def brain79_doctor(
     fix: bool = False,
     force: bool = False,
@@ -878,3 +847,81 @@ def brain79_doctor(
         return report.format_text()
     except Exception as exc:
         return f"Doctor Diagnostic Error: {exc}"
+
+
+CORE_TOOLS: frozenset[str] = frozenset({
+    "brain79_orient",
+    "brain79_index",
+    "brain79_read",
+    "brain79_read_batch",
+    "brain79_schema",
+    "brain79_write",
+    "brain79_edit",
+    "brain79_write_many",
+    "brain79_list",
+    "brain79_search",
+    "brain79_lint",
+    "brain79_session_commit",
+    "brain79_handoff_read",
+    "brain79_handoff_write",
+})
+
+ADMIN_TOOLS: frozenset[str] = frozenset({
+    "brain79_ingest",
+    "brain79_handoff_purge",
+    "brain79_context",
+    "brain79_bootstrap",
+    "brain79_navigate",
+    "brain79_migrate",
+    "brain79_update_project",
+    "brain79_doctor",
+})
+
+_ALL_TOOL_FUNCS = (
+    brain79_orient,
+    brain79_index,
+    brain79_read,
+    brain79_read_batch,
+    brain79_schema,
+    brain79_write,
+    brain79_edit,
+    brain79_write_many,
+    brain79_list,
+    brain79_search,
+    brain79_ingest,
+    brain79_handoff_write,
+    brain79_handoff_read,
+    brain79_handoff_purge,
+    brain79_lint,
+    brain79_context,
+    brain79_bootstrap,
+    brain79_navigate,
+    brain79_session_commit,
+    brain79_migrate,
+    brain79_update_project,
+    brain79_doctor,
+)
+
+
+def create_mcp_server(profile: Literal["core", "full"] = "full") -> FastMCP:
+    """Create a configured FastMCP server instance for the requested tool profile."""
+    if profile not in ("core", "full"):
+        raise ValueError(f"Invalid MCP profile: {profile!r}. Expected 'core' or 'full'.")
+
+    server = FastMCP(
+        "brain79",
+        version=__version__,
+        instructions=(
+            "brain79 is a per-project AI memory system. "
+            "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation. "
+            "Call brain79_schema() before writing or updating articles to inspect exact frontmatter rules."
+        ),
+    )
+    allowed = CORE_TOOLS if profile == "core" else (CORE_TOOLS | ADMIN_TOOLS)
+    for fn in _ALL_TOOL_FUNCS:
+        if fn.__name__ in allowed:
+            server.tool(output_schema=None)(fn)
+    return server
+
+
+mcp = create_mcp_server(profile="full")

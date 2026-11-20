@@ -32,8 +32,14 @@ from brain79.core.frontmatter import (
     dump_frontmatter,
     parse_frontmatter,
 )
+from brain79.core.git_ops import GitError, GitTimeoutError, NotAGitRepoError, git_dirty_paths
 from brain79.core.handoff import validate_handoff_params, write_handoff
-from brain79.core.locks import acquire_wiki_lock, normalize_posix_input, normalize_wiki_rel_path
+from brain79.core.locks import (
+    acquire_wiki_lock,
+    normalize_posix_input,
+    normalize_wiki_rel_path,
+    transaction_temp_scope,
+)
 from brain79.core.navigation import regenerate_index_navigation
 from brain79.core.validation import check_anti_sprawl_overlap, validate_article_content
 from brain79.core.wiki import (
@@ -450,38 +456,18 @@ def commit_session(
             dirty_git_paths: set[str] = set()
             if not is_pure_research:
                 try:
-                    res_git = subprocess.run(
-                        ["git", "-c", "core.quotepath=false", "status", "--porcelain=v1", "-z"],
-                        cwd=str(p_root),
-                        capture_output=True,
-                        check=False,
-                        timeout=2.0,
+                    dirty_git_paths = set(
+                        git_dirty_paths(p_root, exclude_prefix=".brain-79/", timeout=2.0)
                     )
-                    if res_git.returncode == 0 and res_git.stdout:
-                        raw_entries = res_git.stdout.split(b"\x00")
-                        idx = 0
-                        while idx < len(raw_entries):
-                            entry_bytes = raw_entries[idx]
-                            idx += 1
-                            if not entry_bytes:
-                                continue
-                            entry_str = entry_bytes.decode("utf-8", errors="replace")
-                            if len(entry_str) >= 4 and entry_str[2] == " ":
-                                xy = entry_str[:2]
-                                p_str = entry_str[3:]
-                                norm_p = normalize_posix_input(p_str).lstrip("/")
-                                if norm_p and not norm_p.startswith(".brain-79/"):
-                                    dirty_git_paths.add(norm_p)
-                                if "R" in xy or "C" in xy:
-                                    if idx < len(raw_entries) and raw_entries[idx]:
-                                        orig_bytes = raw_entries[idx]
-                                        idx += 1
-                                        orig_str = orig_bytes.decode("utf-8", errors="replace")
-                                        norm_orig = normalize_posix_input(orig_str).lstrip("/")
-                                        if norm_orig and not norm_orig.startswith(".brain-79/"):
-                                            dirty_git_paths.add(norm_orig)
-                except Exception:
-                    pass
+                except NotAGitRepoError:
+                    dirty_git_paths = set()
+                except (GitTimeoutError, GitError, OSError, UnicodeDecodeError) as exc:
+                    raise ValidationError(
+                        rule="git_status_verification_failed",
+                        path="session_commit",
+                        message=f"Operational Git error while checking working-tree ripple: {exc}",
+                        actionable="Resolve the Git error or pass allow_partial_ripple=True if intentionally deferring ripple verification.",
+                    ) from exc
 
             session_ripple_articles: set[str] = set()
             touched_wiki_articles = set(written_article_keys) | set(edited_article_keys)
@@ -564,51 +550,79 @@ def commit_session(
         manifest_file = w_root / ".drift_manifest.json"
         orig_manifest_text = manifest_file.read_text(encoding="utf-8") if manifest_file.is_file() else None
 
-        try:
-            save_drift_manifest(w_root, manifest_staging)
+        registry_file = w_root / ".navigation_registry.json"
+        orig_registry_text = registry_file.read_text(encoding="utf-8") if registry_file.is_file() else None
 
-            raw_path: str | None = None
-            if session_summary:
-                raw_msg = save_raw_session(session_summary, instructions=instructions or "", wiki_root=w_root)
-                if "_raw/sessions/" in raw_msg:
-                    raw_path = "_raw/sessions/" + raw_msg.split("_raw/sessions/")[-1].strip()
+        index_file = w_root / "INDEX.md"
+        orig_index_text = index_file.read_text(encoding="utf-8") if index_file.is_file() else None
 
-            for rel_str, content in virtual_fs.items():
-                write_article(
-                    rel_str,
-                    content,
-                    timeout=timeout,
-                    force_validation_skip=force_validation_skip,
-                    _skip_nav_regen=True,
-                    wiki_root=w_root,
+        raw_path: str | None = None
+        nav_regen_failed = False
+        nav_warnings: list[str] = []
+
+        with transaction_temp_scope() as tx_tmp_files:
+            try:
+                save_drift_manifest(w_root, manifest_staging)
+
+                if session_summary:
+                    raw_msg = save_raw_session(session_summary, instructions=instructions or "", wiki_root=w_root)
+                    if "_raw/sessions/" in raw_msg:
+                        raw_path = "_raw/sessions/" + raw_msg.split("_raw/sessions/")[-1].strip()
+
+                for rel_str, content in virtual_fs.items():
+                    write_article(
+                        rel_str,
+                        content,
+                        timeout=timeout,
+                        force_validation_skip=force_validation_skip,
+                        _skip_nav_regen=True,
+                        wiki_root=w_root,
+                    )
+
+                has_indexable_changes = any(
+                    not p.startswith("_raw/") and not p.startswith("handoffs/") and p not in ("SCHEMA.md", "INDEX.md")
+                    for p in virtual_fs
                 )
+                if has_indexable_changes:
+                    try:
+                        regenerate_index_navigation(w_root)
+                    except Exception as exc:
+                        nav_regen_failed = True
+                        nav_warnings.append(
+                            f"Navigation regeneration failed ({type(exc).__name__}: {exc}). "
+                            "Run 'brain79 navigate --regenerate' to repair INDEX.md."
+                        )
+            except BaseException:
+                # Transaction rollback: restore all Pass 3 artifacts to pre-commit state
+                for rel_str, orig_content in orig_states.items():
+                    target_f = w_root / rel_str
+                    if orig_content is None:
+                        target_f.unlink(missing_ok=True)
+                    else:
+                        target_f.write_text(orig_content, encoding="utf-8", newline="\n")
 
-            has_indexable_changes = any(
-                not p.startswith("_raw/") and not p.startswith("handoffs/") and p not in ("SCHEMA.md", "INDEX.md")
-                for p in virtual_fs
-            )
-            if has_indexable_changes:
-                try:
-                    regenerate_index_navigation(w_root)
-                except Exception:
-                    pass
-        except BaseException:
-            # Transaction rollback: restore files to pre-commit state
-            for rel_str, orig_content in orig_states.items():
-                target_f = w_root / rel_str
-                if orig_content is None:
-                    target_f.unlink(missing_ok=True)
+                if orig_manifest_text is None:
+                    manifest_file.unlink(missing_ok=True)
                 else:
-                    target_f.write_text(orig_content, encoding="utf-8", newline="\n")
+                    manifest_file.write_text(orig_manifest_text, encoding="utf-8", newline="\n")
 
-            if orig_manifest_text is None:
-                manifest_file.unlink(missing_ok=True)
-            else:
-                manifest_file.write_text(orig_manifest_text, encoding="utf-8", newline="\n")
+                if orig_registry_text is None:
+                    registry_file.unlink(missing_ok=True)
+                else:
+                    registry_file.write_text(orig_registry_text, encoding="utf-8", newline="\n")
 
-            for tmp_file in w_root.rglob("*.tmp*"):
-                tmp_file.unlink(missing_ok=True)
-            raise
+                if orig_index_text is None:
+                    index_file.unlink(missing_ok=True)
+                else:
+                    index_file.write_text(orig_index_text, encoding="utf-8", newline="\n")
+
+                if raw_path is not None:
+                    (w_root / raw_path).unlink(missing_ok=True)
+
+                # Unlink only transaction-owned temp files (never touch unrelated worker .tmp files)
+                for tmp_file in tx_tmp_files:
+                    tmp_file.unlink(missing_ok=True)
+                raise
 
         # =========================================================================
         # Pass 4: Post-persistence write_handoff() (guarantees fresh handoff)
@@ -633,7 +647,7 @@ def commit_session(
                 handoff_path = "handoffs/" + handoff_msg.split("handoffs/")[-1].strip()
 
     # Collect health diagnostics
-    all_warnings: list[str] = []
+    all_warnings: list[str] = list(nav_warnings)
     for rel_str in virtual_fs:
         try:
             content = (w_root / rel_str).read_text(encoding="utf-8")
@@ -641,6 +655,7 @@ def commit_session(
         except Exception:
             pass
 
+    health_status = "degraded" if nav_regen_failed else ("warnings" if all_warnings else "ok")
     return {
         "success": True,
         "session_raw_path": raw_path,
@@ -648,6 +663,6 @@ def commit_session(
         "edited_articles": edited_article_keys,
         "verified_articles": [v.get("path") for v in verified_articles_in],
         "handoff_path": handoff_path,
-        "health_status": "warnings" if all_warnings else "ok",
+        "health_status": health_status,
         "warnings": all_warnings,
     }

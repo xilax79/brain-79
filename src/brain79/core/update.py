@@ -56,6 +56,15 @@ def update_project(branch_override: str | None = None) -> int:
         int: Exit code (0, 1, 2, 3, 4, or 130).
     """
     try:
+        if branch_override is not None:
+            if (
+                not branch_override
+                or branch_override.startswith("-")
+                or not re.match(r"^[A-Za-z0-9._/-]+$", branch_override)
+            ):
+                print(f"[ERR] Invalid branch name: '{branch_override}'.")
+                return 1
+
         spec = importlib.util.find_spec("brain79")
         if spec is None or spec.origin is None:
             print("[ERR] Brain79 module specification or origin not found.")
@@ -157,14 +166,18 @@ def update_project(branch_override: str | None = None) -> int:
             )
             return 1
 
-        # Check git remote
-        remote_res = subprocess.run(
-            ["git", "remote", "get-url", "origin"],
-            cwd=git_root,
-            capture_output=True,
-            text=True,
-            timeout=5,
+        from brain79.core.git_ops import (
+            GitTimeoutError,
+            git_fetch,
+            git_pull_ff_only,
+            git_remote_get_url,
+            git_status_porcelain,
+            git_symbolic_ref,
+            run_git,
         )
+
+        # Check git remote
+        remote_res = git_remote_get_url(git_root, "origin", timeout=5)
         if remote_res.returncode != 0:
             print(
                 "[ERR] Failed to fetch from upstream. Check your internet connection or git remotes."
@@ -172,13 +185,7 @@ def update_project(branch_override: str | None = None) -> int:
             return 1
 
         # Check working tree cleanliness
-        status_res = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
-            cwd=git_root,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
+        status_res = git_status_porcelain(git_root, untracked="no", timeout=5, check_repo=False)
         if status_res.returncode != 0 or status_res.stdout.strip():
             print(
                 "[ERR] Local modifications detected. Please commit or stash your changes before updating."
@@ -186,13 +193,7 @@ def update_project(branch_override: str | None = None) -> int:
             return 1
 
         # Check branch (detached HEAD or valid branch)
-        branch_res = subprocess.run(
-            ["git", "symbolic-ref", "--short", "HEAD"],
-            cwd=git_root,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
+        branch_res = git_symbolic_ref(git_root, "HEAD", short=True, timeout=5)
         if branch_res.returncode != 0:
             print("[ERR] Detached HEAD. Cannot determine current branch.")
             return 1
@@ -203,13 +204,7 @@ def update_project(branch_override: str | None = None) -> int:
         if branch_override:
             default_branch = branch_override
         else:
-            ref_res = subprocess.run(
-                ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
-                cwd=git_root,
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
+            ref_res = git_symbolic_ref(git_root, "refs/remotes/origin/HEAD", short=False, timeout=5)
             if ref_res.returncode == 0 and ref_res.stdout.strip():
                 raw_ref = ref_res.stdout.strip()
                 prefix = "refs/remotes/origin/"
@@ -233,39 +228,21 @@ def update_project(branch_override: str | None = None) -> int:
         # Fetch origin
         print("Fetching from origin...")
         try:
-            fetch_res = subprocess.run(
-                ["git", "fetch", "origin"],
-                cwd=git_root,
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
+            fetch_res = git_fetch(git_root, "origin", timeout=60)
             if fetch_res.returncode != 0:
                 print(
                     "[ERR] Failed to fetch from upstream. Check your internet connection or git remotes."
                 )
                 return 3
-        except subprocess.TimeoutExpired:
+        except (GitTimeoutError, subprocess.TimeoutExpired):
             print(
                 "[ERR] Failed to fetch from upstream. Check your internet connection or git remotes."
             )
             return 3
 
         # Check diff (rev-parse)
-        local_rev = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=git_root,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        remote_rev = subprocess.run(
-            ["git", "rev-parse", f"origin/{default_branch}"],
-            cwd=git_root,
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
+        local_rev = run_git(["rev-parse", "HEAD"], cwd=git_root, timeout=5, check_repo=False)
+        remote_rev = run_git(["rev-parse", f"origin/{default_branch}"], cwd=git_root, timeout=5, check_repo=False)
 
         if (
             local_rev.returncode == 0
@@ -277,13 +254,7 @@ def update_project(branch_override: str | None = None) -> int:
 
         # Pull updates
         try:
-            pull_res = subprocess.run(
-                ["git", "pull", "--ff-only", "origin", default_branch],
-                cwd=git_root,
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
+            pull_res = git_pull_ff_only(git_root, "origin", default_branch, timeout=60)
             if pull_res.returncode != 0:
                 output = pull_res.stderr + pull_res.stdout
                 if (

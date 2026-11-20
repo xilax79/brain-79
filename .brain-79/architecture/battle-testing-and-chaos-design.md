@@ -20,8 +20,8 @@ related:
   - decisions/adr-013-versioning-and-release-governance.md
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
-last_updated: 2026-11-17
-applies_to_digest: "sha256:e3c272ee32b1bbd7"
+last_updated: 2026-11-20
+applies_to_digest: "sha256:1265c016151e4647"
 applies_to_count: 8
 ---
 

@@ -13,7 +13,7 @@ related:
   - decisions/adr-008-pure-index-routing-table.md
   - architecture/roadmap-industrial-scale.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:838ad910e63a792c"
+applies_to_digest: "sha256:e226e69b82863b8e"
 applies_to_count: 3
 ---
 

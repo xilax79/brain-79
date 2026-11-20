@@ -64,33 +64,58 @@
   "articles": {
     "architecture/agy-init-and-plugin-design.md": {
       "count": 6,
-      "digest": "sha256:8e36073174fd4a5f",
+      "digest": "sha256:dc28ce6364a85553",
       "targets": {
-        "src/brain79/__main__.py": "sha256:bd54b6bf685f887e",
+        "src/brain79/__main__.py": "sha256:b18761ee51d6cb6f",
         "src/brain79/cli/dispatch.py": "sha256:9b5f43804410bb07",
-        "src/brain79/config.py": "sha256:cba990f9de36f575",
-        "src/brain79/core/doctor.py": "sha256:a9e1132048f14d8f",
-        "src/brain79/core/init_project.py": "sha256:e8c122f9190a00b3",
+        "src/brain79/config.py": "sha256:e93ef1dc298d496e",
+        "src/brain79/core/doctor.py": "sha256:8934740c2ec97c17",
+        "src/brain79/core/init_project.py": "sha256:21e3b673ab4afe8c",
         "src/brain79/templates/AGENTS.md": "sha256:246be2d174462daa"
       }
     },
     "architecture/battle-testing-and-chaos-design.md": {
       "count": 8,
-      "digest": "sha256:e3c272ee32b1bbd7",
+      "digest": "sha256:1265c016151e4647",
       "targets": {
         "scripts/run_e2e_smoke.py": "sha256:a0a3f39f8aaff12d",
-        "src/brain79/core/drift.py": "sha256:2617a93d9ce9ec89",
-        "src/brain79/core/frontmatter.py": "sha256:0d001da5e1789411",
-        "src/brain79/core/locks.py": "sha256:8d52b7ba702d7ad8",
+        "src/brain79/core/drift.py": "sha256:bd421fda07a879d4",
+        "src/brain79/core/frontmatter.py": "sha256:53705639b5aba5d6",
+        "src/brain79/core/locks.py": "sha256:796f852313b31e82",
         "src/brain79/core/migration.py": "sha256:c2bf91d50a5bd1ce",
-        "src/brain79/core/session_commit.py": "sha256:d500a95f3d4e71f3",
+        "src/brain79/core/session_commit.py": "sha256:cbd2f9333a198858",
         "src/brain79/core/validation.py": "sha256:d8a30b2b6f6b3b16",
-        "src/brain79/core/wiki.py": "sha256:386e23fff696c829"
+        "src/brain79/core/wiki.py": "sha256:9500b5cc8f1a6399"
+      }
+    },
+    "architecture/core-refactoring-and-hardening-design.md": {
+      "count": 19,
+      "digest": "sha256:637e76d45f43eee0",
+      "targets": {
+        "src/brain79/config.py": "sha256:e93ef1dc298d496e",
+        "src/brain79/core/ast_guards/__init__.py": "sha256:8bcecf4b592a299d",
+        "src/brain79/core/ast_guards/base.py": "sha256:1b8860d5f413b344",
+        "src/brain79/core/ast_guards/python_inspector.py": "sha256:72d038f907dfcdf7",
+        "src/brain79/core/drift.py": "sha256:bd421fda07a879d4",
+        "src/brain79/core/frontmatter.py": "sha256:53705639b5aba5d6",
+        "src/brain79/core/git_ops.py": "sha256:ddb72372adcfa8d6",
+        "src/brain79/core/harnesses/__init__.py": "sha256:78e35adfea8a25cb",
+        "src/brain79/core/harnesses/agents_md.py": "sha256:faa301ef84857b22",
+        "src/brain79/core/harnesses/antigravity.py": "sha256:93b2532e9d3b3176",
+        "src/brain79/core/harnesses/base.py": "sha256:dff1956768feea7a",
+        "src/brain79/core/harnesses/cursor.py": "sha256:3755d664f5ff7c10",
+        "src/brain79/core/harnesses/mcp_json.py": "sha256:4d137a4c5bcb56e5",
+        "src/brain79/core/init_project.py": "sha256:21e3b673ab4afe8c",
+        "src/brain79/core/locks.py": "sha256:796f852313b31e82",
+        "src/brain79/core/navigation.py": "sha256:187f2bad1fdd9922",
+        "src/brain79/core/session_commit.py": "sha256:cbd2f9333a198858",
+        "src/brain79/core/update.py": "sha256:0aa0d83f3e9545a2",
+        "src/brain79/server.py": "sha256:25d95a2b924a8def"
       }
     },
     "architecture/current-state.md": {
       "count": 32,
-      "digest": "sha256:4efd263a26c91850",
+      "digest": "sha256:3b970eab59b826d1",
       "targets": {
         ".brain-79/decisions/adr-001-hybrid-cli.md": "sha256:07b808b996af3e98",
         ".brain-79/decisions/adr-002-immutable-handoffs.md": "sha256:273b646907ec6e9c",
@@ -111,7 +136,7 @@
         ".brain-79/decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md": "sha256:c786edfa07e7e533",
         ".brain-79/decisions/adr-018-living-manuals-and-temporal-decontamination.md": "sha256:1b2e7a9e6e14ab99",
         ".brain-79/features/cli.md": "sha256:e4c500f69d578067",
-        ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:d64a8d84f73b6b97",
+        ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:4f660d1dbb16dacf",
         ".brain-79/features/handoff-continuity.md": "sha256:c843537e098908b8",
         ".brain-79/features/mcp-server.md": "sha256:efffd3665236dffd",
         ".brain-79/features/organizational-enforcement.md": "sha256:fc78407ffa5f9095",
@@ -120,46 +145,46 @@
         ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:18f6810d2a72e7fe",
         ".brain-79/features/version-governance.md": "sha256:8ebe97d6672f7b6b",
         "ARCHITECTURE.md": "sha256:b451b681e4e72b06",
-        "README.md": "sha256:96f358c04220c510",
+        "README.md": "sha256:554440476deb9eee",
         "USER_GUIDE.md": "sha256:708a5b4a886631f8",
-        "src/brain79/__init__.py": "sha256:bf8ce62a3b0a38f6",
+        "src/brain79/__init__.py": "sha256:ada32ef5703d2448",
         "src/brain79/core/__init__.py": "sha256:8c15bb5da5688e3f"
       }
     },
     "architecture/defect-backlog.md": {
       "count": 5,
-      "digest": "sha256:40941006100a637f",
+      "digest": "sha256:3afdc1af7300b9ff",
       "targets": {
-        "src/brain79/core/frontmatter.py": "sha256:7b1592afd173d2bb",
-        "src/brain79/core/handoff_freshness.py": "sha256:c18b37cced71edda",
-        "src/brain79/core/init_project.py": "sha256:e8c122f9190a00b3",
+        "src/brain79/core/frontmatter.py": "sha256:53705639b5aba5d6",
+        "src/brain79/core/handoff_freshness.py": "sha256:eca048af515bedd1",
+        "src/brain79/core/init_project.py": "sha256:21e3b673ab4afe8c",
         "src/brain79/core/lint_organizational.py": "sha256:45de2d4d2bb52ef4",
         "src/brain79/core/validation.py": "sha256:d8a30b2b6f6b3b16"
       }
     },
     "architecture/dispatcher.md": {
       "count": 3,
-      "digest": "sha256:85bac2013256ff68",
+      "digest": "sha256:d3e3a570a4f996e9",
       "targets": {
-        "src/brain79/__main__.py": "sha256:bd54b6bf685f887e",
+        "src/brain79/__main__.py": "sha256:b18761ee51d6cb6f",
         "src/brain79/cli/dispatch.py": "sha256:9b5f43804410bb07",
         "src/brain79/cli/io.py": "sha256:59e240c852ca8c4f"
       }
     },
     "architecture/mcp-server.md": {
       "count": 2,
-      "digest": "sha256:f6978829aa8c4982",
+      "digest": "sha256:11048f19606e8f55",
       "targets": {
-        "src/brain79/__main__.py": "sha256:bd54b6bf685f887e",
-        "src/brain79/server.py": "sha256:e6d9b8ca9815992a"
+        "src/brain79/__main__.py": "sha256:b18761ee51d6cb6f",
+        "src/brain79/server.py": "sha256:25d95a2b924a8def"
       }
     },
     "architecture/roadmap-industrial-scale.md": {
       "count": 9,
-      "digest": "sha256:8d8688bc0228430f",
+      "digest": "sha256:e78810519fc44da4",
       "targets": {
         ".brain-79/features/cli.md": "sha256:e4c500f69d578067",
-        ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:d64a8d84f73b6b97",
+        ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:4f660d1dbb16dacf",
         ".brain-79/features/handoff-continuity.md": "sha256:c843537e098908b8",
         ".brain-79/features/mcp-server.md": "sha256:efffd3665236dffd",
         ".brain-79/features/organizational-enforcement.md": "sha256:fc78407ffa5f9095",
@@ -171,67 +196,67 @@
     },
     "architecture/symmetry.md": {
       "count": 3,
-      "digest": "sha256:d97d4dd7024aee93",
+      "digest": "sha256:603549443430cf7d",
       "targets": {
         "src/brain79/cli/dispatch.py": "sha256:9b5f43804410bb07",
-        "src/brain79/server.py": "sha256:e6d9b8ca9815992a",
+        "src/brain79/server.py": "sha256:25d95a2b924a8def",
         "tests/test_symmetry.py": "sha256:7b7c76953ba5ba5e"
       }
     },
     "architecture/zero-clone-distribution-and-visual-docs.md": {
       "count": 8,
-      "digest": "sha256:6d5b8e988ca3833d",
+      "digest": "sha256:c40e6b31f0f4a4d8",
       "targets": {
         "ARCHITECTURE.md": "sha256:b451b681e4e72b06",
-        "README.md": "sha256:96f358c04220c510",
+        "README.md": "sha256:554440476deb9eee",
         "USER_GUIDE.md": "sha256:708a5b4a886631f8",
-        "src/brain79/__main__.py": "sha256:bd54b6bf685f887e",
+        "src/brain79/__main__.py": "sha256:b18761ee51d6cb6f",
         "src/brain79/cli/dispatch.py": "sha256:9b5f43804410bb07",
-        "src/brain79/core/doctor.py": "sha256:a9e1132048f14d8f",
-        "src/brain79/core/update.py": "sha256:96edc462a5ff57b5",
+        "src/brain79/core/doctor.py": "sha256:8934740c2ec97c17",
+        "src/brain79/core/update.py": "sha256:0aa0d83f3e9545a2",
         "src/brain79/templates/AGENTS.md": "sha256:246be2d174462daa"
       }
     },
     "decisions/adr-010-orient-and-3-signal-context-ranking.md": {
       "count": 3,
-      "digest": "sha256:838ad910e63a792c",
+      "digest": "sha256:e226e69b82863b8e",
       "targets": {
         "src/brain79/core/context.py": "sha256:5daa88e02f8d7491",
-        "src/brain79/core/navigation.py": "sha256:bbf07eff59ad2fad",
-        "src/brain79/core/orient.py": "sha256:db18b49f99ac2395"
+        "src/brain79/core/navigation.py": "sha256:187f2bad1fdd9922",
+        "src/brain79/core/orient.py": "sha256:bfac2be36dac9cac"
       }
     },
     "decisions/adr-011-session-commit-and-batch-reading.md": {
       "count": 4,
-      "digest": "sha256:f24f32357d01feda",
+      "digest": "sha256:903eef44f6c014e9",
       "targets": {
         "src/brain79/cli/dispatch.py": "sha256:9b5f43804410bb07",
-        "src/brain79/core/session_commit.py": "sha256:d500a95f3d4e71f3",
-        "src/brain79/core/wiki.py": "sha256:386e23fff696c829",
-        "src/brain79/server.py": "sha256:e6d9b8ca9815992a"
+        "src/brain79/core/session_commit.py": "sha256:cbd2f9333a198858",
+        "src/brain79/core/wiki.py": "sha256:9500b5cc8f1a6399",
+        "src/brain79/server.py": "sha256:25d95a2b924a8def"
       }
     },
     "decisions/adr-012-structural-quality-and-drift-detection.md": {
       "count": 6,
-      "digest": "sha256:786b46b2375be013",
+      "digest": "sha256:ca4a91352cfaf2a8",
       "targets": {
-        "src/brain79/core/drift.py": "sha256:2617a93d9ce9ec89",
-        "src/brain79/core/frontmatter.py": "sha256:0d001da5e1789411",
+        "src/brain79/core/drift.py": "sha256:bd421fda07a879d4",
+        "src/brain79/core/frontmatter.py": "sha256:53705639b5aba5d6",
         "src/brain79/core/lint_organizational.py": "sha256:45de2d4d2bb52ef4",
-        "src/brain79/core/orient.py": "sha256:db18b49f99ac2395",
+        "src/brain79/core/orient.py": "sha256:bfac2be36dac9cac",
         "src/brain79/core/validation.py": "sha256:d8a30b2b6f6b3b16",
-        "src/brain79/core/wiki.py": "sha256:386e23fff696c829"
+        "src/brain79/core/wiki.py": "sha256:9500b5cc8f1a6399"
       }
     },
     "decisions/adr-013-versioning-and-release-governance.md": {
       "count": 6,
-      "digest": "sha256:8a20e1a444a4979a",
+      "digest": "sha256:b57d1781d4290a5a",
       "targets": {
-        "README.md": "sha256:96f358c04220c510",
+        "README.md": "sha256:554440476deb9eee",
         "USER_GUIDE.md": "sha256:708a5b4a886631f8",
         "pyproject.toml": "sha256:bd3759a66821117b",
-        "src/brain79/__init__.py": "sha256:bf8ce62a3b0a38f6",
-        "src/brain79/server.py": "sha256:e6d9b8ca9815992a",
+        "src/brain79/__init__.py": "sha256:ada32ef5703d2448",
+        "src/brain79/server.py": "sha256:25d95a2b924a8def",
         "tests/test_version_governance.py": "sha256:063fac67fd029eee"
       }
     },
@@ -246,91 +271,91 @@
     },
     "features/cross-platform-and-lock-isolation.md": {
       "count": 2,
-      "digest": "sha256:e64667746dc37dfc",
+      "digest": "sha256:bed348818df9d481",
       "targets": {
-        "src/brain79/config.py": "sha256:cba990f9de36f575",
-        "src/brain79/core/locks.py": "sha256:8d52b7ba702d7ad8"
+        "src/brain79/config.py": "sha256:e93ef1dc298d496e",
+        "src/brain79/core/locks.py": "sha256:796f852313b31e82"
       }
     },
     "features/handoff-continuity.md": {
       "count": 2,
-      "digest": "sha256:9595375ec874839c",
+      "digest": "sha256:e1f0355d17de7ab8",
       "targets": {
         "src/brain79/core/handoff.py": "sha256:4b4a330a2546fb23",
-        "src/brain79/core/handoff_freshness.py": "sha256:e98d882f9865f9e3"
+        "src/brain79/core/handoff_freshness.py": "sha256:eca048af515bedd1"
       }
     },
     "features/mcp-server.md": {
       "count": 1,
-      "digest": "sha256:d1f7568c7f9bcb4e",
+      "digest": "sha256:9978c2ac4f68bd5b",
       "targets": {
-        "src/brain79/server.py": "sha256:e6d9b8ca9815992a"
+        "src/brain79/server.py": "sha256:25d95a2b924a8def"
       }
     },
     "features/organizational-enforcement.md": {
       "count": 7,
-      "digest": "sha256:f0766baa06be80a5",
+      "digest": "sha256:20b8d3403e63cf0c",
       "targets": {
-        "src/brain79/core/frontmatter.py": "sha256:0d001da5e1789411",
+        "src/brain79/core/frontmatter.py": "sha256:53705639b5aba5d6",
         "src/brain79/core/lint.py": "sha256:d34ce9d50a76b0a5",
         "src/brain79/core/lint_organizational.py": "sha256:45de2d4d2bb52ef4",
         "src/brain79/core/migration.py": "sha256:c2bf91d50a5bd1ce",
-        "src/brain79/core/navigation.py": "sha256:bbf07eff59ad2fad",
+        "src/brain79/core/navigation.py": "sha256:187f2bad1fdd9922",
         "src/brain79/core/validation.py": "sha256:d8a30b2b6f6b3b16",
         "src/brain79/templates/__init__.py": "sha256:ba57cc5d749b138b"
       }
     },
     "features/project-upgrade-and-multi-harness-doctor.md": {
       "count": 6,
-      "digest": "sha256:1ab94e839a4a566f",
+      "digest": "sha256:80d8b73173e1a9fd",
       "targets": {
         "src/brain79/cli/dispatch.py": "sha256:9b5f43804410bb07",
-        "src/brain79/core/doctor.py": "sha256:a9e1132048f14d8f",
-        "src/brain79/core/init_project.py": "sha256:e8c122f9190a00b3",
+        "src/brain79/core/doctor.py": "sha256:8934740c2ec97c17",
+        "src/brain79/core/init_project.py": "sha256:21e3b673ab4afe8c",
         "src/brain79/core/migration.py": "sha256:c2bf91d50a5bd1ce",
-        "src/brain79/core/orient.py": "sha256:db18b49f99ac2395",
-        "src/brain79/server.py": "sha256:e6d9b8ca9815992a"
+        "src/brain79/core/orient.py": "sha256:bfac2be36dac9cac",
+        "src/brain79/server.py": "sha256:25d95a2b924a8def"
       }
     },
     "features/session-triage-and-research-persistence.md": {
       "count": 7,
-      "digest": "sha256:5830aabd3fc15a11",
+      "digest": "sha256:f61674610e89f324",
       "targets": {
         "src/brain79/core/bootstrap.py": "sha256:0d7f37cbdb44ea83",
         "src/brain79/core/context.py": "sha256:5daa88e02f8d7491",
-        "src/brain79/core/curate.py": "sha256:f23e012ee8c480cb",
-        "src/brain79/core/init_project.py": "sha256:e8c122f9190a00b3",
-        "src/brain79/core/orient.py": "sha256:db18b49f99ac2395",
-        "src/brain79/core/session_commit.py": "sha256:d500a95f3d4e71f3",
-        "src/brain79/core/wiki.py": "sha256:386e23fff696c829"
+        "src/brain79/core/curate.py": "sha256:4ac7a5a18c66bb4b",
+        "src/brain79/core/init_project.py": "sha256:21e3b673ab4afe8c",
+        "src/brain79/core/orient.py": "sha256:bfac2be36dac9cac",
+        "src/brain79/core/session_commit.py": "sha256:cbd2f9333a198858",
+        "src/brain79/core/wiki.py": "sha256:9500b5cc8f1a6399"
       }
     },
     "features/transitive-drift-and-ripple-guards.md": {
       "count": 4,
-      "digest": "sha256:71e39fc0ee093dd9",
+      "digest": "sha256:ef63f633c004573d",
       "targets": {
         "src/brain79/core/context.py": "sha256:5daa88e02f8d7491",
-        "src/brain79/core/drift.py": "sha256:2617a93d9ce9ec89",
-        "src/brain79/core/orient.py": "sha256:db18b49f99ac2395",
-        "src/brain79/core/session_commit.py": "sha256:d500a95f3d4e71f3"
+        "src/brain79/core/drift.py": "sha256:bd421fda07a879d4",
+        "src/brain79/core/orient.py": "sha256:bfac2be36dac9cac",
+        "src/brain79/core/session_commit.py": "sha256:cbd2f9333a198858"
       }
     },
     "features/version-governance.md": {
       "count": 3,
-      "digest": "sha256:75446953c07c4a05",
+      "digest": "sha256:c387dee7e58eda62",
       "targets": {
         "pyproject.toml": "sha256:bd3759a66821117b",
-        "src/brain79/__init__.py": "sha256:bf8ce62a3b0a38f6",
-        "src/brain79/core/update.py": "sha256:96edc462a5ff57b5"
+        "src/brain79/__init__.py": "sha256:ada32ef5703d2448",
+        "src/brain79/core/update.py": "sha256:0aa0d83f3e9545a2"
       }
     },
     "product/overview.md": {
       "count": 11,
-      "digest": "sha256:93424b72393e522e",
+      "digest": "sha256:eb9eacdca01b7203",
       "targets": {
-        ".brain-79/SCHEMA.md": "sha256:8da2ffc2747881bc",
+        ".brain-79/SCHEMA.md": "sha256:965fd56d232668ae",
         ".brain-79/features/cli.md": "sha256:e4c500f69d578067",
-        ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:d64a8d84f73b6b97",
+        ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:4f660d1dbb16dacf",
         ".brain-79/features/handoff-continuity.md": "sha256:c843537e098908b8",
         ".brain-79/features/mcp-server.md": "sha256:efffd3665236dffd",
         ".brain-79/features/organizational-enforcement.md": "sha256:fc78407ffa5f9095",
@@ -338,7 +363,7 @@
         ".brain-79/features/session-triage-and-research-persistence.md": "sha256:bcec2480ff469f04",
         ".brain-79/features/transitive-drift-and-ripple-guards.md": "sha256:18f6810d2a72e7fe",
         ".brain-79/features/version-governance.md": "sha256:8ebe97d6672f7b6b",
-        "src/brain79/__init__.py": "sha256:bf8ce62a3b0a38f6"
+        "src/brain79/__init__.py": "sha256:ada32ef5703d2448"
       }
     }
   },

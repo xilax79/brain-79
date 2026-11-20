@@ -13,7 +13,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:4efd263a26c91850"
+applies_to_digest: "sha256:3b970eab59b826d1"
 applies_to_count: 32
 ---
 
@@ -21,7 +21,7 @@ applies_to_count: 32
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.10.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.11.0.
 
 ## Active subsystem topology
 
@@ -31,11 +31,12 @@ This document maintains a high-level summary of the repository's current archite
 | **FastMCP Server** | `src/brain79/server.py` | [Feature — FastMCP integration](../features/mcp-server.md), [Architecture — MCP server](mcp-server.md) |
 | **3-Signal Context & Orient** | `src/brain79/core/orient.py`, `src/brain79/core/context.py` | [ADR-010](../decisions/adr-010-orient-and-3-signal-context-ranking.md), [Feature — Transitive drift detection](../features/transitive-drift-and-ripple-guards.md) |
 | **Transactional Session Commit & Ripple Gate** | `src/brain79/core/session_commit.py`, `src/brain79/core/curate.py` | [ADR-011](../decisions/adr-011-session-commit-and-batch-reading.md), [Feature — Transitive drift detection](../features/transitive-drift-and-ripple-guards.md) |
-| **Merkle Drift Engine** | `src/brain79/core/drift.py` | [Feature — Transitive drift detection](../features/transitive-drift-and-ripple-guards.md), [ADR-012](../decisions/adr-012-structural-quality-and-drift-detection.md) |
+| **Merkle Drift Engine & AST Guards** | `src/brain79/core/drift.py`, `src/brain79/core/ast_guards/` | [Feature — Transitive drift detection](../features/transitive-drift-and-ripple-guards.md), [ADR-012](../decisions/adr-012-structural-quality-and-drift-detection.md), [Architecture — Core refactoring and hardening](core-refactoring-and-hardening-design.md) |
+| **Centralized Git Layer** | `src/brain79/core/git_ops.py` | [Architecture — Core refactoring and hardening](core-refactoring-and-hardening-design.md) |
 | **Organizational Linter & Schema Engine** | `src/brain79/core/lint_organizational.py`, `src/brain79/core/validation.py`, `src/brain79/core/frontmatter.py` | [Feature — Wiki organizational enforcement](../features/organizational-enforcement.md), [ADR-018](../decisions/adr-018-living-manuals-and-temporal-decontamination.md) |
-| **Cross-Platform Lock & I/O Layer** | `src/brain79/core/locks.py`, `src/brain79/config.py` | [Feature — Cross-platform portability and centralized lock isolation](../features/cross-platform-and-lock-isolation.md), [ADR-014](../decisions/adr-014-centralized-locks-and-cross-platform-io.md) |
+| **Cross-Platform Lock & Scoped Context** | `src/brain79/core/locks.py`, `src/brain79/config.py` | [Feature — Cross-platform portability and centralized lock isolation](../features/cross-platform-and-lock-isolation.md), [ADR-014](../decisions/adr-014-centralized-locks-and-cross-platform-io.md) |
 | **Handoff Continuity & Freshness** | `src/brain79/core/handoff.py`, `src/brain79/core/handoff_freshness.py` | [Feature — Short-term handoff continuity](../features/handoff-continuity.md), [ADR-016](../decisions/adr-016-handoff-freshness-and-authority-decay.md) |
-| **Project Protocol Upgrade & Diagnostics** | `src/brain79/core/init_project.py`, `src/brain79/core/doctor.py`, `src/brain79/core/migration.py` | [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md) |
+| **Project Protocol Upgrade & Harness Registry** | `src/brain79/core/init_project.py`, `src/brain79/core/doctor.py`, `src/brain79/core/harnesses/`, `src/brain79/core/migration.py` | [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md) |
 
 > For the historical sequence of developmental milestones and releases, refer to [Architecture — Industrial-scale roadmap and adoption evolution](roadmap-industrial-scale.md) and [Changelog — Historical internal development milestones](../changelog/legacy-internal-releases.md).
 
@@ -52,8 +53,8 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Completion of `v0.10.0` (Phase 9: automated battle-testing, 5-cell L-shaped multi-OS CI matrix, chaos fuzzing, 5-archetype gauntlet, transactional rollback, and live-agent recovery smoke).
-- Continuous performance and reliability monitoring across heterogeneous repository archetypes.
+- Completion of `v0.11.0` (Phase 10: core architectural refactoring and hardening — ordered lock hierarchy, TOCTOU elimination, full Pass 3 rollback, centralized `core/git_ops.py`, fail-closed guardrails, security containment, `core/ast_guards/`, `core/harnesses/`, `create_mcp_server(profile=...)`, and `ContextVar`-backed `ProjectContext`).
+- Next up: Phase 11 (`v0.12.0`, P0 — public release readiness and friction removal).
 
 ---
 

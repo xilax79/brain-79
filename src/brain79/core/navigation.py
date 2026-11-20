@@ -11,6 +11,7 @@ from brain79.core.locks import (
     acquire_wiki_lock,
     atomic_replace_with_retry,
     cleanup_legacy_inline_locks,
+    create_temp_path,
 )
 
 REGISTRY_FILENAME = ".navigation_registry.json"
@@ -37,7 +38,7 @@ def load_registry(wiki_root: Path) -> dict[str, Any]:
 def _save_registry_unlocked(wiki_root: Path, registry: dict[str, Any]) -> None:
     """Atomic write of registry (expects lock already held)."""
     registry_path = wiki_root / REGISTRY_FILENAME
-    tmp_path = registry_path.with_suffix(f".tmp.{uuid.uuid4().hex}")
+    tmp_path = create_temp_path(registry_path)
     try:
         tmp_path.write_text(json.dumps(registry, indent=2), encoding="utf-8", newline="\n")
         atomic_replace_with_retry(tmp_path, registry_path)
@@ -139,8 +140,11 @@ def register_article(
     if ".." in p.parts or path.startswith("/") or p.is_absolute():
         raise ValueError(f"Invalid path for navigation registry: {path}")
 
+    # Normalize section key to lowercase (R-1.1)
+    norm_section = (section or "root").strip().lower() or "root"
+
     # Exclude handoffs from navigation registry
-    if path.startswith("handoffs/") or section == "handoffs":
+    if path.startswith("handoffs/") or norm_section == "handoffs":
         return
 
     graph_meta = graph_meta or {}
@@ -160,7 +164,7 @@ def register_article(
             existing is not None
             and existing.get("title") == (title or path)
             and existing.get("summary") == summary
-            and existing.get("section") == section
+            and existing.get("section") == norm_section
             and existing.get("applies_to", []) == applies_to
             and existing.get("related", []) == related
             and existing.get("supersedes", []) == supersedes
@@ -173,7 +177,7 @@ def register_article(
             "path": path,
             "title": title or path,
             "summary": summary,
-            "section": section,
+            "section": norm_section,
             "registered_at": datetime.now(UTC).isoformat(),
         }
         if applies_to:
@@ -299,13 +303,12 @@ def _escape_markdown(text: str) -> str:
     return text.translate(_ESCAPE_CHARS)
 
 
-def generate_quick_navigation(wiki_root: Path) -> str:
-    """Generate Quick navigation section, grouped by section, sorted by title."""
-    registry = load_registry(wiki_root)
+def _render_quick_navigation(registry: dict[str, Any]) -> str:
+    """Render Quick navigation section from an in-memory registry snapshot."""
     by_section: dict[str, list[dict[str, Any]]] = {}
     for article in registry.get("articles", []):
         path_str = article.get("path", "")
-        sec = article.get("section", "root")
+        sec = str(article.get("section", "root") or "root").strip().lower() or "root"
         if path_str.startswith("handoffs/") or sec == "handoffs":
             continue
         by_section.setdefault(sec, []).append(article)
@@ -328,24 +331,49 @@ def generate_quick_navigation(wiki_root: Path) -> str:
     return "\n".join(lines).rstrip()
 
 
+def generate_quick_navigation(wiki_root: Path) -> str:
+    """Generate Quick navigation section, grouped by section, sorted by title."""
+    registry = load_registry(wiki_root)
+    return _render_quick_navigation(registry)
+
+
 def regenerate_index_navigation(wiki_root: Path) -> str:
-    """Regenerate Quick navigation section in INDEX.md from navigation registry (atomic & locked)."""
+    """Regenerate Quick navigation section in INDEX.md from navigation registry (atomic & locked).
+
+    Follows the global lock hierarchy:
+        _registry.lock -> _drift_manifest.lock -> INDEX.md.lock
+    Computes the rendered Quick navigation section from the registry snapshot captured under
+    _registry.lock and writes INDEX.md under INDEX.md.lock before releasing _registry.lock,
+    eliminating any unlocked read window (TOCTOU).
+    """
     index_path = wiki_root / "INDEX.md"
     if not index_path.exists():
         raise FileNotFoundError("INDEX.md not found.")
 
-    # Self-heal registry & drift manifest: purge handoffs and articles whose .md file was deleted
+    # Self-heal registry & drift manifest under _registry.lock, then write INDEX.md under INDEX.md.lock
     lock_reg = _get_lock(wiki_root)
     with lock_reg:
         registry = load_registry(wiki_root)
         articles = registry.get("articles", [])
-        cleaned = [
-            a for a in articles
-            if not a.get("path", "").startswith("handoffs/")
-            and a.get("section") != "handoffs"
-            and (wiki_root / a.get("path", "")).is_file()
-        ]
-        if len(cleaned) != len(articles):
+        cleaned: list[dict[str, Any]] = []
+        registry_mutated = False
+        for a in articles:
+            path_str = a.get("path", "")
+            raw_sec = a.get("section", "root")
+            norm_sec = str(raw_sec or "root").strip().lower() or "root"
+            if path_str.startswith("handoffs/") or norm_sec == "handoffs":
+                registry_mutated = True
+                continue
+            if not (wiki_root / path_str).is_file():
+                registry_mutated = True
+                continue
+            if raw_sec != norm_sec:
+                a = dict(a)
+                a["section"] = norm_sec
+                registry_mutated = True
+            cleaned.append(a)
+
+        if registry_mutated:
             registry["articles"] = cleaned
             _save_registry_unlocked(wiki_root, registry)
 
@@ -363,51 +391,62 @@ def regenerate_index_navigation(wiki_root: Path) -> str:
                         }
                         if len(cleaned_m) != len(m_articles):
                             m_data["articles"] = cleaned_m
-                            tmp_m = manifest_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
-                            tmp_m.write_text(json.dumps(m_data, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-                            atomic_replace_with_retry(tmp_m, manifest_file)
+                            tmp_m = create_temp_path(manifest_file)
+                            try:
+                                tmp_m.write_text(
+                                    json.dumps(m_data, indent=2, sort_keys=True) + "\n",
+                                    encoding="utf-8",
+                                    newline="\n",
+                                )
+                                atomic_replace_with_retry(tmp_m, manifest_file)
+                            finally:
+                                if tmp_m.exists():
+                                    try:
+                                        tmp_m.unlink()
+                                    except OSError:
+                                        pass
             except Exception:
                 pass
 
-    new_section = generate_quick_navigation(wiki_root)
+        # Render Quick navigation from the locked registry snapshot (zero unlocked read window)
+        new_section = _render_quick_navigation(registry)
 
-    # Synchronize navigation regeneration with concurrent writes via centralized INDEX.md.lock
-    index_lock = acquire_wiki_lock(wiki_root, "INDEX.md", timeout=5.0)
+        # Acquire INDEX.md.lock while still holding _registry.lock (strict lock order: 1 -> 3)
+        index_lock = acquire_wiki_lock(wiki_root, "INDEX.md", timeout=5.0)
+        with index_lock:
+            content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
-    with index_lock:
-        content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+            # Update last_updated date in frontmatter to today
+            today = datetime.now(UTC).strftime("%Y-%m-%d")
+            if content.startswith("---\n"):
+                content = re.sub(
+                    r"^last_updated:\s*.*$",
+                    f"last_updated: {today}",
+                    content,
+                    flags=re.MULTILINE,
+                )
 
-        # Update last_updated date in frontmatter to today
-        today = datetime.now(UTC).strftime("%Y-%m-%d")
-        if content.startswith("---\n"):
-            content = re.sub(
-                r"^last_updated:\s*.*$",
-                f"last_updated: {today}",
+            # Remove ALL existing Quick navigation sections to avoid duplicates
+            cleaned_content = re.sub(
+                r"## Quick navigation\n.*?(?=\n## |\Z)",
+                "",
                 content,
-                flags=re.MULTILINE,
-            )
+                flags=re.DOTALL,
+            ).rstrip()
 
-        # Remove ALL existing Quick navigation sections to avoid duplicates
-        cleaned_content = re.sub(
-            r"## Quick navigation\n.*?(?=\n## |\Z)",
-            "",
-            content,
-            flags=re.DOTALL,
-        ).rstrip()
+            # Insert the new Quick navigation section
+            updated = cleaned_content + "\n\n" + new_section + "\n"
 
-        # Insert the new Quick navigation section
-        updated = cleaned_content + "\n\n" + new_section + "\n"
-
-        tmp_path = index_path.with_suffix(f".tmp.{uuid.uuid4().hex}")
-        try:
-            tmp_path.write_text(updated, encoding="utf-8", newline="\n")
-            atomic_replace_with_retry(tmp_path, index_path)
-        finally:
-            if tmp_path.exists():
-                try:
-                    tmp_path.unlink()
-                except OSError:
-                    pass
+            tmp_path = create_temp_path(index_path)
+            try:
+                tmp_path.write_text(updated, encoding="utf-8", newline="\n")
+                atomic_replace_with_retry(tmp_path, index_path)
+            finally:
+                if tmp_path.exists():
+                    try:
+                        tmp_path.unlink()
+                    except OSError:
+                        pass
 
     cleanup_legacy_inline_locks(wiki_root)
     return "INDEX.md Quick navigation regenerated."

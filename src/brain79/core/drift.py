@@ -22,7 +22,22 @@ from typing import Any
 import uuid
 
 from brain79.config import get_project_root, get_wiki_root
-from brain79.core.frontmatter import INACTIVE_STATUSES, PRE_IMPLEMENTATION_STATUSES, parse_frontmatter
+from brain79.core.frontmatter import (
+    INACTIVE_STATUSES,
+    PRE_IMPLEMENTATION_STATUSES,
+    ValidationError,
+    parse_frontmatter,
+)
+from brain79.core.git_ops import (
+    GitError,
+    GitTimeoutError,
+    NotAGitRepoError,
+    git_last_commit_for_path,
+    git_ls_files,
+    git_rev_parse_head,
+    git_show_blob,
+    git_status_porcelain,
+)
 from brain79.core.locks import (
     acquire_wiki_lock,
     atomic_replace_with_retry,
@@ -247,32 +262,20 @@ class WorkspaceIndex:
         from brain79.core.handoff_freshness import is_git_workspace
         if is_git_workspace(p_root):
             try:
-                res = subprocess.run(
-                    ["git", "-c", "core.quotepath=false", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-                    cwd=str(p_root),
-                    capture_output=True,
-                    check=False,
-                    timeout=2.0,
-                )
-                if res.returncode == 0:
-                    is_git_ok = True
-                    for raw_path in res.stdout.split(b"\x00"):
-                        if not raw_path:
-                            continue
-                        p_str = raw_path.decode("utf-8", errors="replace").strip()
-                        if not p_str:
-                            continue
-                        disk_target = p_root / p_str
-                        if disk_target.is_dir():
-                            for child in disk_target.rglob("*"):
-                                if child.is_file() and not _is_ignored(child, p_root, allow_brain79=True):
-                                    try:
-                                        all_paths.add(rel_posix(child, p_root))
-                                    except ValueError:
-                                        pass
-                        else:
-                            all_paths.add(p_str)
-            except Exception:
+                ls_paths = git_ls_files(p_root, timeout=2.0)
+                is_git_ok = True
+                for p_str in ls_paths:
+                    disk_target = p_root / p_str
+                    if disk_target.is_dir():
+                        for child in disk_target.rglob("*"):
+                            if child.is_file() and not _is_ignored(child, p_root, allow_brain79=True):
+                                try:
+                                    all_paths.add(rel_posix(child, p_root))
+                                except ValueError:
+                                    pass
+                    else:
+                        all_paths.add(p_str)
+            except (NotAGitRepoError, GitTimeoutError, GitError, OSError):
                 is_git_ok = False
 
         if not is_git_ok:
@@ -526,6 +529,21 @@ def compute_wiki_article_digest(content: str) -> str:
         return "sha256:" + hashlib.sha256(norm).hexdigest()[:16]
 
 
+def _resolve_contained_path(project_root: Path, rel_posix_path: str) -> Path:
+    """Resolve `project_root / rel_posix_path` and verify it remains strictly inside `project_root`.
+
+    Raises ValueError if the resolved path (including symlink targets or `..` traversals)
+    escapes `project_root`.
+    """
+    p_root = project_root.resolve()
+    candidate = (p_root / rel_posix_path).resolve()
+    if not candidate.is_relative_to(p_root):
+        raise ValueError(
+            f"Path '{rel_posix_path}' resolves outside project root '{p_root}' (resolved: '{candidate}')."
+        )
+    return candidate
+
+
 def compute_applies_to_manifest(
     patterns: list[str],
     project_root: Path,
@@ -570,7 +588,10 @@ def compute_applies_to_manifest(
             else:
                 d = compute_file_content_digest(None, content_bytes=content_overlay.encode("utf-8"))
         else:
-            disk_p = p_root / p
+            try:
+                disk_p = _resolve_contained_path(p_root, p)
+            except ValueError:
+                continue
             if p.startswith(f"{wiki_rel}/") and p.endswith(".md"):
                 try:
                     d = compute_wiki_article_digest(disk_p.read_text(encoding="utf-8"))
@@ -611,10 +632,15 @@ def save_drift_manifest(wiki_root: Path, manifest_data: dict[str, Any]) -> None:
     manifest_file = wiki_root / ".drift_manifest.json"
     drift_lock = acquire_wiki_lock(wiki_root, ".drift_manifest.json", timeout=10.0)
     with drift_lock:
+        from brain79.core.locks import create_temp_path
+
         content = json.dumps(manifest_data, indent=2, sort_keys=True) + "\n"
-        tmp_file = manifest_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
-        tmp_file.write_text(content, encoding="utf-8", newline="\n")
-        atomic_replace_with_retry(tmp_file, manifest_file)
+        tmp_file = create_temp_path(manifest_file)
+        try:
+            tmp_file.write_text(content, encoding="utf-8", newline="\n")
+            atomic_replace_with_retry(tmp_file, manifest_file)
+        finally:
+            tmp_file.unlink(missing_ok=True)
 
 
 def get_file_last_modified_date(file_path: Path, project_root: Path) -> str | None:
@@ -631,36 +657,20 @@ def get_file_last_modified_date(file_path: Path, project_root: Path) -> str | No
         return _GIT_DATE_CACHE[rel_str]
 
     try:
-        res = subprocess.run(
-            ["git", "log", "-1", "--format=%cs", "--", rel_str],
-            cwd=str(project_root),
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-        if res.returncode == 0:
-            commit_date = res.stdout.strip()
-            if len(commit_date) == 10 and commit_date.count("-") == 2:
-                try:
-                    status_res = subprocess.run(
-                        ["git", "status", "--porcelain", "--", rel_str],
-                        cwd=str(project_root),
-                        capture_output=True,
-                        text=True,
-                        timeout=5,
-                        check=False,
-                    )
-                    if status_res.returncode == 0 and status_res.stdout.strip():
-                        mtime = file_path.stat().st_mtime
-                        fs_date = datetime.fromtimestamp(mtime, tz=UTC).strftime("%Y-%m-%d")
-                        if fs_date > commit_date:
-                            return fs_date
-                except OSError:
-                    pass
-                _GIT_DATE_CACHE[rel_str] = commit_date
-                return commit_date
-    except (subprocess.TimeoutExpired, OSError, ValueError):
+        commit_date = git_last_commit_for_path(project_root, rel_str, fmt="%cs", timeout=5.0)
+        if commit_date and len(commit_date) == 10 and commit_date.count("-") == 2:
+            try:
+                status_res = git_status_porcelain(project_root, paths=[rel_str], timeout=5.0, check_repo=False)
+                if status_res.returncode == 0 and status_res.stdout.strip():
+                    mtime = file_path.stat().st_mtime
+                    fs_date = datetime.fromtimestamp(mtime, tz=UTC).strftime("%Y-%m-%d")
+                    if fs_date > commit_date:
+                        return fs_date
+            except (GitError, OSError):
+                pass
+            _GIT_DATE_CACHE[rel_str] = commit_date
+            return commit_date
+    except (NotAGitRepoError, GitTimeoutError, GitError, OSError, ValueError):
         pass
 
     try:
@@ -941,145 +951,8 @@ def detect_all_drift(
     return all_drifts
 
 
-def _extract_function_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[Any, ...]:
-    args = node.args
-    pos_args = [a.arg for a in args.args]
-    posonly_args = [a.arg for a in getattr(args, "posonlyargs", [])]
-    kwonly_args = [a.arg for a in args.kwonlyargs]
-    vararg = args.vararg.arg if args.vararg else None
-    kwarg = args.kwarg.arg if args.kwarg else None
-    defaults = [ast.unparse(d) for d in args.defaults]
-    kw_defaults = [ast.unparse(d) if d else None for d in args.kw_defaults]
-    returns = ast.unparse(node.returns) if node.returns else None
-    decorators = [ast.unparse(dec) for dec in getattr(node, "decorator_list", [])]
-    return (posonly_args, pos_args, kwonly_args, vararg, kwarg, defaults, kw_defaults, returns, decorators)
-
-
-def extract_public_python_signatures(source_code: str) -> dict[str, Any]:
-    """Parse python source and extract public signatures for top-level functions and classes."""
-    try:
-        tree = ast.parse(source_code)
-    except SyntaxError:
-        return {}
-
-    signatures: dict[str, Any] = {}
-
-    for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if not node.name.startswith("_"):
-                signatures[f"def {node.name}"] = _extract_function_signature(node)
-        elif isinstance(node, ast.ClassDef):
-            if not node.name.startswith("_"):
-                methods: dict[str, Any] = {}
-                for item in node.body:
-                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                        if item.name == "__init__" or not item.name.startswith("_"):
-                            methods[item.name] = _extract_function_signature(item)
-                    elif isinstance(item, ast.AnnAssign):
-                        if isinstance(item.target, ast.Name) and not item.target.id.startswith("_"):
-                            methods[f"var {item.target.id}"] = ast.unparse(item.annotation)
-                signatures[f"class {node.name}"] = methods
-
-    return signatures
-
-
-def has_public_python_api_changes(
-    project_root: Path,
-    rel_posix_path: str,
-    article_path: str,
-    current_content: str | None = None,
-    wiki_root: Path | None = None,
-) -> tuple[bool, str]:
-    """AST Public API Signature Verification (Guard C).
-
-    Checks whether any public function, class, or method signature in a .py file
-    was added, removed, or changed compared to the git revision where the governing article
-    was last committed (or HEAD).
-    """
-    if not rel_posix_path.endswith(".py"):
-        return False, ""
-
-    p_root = project_root.resolve()
-    target_disk = p_root / rel_posix_path
-
-    if current_content is None:
-        if not target_disk.is_file():
-            return False, ""
-        try:
-            current_content = target_disk.read_text(encoding="utf-8")
-        except Exception:
-            return False, ""
-
-    w_root = (wiki_root or (p_root / ".brain-79")).resolve()
-    try:
-        wiki_rel = rel_posix(w_root, p_root)
-    except ValueError:
-        wiki_rel = ".brain-79"
-
-    clean_art = normalize_wiki_rel_path(article_path)
-    rel_wiki_path = f"{wiki_rel}/{clean_art}"
-    base_rev: str | None = None
-
-    try:
-        res = subprocess.run(
-            ["git", "log", "-1", "--format=%H", "--", rel_wiki_path],
-            cwd=str(p_root),
-            capture_output=True,
-            text=True,
-            timeout=2.0,
-            check=False,
-        )
-        if res.returncode == 0 and res.stdout.strip():
-            base_rev = res.stdout.strip()
-        else:
-            res_head = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=str(p_root),
-                capture_output=True,
-                text=True,
-                timeout=2.0,
-                check=False,
-            )
-            if res_head.returncode == 0 and res_head.stdout.strip():
-                base_rev = res_head.stdout.strip()
-    except Exception:
-        base_rev = None
-
-    if not base_rev:
-        return False, ""
-
-    try:
-        res_show = subprocess.run(
-            ["git", "show", f"{base_rev}:{rel_posix_path}"],
-            cwd=str(p_root),
-            capture_output=True,
-            text=True,
-            timeout=2.0,
-            check=False,
-        )
-        if res_show.returncode != 0:
-            curr_sigs = extract_public_python_signatures(current_content)
-            if curr_sigs:
-                first_sym = sorted(curr_sigs.keys())[0]
-                return True, f"new public symbol '{first_sym}' in {rel_posix_path}"
-            return False, ""
-        base_content = res_show.stdout
-    except Exception:
-        return False, ""
-
-    base_sigs = extract_public_python_signatures(base_content)
-    curr_sigs = extract_public_python_signatures(current_content)
-
-    added = set(curr_sigs.keys()) - set(base_sigs.keys())
-    if added:
-        return True, f"added public symbol '{sorted(added)[0]}' in {rel_posix_path}"
-
-    removed = set(base_sigs.keys()) - set(curr_sigs.keys())
-    if removed:
-        return True, f"removed public symbol '{sorted(removed)[0]}' in {rel_posix_path}"
-
-    for sym in sorted(base_sigs.keys()):
-        if base_sigs[sym] != curr_sigs[sym]:
-            return True, f"changed public signature for '{sym}' in {rel_posix_path}"
-
-    return False, ""
+# Backward-compatible re-exports from pluggable AST inspector subsystem (Phase 10 Stage 4: R-4.1)
+from brain79.core.ast_guards import (
+    extract_public_python_signatures,
+    has_public_python_api_changes,
+)

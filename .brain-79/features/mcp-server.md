@@ -9,7 +9,7 @@ applies_to:
 related:
   - architecture/symmetry.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:d1f7568c7f9bcb4e"
+applies_to_digest: "sha256:9978c2ac4f68bd5b"
 applies_to_count: 1
 ---
 

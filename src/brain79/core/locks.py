@@ -10,14 +10,109 @@ Provides single authority for:
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 import os
 from pathlib import Path
+import threading
 import time
-from typing import Final
+from typing import Any, Final
+import uuid
 
 import filelock
 
 LOCKS_DIRNAME: Final[str] = ".locks"
+
+# Global lock acquisition hierarchy (highest to lowest precedence).
+# No code path may acquire a lock with a lower index while holding one with a higher index.
+LOCK_HIERARCHY: Final[tuple[str, ...]] = (
+    "_transaction.lock",
+    "_registry.lock",
+    "_drift_manifest.lock",
+    "INDEX.md.lock",
+)
+_LOCK_RANK: Final[dict[str, int]] = {name: idx for idx, name in enumerate(LOCK_HIERARCHY)}
+_HELD_LOCKS = threading.local()
+_TX_TEMP_FILES: ContextVar[list[Path] | None] = ContextVar("_tx_temp_files", default=None)
+
+
+def register_tx_temp_file(path: Path) -> Path:
+    """Register a temp file with the active transaction_temp_scope(), if any."""
+    active = _TX_TEMP_FILES.get()
+    if active is not None:
+        active.append(path)
+    return path
+
+
+def create_temp_path(target: Path, suffix: str | None = None) -> Path:
+    """Create a temp path adjacent to target and register it in any active transaction scope."""
+    tmp_suffix = suffix if suffix is not None else f".tmp.{uuid.uuid4().hex}"
+    tmp_path = target.with_suffix(tmp_suffix)
+    return register_tx_temp_file(tmp_path)
+
+
+@contextmanager
+def transaction_temp_scope() -> Iterator[list[Path]]:
+    """Context manager tracking transaction-owned temp files for scoped rollback cleanup."""
+    tracked: list[Path] = []
+    token = _TX_TEMP_FILES.set(tracked)
+    try:
+        yield tracked
+    finally:
+        _TX_TEMP_FILES.reset(token)
+
+
+def _get_held_locks() -> list[tuple[int, str, int]]:
+    held: list[tuple[int, str, int]] | None = getattr(_HELD_LOCKS, "stack", None)
+    if held is None:
+        held = []
+        _HELD_LOCKS.stack = held
+    return held
+
+
+class OrderedFileLock(filelock.FileLock):
+    """FileLock subclass enforcing global lock acquisition order within a thread.
+
+    Global lock hierarchy:
+        _transaction.lock -> _registry.lock -> _drift_manifest.lock -> INDEX.md.lock
+    """
+
+    def __init__(self, lock_file: str | os.PathLike[str], timeout: float = -1) -> None:
+        super().__init__(lock_file, timeout=timeout)
+        self._lock_basename = Path(lock_file).name
+        self._lock_rank = _LOCK_RANK.get(self._lock_basename)
+
+    def acquire(self, *args: Any, **kwargs: Any) -> Any:
+        if self._lock_rank is not None:
+            held = _get_held_locks()
+            for _, held_name, held_rank in held:
+                if held_rank > self._lock_rank:
+                    raise RuntimeError(
+                        f"Lock hierarchy violation: cannot acquire '{self._lock_basename}' "
+                        f"(rank {self._lock_rank}) while holding '{held_name}' (rank {held_rank}). "
+                        f"Required order: {' -> '.join(LOCK_HIERARCHY)}."
+                    )
+        proxy = super().acquire(*args, **kwargs)
+        if self._lock_rank is not None:
+            _get_held_locks().append((id(self), self._lock_basename, self._lock_rank))
+        return proxy
+
+    def release(self, force: bool = False) -> None:
+        was_locked = self.is_locked
+        try:
+            super().release(force=force)
+        finally:
+            if was_locked and self._lock_rank is not None:
+                held = _get_held_locks()
+                self_id = id(self)
+                if force:
+                    held[:] = [entry for entry in held if entry[0] != self_id]
+                else:
+                    for idx in range(len(held) - 1, -1, -1):
+                        if held[idx][0] == self_id:
+                            held.pop(idx)
+                            break
 
 
 def rel_posix(path: Path, root: Path) -> str:
@@ -113,13 +208,15 @@ def acquire_wiki_lock(
     rel_posix_path: str,
     timeout: float = 10.0,
 ) -> filelock.FileLock:
-    """Acquire a filelock within the centralized .brain-79/.locks/ directory.
+    """Acquire an ordered filelock within the centralized .brain-79/.locks/ directory.
 
-    Automatically ensures .locks/ exists before initializing FileLock.
+    Automatically ensures .locks/ exists before initializing OrderedFileLock.
+    Enforces the global lock hierarchy:
+        _transaction.lock -> _registry.lock -> _drift_manifest.lock -> INDEX.md.lock
     """
     lock_file = get_lock_path(wiki_root, rel_posix_path)
     lock_file.parent.mkdir(parents=True, exist_ok=True)
-    return filelock.FileLock(str(lock_file), timeout=timeout)
+    return OrderedFileLock(str(lock_file), timeout=timeout)
 
 
 def atomic_replace_with_retry(

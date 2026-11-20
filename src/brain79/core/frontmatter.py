@@ -1,3 +1,4 @@
+import copy
 import csv
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -966,7 +967,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     """
     if content in _PARSE_CACHE:
         cached_meta, cached_body = _PARSE_CACHE[content]
-        return {k: list(v) if isinstance(v, list) else v for k, v in cached_meta.items()}, cached_body
+        return copy.deepcopy(cached_meta), cached_body
 
     content = _normalize_content(content)
     if not content.startswith("---\n") and content != "---":
@@ -1012,8 +1013,7 @@ def parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     body = "\n".join(lines[end_idx + 1:]).lstrip("\n")
     if len(_PARSE_CACHE) >= _PARSE_CACHE_MAX:
         _PARSE_CACHE.pop(next(iter(_PARSE_CACHE)))
-    cloned_cache = {k: list(v) if isinstance(v, list) else v for k, v in metadata.items()}
-    _PARSE_CACHE[content] = (cloned_cache, body)
+    _PARSE_CACHE[content] = (copy.deepcopy(metadata), body)
     return metadata, body
 
 

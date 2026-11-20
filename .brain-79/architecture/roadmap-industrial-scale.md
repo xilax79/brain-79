@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed phases (0-7) and pre-GA phases (8-9) for visual documentation and automated battle-testing
+summary: project roadmap covering completed foundation (phases 0-10) and prioritized evolution phases (11-15) for public launch, team collaboration, polyglot guards, and PyPI release
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -24,8 +24,9 @@ related:
   - architecture/defect-backlog.md
   - architecture/agy-init-and-plugin-design.md
   - architecture/battle-testing-and-chaos-design.md
-last_updated: 2026-11-17
-applies_to_digest: "sha256:8d8688bc0228430f"
+  - architecture/core-refactoring-and-hardening-design.md
+last_updated: 2026-11-20
+applies_to_digest: "sha256:e78810519fc44da4"
 applies_to_count: 9
 ---
 
@@ -33,15 +34,17 @@ applies_to_count: 9
 
 ## Overview
 
-This document tracks the engineering roadmap of `brain-79`.
+This document tracks the engineering and product roadmap of `brain-79`.
 
-`brain-79` is a mechanical implementation of Andrej Karpathy's **LLM-wiki** pattern. Instead of dumping everything into one huge `CLAUDE.md` file or relying on vector RAG, the AI maintains a structured Markdown wiki inside `.brain-79/`. Because LLMs tend to break links, create duplicate files, or leave documentation outdated when code changes, `brain-79` surrounds that Markdown wiki with a mechanical linter, SHA-256 drift tracking, and atomic MCP/CLI tools.
+`brain-79` is a mechanical implementation of Andrej Karpathy's **LLM-wiki** pattern. Instead of dumping everything into one huge `CLAUDE.md` file or relying on opaque vector databases, the AI maintains a structured Markdown wiki inside `.brain-79/` guarded by mechanical linters, SHA-256 Merkle drift tracking, and atomic MCP/CLI tools.
 
-In accordance with **ADR-017 (Pre-GA Semantic Version Calibration)**, `brain-79` stays pre-GA (`0.y.z`). Phases 7.1 and 8 shipped as `v0.9.1` and `v0.9.2`. From Phase 9 onward, each completed phase increments the minor number (`y` in `x.y.z`): Phase 9 ships as `v0.10.0`. No phase bumps to `v1.0.0`; the project owner alone decides when `1.0.0` happens, and no document may imply otherwise.
+In accordance with **ADR-017 (Pre-GA Semantic Version Calibration)**, `brain-79` stays pre-GA (`0.y.z`). Each completed phase increments the minor version (`y` in `x.y.z`). No phase bumps to `v1.0.0`; the project owner alone decides when `1.0.0` happens, and no document may imply otherwise.
 
 ---
 
-## Completed foundation (Phases 0–7)
+## Completed foundation (phases 0–10)
+
+Detailed specifications for shipped phases live in their dedicated architecture docs and release changelogs.
 
 - **[x] Phase 0**: unified write/lint validation; pure routing `INDEX.md` (ADR-008); standard frontmatter.
 - **[x] Phase 1**: declarative `.brain-79/SCHEMA.md` and `software`/`general` profiles (ADR-009).
@@ -56,121 +59,104 @@ In accordance with **ADR-017 (Pre-GA Semantic Version Calibration)**, `brain-79`
 - **[x] Phase 6.7 (`v0.8.0`)**: `.drift_manifest.json`, DAG ripple, Hard Session Ripple Gate, Anti-Sprawl, AST checks.
 - **[x] Phase 6.8 (`v0.8.1`)**: three document classes, temporal decontamination, `<= 20 KB` living manuals (ADR-018).
 - **[x] Phase 7 (`v0.9.0`)**: managed `AGENTS.md` blocks, `SCHEMA.md` v2, MCP harnesses, `migrate_wiki` v2, `doctor`.
-- **[x] Phase 7.1 (`v0.9.1`)**: native `agy` plugin, progressive disclosure AGENTS.md/SKILL.md, ancestor root walk, doctor checks.
+- **[x] Phase 7.1 (`v0.9.1`)**: native `agy` plugin, progressive disclosure `AGENTS.md`/`SKILL.md`, ancestor root walk, doctor checks.
 - **[x] Phase 8 (`v0.9.2`)**: zero-clone install via `uv tool`, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation structure.
 - **[x] Phase 9 (`v0.10.0`)**: automated battle-testing, multi-OS CI matrix, chaos fuzzing, 5-archetype gauntlet, and transactional rollback.
+- **[x] Phase 10 (`v0.11.0`)**: core architectural refactoring and hardening (`OrderedFileLock`, full Pass 3 rollback, `core/git_ops.py`, fail-closed guardrails, symlink/CLI security, `core/ast_guards/`, `core/harnesses/`, `--mcp-profile`, `ProjectContext`).
 
 ---
 
-## Upcoming execution roadmap (`v0.10.x` onward)
+## Strategic evolution roadmap (`v0.12.0` onward)
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 7.1: Antigravity (agy) native plugin, AGENTS.md split & root walk (v0.9.1)  | [x] Shipped|
+| Phase 10 (Pre-P0): Core architectural refactoring & hardening (v0.11.0)           | [x] Done
 +-----------------------------------------------------------------------------------+
-| Phase 8: Zero-clone install, CLI/runtime alignment & Diátaxis docs (v0.9.2)       | [x] Shipped|
+| Phase 11 (P0): Public release readiness & friction removal (v0.12.0)              | [ ] Next
 +-----------------------------------------------------------------------------------+
-| Phase 9: Automated battle-testing, chaos fuzzing & multi-repo gauntlet (v0.10.0)  | [x] Shipped|
+| Phase 12 (P1): Team-safe Git collaboration & low-friction onboarding (v0.13.0)    | [ ] Planned
 +-----------------------------------------------------------------------------------+
-| Release 1.0.0: owner-decided; not tied to any phase                               | [ ] Undated|
+| Phase 13 (P1): Polyglot AST guards & hybrid local retrieval (v0.14.0)             | [ ] Planned
++-----------------------------------------------------------------------------------+
+| Phase 14 (P2): Passive agent lifecycle hooks, CI PR gate & observability (v0.15.0)| [ ] Planned
++-----------------------------------------------------------------------------------+
+| Phase 15 (P2): Multi-agent isolation, benchmarks & PyPI release (v0.16.0)         | [ ] Planned
++-----------------------------------------------------------------------------------+
+| Release 1.0.0: owner-decided; not tied to any phase                               | [ ] Undated
 +-----------------------------------------------------------------------------------+
 ```
 
----
+### Priority order and rationale
 
-### Phase 7.1: Antigravity (`agy`) zero-config plugin, progressive disclosure, and root resolution (`v0.9.1`)
-
-`agy` ignores `.agents/mcp_config.json` (it only reads `~/.gemini/config/mcp_config.json` or `.agents/plugins/<name>/mcp_config.json`), `AGENTS.md` (`13,439` bytes) consumes excessive rules budget with an inaccurate `.mcp.json` instruction for `agy`, and `--project-root .` pins `cwd` on subdirectory launches. Full contracts and test cases are specified in [the Antigravity plugin design spec](agy-init-and-plugin-design.md).
-
-#### Deliverable 7.1.1: Native `agy` workspace plugin (`src/brain79/core/init_project.py`)
-- In `sync_project_mcp_configs()`, generate `.agents/plugins/brain79/plugin.json` (`{"name": "brain79"}`), `.agents/plugins/brain79/mcp_config.json` (`command: "brain79"`, `args: ["--project-root", "."]`), and `.agents/plugins/brain79/skills/brain79-wiki/SKILL.md` (from `src/brain79/templates/SKILL.md`).
-- Preserve custom `plugin.json` fields (including `"disabled"`) and third-party `mcpServers`, back up corrupt JSON to `.bak`, and support `dry_run=True`.
-- **Backward compatibility**: keep syncing `.agents/mcp_config.json`, `.mcp.json`, and `.cursor/mcp.json`; never write `brain79-<project>` entries into `~/.gemini/config/mcp_config.json` under `--include-desktop`.
-
-#### Deliverable 7.1.2: Progressive disclosure split (`templates/AGENTS.md`, `templates/SKILL.md`)
-- Trim `AGENTS.md` to `<= 6,500` bytes (`always_on`), preserving compatibility anchors (`<!-- brain79:start v{{VERSION}} -->`, `# Brain-79 AI memory protocol`, `pi-mcp-adapter`, `brain79_index`, `No-Op Idempotence`, `Zero-Modification Rule`, `## Project notes`) and fixing the `agy` setup note to reference `.agents/plugins/brain79/` or `agy mcp add`.
-- Move full CLI/MCP tables, JSON examples, lint/migration guides, and `force_validation_skip` to `src/brain79/templates/SKILL.md` (`name: brain79-wiki`).
-
-#### Deliverable 7.1.3: Ancestor root walk & `init` isolation (`__main__.py`, `config.py`, `cli/dispatch.py`)
-- In `parse_global_flags()`, leave `_project_root = None` when `--project-root` is `"."` or `"./"` so `get_project_root()` walks up from `Path.cwd().resolve()` to `.brain-79/`, stopping at `.git` boundaries for nested repos.
-- In `dispatch_cmd()` for `init`, resolve omitted `--project-root` to `Path.cwd().resolve()` directly so `init` stays local.
-
-#### Deliverable 7.1.4: Doctor diagnostics & version parity (`doctor.py`, `tests/`)
-- Update `run_doctor()` in `src/brain79/core/doctor.py` to validate `.agents/plugins/brain79/{plugin.json, mcp_config.json, skills/brain79-wiki/SKILL.md}`, warn when `.agents/mcp_config.json` exists without the plugin, and add `".agents/plugins/brain79"` to the `--fix` dirty-tree guard.
-- Bump `__version__` to `"0.9.1"` (`src/brain79/__init__.py`, `README.md`, `CHANGELOG.md`, `.brain-79/changelog/v0-9-1.md`) per ADR-013; verify with `pytest`, `mypy src/`, and `brain79 lint --strict`.
-
----
-
-### Phase 8: Zero-clone installation, CLI/Python 3.11+ alignment, and 3-layer Diátaxis documentation (`v0.9.2`)
-
-Before opening the repository to external users, a newcomer must be able to understand what `brain-79` does in 30 seconds, see real before/after terminal examples, and install it with one command without cloning the repository. Full engineering contracts, error messages, module maps, and verification steps are specified in [the zero-clone distribution and visual docs design](zero-clone-distribution-and-visual-docs.md).
-
-#### Writing and communication rules (mandatory)
-1. **No marketing hype or false promises**: never claim *"Zero hallucination"*, *"Zero context rot"*, or *"Your AI never forgets"*. No external tool controls LLM weights. State what `brain-79` actually does: it turns a Karpathy-style **LLM-wiki** into an enforced workflow by loading task-relevant files on startup, checking code-to-doc SHA-256 drift, and validating wiki writes before they hit the disk.
-2. **Clean, human B2 English (no AI writing vices)**:
-   - Write short, direct sentences (subject-verb-object).
-   - Avoid AI clichés: no rule-of-three adjective chains, no endless `-ing` participial tails (*"...ensuring X, guaranteeing Y, and enabling Z"*), and no stuffing five technical terms into one sentence.
-   - Show real terminal inputs and outputs instead of abstract prose.
-
-#### Deliverable 8.1: Zero-clone self-update and holistic CLI/runtime alignment (`update.py`, `dispatch.py`, `__main__.py`, `doctor.py`, `templates/AGENTS.md`)
-- Update `src/brain79/core/update.py` so `brain79 update` distinguishes a local editable git checkout (excluding `site-packages`/`dist-packages` and `$HOME` dotfiles false positives) from a standalone zero-clone install.
-- Inside a local dev checkout, run `git pull --ff-only` followed by `uv tool install --editable --force .`. Inside a standalone install, run `uv tool install --force git+https://github.com/xilax79/brain-79.git` (supporting `--branch` via `@<branch>` and handling Windows running-binary lock errors gracefully).
-- Fix `brain79 update` help/flag descriptions in `dispatch.py` and `ROOT_HELP` in `__main__.py` (adding `update-project` and `doctor`), align `doctor.py` Python runtime checks to `>= 3.11` matching `pyproject.toml`, and replace `--editable .` hints in `doctor.py` and `src/brain79/templates/AGENTS.md` with `uv tool install git+https://github.com/xilax79/brain-79.git`.
-
-#### Deliverable 8.2: High-clarity, human-facing landing page (README.md) and user guide (USER_GUIDE.md)
-- Rewrite `README.md` (~138 lines) in clean B2 English with ADR-015 sentence case: Karpathy LLM-wiki positioning, a 4-row comparison table, ASCII workflow diagram, and day-to-day usage walkthrough without internal engine jargon.
-- Create `USER_GUIDE.md` as Diátaxis How-To and protocol reference: AGENTS.md + MCP connection, 5 concrete code-verified scenarios (cold-start orientation with 64 KB reading manifest, AST Guard C and Ripple Gate stale doc protection, gitless research, on-demand handoffs with cryptographic provenance, and MCP tool vs CLI symmetry table). Preserve the `version-0.9.2-blue.svg` badge required by `tests/test_version_governance.py`.
-
-#### Deliverable 8.3: Developer-grade ARCHITECTURE.md (contributor-facing)
-- Rewrite `ARCHITECTURE.md` retaining the three-class ontology, authority hierarchy, 1:1 symmetry (`24` CLI / `22` MCP), and `.brain-79/` layout while adding a complete 28-file `src/brain79/` module map, verified step-by-step traces of `orient()` and `commit_session()`, and cross-platform `.locks/` + atomic storage details.
-
-#### Deliverable 8.4: Retirement of HTML documentation and 3-layer Diátaxis structure
-- Remove stale `docs/whitepaper.html` and `docs/index.html` in favor of pure Markdown Diátaxis documentation (`README.md`, `USER_GUIDE.md`, `ARCHITECTURE.md`), eliminating redundant HTML maintenance and external CDN dependencies.
-
----
-
-### Phase 9: Automated battle-testing, chaos fuzzing, and multi-repo gauntlet (`v0.10.0`)
-
-Because `brain-79` is maintained by a solo builder, manual testing cannot cover every OS, git state, or LLM behavior. Phase 9 adds an automated battle-testing harness that stress-tests the engine as a pre-GA hardening step. Phase 9 changes tests, CI, scripts, and version files only; defects found are fixed in `src/` with a regression test. Full contracts, corpora, budgets, the failure catalog (F1–F16), and release gates are in [the battle-testing design](battle-testing-and-chaos-design.md).
-
-#### Deliverable 9.1: Multi-OS GitHub Actions matrix (`.github/workflows/ci.yml`, `.gitattributes`, `tests/test_ci_workflow.py`)
-- Five jobs (L-shaped matrix): Ubuntu × Python `3.11`, `3.12`, `3.13` plus macOS × `3.12` and Windows × `3.12`, `fail-fast: false`. Each runs `pytest`, `mypy src tests`, `brain79 lint --strict`, and `brain79 doctor`; doctor warnings fail the job unless allowlisted.
-- Real-OS tests cover Windows file replace, `%APPDATA%`, CRLF digests, case-insensitive filenames, and POSIX hook execution.
-
-#### Deliverable 9.2: Multiprocess stress and deterministic fuzzing (`tests/test_chaos_and_fuzzing.py`)
-- 8 `spawn` workers with a barrier run `write_article`, `edit_article`, `navigate --regenerate`, and `session_commit` on one `.brain-79/`. Assert valid JSON state, no leftover temp files, all locks acquirable, no torn or lost writes, and `lint --strict` exit `0`. A SIGKILL case checks lock recovery on POSIX.
-- Seeded stdlib fuzzing (no new dependency) feeds hostile YAML, encodings, Unicode, boundary sizes (`20,479`/`20,480`/`20,481` bytes), traversal paths, and wiki cycles into `validate_article_content`, `parse_frontmatter`, and `migrate_wiki`. Only `ValidationError` or `FrontmatterError` may be raised; no hang over 5 s.
-- Environment faults (read-only dir, disk full, interrupt) must leave a commit fully applied or not applied.
-
-#### Deliverable 9.3: Five-archetype gauntlet (`scripts/run_battle_gauntlet.py`, `tests/test_battle_gauntlet.py`)
-- Runs a fixed 10-step lifecycle on five temporary workspaces: dirty polyglot monorepo, chaotic legacy wiki, gitless research (`--profile general`), git branch warfare with AST mutation, and a 200-article / 1,000-file scale benchmark.
-- Latency budgets are in-process medians, calibrated with `scripts/benchmark_baseline.py` before they are frozen.
-
-#### Deliverable 9.4: Live-agent recovery smoke (`scripts/run_e2e_smoke.py`)
-- Add scenarios for `unresolved_session_ripple` and `duplicate_governance_target`. A real agent must self-correct from the `actionable` hint. It runs manually before release (not in CI) with `gemini-3.8-flash` at effort `low` (`medium` only if a scenario proves too complex); pass means at least 2 of 3 attempts succeed.
-
-#### Deliverable 9.5: Release parity (`v0.10.0`)
-- Bump `__version__` to `0.10.0` (`src/brain79/__init__.py`, `README.md` badge, `CHANGELOG.md`, `.brain-79/changelog/v0-10-0.md`, `AGENTS.md` anchor) per ADR-013. Mark Phase 9 shipped here and in `current-state.md`, and update affected living manuals.
-
----
-
-## Acceptance criteria for Phases 7.1, 8, and 9 (`v0.9.1`–`v0.10.0`)
-
-| ID | Phase | Criterion | Verification |
+| Priority | Phase | Target version | Primary objective |
 |---|---|---|---|
-| **AC-7.1.1** | `v0.9.1` | **Native `agy` workspace plugin**: `init` & `update-project` create `.agents/plugins/brain79/{plugin.json, mcp_config.json, skills/brain79-wiki/SKILL.md}` and retain `.agents/mcp_config.json`. | `tests/test_init_project.py` |
-| **AC-7.1.2** | `v0.9.1` | **Progressive `AGENTS.md` split**: `AGENTS.md` `<= 6,500` bytes with all test anchors and accurate `agy` setup; full reference tables in `SKILL.md`. | `tests/test_init_project.py` |
-| **AC-7.1.3** | `v0.9.1` | **Subdirectory root walk & `init` isolation**: `--project-root .` finds ancestor `.brain-79/`, stops at `.git` boundaries, and `init` stays local to `cwd`. | `tests/test_cli.py` |
-| **AC-7.1.4** | `v0.9.1` | **Doctor & ADR-013 parity**: `doctor` flags missing `.agents/plugins/brain79/`, `doctor --fix` repairs it, and `pytest`/`mypy`/`lint --strict` pass at `v0.9.1`. | `tests/test_project_upgrade_and_doctor.py` |
-| **AC-8.1** | `v0.9.2` | **Zero-clone `brain79 update` & CLI/Python alignment**: standalone installs upgrade via `uv tool install --force git+...`, local dev checkouts preserve `git pull` + `--editable --force .`, `dispatch.py`/`ROOT_HELP`/`doctor.py`/`AGENTS.md` align on `Python >= 3.11` and zero-clone hints. | `tests/test_update.py`, `tests/test_cli.py`, `tests/test_project_upgrade_and_doctor.py` |
-| **AC-8.2** | `v0.9.2` | **Three-layer Diátaxis documentation structure**: human-facing `README.md`, How-To & protocol reference `USER_GUIDE.md`, and technical specifications `ARCHITECTURE.md` with zero hype, ADR-015 sentence case, and version badge parity (`0.9.2`). | `tests/test_version_governance.py`, doc audit |
-| **AC-8.3** | `v0.9.2` | **HTML docs retirement**: `docs/whitepaper.html` and `docs/index.html` removed in favor of pure, zero-dependency Markdown documentation with zero `file:///Users/` paths. | `tests/test_version_governance.py` |
-| **AC-8.4** | `v0.9.2` | **Release & Merkle ripple parity**: `__version__` bumped to `0.9.2`, `CHANGELOG.md` + `changelog/v0-9-2.md` + `AGENTS.md` synced, and all impacted wiki articles updated or verified with zero drift. | `pytest`, `mypy src tests`, `brain79 lint --strict`, `brain79 doctor` |
-| **AC-9.1** | `v0.10.0` | **Multi-OS CI matrix**: all 5 L-shaped cells green on the release commit; workflow structure is asserted statically. | GitHub Actions, `tests/test_ci_workflow.py` |
-| **AC-9.2** | `v0.10.0` | **Concurrency and fuzzing**: zero corrupt state, zero leaked locks or temp files, zero lost writes, only structured exceptions, atomic commits under faults; 20 consecutive local runs pass. | `tests/test_chaos_and_fuzzing.py` |
-| **AC-9.3** | `v0.10.0` | **Five-archetype gauntlet**: all archetypes pass the 10-step lifecycle with zero data loss and budgets met; runner exit codes and JSON report schema verified. | `tests/test_battle_gauntlet.py`, `scripts/run_battle_gauntlet.py` |
-| **AC-9.4** | `v0.10.0` | **Live-agent recovery**: both scenarios reach 2 of 3 successes without hints; results recorded in the changelog. | `scripts/run_e2e_smoke.py` (manual) |
-| **AC-9.5** | `v0.10.0` | **Release parity**: version `0.10.0` synced across all files, wiki updated with zero drift, no `xfail` masking defects. | `pytest`, `mypy src tests`, `brain79 lint --strict`, `brain79 doctor` |
+| **Pre-P0** | Phase 10 | `v0.11.0` (Done) | Fixed concurrency/rollback/security defects and decomposed monoliths for phases 11–15. |
+| **P0** | Phase 11 | `v0.12.0` | Remove immediate public-launch blockers and reduce per-turn token tax. |
+| **P1** | Phase 12 | `v0.13.0` | Eliminate multi-developer Git merge conflicts and ease brownfield adoption. |
+| **P1** | Phase 13 | `v0.14.0` | Extend AST protection beyond Python and upgrade local search quality. |
+| **P2** | Phase 14 | `v0.15.0` | Enforce protocol via native agent hooks, PR gates, and human observability. |
+| **P2** | Phase 15 | `v0.16.0` | Support concurrent multi-agent worktrees, publish benchmarks, and release to PyPI. |
+
+---
+
+## Phase 11 (`v0.12.0`) — Public release readiness and friction removal (P0)
+
+Goal: remove every avoidable adoption blocker before announcing `brain-79` publicly as a preview release.
+
+- **English-first backlink standardization**: replace the hardcoded Spanish footer invariant (`[← Volver al Índice](../INDEX.md)`) with English (`[← Back to Index](../INDEX.md)`), allow schema-level customization, and auto-migrate existing wikis cleanly via `migrate_wiki`.
+- **Native multi-harness instruction adapters**: plug new adapters into `core/harnesses/` for dominant coding agents: `CLAUDE.md` (Claude Code), `.cursor/rules/brain79.mdc` (Cursor), and `.github/copilot-instructions.md` (GitHub Copilot).
+- **MCP tool surface compaction (`core` default)**: switch the default FastMCP server profile to `core` (~7–8 hot-path tools: `orient`, `session_commit`, `read`, `read_batch`, `edit`, `context`, `search`, `lint`) to cut per-turn system-prompt token overhead; expose administrative tools under `--mcp-profile full` or CLI.
+- **Honest positioning**: add an explicit **Limitations and trade-offs** section to `README.md` and clarify `CHANGELOG.md` pre-GA version history.
+
+---
+
+## Phase 12 (`v0.13.0`) — Team-safe Git collaboration and low-friction onboarding (P1)
+
+Goal: make `brain-79` practical for multi-developer teams on parallel branches and fast to adopt on existing large codebases.
+
+- **Merge-conflict-free derived state**: separate human-authored Markdown from machine-derived caches (`.drift_manifest.json`, `.navigation_registry.json`). Support deterministic rebuild-on-demand (gitignore-friendly derived state) and ship an optional Git merge driver for `INDEX.md` so parallel Pull Requests stop colliding on centralized index files.
+- **Automated brownfield onboarding (`bootstrap --auto-map`)**: upgrade `bootstrap` from a passive scan manifest into a deterministic repository mapper that proposes initial `applies_to` boundaries from directory structure, package manifests (`pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`), and git history.
+- **Configurable enforcement tiers (`strict` / `balanced` / `advisory`)**: allow repositories to declare enforcement strictness in `SCHEMA.md` so teams can start with non-blocking drift warnings during onboarding and graduate to Hard Session Ripple Gates once documentation stabilizes.
+
+---
+
+## Phase 13 (`v0.14.0`) — Polyglot AST guards and hybrid local retrieval (P1)
+
+Goal: extend `brain-79`'s strongest mechanical moat beyond Python and close the retrieval gap against vector/database memory tools without sacrificing Git-native simplicity.
+
+- **Polyglot AST Guard C via optional Tree-sitter extra**: plug an optional `brain79[polyglot]` extra into `core/ast_guards/` powered by `tree-sitter` covering **TypeScript/JavaScript, Go, Rust, and Java** public symbol and signature verification while keeping Python stdlib `ast` zero-dependency by default.
+- **Hybrid local retrieval (SQLite FTS5 + optional local embeddings)**: augment Signal 2 in `context.py` with a local derived SQLite FTS5 index (stdlib `sqlite3`, zero external servers) for fast stemming and phrase search, plus an optional pluggable local-embedding backend for conceptual queries where keyword overlap fails. Plain Markdown in Git remains the sole source of truth.
+- **Context budget telemetry (`brain79 stats`)**: report real token estimates, `orient()` budget utilization, and drift/coverage metrics so teams can quantify context savings against raw `CLAUDE.md` files.
+
+---
+
+## Phase 14 (`v0.15.0`) — Passive enforcement hooks, CI PR gate, and observability (P2)
+
+Goal: close the voluntary-compliance gap where agents ignore `AGENTS.md`, and make `.brain-79/` immediately valuable to human reviewers.
+
+- **Native agent lifecycle hooks**: ship opt-in hook templates via `core/harnesses/` for clients that support lifecycle events (such as Claude Code `SessionStart` / `Stop` hooks and Cursor/Antigravity hooks) to inject `brain79 orient` automatically on startup and surface drifted targets before session exit.
+- **Reusable GitHub Action PR Gate (`brain79 ci-check`)**: post concise Pull Request summaries listing drifted governing articles, relevant ADRs for the PR diff, and `lint --strict` status—bringing `brain-79` directly into team code review workflows.
+- **Human-facing observability (`brain79 report` / `graph`)**: generate zero-dependency terminal and Mermaid reports showing code-to-wiki coverage percentage, hot drifted nodes, and stale documentation clusters.
+
+---
+
+## Phase 15 (`v0.16.0`) — Multi-agent coordination, ecosystem proof, and PyPI release (P2)
+
+Goal: establish `brain-79` as the standard deterministic memory substrate for parallel autonomous agents, back its claims with reproducible evidence, and publish the matured package to PyPI.
+
+- **Multi-agent / worktree session isolation**: add `agent_id` and `worktree` scoping to handoffs and transactional commits (built on `ProjectContext`) so concurrent subagents in parallel git worktrees share canonical governing docs without clobbering each other's handoff streams.
+- **Published empirical benchmark suite**: maintain a reproducible benchmark comparing `brain-79` against raw `CLAUDE.md` and lightweight Markdown wikis across token consumption, drift detection recall, and live-agent task recovery on multiple frontier and fast models.
+- **PyPI distribution**: once the protocol, multi-harness adapters, team-safe state, and polyglot guards have matured, publish `brain79` to PyPI via automated GitHub Actions Trusted Publishers, enabling `uv tool install brain79`, `uvx brain79`, and `pipx install brain79` without raw Git URLs.
+
+---
+
+## Feasibility note: evolution vs. rewrite
+
+Every phase in this roadmap is achievable **incrementally on the existing Python codebase** (`src/brain79/`) without rewriting from scratch:
+
+- **Phase 10 prepares clean seams**: `core/git_ops.py`, `core/ast_guards/`, `core/harnesses/`, `create_mcp_server()`, and `ProjectContext` isolate every extension point needed by Phases 11–15.
+- **Zero-dependency core preserved**: heavy capabilities (Tree-sitter polyglot AST, optional local embeddings) are isolated behind optional Python extras (`brain79[polyglot]`, `brain79[semantic]`), keeping base installation fast and portable.
+- **Only boundary that could later justify packaging work (not a rewrite)**: if non-Python developer adoption stalls due to Python/uv prerequisites, standalone binary distribution (e.g., Homebrew / `npx` wrapper over `uvx` or compiled binaries) solves distribution without rewriting the core engine.
 
 ---
 

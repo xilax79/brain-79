@@ -202,3 +202,27 @@ def test_generate_frontmatter_template_enums() -> None:
     dec = generate_frontmatter_template("decision")
     assert "status: proposed  # <proposed|accepted|superseded|rejected|legacy>" in dec
 
+
+
+def test_parse_frontmatter_cache_deep_copy_isolation() -> None:
+    """AC-10.7: Mutating nested dicts/lists returned by parse_frontmatter does not poison _PARSE_CACHE."""
+    content = (
+        "---\n"
+        "type: topic\n"
+        "summary: Nested metadata test\n"
+        "nested:\n"
+        "  items:\n"
+        "    - a\n"
+        "    - b\n"
+        "  meta:\n"
+        "    flag: true\n"
+        "---\n\n"
+        "# Nested Test\n"
+    )
+    meta1, _ = parse_frontmatter(content)
+    meta1["nested"]["items"].append("poisoned")
+    meta1["nested"]["meta"]["flag"] = False
+
+    meta2, _ = parse_frontmatter(content)
+    assert meta2["nested"]["items"] == ["a", "b"]
+    assert meta2["nested"]["meta"]["flag"] is True

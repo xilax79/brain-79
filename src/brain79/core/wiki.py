@@ -412,7 +412,9 @@ def write_article(
 
     try:
         with lock:
-            tmp_path = target.with_suffix(".md.tmp")
+            from brain79.core.locks import create_temp_path
+
+            tmp_path = create_temp_path(target, suffix=".md.tmp")
             try:
                 tmp_path.write_text(content, encoding="utf-8", newline="\n")
                 atomic_replace_with_retry(tmp_path, target)

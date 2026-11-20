@@ -708,3 +708,14 @@ def test_missing_pyproject(
     assert code == 1
     captured = capsys.readouterr()
     assert "pyproject.toml not found at" in captured.out
+
+
+def test_update_project_rejects_option_injection_branch_override(
+    mock_brain79_env: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """AC-10.9: branch_override starting with '-' is rejected with exit code 1 before invoking subprocess."""
+    with patch("subprocess.run") as mock_run:
+        for bad_branch in ("--upload-pack=evil", "-x", "--"):
+            rc = update_project(branch_override=bad_branch)
+            assert rc == 1
+        mock_run.assert_not_called()

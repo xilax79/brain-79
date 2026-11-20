@@ -207,39 +207,10 @@ def orient(
     # Unconditional Git working-tree path discovery (even when task=None, paths=None)
     discovered_paths: list[str] = []
     try:
-        res = subprocess.run(
-            ["git", "-c", "core.quotepath=false", "status", "--porcelain=v1", "-z"],
-            cwd=str(p_root),
-            capture_output=True,
-            check=False,
-            timeout=2.0,
-        )
-        if res.returncode == 0 and res.stdout:
-            raw_entries = res.stdout.split(b"\x00")
-            idx = 0
-            while idx < len(raw_entries):
-                entry_bytes = raw_entries[idx]
-                idx += 1
-                if not entry_bytes:
-                    continue
-                entry_str = entry_bytes.decode("utf-8", errors="replace")
-                if len(entry_str) >= 4 and entry_str[2] == " ":
-                    xy = entry_str[:2]
-                    p_str = entry_str[3:]
-                    norm_p = normalize_posix_input(p_str).lstrip("/")
-                    if norm_p and norm_p not in discovered_paths and not norm_p.startswith(".brain-79/"):
-                        discovered_paths.append(norm_p)
-                    if "R" in xy or "C" in xy:
-                        if idx < len(raw_entries) and raw_entries[idx]:
-                            orig_bytes = raw_entries[idx]
-                            idx += 1
-                            orig_str = orig_bytes.decode("utf-8", errors="replace")
-                            norm_orig = normalize_posix_input(orig_str).lstrip("/")
-                            if norm_orig and norm_orig not in discovered_paths and not norm_orig.startswith(".brain-79/"):
-                                discovered_paths.append(norm_orig)
-                    if len(discovered_paths) >= 50:
-                        break
-    except Exception:
+        from brain79.core.git_ops import GitError, git_dirty_paths
+
+        discovered_paths = git_dirty_paths(p_root, exclude_prefix=".brain-79/", timeout=2.0)[:50]
+    except (GitError, OSError):
         discovered_paths = []
 
     effective_paths: list[str] = []

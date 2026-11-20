@@ -10,7 +10,7 @@ related:
   - architecture/roadmap-industrial-scale.md
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:e64667746dc37dfc"
+applies_to_digest: "sha256:bed348818df9d481"
 applies_to_count: 2
 ---
 
@@ -29,6 +29,8 @@ All inter-process file locks are isolated in `.brain-79/.locks/` (excluded from 
 - **Merkle manifest lock**: `.brain-79/.locks/_drift_manifest.lock` guards `.drift_manifest.json`.
 - **Transaction commit lock**: `.brain-79/.locks/_transaction.lock` guards multi-file writes and session commits.
 - **Article content locks**: mapped deterministically by replacing `/` with `__` (e.g. `features/cli.md` $\rightarrow$ `.brain-79/.locks/features__cli.md.lock`).
+- **Global lock hierarchy (`LOCK_HIERARCHY` / `OrderedFileLock`)**: enforces strict acquisition order `_transaction.lock` -> `_registry.lock` -> `_drift_manifest.lock` -> `INDEX.md.lock` per thread, raising `RuntimeError` on reverse-order acquisition.
+- **Transaction-scoped temp tracking (`transaction_temp_scope`, `create_temp_path`, `register_tx_temp_file`)**: tracks transaction-owned `.tmp` files via `ContextVar` for scoped rollback cleanup without touching unrelated worker files.
 
 ### 2. Universal POSIX path, case-sensitivity, and line-ending normalization
 - **Case-sensitive path verification (`has_exact_case_path`)**: walks directory segments against `os.listdir()` to enforce exact character casing on macOS and Windows, preventing links that would break on case-sensitive Linux filesystems.

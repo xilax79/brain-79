@@ -87,12 +87,11 @@ def run_doctor(
     if fix:
         if not force and is_git_workspace(p_root):
             try:
-                proc = subprocess.run(
-                    [
-                        "git",
-                        "status",
-                        "--porcelain",
-                        "--",
+                from brain79.core.git_ops import git_status_porcelain
+
+                proc = git_status_porcelain(
+                    p_root,
+                    paths=[
                         "AGENTS.md",
                         ".brain-79",
                         ".mcp.json",
@@ -100,10 +99,7 @@ def run_doctor(
                         ".agents/plugins/brain79",
                         ".cursor/mcp.json",
                     ],
-                    cwd=p_root,
-                    capture_output=True,
-                    text=True,
-                    check=False,
+                    check_repo=False,
                 )
                 if proc.stdout.strip():
                     dirty_check = DoctorCheck(
@@ -553,6 +549,21 @@ def run_doctor(
                         message=f"Latest handoff '{latest.name}' is {freshness.state} ({count} total handoffs).",
                     )
                 )
+
+    # Delegate harness diagnostics through core/harnesses registry (R-4.2)
+    from brain79.core.harnesses import diagnose_all_harnesses
+
+    _builtin_harnesses = {"agents_md", "mcp_json", "antigravity", "cursor"}
+    for h_name, h_issues in diagnose_all_harnesses(p_root).items():
+        if h_name not in _builtin_harnesses and h_issues:
+            checks.append(
+                DoctorCheck(
+                    category=f"harness:{h_name}",
+                    status="warning",
+                    message="; ".join(h_issues),
+                    actionable="Run 'brain79 update-project' or 'brain79 doctor --fix' to repair harness configuration.",
+                )
+            )
 
     # Compute overall status and exit code
     has_error = any(c.status == "error" for c in checks)
