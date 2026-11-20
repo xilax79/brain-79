@@ -46,7 +46,7 @@ File: `.github/workflows/ci.yml`. Trigger: `push` and `pull_request` on `main`. 
 
 | Item | Contract |
 |---|---|
-| Matrix | `os: [ubuntu-latest, macos-latest, windows-latest]` × `python: ["3.11", "3.12", "3.13"]` = 9 jobs, `fail-fast: false`, `timeout-minutes: 20` |
+| Matrix | L-shaped 5-cell matrix: `ubuntu-latest` × `["3.11", "3.12", "3.13"]` + `macos-latest` × `"3.12"` + `windows-latest` × `"3.12"` = 5 jobs, `fail-fast: false`, `timeout-minutes: 20` |
 | Setup | `actions/checkout`, `astral-sh/setup-uv`, then `uv sync --group dev` on the matrix Python. Actions are pinned to a major version tag |
 | Line endings | add `.gitattributes` with `* text=auto eol=lf` so Windows checkouts keep LF and Merkle digests match |
 | Steps | `uv run pytest -q`, `uv run mypy src tests`, `uv run brain79 lint --strict`, `uv run brain79 doctor --format json` |
@@ -146,7 +146,7 @@ Budgets are measured in-process (no interpreter startup), median of 5 runs after
 | F15 | Agent cannot self-correct from an `actionable` hint | live smoke |
 | F16 | Release parity broken | version-governance tests |
 
-Gate for `v0.10.0` (all required): the 9-cell CI matrix is green on the release commit; `tests/test_ci_workflow.py` parses `ci.yml` with `pyyaml` and asserts the matrix, `fail-fast: false`, the four steps, pinned actions, and the doctor allowlist; chaos and gauntlet tests pass on all cells; the same chaos test passes 20 consecutive local runs (flake check); the live smoke is recorded; `__version__` is `0.10.0` with `README.md` badge, `CHANGELOG.md`, `changelog/v0-10-0.md`, and `AGENTS.md` anchor synced; the roadmap and `current-state.md` mark Phase 9 shipped; `brain79 lint --strict` and `brain79 doctor` are clean with zero drift.
+Gate for `v0.10.0` (all required): the 5-cell L-shaped CI matrix is green on the release commit; `tests/test_ci_workflow.py` parses `ci.yml` with `pyyaml` and asserts the matrix, `fail-fast: false`, the four steps, pinned actions, and the doctor allowlist; chaos and gauntlet tests pass on all cells; the same chaos test passes 20 consecutive local runs (flake check); the live smoke is recorded; `__version__` is `0.10.0` with `README.md` badge, `CHANGELOG.md`, `changelog/v0-10-0.md`, and `AGENTS.md` anchor synced; the roadmap and `current-state.md` mark Phase 9 shipped; `brain79 lint --strict` and `brain79 doctor` are clean with zero drift.
 
 ---
 

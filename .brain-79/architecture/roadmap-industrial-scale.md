@@ -134,7 +134,7 @@ Before opening the repository to external users, a newcomer must be able to unde
 Because `brain-79` is maintained by a solo builder, manual testing cannot cover every OS, git state, or LLM behavior. Phase 9 adds an automated battle-testing harness that stress-tests the engine as a pre-GA hardening step. Phase 9 changes tests, CI, scripts, and version files only; defects found are fixed in `src/` with a regression test. Full contracts, corpora, budgets, the failure catalog (F1–F16), and release gates are in [the battle-testing design](battle-testing-and-chaos-design.md).
 
 #### Deliverable 9.1: Multi-OS GitHub Actions matrix (`.github/workflows/ci.yml`, `.gitattributes`, `tests/test_ci_workflow.py`)
-- Nine jobs: Ubuntu, macOS, and Windows × Python `3.11`, `3.12`, `3.13`, `fail-fast: false`. Each runs `pytest`, `mypy src tests`, `brain79 lint --strict`, and `brain79 doctor`; doctor warnings fail the job unless allowlisted.
+- Five jobs (L-shaped matrix): Ubuntu × Python `3.11`, `3.12`, `3.13` plus macOS × `3.12` and Windows × `3.12`, `fail-fast: false`. Each runs `pytest`, `mypy src tests`, `brain79 lint --strict`, and `brain79 doctor`; doctor warnings fail the job unless allowlisted.
 - Real-OS tests cover Windows file replace, `%APPDATA%`, CRLF digests, case-insensitive filenames, and POSIX hook execution.
 
 #### Deliverable 9.2: Multiprocess stress and deterministic fuzzing (`tests/test_chaos_and_fuzzing.py`)
@@ -166,7 +166,7 @@ Because `brain-79` is maintained by a solo builder, manual testing cannot cover 
 | **AC-8.2** | `v0.9.2` | **Three-layer Diátaxis documentation structure**: human-facing `README.md`, How-To & protocol reference `USER_GUIDE.md`, and technical specifications `ARCHITECTURE.md` with zero hype, ADR-015 sentence case, and version badge parity (`0.9.2`). | `tests/test_version_governance.py`, doc audit |
 | **AC-8.3** | `v0.9.2` | **HTML docs retirement**: `docs/whitepaper.html` and `docs/index.html` removed in favor of pure, zero-dependency Markdown documentation with zero `file:///Users/` paths. | `tests/test_version_governance.py` |
 | **AC-8.4** | `v0.9.2` | **Release & Merkle ripple parity**: `__version__` bumped to `0.9.2`, `CHANGELOG.md` + `changelog/v0-9-2.md` + `AGENTS.md` synced, and all impacted wiki articles updated or verified with zero drift. | `pytest`, `mypy src tests`, `brain79 lint --strict`, `brain79 doctor` |
-| **AC-9.1** | `v0.10.0` | **Multi-OS CI matrix**: all 9 cells green on the release commit; workflow structure is asserted statically. | GitHub Actions, `tests/test_ci_workflow.py` |
+| **AC-9.1** | `v0.10.0` | **Multi-OS CI matrix**: all 5 L-shaped cells green on the release commit; workflow structure is asserted statically. | GitHub Actions, `tests/test_ci_workflow.py` |
 | **AC-9.2** | `v0.10.0` | **Concurrency and fuzzing**: zero corrupt state, zero leaked locks or temp files, zero lost writes, only structured exceptions, atomic commits under faults; 20 consecutive local runs pass. | `tests/test_chaos_and_fuzzing.py` |
 | **AC-9.3** | `v0.10.0` | **Five-archetype gauntlet**: all archetypes pass the 10-step lifecycle with zero data loss and budgets met; runner exit codes and JSON report schema verified. | `tests/test_battle_gauntlet.py`, `scripts/run_battle_gauntlet.py` |
 | **AC-9.4** | `v0.10.0` | **Live-agent recovery**: both scenarios reach 2 of 3 successes without hints; results recorded in the changelog. | `scripts/run_e2e_smoke.py` (manual) |

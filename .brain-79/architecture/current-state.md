@@ -52,7 +52,7 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Completion of `v0.10.0` (Phase 9: automated battle-testing, 9-cell multi-OS CI matrix, chaos fuzzing, 5-archetype gauntlet, transactional rollback, and live-agent recovery smoke).
+- Completion of `v0.10.0` (Phase 9: automated battle-testing, 5-cell L-shaped multi-OS CI matrix, chaos fuzzing, 5-archetype gauntlet, transactional rollback, and live-agent recovery smoke).
 - Continuous performance and reliability monitoring across heterogeneous repository archetypes.
 
 ---

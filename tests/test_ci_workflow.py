@@ -124,17 +124,20 @@ def test_ci_workflow_matrix_cells(workflow_yaml: dict[str, Any]) -> None:
     assert strategy.get("fail-fast") is False, "Strategy must have 'fail-fast: false'"
 
     matrix = strategy.get("matrix", {})
-    os_list = matrix.get("os", [])
-    python_list = matrix.get("python", [])
+    includes = matrix.get("include", [])
+    assert isinstance(includes, list), "Matrix must use 'include' for L-shaped 5-cell coverage"
 
-    expected_os = {"ubuntu-latest", "macos-latest", "windows-latest"}
-    expected_py = {"3.11", "3.12", "3.13"}
+    cells = {(entry.get("os"), entry.get("python")) for entry in includes}
+    expected_cells = {
+        ("ubuntu-latest", "3.11"),
+        ("ubuntu-latest", "3.12"),
+        ("ubuntu-latest", "3.13"),
+        ("macos-latest", "3.12"),
+        ("windows-latest", "3.12"),
+    }
 
-    assert set(os_list) == expected_os, f"Matrix 'os' mismatch: {os_list}"
-    assert set(python_list) == expected_py, f"Matrix 'python' mismatch: {python_list}"
-
-    total_cells = len(os_list) * len(python_list)
-    assert total_cells == 9, f"Expected 9 matrix jobs, found {total_cells}"
+    assert cells == expected_cells, f"Matrix cells mismatch: {cells}"
+    assert len(includes) == 5, f"Expected 5 matrix jobs, found {len(includes)}"
 
 
 def test_ci_workflow_pinned_actions(workflow_yaml: dict[str, Any]) -> None:

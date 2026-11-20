@@ -8,7 +8,7 @@ All notable changes to `brain-79` will be documented in this file.
 
 ### Added
 - **Automated battle-testing, chaos fuzzing, and multi-repo gauntlet (Phase 9)**:
-  - Cross-platform 9-cell GitHub Actions CI matrix across Ubuntu, macOS, and Windows runners for Python 3.11, 3.12, and 3.13 (`.github/workflows/ci.yml`) with pinned action tags and `.gitattributes` line-ending standardization.
+  - Cross-platform 5-cell L-shaped GitHub Actions CI matrix (Ubuntu × Python 3.11/3.12/3.13, macOS × Python 3.12, Windows × Python 3.12) in `.github/workflows/ci.yml` with pinned Node 24 action tags and `.gitattributes` line-ending standardization.
   - Comprehensive real-OS platform tests (`tests/test_cross_platform_and_locks.py`) asserting Windows reserved name rejection, case collision detection on case-insensitive filesystems, path whitespace/unicode handling, and CRLF drift hashing parity.
   - Multiprocess concurrency stress testing with 8 worker processes and `Barrier(8)` under contention, validating zero JSON state corruption, zero orphan temporary files, atomic lock release, and zero torn writes (`tests/test_chaos_and_fuzzing.py`).
   - POSIX SIGKILL process crash lock recovery.
