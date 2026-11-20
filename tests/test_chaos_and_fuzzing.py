@@ -910,8 +910,7 @@ def test_environment_fault_readonly_directory(tmp_path: Path) -> None:
                     raise PermissionError(13, "Access is denied: 'topics\\\\blocked.md'")
                 orig_atomic(src_p, dst_p)
 
-            with patch("brain79.core.wiki.atomic_replace_with_retry", side_effect=mock_atomic), \
-                 patch("brain79.core.session_commit.atomic_replace_with_retry", side_effect=mock_atomic):
+            with patch("brain79.core.wiki.atomic_replace_with_retry", side_effect=mock_atomic):
                 with pytest.raises((OSError, ValidationError)):
                     commit_session(
                         session_summary="Attempt to write in read-only directory",

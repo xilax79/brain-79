@@ -1,6 +1,7 @@
 """Tests for Phase 9 Deliverable 9.3: Five-Archetype Multi-Repo Battle Gauntlet."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -78,7 +79,8 @@ def test_gauntlet_cli_runner_and_json_report(tmp_path: Path) -> None:
         "--json",
         str(report_file),
     ]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    runner_env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+    res = subprocess.run(cmd, capture_output=True, text=True, env=runner_env)
     assert res.returncode == 0, f"Gauntlet CLI failed: {res.stderr}\n{res.stdout}"
     assert report_file.is_file(), "Report file was not created"
 
@@ -103,5 +105,6 @@ def test_gauntlet_cli_runner_invalid_archetype() -> None:
         "--archetype",
         "99",
     ]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    runner_env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+    res = subprocess.run(cmd, capture_output=True, text=True, env=runner_env)
     assert res.returncode == 2

@@ -248,7 +248,7 @@ def test_11_json_parse_resilience(tmp_path: Path) -> None:
         with patch("subprocess.run", return_value=mock_proc):
             matches = context_ops._search_keyword_rg("rg", "auth", tmp_file)
             assert len(matches) == 1
-            assert matches[Path("/path/valid.md")] == 5
+            assert matches[Path("/path/valid.md").resolve()] == 5
     finally:
         if tmp_file.exists():
             tmp_file.unlink()

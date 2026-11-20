@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 20
     env:
       BRAIN79_PERF_FACTOR: "3"
+      PYTHONUTF8: "1"
     strategy:
       fail-fast: false
       matrix:

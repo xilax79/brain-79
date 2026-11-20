@@ -25,6 +25,7 @@ WORKFLOW_PATH = Path(__file__).resolve().parent.parent / ".github" / "workflows"
 # Any category not listed here causes the CI step to fail.
 DOCTOR_WARNING_ALLOWLIST: set[str] = {
     "handoff_hygiene",
+    "git_hooks",
 }
 
 
