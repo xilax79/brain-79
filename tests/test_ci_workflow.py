@@ -26,6 +26,7 @@ WORKFLOW_PATH = Path(__file__).resolve().parent.parent / ".github" / "workflows"
 DOCTOR_WARNING_ALLOWLIST: set[str] = {
     "handoff_hygiene",
     "git_hooks",
+    "git_merge_driver",
 }
 
 
@@ -219,6 +220,20 @@ def test_doctor_policy_allowlisted_warning_passes() -> None:
         "fixed": [],
     }
     assert evaluate_doctor_report(report, allowlist={"handoff_hygiene"}) == 0
+
+
+def test_doctor_policy_default_allowlist_includes_local_git_checks() -> None:
+    """Fresh CI checkouts lack local .git/hooks and local .git/config merge driver."""
+    report = {
+        "status": "warning",
+        "exit_code": 2,
+        "checks": [
+            {"category": "git_hooks", "status": "warning", "message": "pre-commit hook missing"},
+            {"category": "git_merge_driver", "status": "warning", "message": "local merge driver not configured"},
+        ],
+        "fixed": [],
+    }
+    assert evaluate_doctor_report(report) == 0
 
 
 def test_doctor_policy_unallowlisted_warning_fails() -> None:
