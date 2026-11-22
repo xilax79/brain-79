@@ -29,6 +29,7 @@ last_updated: 2026-11-22
 - [Changelog — release 0.10.0: automated battle-testing, chaos fuzzing, and multi-repo gauntlet](changelog/v0-10-0.md) — release v0.10.0 — automated battle-testing, chaos fuzzing, and multi-repo gauntlet
 - [Changelog — v0.12.0](changelog/v0-12-0.md) — release notes for v0.12.0 (Phase 11 public release readiness, English backlinks, native harnesses, core MCP default, and Windows CI latency recovery)
 - [Changelog — v0.13.0](changelog/v0-13-0.md) — release notes for v0.13.0 (Phase 12 team-safe Git collaboration, INDEX.md merge driver, bootstrap --auto-map, and configurable enforcement tiers)
+- [Changelog — v0.13.1](changelog/v0-13-1.md) — release notes for v0.13.1 (BUG-008 navigation registry disk reconciliation, BUG-009 index\_desync lint rule, and BUG-010 symmetric version skew detection)
 - [Release v0.11.0 — Core refactoring and hardening](changelog/v0-11-0.md) — core architectural refactoring, concurrency hardening, centralized Git layer, security fixes, and modular decomposition
 
 ### Decisions
@@ -68,4 +69,4 @@ last_updated: 2026-11-22
 - [Brain-79 — Product vision](product/overview.md) — deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
 
 ### Topics
-- [Open v0.13.0 defects — Navigation registry completeness, lint index desynchronization, and MCP version skew](topics/v0-13-0-navigation-registry-and-lint-defects.md) — open v0.13.0 defects in navigation registry completeness, lint index desynchronization, and stale MCP version skew detection
+- [Resolved v0.13.0 defects — Navigation registry completeness, lint index desynchronization, and MCP version skew](topics/v0-13-0-navigation-registry-and-lint-defects.md) — resolved v0.13.0 defects in navigation registry completeness, lint index desynchronization, and stale MCP version skew detection (fixed in v0.13.1)

@@ -239,6 +239,106 @@ class TestNavigationRegistryRebuild:
         assert len(reg2["articles"]) == 1
         assert reg2["articles"][0]["path"] == "features/auth.md"
 
+    def test_load_registry_reconciles_incomplete_or_stale_cache(self, tmp_path: Path) -> None:
+        from brain79.core.navigation import register_article
+
+        init_project(tmp_path, auto_git_init=False, install_git_hooks_flag=False)
+        wiki_root = tmp_path / ".brain-79"
+        _write_md(
+            wiki_root / "features" / "alpha.md",
+            "---\ntype: feature\nsummary: alpha summary\n---\n\n# Alpha\n\nAlpha.\n",
+        )
+        _write_md(
+            wiki_root / "features" / "beta.md",
+            "---\ntype: feature\nsummary: beta summary\n---\n\n# Beta\n\nBeta.\n",
+        )
+        _write_md(
+            wiki_root / "topics" / "gamma.md",
+            "---\ntype: topic\nsummary: gamma summary\n---\n\n# Gamma\n\nGamma.\n",
+        )
+
+        # Write a valid but incomplete registry (only 1 of 3 articles)
+        reg_file = wiki_root / REGISTRY_FILENAME
+        reg_file.write_text(
+            json.dumps(
+                {
+                    "articles": [
+                        {
+                            "path": "features/alpha.md",
+                            "title": "Alpha",
+                            "summary": "alpha summary",
+                            "section": "features",
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        # load_registry() reconciles against disk without mutating disk when persist=False
+        reg = load_registry(wiki_root)
+        assert [a["path"] for a in reg["articles"]] == [
+            "features/alpha.md",
+            "features/beta.md",
+            "topics/gamma.md",
+        ]
+
+        # Stale deleted entry in cache triggers direct reconciliation in load_registry()
+        reg_file.write_text(
+            json.dumps(
+                {
+                    "articles": [
+                        {"path": "features/alpha.md", "title": "Alpha", "summary": "s", "section": "features"},
+                        {"path": "features/beta.md", "title": "Beta", "summary": "s", "section": "features"},
+                        {"path": "topics/gamma.md", "title": "Gamma", "summary": "s", "section": "topics"},
+                        {"path": "features/deleted.md", "title": "Deleted", "summary": "s", "section": "features"},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        reg_reconciled = load_registry(wiki_root)
+        assert [a["path"] for a in reg_reconciled["articles"]] == [
+            "features/alpha.md",
+            "features/beta.md",
+            "topics/gamma.md",
+        ]
+
+        # Read-only filesystem safety when persist=True
+        with patch("brain79.core.navigation._save_registry_unlocked", side_effect=PermissionError("read-only")):
+            reg_ro = load_registry(wiki_root, persist=True)
+        assert len(reg_ro["articles"]) == 3
+
+        # regenerate_index_navigation(rebuild=False) heals INDEX.md and .navigation_registry.json without deadlock
+        reg_file.write_text(
+            json.dumps(
+                {"articles": [{"path": "features/alpha.md", "title": "Alpha", "summary": "s", "section": "features"}]}
+            ),
+            encoding="utf-8",
+        )
+        regenerate_index_navigation(wiki_root, rebuild=False)
+        index_text = (wiki_root / "INDEX.md").read_text(encoding="utf-8")
+        assert "features/alpha.md" in index_text
+        assert "features/beta.md" in index_text
+        assert "topics/gamma.md" in index_text
+        persisted = json.loads(reg_file.read_text(encoding="utf-8"))
+        assert len(persisted["articles"]) == 3
+
+        # register_article() holding _registry.lock does not deadlock when reconciling incomplete cache
+        reg_file.write_text(
+            json.dumps(
+                {"articles": [{"path": "features/alpha.md", "title": "Alpha", "summary": "s", "section": "features"}]}
+            ),
+            encoding="utf-8",
+        )
+        register_article(wiki_root, "features/alpha.md", "Alpha", "alpha summary", "features")
+        persisted_after_reg = json.loads(reg_file.read_text(encoding="utf-8"))
+        assert [a["path"] for a in sorted(persisted_after_reg["articles"], key=lambda x: x["path"])] == [
+            "features/alpha.md",
+            "features/beta.md",
+            "topics/gamma.md",
+        ]
+
     def test_navigate_rebuild_cli_and_mcp(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         init_project(tmp_path, auto_git_init=False, install_git_hooks_flag=False)
         wiki_root = tmp_path / ".brain-79"

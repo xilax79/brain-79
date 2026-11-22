@@ -24,8 +24,8 @@ related:
   - features/project-upgrade-and-multi-harness-doctor.md
   - features/team-collaboration-and-onboarding.md
   - topics/v0-13-0-navigation-registry-and-lint-defects.md
-last_updated: 2026-11-21
-applies_to_digest: "sha256:3d677e9581a44fb9"
+last_updated: 2026-11-22
+applies_to_digest: "sha256:37816ca34ef275a0"
 applies_to_count: 10
 ---
 
@@ -66,16 +66,17 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 - **[x] Phase 10 (`v0.11.0`)**: core architectural refactoring and hardening (`OrderedFileLock`, full Pass 3 rollback, `core/git_ops.py`, fail-closed guardrails, symlink/CLI security, `core/ast_guards/`, `core/harnesses/`, `--mcp-profile`, `ProjectContext`). Archived spec: `specs/archive/legacy/core-refactoring-and-hardening-design.md`.
 - **[x] Phase 11 (`v0.12.0`)**: public release readiness and friction removal (English-first backlinks, native Claude/Cursor MDC/Copilot instruction adapters, `core` 8-tool MCP default, honest `README.md` limitations, Windows CI `orient()` hot-path optimization). Archived spec: `specs/archive/legacy/public-release-readiness-design.md`.
 - **[x] Phase 12 (`v0.13.0`)**: team-safe Git collaboration and low-friction onboarding (git-ignored derived caches with deterministic zero-masking rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map` with zero-overlap proposals, and configurable `strict`/`balanced`/`advisory` enforcement tiers). Living manual: [team-collaboration-and-onboarding.md](../features/team-collaboration-and-onboarding.md); archived spec: `specs/archive/legacy/team-collaboration-and-onboarding-design.md`.
+- **[x] Patch (`v0.13.1`)**: integrity and version-skew hardening (`BUG-008` `load_registry()` disk reconciliation, `BUG-009` `index_desync` organizational lint rule, and `BUG-010` symmetric reverse version-skew warning in `orient()`).
 
 ---
 
-## Strategic evolution roadmap (`v0.13.1` onward)
+## Strategic evolution roadmap (`v0.14.0` onward)
 
 ```
 +-----------------------------------------------------------------------------------+
-| Patch (P0): Integrity & version-skew hardening (v0.13.1)                          | [ ] Next
+| Patch (P0): Integrity & version-skew hardening (v0.13.1)                          | [x] Done
 +-----------------------------------------------------------------------------------+
-| Phase 13 (P0): Passive lifecycle hooks & GitHub Action PR gate (v0.14.0)          | [ ] Planned
+| Phase 13 (P0): Passive lifecycle hooks & GitHub Action PR gate (v0.14.0)          | [ ] Next
 +-----------------------------------------------------------------------------------+
 | Phase 14 (P1): Polyglot AST guards, stats, anti-rot proof & PyPI release (v0.15.0)| [ ] Planned
 +-----------------------------------------------------------------------------------+
@@ -100,7 +101,7 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 
 Tracked defects: [v0-13-0-navigation-registry-and-lint-defects.md](../topics/v0-13-0-navigation-registry-and-lint-defects.md).
 
-Goal: close integrity gaps discovered during live `v0.13.0` usage before onboarding external users.
+Status: **Done (`v0.13.1`)** — closed integrity and version-skew gaps discovered during live `v0.13.0` usage (`BUG-008`, `BUG-009`, `BUG-010`).
 
 - **BUG-008 (`load_registry` disk reconciliation)**: compare cached `.navigation_registry.json` entries against on-disk indexable `.md` files and deterministically rebuild whenever paths diverge.
 - **BUG-009 (`index_desync` lint rule)**: add an explicit organizational lint check comparing on-disk indexable articles against `INDEX.md` `## Quick navigation` entries, preventing silent truncation from passing `lint --strict`.

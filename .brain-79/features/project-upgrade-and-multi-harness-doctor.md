@@ -19,7 +19,7 @@ related:
   - features/cross-platform-and-lock-isolation.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
 last_updated: 2026-11-17
-applies_to_digest: "sha256:de4abe0148596990"
+applies_to_digest: "sha256:9ea774a06f72e6bf"
 applies_to_count: 16
 ---
 

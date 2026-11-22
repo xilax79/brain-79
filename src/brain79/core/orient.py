@@ -27,6 +27,23 @@ from brain79.core.wiki import get_index, read_article
 MAX_ORIENT_INLINE_CHARS = 64_000
 
 
+def _parse_semver(version_str: str) -> tuple[int, int, int] | None:
+    """Parse leading (major, minor, patch) from a semantic version string (including pre-release/dev suffixes)."""
+    import re
+
+    m = re.match(r"^v?(\d+)\.(\d+)\.(\d+)", version_str.strip())
+    if not m:
+        return None
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+
+
+def _forward_skew_notice(running_version: str) -> str:
+    return (
+        f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{running_version}. "
+        "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
+    )
+
+
 def check_protocol_version_skew(project_root: Path, wiki_root: Path) -> str | None:
     """Inspect AGENTS.md delimiter version and SCHEMA.md schema_version for protocol skew."""
     from brain79 import __version__
@@ -34,51 +51,43 @@ def check_protocol_version_skew(project_root: Path, wiki_root: Path) -> str | No
 
     agents_file = project_root / "AGENTS.md"
     if not agents_file.is_file():
-        return (
-            f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
-            "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
-        )
+        return _forward_skew_notice(__version__)
 
     try:
         content = agents_file.read_text(encoding="utf-8")
         m_start = AGENTS_START_REGEX.search(content)
         if not m_start:
-            return (
-                f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
-                "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
-            )
+            return _forward_skew_notice(__version__)
         version_in_block = m_start.group(1)
-        if not version_in_block or version_in_block != __version__:
-            return (
-                f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
-                "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
-            )
+        if not version_in_block:
+            return _forward_skew_notice(__version__)
+        running_ver = _parse_semver(__version__)
+        block_ver = _parse_semver(version_in_block)
+        if running_ver is not None and block_ver is not None:
+            if running_ver < block_ver:
+                return (
+                    f"> ⚠️ **Stale brain79 server/CLI detected**: Running brain79 v{__version__} is older than "
+                    f"project protocol templates (v{version_in_block}). "
+                    "Restart your MCP client/server or run 'brain79 update' to upgrade."
+                )
+            if running_ver > block_ver:
+                return _forward_skew_notice(__version__)
+        elif version_in_block != __version__:
+            return _forward_skew_notice(__version__)
     except Exception:
-        return (
-            f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
-            "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
-        )
+        return _forward_skew_notice(__version__)
 
     schema_file = wiki_root / "SCHEMA.md"
     if not schema_file.is_file():
-        return (
-            f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
-            "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
-        )
+        return _forward_skew_notice(__version__)
 
     try:
         s_meta, _ = parse_frontmatter(schema_file.read_text(encoding="utf-8"))
         schema_version = int(s_meta.get("schema_version", 1))
         if schema_version < 2:
-            return (
-                f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
-                "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
-            )
+            return _forward_skew_notice(__version__)
     except Exception:
-        return (
-            f"> ℹ️ **Protocol update available**: Project templates predate brain79 v{__version__}. "
-            "Run 'brain79 update-project' to sync AGENTS.md and SCHEMA.md."
-        )
+        return _forward_skew_notice(__version__)
 
     return None
 

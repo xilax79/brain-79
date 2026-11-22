@@ -115,17 +115,28 @@ def rebuild_navigation_registry(wiki_root: Path, *, persist: bool = True) -> dic
 
 
 def load_registry(wiki_root: Path, *, persist: bool = False) -> dict[str, Any]:
-    """Load navigation registry, auto-rebuilding from disk if missing/corrupt and .md files exist."""
+    """Load navigation registry, auto-rebuilding from disk if missing, corrupt, or out of sync."""
     registry_path = wiki_root / REGISTRY_FILENAME
+    on_disk_items = _scan_indexable_md_files(wiki_root)
+    on_disk_paths = {rel_path for rel_path, _ in on_disk_items}
+
     if registry_path.exists():
         try:
             data = json.loads(registry_path.read_text(encoding="utf-8"))
             if isinstance(data, dict) and "articles" in data and isinstance(data["articles"], list):
-                return data
+                if not on_disk_items:
+                    return data
+                cached_paths = {
+                    str(a.get("path", ""))
+                    for a in data["articles"]
+                    if isinstance(a, dict) and a.get("path")
+                }
+                if cached_paths == on_disk_paths and len(cached_paths) == len(data["articles"]):
+                    return data
         except (OSError, json.JSONDecodeError):
             pass
 
-    if _scan_indexable_md_files(wiki_root):
+    if on_disk_items:
         return rebuild_navigation_registry(wiki_root, persist=persist)
     return {"articles": []}
 
@@ -253,10 +264,21 @@ def register_article(
         registry = load_registry(wiki_root)
         articles = registry.get("articles", [])
 
-        # Avoid updating registered_at if content metadata has not changed and registry exists on disk
+        # Avoid updating registered_at if content metadata has not changed and on-disk registry is already in sync
         existing = next((a for a in articles if a.get("path") == path), None)
+        registry_file = wiki_root / REGISTRY_FILENAME
+        disk_in_sync = False
+        if registry_file.is_file() and existing is not None:
+            try:
+                disk_data = json.loads(registry_file.read_text(encoding="utf-8"))
+                disk_articles = disk_data.get("articles", []) if isinstance(disk_data, dict) else []
+                disk_paths = {a.get("path") for a in disk_articles if isinstance(a, dict) and a.get("path")}
+                mem_paths = {a.get("path") for a in articles if isinstance(a, dict) and a.get("path")}
+                disk_in_sync = len(disk_articles) == len(articles) and disk_paths == mem_paths
+            except (OSError, json.JSONDecodeError):
+                disk_in_sync = False
         if (
-            (wiki_root / REGISTRY_FILENAME).is_file()
+            disk_in_sync
             and existing is not None
             and existing.get("title") == (title or path)
             and existing.get("summary") == summary
@@ -460,6 +482,20 @@ def regenerate_index_navigation(wiki_root: Path, *, rebuild: bool = False) -> st
         articles = registry.get("articles", [])
         cleaned: list[dict[str, Any]] = []
         registry_mutated = False
+        if not rebuild:
+            reg_file = wiki_root / REGISTRY_FILENAME
+            if not reg_file.is_file():
+                registry_mutated = bool(articles)
+            else:
+                try:
+                    disk_raw = json.loads(reg_file.read_text(encoding="utf-8"))
+                    disk_arts = disk_raw.get("articles", []) if isinstance(disk_raw, dict) else []
+                    disk_paths = {a.get("path") for a in disk_arts if isinstance(a, dict) and a.get("path")}
+                    mem_paths = {a.get("path") for a in articles if isinstance(a, dict) and a.get("path")}
+                    if len(disk_arts) != len(articles) or disk_paths != mem_paths:
+                        registry_mutated = True
+                except (OSError, json.JSONDecodeError):
+                    registry_mutated = True
         for a in articles:
             path_str = a.get("path", "")
             raw_sec = a.get("section", "root")

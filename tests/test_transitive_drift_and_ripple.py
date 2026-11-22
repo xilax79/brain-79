@@ -501,10 +501,12 @@ def test_navigation_registry_and_manifest_orphan_purge(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    # Register 2 articles: one that exists, one that will be deleted
+    # Register 2 articles: one that stays, one that will be deleted
     f1 = wiki_root / "features" / "existing.md"
     f1.parent.mkdir()
     f1.write_text("---\ntype: feature\nlast_updated: 2026-11-11\n---\n# Existing\nSummary 1", encoding="utf-8")
+    f2 = wiki_root / "features" / "deleted.md"
+    f2.write_text("---\ntype: feature\nlast_updated: 2026-11-11\n---\n# Deleted\nSummary 2", encoding="utf-8")
 
     register_article(wiki_root, "features/existing.md", "Existing", "Summary 1", "features")
     register_article(wiki_root, "features/deleted.md", "Deleted", "Summary 2", "features")
@@ -520,11 +522,12 @@ def test_navigation_registry_and_manifest_orphan_purge(tmp_path: Path) -> None:
     }
     manifest_file.write_text(json.dumps(manifest_data), encoding="utf-8")
 
-    # Check registry before regeneration
+    # Check registry before deletion & regeneration
     reg_before = load_registry(wiki_root)
     assert len(reg_before.get("articles", [])) == 2
 
-    # Regenerate index navigation
+    # Delete features/deleted.md from disk, then regenerate index navigation
+    f2.unlink()
     regenerate_index_navigation(wiki_root)
 
     # Check registry after regeneration: deleted.md must be purged

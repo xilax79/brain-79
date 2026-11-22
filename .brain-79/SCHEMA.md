@@ -1,7 +1,7 @@
 ---
 profile: software
 schema_version: 2
-last_updated: 2026-11-20
+last_updated: 2026-11-22
 ---
 
 # Brain-79 — Wiki schema (normative)
@@ -38,7 +38,7 @@ type: feature
 summary: one-line summary for INDEX.md entry
 status: planned  # planned | in_progress | shipped | deprecated | archived | legacy
 version: 1.0.0
-last_updated: 2026-11-20
+last_updated: 2026-11-22
 ---
 
 # Decision (decisions/adr-*.md)
@@ -46,9 +46,9 @@ last_updated: 2026-11-20
 type: decision
 summary: one-line summary of architectural decision
 status: proposed  # proposed | accepted | superseded | rejected | legacy
-date: 2026-11-20
+date: 2026-11-22
 deciders: [author]
-last_updated: 2026-11-20
+last_updated: 2026-11-22
 ---
 
 # Architecture (architecture/*.md)
@@ -56,14 +56,14 @@ last_updated: 2026-11-20
 type: architecture
 summary: one-line summary of subsystem or pattern
 stability: experimental  # experimental | stable | archived | legacy
-last_updated: 2026-11-20
+last_updated: 2026-11-22
 ---
 
 # Product (product/*.md)
 ---
 type: product
 summary: one-line summary of domain or vision
-last_updated: 2026-11-20
+last_updated: 2026-11-22
 ---
 
 # Topic (topics/*.md)
@@ -71,7 +71,7 @@ last_updated: 2026-11-20
 type: topic
 summary: one-line summary of research, benchmark, or domain topic
 status: active  # active | archived | draft | legacy
-last_updated: 2026-11-20
+last_updated: 2026-11-22
 ---
 ```
 

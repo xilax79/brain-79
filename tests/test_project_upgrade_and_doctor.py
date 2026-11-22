@@ -427,6 +427,39 @@ def test_orient_protocol_skew_banner_rendered_and_cleared(tmp_path: Path) -> Non
     assert "Protocol update available" not in out_clean
 
 
+def test_orient_reverse_protocol_version_skew_warns_stale_server(tmp_path: Path) -> None:
+    from brain79.core.orient import check_protocol_version_skew, orient
+
+    init_project(tmp_path, auto_git_init=False, install_git_hooks_flag=False)
+    w_root = tmp_path / ".brain-79"
+
+    # Simulate repo upgraded to a newer version than the running MCP server/CLI
+    agents_file = tmp_path / "AGENTS.md"
+    content = agents_file.read_text(encoding="utf-8")
+    content = content.replace(f"v{__version__}", "v99.0.0")
+    agents_file.write_text(content, encoding="utf-8")
+
+    skew_msg = check_protocol_version_skew(tmp_path, w_root)
+    assert skew_msg is not None
+    assert "99.0.0" in skew_msg
+    assert "predate" not in skew_msg.lower()
+    assert "restart" in skew_msg.lower()
+    assert "brain79 update" in skew_msg
+
+    out_reverse = orient(wiki_root=w_root)
+    assert "99.0.0" in out_reverse
+    assert "brain79 update" in out_reverse
+
+    # Pre-release and dev suffixes on newer project templates also trigger stale-server warning
+    for suffix_ver in ("v99.0.0-rc1", "v99.0.0.dev0"):
+        agents_file.write_text(content.replace("v99.0.0", suffix_ver), encoding="utf-8")
+        suffix_msg = check_protocol_version_skew(tmp_path, w_root)
+        assert suffix_msg is not None
+        assert "predate" not in suffix_msg.lower()
+        assert "restart" in suffix_msg.lower()
+        assert "brain79 update" in suffix_msg
+
+
 def test_doctor_7_checks_clean_environment_exit_code_0(tmp_path: Path) -> None:
     import subprocess
     from brain79.core.doctor import run_doctor

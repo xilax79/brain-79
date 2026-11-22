@@ -1,15 +1,15 @@
 ---
 type: topic
-summary: open v0.13.0 defects in navigation registry completeness, lint index desynchronization, and stale MCP version skew detection
-status: active
+summary: resolved v0.13.0 defects in navigation registry completeness, lint index desynchronization, and stale MCP version skew detection (fixed in v0.13.1)
+status: archived
 related:
   - architecture/roadmap-industrial-scale.md
   - architecture/current-state.md
   - features/cross-platform-and-lock-isolation.md
-last_updated: 2026-11-21
+last_updated: 2026-11-22
 ---
 
-# Open v0.13.0 defects — Navigation registry completeness, lint index desynchronization, and MCP version skew
+# Resolved v0.13.0 defects — Navigation registry completeness, lint index desynchronization, and MCP version skew
 
 ## Context and discovery
 
@@ -21,7 +21,7 @@ Auditing `v0.13.0` against that incident exposed three product defects to addres
 
 ## BUG-008 — `load_registry()` accepts incomplete `.navigation_registry.json` caches without disk reconciliation
 
-- **Status**: open.
+- **Status**: resolved in `v0.13.1`.
 - **Severity**: high.
 - **Location**: `src/brain79/core/navigation.py` (`load_registry`, `register_article`).
 - **Symptom**: `load_registry()` triggers `rebuild_navigation_registry()` only when `.navigation_registry.json` is missing or contains invalid JSON. If an existing cache file is structurally valid JSON (`{"articles": [...]}`) but missing indexable `.md` files present on disk (e.g., after a stale process write, interrupted sync, or partial cache), `load_registry()` returns the incomplete list and `regenerate_index_navigation()` persists a truncated `INDEX.md`.
@@ -37,7 +37,7 @@ Auditing `v0.13.0` against that incident exposed three product defects to addres
 
 ## BUG-009 — `lint --strict` lacks an explicit `index_desync` / `registry_incomplete` check
 
-- **Status**: open.
+- **Status**: resolved in `v0.13.1`.
 - **Severity**: high.
 - **Location**: `src/brain79/core/lint_organizational.py`, `src/brain79/core/lint.py`.
 - **Symptom**: running `uv run brain79 lint --strict` against a truncated `INDEX.md` (2 entries out of 59 indexable `.md` files) reported `Broken Local Links (0)`, `Namespace Violations (0)`, and `Structural Errors & Warnings (0)`. It exited `1` only indirectly because 29 articles with no other inbound links appeared under `[INFO] Orphans (29)`; the other 28 articles linked internally were completely unreported, and no diagnostic indicated that `INDEX.md` was missing 57 entries.
@@ -52,7 +52,7 @@ Auditing `v0.13.0` against that incident exposed three product defects to addres
 
 ## BUG-010 — `orient()` does not detect reverse version skew (running server older than project protocol)
 
-- **Status**: open.
+- **Status**: resolved in `v0.13.1`.
 - **Severity**: medium.
 - **Location**: `src/brain79/core/orient.py`, `src/brain79/core/init_project.py` (`check_protocol_version_skew`).
 - **Symptom**: when a stale long-lived MCP server process (`< 0.13.0`) connected to a repository already upgraded to `v0.13.0` (`<!-- brain79:start v0.13.0 -->`), `orient()` failed to warn that the running server was *older* than the repository's protocol templates (in fact, the older server emitted a misleading *"Project templates predate brain79 v0.9.0"* message).

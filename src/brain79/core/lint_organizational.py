@@ -408,6 +408,71 @@ def check_navigation_freshness(wiki_root: Path) -> list[OrganizationalIssue]:
     return issues
 
 
+def _extract_quick_nav_paths(index_content: str) -> set[str]:
+    """Extract normalized wiki-relative .md article paths linked in INDEX.md ## Quick navigation."""
+    import posixpath
+    from urllib.parse import unquote
+    from brain79.core.lint import _extract_raw_link_targets
+
+    qn_match = re.search(r"## Quick navigation\n(.*?)(?=\n## |\Z)", index_content, re.DOTALL)
+    if not qn_match:
+        return set()
+
+    paths: set[str] = set()
+    for raw in _extract_raw_link_targets(qn_match.group(1)):
+        if "://" in raw or raw.startswith(("#", "mailto:", "//")):
+            continue
+        cleaned = unquote(raw.split("#", 1)[0].strip()).replace("\\", "/")
+        if not cleaned.endswith(".md"):
+            continue
+        norm = posixpath.normpath(cleaned.lstrip("/"))
+        if norm.startswith("..") or norm in ("INDEX.md", "SCHEMA.md"):
+            continue
+        if norm.startswith(("_raw/", ".locks/", "handoffs/")):
+            continue
+        paths.add(norm)
+    return paths
+
+
+def check_index_desync(wiki_root: Path) -> list[OrganizationalIssue]:
+    """Detect missing or stale article links between on-disk indexable .md files and INDEX.md Quick navigation."""
+    index_path = wiki_root / "INDEX.md"
+    if not index_path.is_file():
+        return []
+
+    from brain79.core.navigation import _scan_indexable_md_files
+
+    on_disk = {rel_path for rel_path, _ in _scan_indexable_md_files(wiki_root)}
+    index_content = index_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+    linked = _extract_quick_nav_paths(index_content)
+
+    missing = sorted(on_disk - linked)
+    stale = sorted(linked - on_disk)
+    if not missing and not stale:
+        return []
+
+    parts: list[str] = []
+    if missing:
+        sample = ", ".join(missing[:5])
+        suffix = f" (+{len(missing) - 5} more)" if len(missing) > 5 else ""
+        parts.append(f"missing {len(missing)} on-disk article(s): {sample}{suffix}")
+    if stale:
+        sample = ", ".join(stale[:5])
+        suffix = f" (+{len(stale) - 5} more)" if len(stale) > 5 else ""
+        parts.append(f"contains {len(stale)} stale link(s): {sample}{suffix}")
+
+    return [
+        OrganizationalIssue(
+            rule="index_desync",
+            path="INDEX.md",
+            line=None,
+            severity="error",
+            message=f"INDEX.md Quick navigation is out of sync with disk ({'; '.join(parts)}).",
+            actionable="Run 'brain79 navigate --regenerate --rebuild'",
+        )
+    ]
+
+
 def check_legacy_articles(
     wiki_root: Path, md_files: list[Path] | None = None
 ) -> list[OrganizationalIssue]:
@@ -1161,6 +1226,7 @@ def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
     issues.extend(check_article_atomicity(wiki_root, md_files=md_files))
     issues.extend(check_prohibited_content(wiki_root))
     issues.extend(check_navigation_freshness(wiki_root))
+    issues.extend(check_index_desync(wiki_root))
     issues.extend(check_legacy_articles(wiki_root, md_files=md_files))
     issues.extend(check_force_skipped_articles(wiki_root, md_files=md_files))
     issues.extend(check_unfilled_placeholders(wiki_root))

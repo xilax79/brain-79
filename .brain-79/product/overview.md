@@ -6,7 +6,7 @@ applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:1466497b641957c3"
+applies_to_digest: "sha256:60b46e1c5280da0f"
 applies_to_count: 12
 ---
 
@@ -38,7 +38,7 @@ LLMs maintain wikis that degrade organically:
 
 - Development projects where an AI agent works in recurring sessions.
 - Knowledge wikis with `INDEX.md` that grows uncontrollably or without structure.
-- Teams that require mechanical and deterministic validation of project documentation.
+- Teams that require mechanical, deterministic validation of project documentation and `INDEX.md` synchronization.
 
 ---
 

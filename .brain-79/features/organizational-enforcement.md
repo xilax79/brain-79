@@ -17,7 +17,7 @@ related:
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - decisions/adr-012-structural-quality-and-drift-detection.md
   - decisions/adr-018-living-manuals-and-temporal-decontamination.md
-applies_to_digest: "sha256:aaa2065857e58a02"
+applies_to_digest: "sha256:f47ed46397419d06"
 applies_to_count: 7
 ---
 
@@ -56,6 +56,10 @@ brain79 lint --strict --format json
 # Get extraction suggestions for oversized INDEX.md
 brain79 lint --suggest-extract
 ```
+
+## Index synchronization check
+
+- `check_index_desync()` (`index_desync` rule) compares on-disk indexable `.md` files against `INDEX.md` `## Quick navigation` links and flags missing or stale entries (blocking under `lint --strict`, remediated with `brain79 navigate --regenerate --rebuild`).
 
 ## Known edge cases
 

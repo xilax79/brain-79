@@ -34,7 +34,7 @@ All Git invocations route through `core/git_ops.py` with `shell=False`, explicit
 
 ### 2. Merge-conflict-free derived state and deterministic rebuilds
 - **Git-ignored caches**: `init` and `update-project` idempotently maintain `.brain-79/.gitignore` to ignore `.locks/`, `*.lock`, `*.tmp`, `*.tmp.*`, `.navigation_registry.json`, `.drift_manifest.json`, and `.bootstrap_state.json` while preserving user lines.
-- **Navigation registry rebuild**: `rebuild_navigation_registry()` (`brain79 navigate --rebuild` / `brain79_navigate(rebuild=True)`) deterministically reconstructs `.navigation_registry.json` from on-disk Markdown files (read-only safe, `followlinks=False`).
+- **Navigation registry rebuild**: `rebuild_navigation_registry()` (`brain79 navigate --rebuild` / `brain79_navigate(rebuild=True)`) deterministically reconstructs `.navigation_registry.json` from on-disk Markdown files (read-only safe, `followlinks=False`). `load_registry()` also reconciles incomplete or stale `.navigation_registry.json` caches against `_scan_indexable_md_files()` automatically so truncated caches cannot propagate into `INDEX.md`.
 - **Zero-masking drift manifest rebuild**: `rebuild_drift_manifest()` hydrates `targets` only when `curr_digest == stored_digest`; when a governed article is drifted (`curr_digest != stored_digest`), `targets` are omitted and `check_article_drift()` provides `fallback_targets` so Guard A and Guard C continue operating without `.drift_manifest.json`.
 
 ### 3. Three-way `INDEX.md` Git merge driver

@@ -6,6 +6,13 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-11-22
+
+### Fixed
+- **BUG-008 — `load_registry()` disk reconciliation (`core/navigation.py`)**: reconciled `.navigation_registry.json` completeness against `_scan_indexable_md_files(wiki_root)` whenever cached paths diverge from on-disk indexable `.md` files (missing articles or stale deleted entries), deterministically rebuilding from disk without deadlocking on `_registry.lock` when called from `register_article()` or `regenerate_index_navigation()`, and preserving read-only filesystem safety.
+- **BUG-009 — `index_desync` organizational lint rule (`core/lint_organizational.py`)**: added `check_index_desync()` comparing `_scan_indexable_md_files(wiki_root)` against article links in `INDEX.md` `## Quick navigation` to surface missing or stale entries (blocking under `lint --strict`) with actionable remediation `Run 'brain79 navigate --regenerate --rebuild'`, while keeping empty wikis and fixtures without `INDEX.md` clean.
+- **BUG-010 — Symmetric protocol version skew detection (`core/orient.py`)**: updated `check_protocol_version_skew()` to compare semantic versions symmetrically and emit an explicit warning when the running MCP server/CLI is older than the repository's `AGENTS.md` protocol marker (instructing the user to restart their MCP client/server or run `brain79 update`), while preserving forward-skew notices.
+
 ## [0.13.0] - 2026-11-20
 
 ### Added

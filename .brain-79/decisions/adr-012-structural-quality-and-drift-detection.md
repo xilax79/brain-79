@@ -18,7 +18,7 @@ related:
   - decisions/adr-011-session-commit-and-batch-reading.md
   - architecture/roadmap-industrial-scale.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:20107b61fa1b8337"
+applies_to_digest: "sha256:a340841246625867"
 applies_to_count: 6
 ---
 
@@ -65,6 +65,7 @@ We implemented **Phase 4: Structural Article Quality & Deterministic Drift Detec
 - **Positive**: Early detection of stale documentation when underlying source files change.
 - **Positive**: Full document skeletons accessible directly in `brain79_schema()`.
 - **Positive**: Zero performance penalty; drift inspection only evaluates articles with explicit `applies_to` bindings.
+- **Positive**: `check_index_desync()` in `lint_organizational.py` ensures `INDEX.md` `## Quick navigation` cannot silently desync from on-disk articles.
 
 ---
 

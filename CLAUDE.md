@@ -1,4 +1,4 @@
-<!-- brain79:start v0.13.0 -->
+<!-- brain79:start v0.13.1 -->
 # Brain-79 AI memory protocol
 
 This repository uses **Brain-79** (`.brain-79/`) as its persistent engineering knowledge base. Follow this 2-call session workflow:

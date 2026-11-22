@@ -2,7 +2,7 @@
 type: architecture
 summary: high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-11-21
+last_updated: 2026-11-22
 applies_to:
   - README.md
   - USER_GUIDE.md
@@ -13,7 +13,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:25a849cfa6e6f538"
+applies_to_digest: "sha256:8496c927e7037cf8"
 applies_to_count: 34
 ---
 
@@ -21,7 +21,7 @@ applies_to_count: 34
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.13.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.13.1.
 
 ## Active subsystem topology
 
@@ -42,7 +42,7 @@ This document maintains a high-level summary of the repository's current archite
 
 ## System invariants and invariant guards
 
-- **Wiki Primacy**: Long-term wiki in `.brain-79/` is the absolute source of truth over tactical handoffs.
+- **Wiki Primacy**: Long-term wiki in `.brain-79/` is the absolute source of truth over tactical handoffs (guarded by `index_desync` (`severity="error"`) and disk-reconciled `.navigation_registry.json`).
 - **Zero-Modification Idempotence**: Wiki updates strictly require real repository mutations (code, tests, decisions); synthetic documentation churn is rejected.
 - **Synchronous Write Validation**: writes to `.brain-79/` are validated against schema rules prior to disk mutation.
 - **Code Fence Masking**: Regex linter rules mask code blocks before scanning to eliminate false positive leakage errors.
@@ -53,8 +53,8 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Completion of `v0.13.0` (team-safe Git collaboration and low-friction onboarding: git-ignored derived JSON caches with deterministic zero-masking rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map` with zero-overlap proposals, and configurable `strict`/`balanced`/`advisory` enforcement tiers).
-- Next up: `v0.14.0` (polyglot AST guards and hybrid local retrieval).
+- Completion of `v0.13.1` (integrity and version-skew hardening: `BUG-008` `load_registry()` disk reconciliation, `BUG-009` `index_desync` organizational lint rule, and `BUG-010` symmetric reverse version-skew warning in `orient()`).
+- Next up: `v0.14.0` (Phase 13: passive lifecycle hooks and CI PR gate).
 
 ---
 

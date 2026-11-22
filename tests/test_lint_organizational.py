@@ -368,3 +368,58 @@ This is documentation showing the placeholder syntax.
     unfilled = [i for i in issues if i.rule == "index_unfilled_placeholder"]
     assert len(unfilled) == 0
 
+
+def test_check_index_desync_detects_missing_and_stale_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """BUG-009: check_index_desync detects missing on-disk articles and stale INDEX.md links and blocks lint --strict."""
+    from brain79 import config
+    from brain79.cli.dispatch import dispatch_cmd
+    from brain79.core.init_project import init_project
+    from brain79.core.lint_organizational import check_index_desync
+
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.setattr(config, "_project_root", project)
+    init_project(project, auto_git_init=False, install_git_hooks_flag=False)
+    wiki_root = project / ".brain-79"
+
+    # Empty wiki has no index_desync issues
+    assert check_index_desync(wiki_root) == []
+
+    # Missing INDEX.md does not regress
+    (wiki_root / "INDEX.md").unlink()
+    assert check_index_desync(wiki_root) == []
+
+    # Restore INDEX.md with only 1 of 2 on-disk articles + 1 stale link
+    (wiki_root / "features").mkdir(parents=True, exist_ok=True)
+    (wiki_root / "features" / "a.md").write_text(
+        "---\ntype: feature\nsummary: feature a\nstatus: shipped\nlast_updated: 2026-11-21\n---\n\n# Feature A\n\n## Overview\nA.\n\n[← Back to Index](../INDEX.md)\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "features" / "b.md").write_text(
+        "---\ntype: feature\nsummary: feature b\nstatus: shipped\nlast_updated: 2026-11-21\n---\n\n# Feature B\n\n## Overview\nB.\n\n[← Back to Index](../INDEX.md)\n",
+        encoding="utf-8",
+    )
+    (wiki_root / "INDEX.md").write_text(
+        "---\ntype: navigation\nlast_updated: 2026-11-21\n---\n\n# Project index\n\n## Quick navigation\n\n### Features\n- [Feature A](features/a.md) — feature a\n- [Ghost](features/ghost.md) — stale\n",
+        encoding="utf-8",
+    )
+
+    issues = check_index_desync(wiki_root)
+    assert len(issues) == 1
+    assert issues[0].rule == "index_desync"
+    assert issues[0].severity == "error"
+    assert "features/b.md" in issues[0].message
+    assert "features/ghost.md" in issues[0].message
+    assert "brain79 navigate --regenerate --rebuild" in issues[0].actionable
+
+    # lint --strict blocks on index_desync
+    rc = dispatch_cmd("lint", ["--strict"])
+    assert rc == 1
+
+    # lint --strict still blocks on index_desync even under enforcement: balanced
+    schema_path = wiki_root / "SCHEMA.md"
+    schema_text = schema_path.read_text(encoding="utf-8").replace("enforcement: strict", "enforcement: balanced")
+    schema_path.write_text(schema_text, encoding="utf-8")
+    rc_balanced = dispatch_cmd("lint", ["--strict"])
+    assert rc_balanced == 1
+

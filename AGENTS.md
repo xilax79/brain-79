@@ -1,4 +1,4 @@
-<!-- brain79:start v0.13.0 -->
+<!-- brain79:start v0.13.1 -->
 # Brain-79 AI memory protocol
 
 ## Prerequisites (one-time setup)

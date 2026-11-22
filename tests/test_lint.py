@@ -167,7 +167,7 @@ def test_lint_structural_errors_and_truncation(tmp_path: Path) -> None:
     )
 
     report = lint_wiki()
-    assert "[Status: WARNING]" in report
+    assert "[Status: CRITICAL]" in report
     assert "## [WARNING] Structural Errors & Warnings (58)" in report
     assert "- features/empty.md: empty (0 bytes)" in report
     assert "- features/huge.md: file_too_large (skipped)" in report
@@ -193,7 +193,7 @@ def test_lint_orphans_bfs_analysis(tmp_path: Path) -> None:
     orphan.write_text("---\ntype: feature\nsummary: Orphan summary\nstatus: shipped\nversion: 1.0.0\nlast_updated: 2026-08-11\n---\n\n# Lonely Article\n", encoding="utf-8")
 
     report = lint_wiki()
-    assert "[Status: WARNING]" in report
+    assert "[Status: CRITICAL]" in report
     assert "## [INFO] Orphans (1)" in report
     assert "- features/orphan.md" in report
 

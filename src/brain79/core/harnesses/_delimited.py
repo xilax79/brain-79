@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 
 DELIMITED_START_REGEX = re.compile(
-    r"<!--\s*brain79:start(?:\s+v?([0-9]+\.[0-9]+\.[0-9]+))?\s*-->",
+    r"<!--\s*brain79:start(?:\s+v?([0-9]+\.[0-9]+\.[0-9]+(?:[-.][0-9A-Za-z.]+)?))?\s*-->",
     re.IGNORECASE,
 )
 DELIMITED_END_REGEX = re.compile(r"<!--\s*brain79:end\s*-->", re.IGNORECASE)

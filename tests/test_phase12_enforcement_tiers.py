@@ -286,12 +286,15 @@ class TestLintOrientDoctorVisibility:
     ) -> None:
         init_project(tmp_path, auto_git_init=False, install_git_hooks_flag=False)
         wiki_root = tmp_path / ".brain-79"
-        # Create an orphan article (produces WARNING status, 0 CRITICAL)
-        orphan = wiki_root / "topics" / "orphan.md"
-        orphan.write_text(
-            "---\ntype: topic\nsummary: orphan note\nlast_updated: 2026-01-01\n---\n\n# Orphan\n\n## Overview\n\nBody.\n\n[← Back to Index](../INDEX.md)\n",
+        # Create an indexed article missing H1 header (produces WARNING status, 0 CRITICAL)
+        from brain79.core.navigation import regenerate_index_navigation
+
+        note = wiki_root / "topics" / "note.md"
+        note.write_text(
+            "---\ntype: topic\nsummary: missing h1 note\nlast_updated: 2026-01-01\n---\n\n## Overview\n\nBody.\n\n[← Back to Index](../INDEX.md)\n",
             encoding="utf-8",
         )
+        regenerate_index_navigation(wiki_root, rebuild=True)
         monkeypatch.setattr(config, "_project_root", tmp_path)
 
         # strict: lint --strict exits 1 on WARNING
