@@ -2,8 +2,8 @@
 type: feature
 summary: model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
 status: shipped
-version: 0.9.0
-last_updated: 2026-11-13
+version: 0.13.0
+last_updated: 2026-11-21
 applies_to:
   - src/brain79/server.py
 related:
@@ -19,7 +19,7 @@ applies_to_count: 1
 
 The Model Context Protocol (MCP) server feature exposes `brain-79` operations as structured tools over JSON-RPC over stdio, integrating seamlessly with AI clients such as Antigravity, Pi, OpenCode, Claude Desktop, and Cursor.
 
-Built using `FastMCP 2.0+`, it suppresses standard error banners during initialization and configures `output_schema=None` across tools to prevent redundant response wrapping, saving token bandwidth in AI harnesses.
+Built using `FastMCP 2.0+`, it suppresses standard error banners during initialization, configures `output_schema=None` across tools to prevent redundant response wrapping, and defaults to the compact `core` profile (8 hot-path tools: `orient`, `session_commit`, `read`, `read_batch`, `edit`, `context`, `search`, `lint`) to cut per-turn schema token overhead by ~64%. Pass `--mcp-profile full` or set `BRAIN79_MCP_PROFILE=full` to expose all 22 tools (including the 14 administrative tools).
 
 ## MCP tools reference
 
@@ -41,8 +41,8 @@ Built using `FastMCP 2.0+`, it suppresses standard error banners during initiali
 | `brain79_handoff_read(ref?)` | `brain79 handoff-read` | Read referenced session handoff |
 | `brain79_handoff_purge(apply?)` | `brain79 handoff-purge` | Purge short-term handoffs |
 | `brain79_lint()` | `brain79 lint` | Run deterministic health check scan |
-| `brain79_bootstrap(scope?, force?)` | `brain79 bootstrap` | Scan repository and return manifest |
-| `brain79_navigate(regenerate?)` | `brain79 navigate` | Query or update navigation registry |
+| `brain79_bootstrap(scope?, force?, auto_map?, max_modules?)` | `brain79 bootstrap` | Scan repository and optionally emit zero-overlap `--auto-map` governance proposals |
+| `brain79_navigate(regenerate?, rebuild?)` | `brain79 navigate` | Query, rebuild from disk, or regenerate navigation registry and `INDEX.md` |
 | `brain79_context(task, top_n?, paths?)` | `brain79 context` | Retrieve relevant articles via 3-signal ranking |
 | `brain79_migrate(apply?, dry_run?)` | `brain79 migrate` | Migrate legacy articles to frontmatter V3 |
 | `brain79_update_project(...)` | `brain79 update-project` | Non-destructively upgrade templates, schemas, and MCP harnesses |

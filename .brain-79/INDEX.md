@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-20
+last_updated: 2026-11-22
 ---
 
 # Project index
@@ -11,18 +11,12 @@ last_updated: 2026-11-20
 ## Quick navigation
 
 ### Architecture
-- [Architecture — Antigravity (agy) plugin initialization and progressive disclosure](architecture/agy-init-and-plugin-design.md) — technical specification for zero-config Antigravity (agy) plugin initialization, progressive AGENTS.md disclosure, and ancestor root resolution
-- [Architecture — Battle-testing, chaos fuzzing, and multi-repo gauntlet](architecture/battle-testing-and-chaos-design.md) — implementation contract for v0.10.0 battle-testing, covering the multi-OS CI matrix, chaos and fuzz tests, the five-archetype gauntlet, live-agent recovery smoke, failure catalog, and acceptance gates
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
-- [Architecture — Core refactoring and hardening](architecture/core-refactoring-and-hardening-design.md) — implementation specification and acceptance criteria for core architectural refactoring, concurrency hardening, security fixes, and modular decomposition prior to public release
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-11) and prioritized evolution phases (12-15) for team collaboration, polyglot guards, and PyPI release
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-12) and prioritized evolution (v0.13.1 integrity patch, phases 13-14, longitudinal anti-rot validation, and PyPI release)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
-- [Architecture — Public release readiness and friction removal](architecture/public-release-readiness-design.md) — implementation specification and acceptance criteria for English-first backlinks, native multi-harness adapters, core MCP surface compaction, and honest README positioning
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
-- [Architecture — Team-safe Git collaboration and low-friction onboarding](architecture/team-collaboration-and-onboarding-design.md) — implementation specification and acceptance criteria for team-safe Git collaboration, INDEX.md merge driver, bootstrap --auto-map, and configurable enforcement tiers
-- [Architecture — Zero-clone distribution, honest documentation, and 3-layer Diátaxis structure](architecture/zero-clone-distribution-and-visual-docs.md) — technical design for zero-clone installation, CLI/Python alignment, and 3-layer Diátaxis documentation
 
 ### Changelog
 - [Changelog — Historical internal development milestones (v1.0.0 through v2.0.2)](changelog/legacy-internal-releases.md) — historical record of internal development cycles (v1.0.0 through v2.0.2) prior to ADR-017 pre-GA recalibration
@@ -56,6 +50,7 @@ last_updated: 2026-11-20
 - [ADR-016: Handoff freshness, provenance, and authority decay](decisions/adr-016-handoff-freshness-and-authority-decay.md) — treat handoffs as perishable transition notes with authority decaying based on deterministic workspace drift
 - [ADR-017: Semantic versioning calibration for pre-GA maturation](decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md) — semantic versioning calibration to 0.7.2 for pre-GA maturation prior to public release
 - [Decision — ADR-018: Living manuals, temporal decontamination, and the three-class document ontology](decisions/adr-018-living-manuals-and-temporal-decontamination.md) — architectural foundation for living manuals, temporal decontamination, Chesterton's Fence for ADRs, and epocal changelog consolidation
+- [Decision — ADR-019: External feature specifications and requirements standard](decisions/adr-019-external-specs-and-requirements-standard.md) — isolate repository feature specifications in specs/ outside .brain-79/ using EARS, BDD Given/When/Then, explicit non-goals, and CI governance tests
 
 ### Features
 - [Feature — Cross-platform portability and centralized lock isolation](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
@@ -64,9 +59,13 @@ last_updated: 2026-11-20
 - [Feature — Session knowledge triage and research persistence](features/session-triage-and-research-persistence.md) — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics
 - [Feature — Short-term handoff continuity, freshness, and lifecycle operations](features/handoff-continuity.md) — tactical session transitions, freshness evaluation, authority decay, anti-hallucination work tracking, and operational purge
 - [Feature — Standalone CLI interface](features/cli.md) — deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
+- [Feature — Team-safe Git collaboration and low-friction onboarding](features/team-collaboration-and-onboarding.md) — team-safe Git collaboration, git-ignored derived caches with deterministic rebuilds, 3-way INDEX.md merge driver, bootstrap --auto-map, centralized git\_ops, and configurable enforcement tiers
 - [Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context](features/transitive-drift-and-ripple-guards.md) — merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
 - [Feature — Versioning and release governance](features/version-governance.md) — single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
 - [Feature — Wiki organizational enforcement](features/organizational-enforcement.md) — prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing
 
 ### Product
 - [Brain-79 — Product vision](product/overview.md) — deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
+
+### Topics
+- [Open v0.13.0 defects — Navigation registry completeness, lint index desynchronization, and MCP version skew](topics/v0-13-0-navigation-registry-and-lint-defects.md) — open v0.13.0 defects in navigation registry completeness, lint index desynchronization, and stale MCP version skew detection

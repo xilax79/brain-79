@@ -1,13 +1,13 @@
 ---
 type: product
 summary: deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
-last_updated: 2026-11-17
+last_updated: 2026-11-21
 applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:f73525ca4ec58cb1"
-applies_to_count: 11
+applies_to_digest: "sha256:1466497b641957c3"
+applies_to_count: 12
 ---
 
 # Brain-79 — Product vision
@@ -31,7 +31,8 @@ LLMs maintain wikis that degrade organically:
 3. **Write-time validation**: Mechanical write operations validate frontmatter schemas, file locations, and target existence.
 4. **Pre-commit hook**: Direct editing bypasses are mechanically blocked before commit via `brain79 lint --strict`.
 5. **Handoff continuity**: Ephemeral tactical transitions with cryptographic freshness tracking and operational purge (`brain79 handoff-purge`).
-6. **Organizational enforcement**: Mechanical linter detecting structural quality violations, unanchored governance, and target sprawl.
+6. **Organizational enforcement**: mechanical linter detecting structural quality violations, unanchored governance, and target sprawl.
+7. **Team-safe Git collaboration**: git-ignored derived caches with deterministic rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map`, and configurable `strict`/`balanced`/`advisory` enforcement tiers.
 
 ## Target users
 

@@ -2,12 +2,13 @@
 type: feature
 summary: merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
 status: shipped
-version: 0.8.1
+version: 0.13.0
 applies_to:
   - src/brain79/core/drift.py
   - src/brain79/core/context.py
   - src/brain79/core/session_commit.py
   - src/brain79/core/orient.py
+  - src/brain79/core/ast_guards/**
 related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-011-session-commit-and-batch-reading.md
@@ -19,8 +20,8 @@ related:
   - architecture/current-state.md
   - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-13
-applies_to_digest: "sha256:6b61dd79617b2842"
-applies_to_count: 4
+applies_to_digest: "sha256:1eb68d339fca9b7c"
+applies_to_count: 7
 ---
 
 # Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context
@@ -59,8 +60,9 @@ Tracks workspace target files governed by `applies_to` patterns in `.drift_manif
 - Writes, edits, manifest updates, and handoffs execute inside outer mutex `.brain-79/.locks/_transaction.lock`:
   - **Pass 1**: in-memory syntax and schema pre-flight validation.
   - **Pass 2**: Anti-sprawl check (2a), digest calculation (2b), verified article review (2c), and **Hard Session Ripple Gate (2d)**: aborts the transaction (`unresolved_session_ripple`) if any impacted article remains drifted.
-  - **Guard C (AST verification)**: blocks `verified_articles` without prose updates if public AST signatures changed in governed `.py` files.
-  - **Pass 3 & Pass 4**: Atomic multi-file disk persistence and handoff emission.
+  - **Guard C (pluggable AST verification in `core/ast_guards/`)**: `base.py` defines the language-inspector seam and `python_inspector.py` blocks `verified_articles` without prose updates if public Python AST signatures changed in governed `.py` files (including fallback target inspection when `.drift_manifest.json` is absent).
+  - **Enforcement tier awareness**: under `balanced` or `advisory` enforcement in `SCHEMA.md`, ripple and AST blocks downgrade to structured warnings (see [Feature — Team-safe Git collaboration and low-friction onboarding](team-collaboration-and-onboarding.md)).
+  - **Pass 3 & Pass 4**: Atomic multi-file disk persistence with full transactional rollback on failure, followed by post-persistence handoff emission.
 
 ## Key invariants and error codes
 

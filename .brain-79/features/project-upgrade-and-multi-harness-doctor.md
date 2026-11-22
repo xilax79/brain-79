@@ -2,12 +2,13 @@
 type: feature
 summary: non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
 status: shipped
-version: 0.9.2
+version: 0.13.0
 allow_overlapping_governance: true
 applies_to:
   - src/brain79/core/init_project.py
   - src/brain79/core/migration.py
   - src/brain79/core/doctor.py
+  - src/brain79/core/harnesses/**
   - src/brain79/cli/dispatch.py
   - src/brain79/server.py
   - src/brain79/core/orient.py
@@ -18,8 +19,8 @@ related:
   - features/cross-platform-and-lock-isolation.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
 last_updated: 2026-11-17
-applies_to_digest: "sha256:cfea3c6a8ff75731"
-applies_to_count: 6
+applies_to_digest: "sha256:de4abe0148596990"
+applies_to_count: 16
 ---
 
 # Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics
@@ -73,10 +74,10 @@ The project protocol upgrade and multi-harness doctor subsystem provides non-des
 - **Schema versioning**: elevates `.brain-79/SCHEMA.md` to `schema_version: 2`.
 - **Frontmatter and extension preservation**: retains existing `profile` (`software` or `general`), `custom_types`, and custom YAML keys. Trailing `## Project-specific schema extensions` sections are preserved intact.
 
-### 3. Portable Tier 1 multi-harness registration
-- **Universal project files**: configures `.mcp.json` (Pi, Claude Code, Zed, OpenCode), `.agents/plugins/brain79/` (Antigravity workspace plugin with `plugin.json`, `mcp_config.json`, and `SKILL.md`), `.agents/mcp_config.json` (legacy Antigravity fallback), and `.cursor/mcp.json` (Cursor IDE).
-- **Portable execution**: sets `"command": "brain79"` with `"args": ["--project-root", "."]`, automatically sanitizing machine-specific absolute binary paths.
-- **Non-destructive JSON merge**: preserves third-party MCP servers, custom plugin metadata, and creates automated `.bak` backups on corrupted files.
+### 3. Portable multi-harness adapter registry (`core/harnesses/`)
+- **Shared delimited engine (`_delimited.py`)**: manages `<!-- brain79:start vX.Y.Z -->` / `<!-- brain79:end -->` blocks non-destructively across `AGENTS.md` (`AgentsMdAdapter`), `CLAUDE.md` (`ClaudeCodeAdapter`), `.cursor/rules/brain79.mdc` (`CursorRulesAdapter` with MDC frontmatter), and `.github/copilot-instructions.md` (`CopilotAdapter`).
+- **MCP config adapters**: configures `.mcp.json` (`McpJsonAdapter`), `.agents/plugins/brain79/` (`AntigravityAdapter` with `plugin.json`, `mcp_config.json`, and `SKILL.md`), and `.cursor/mcp.json` (`CursorAdapter`) using portable `"command": "brain79"` + `"args": ["--project-root", "."]`.
+- **Selective installation**: `brain79 init --harnesses <all|csv>` filters installed adapters; `update-project` and `doctor --fix` diagnose and repair all active adapters.
 - **Tier 2 desktop opt-in**: supports safe registration in host desktop configurations (Claude Desktop, Windsurf) via `--include-desktop` using project-scoped server keys (`brain79-<project_name>`).
 
 ### 4. Git hook management
@@ -85,12 +86,12 @@ The project protocol upgrade and multi-harness doctor subsystem provides non-des
 
 ### 5. Full-pass wiki reconditioning (`migrate_wiki` v2)
 - **Comprehensive inspection**: evaluates every wiki article without early exit.
-- **Field auto-fill and backlink normalization**: completes missing required fields, normalizes summary text, and ensures backlink footers use `[← Volver al Índice](../INDEX.md)` on subfolders and `[← Volver al Índice](INDEX.md)` on root articles.
+- **Field auto-fill and backlink normalization**: completes missing required fields, normalizes summary text, and canonicalizes backlink footers to the active English-first `backlink_label:` from `SCHEMA.md` (default `[← Back to Index](../INDEX.md)` on subfolders and `[← Back to Index](INDEX.md)` on root articles, migrating legacy Spanish footers cleanly).
 - **Semantic legacy status exemption**: articles missing required structural sections or exceeding size ceilings are downgraded to `status: legacy` or `stability: legacy`, exempting them from strict CI linting until organic editing occurs.
 - **Merkle seeding and transition handoffs**: computes `applies_to_digest` and seeds `.drift_manifest.json`. Passing `--commit-transition` generates a maintenance handoff maintaining `fresh` lifecycle state under ADR-016.
 
 ### 6. Subsecond diagnostic engine (`brain79 doctor`)
-- **Seven health checks**: evaluates binary/environment (Python >= 3.11 runtime and zero-clone tool installation), protocol sync, wiki structure, MCP harnesses, filesystem locks, git hooks, and handoff hygiene in $<50\text{ ms}$.
+- **Operational health checks**: evaluates binary/environment (Python >= 3.11 runtime and zero-clone tool installation), protocol sync (including active `enforcement` tier), wiki structure, MCP/instruction harnesses, filesystem locks, git hooks, `derived_state_tracking` (warns if derived JSON caches are tracked in Git), `git_merge_driver` (`INDEX.md` merge driver setup), and handoff hygiene in $<50\text{ ms}$.
 - **Exit codes and formats**: returns `0` (ok), `2` (warning), or `1` (error) with `--format text` and `--format json` support.
 - **Git-aware repair guard**: refuses `--fix` if uncommitted protocol files exist in Git unless `--force` is supplied.
 

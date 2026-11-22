@@ -49,5 +49,4 @@
 
 ## Project notes
 
-> Add project-specific guidance here: coding conventions, deployment steps,
-> common gotchas, links to runbooks, etc.
+- **External feature specs**: before implementing a roadmap phase, public CLI/MCP/schema change, new dependency, or 3+ module feature, check `specs/` (excluding `TEMPLATE.md` and `archive/`) for an `approved`/`in_progress` spec; never implement a `draft` spec. Author new specs from `specs/TEMPLATE.md` per [ADR-019](.brain-79/decisions/adr-019-external-specs-and-requirements-standard.md); never list `specs/` in `.brain-79/` `applies_to`.

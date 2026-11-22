@@ -2,7 +2,7 @@
 type: architecture
 summary: high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-11-17
+last_updated: 2026-11-21
 applies_to:
   - README.md
   - USER_GUIDE.md
@@ -13,8 +13,8 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:0647a42dba68d2e8"
-applies_to_count: 32
+applies_to_digest: "sha256:25a849cfa6e6f538"
+applies_to_count: 34
 ---
 
 # Architecture — System current state
@@ -31,12 +31,12 @@ This document maintains a high-level summary of the repository's current archite
 | **FastMCP Server** | `src/brain79/server.py` | [Feature — FastMCP integration](../features/mcp-server.md), [Architecture — MCP server](mcp-server.md) |
 | **3-Signal Context & Orient** | `src/brain79/core/orient.py`, `src/brain79/core/context.py` | [ADR-010](../decisions/adr-010-orient-and-3-signal-context-ranking.md), [Feature — Transitive drift detection](../features/transitive-drift-and-ripple-guards.md) |
 | **Transactional Session Commit & Ripple Gate** | `src/brain79/core/session_commit.py`, `src/brain79/core/curate.py` | [ADR-011](../decisions/adr-011-session-commit-and-batch-reading.md), [Feature — Transitive drift detection](../features/transitive-drift-and-ripple-guards.md) |
-| **Merkle Drift Engine & AST Guards** | `src/brain79/core/drift.py`, `src/brain79/core/ast_guards/` | [Feature — Transitive drift detection](../features/transitive-drift-and-ripple-guards.md), [ADR-012](../decisions/adr-012-structural-quality-and-drift-detection.md), [Architecture — Core refactoring and hardening](core-refactoring-and-hardening-design.md) |
-| **Centralized Git Layer** | `src/brain79/core/git_ops.py` | [Architecture — Core refactoring and hardening](core-refactoring-and-hardening-design.md) |
+| **Merkle Drift Engine & AST Guards** | `src/brain79/core/drift.py`, `src/brain79/core/ast_guards/` | [Feature — Transitive drift detection](../features/transitive-drift-and-ripple-guards.md), [ADR-012](../decisions/adr-012-structural-quality-and-drift-detection.md) |
+| **Centralized Git Layer & Team Collaboration** | `src/brain79/core/git_ops.py`, `src/brain79/core/auto_map.py`, `src/brain79/core/navigation.py` | [Feature — Team-safe Git collaboration and low-friction onboarding](../features/team-collaboration-and-onboarding.md) |
 | **Organizational Linter & Schema Engine** | `src/brain79/core/lint_organizational.py`, `src/brain79/core/validation.py`, `src/brain79/core/frontmatter.py` | [Feature — Wiki organizational enforcement](../features/organizational-enforcement.md), [ADR-018](../decisions/adr-018-living-manuals-and-temporal-decontamination.md) |
 | **Cross-Platform Lock & Scoped Context** | `src/brain79/core/locks.py`, `src/brain79/config.py` | [Feature — Cross-platform portability and centralized lock isolation](../features/cross-platform-and-lock-isolation.md), [ADR-014](../decisions/adr-014-centralized-locks-and-cross-platform-io.md) |
 | **Handoff Continuity & Freshness** | `src/brain79/core/handoff.py`, `src/brain79/core/handoff_freshness.py` | [Feature — Short-term handoff continuity](../features/handoff-continuity.md), [ADR-016](../decisions/adr-016-handoff-freshness-and-authority-decay.md) |
-| **Project Protocol Upgrade & Harness Registry** | `src/brain79/core/init_project.py`, `src/brain79/core/doctor.py`, `src/brain79/core/harnesses/`, `src/brain79/core/migration.py`, `src/brain79/core/auto_map.py` | [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md), [Architecture — Team-safe Git collaboration and low-friction onboarding](team-collaboration-and-onboarding-design.md) |
+| **Project Protocol Upgrade & Harness Registry** | `src/brain79/core/init_project.py`, `src/brain79/core/doctor.py`, `src/brain79/core/harnesses/`, `src/brain79/core/migration.py` | [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](../features/project-upgrade-and-multi-harness-doctor.md) |
 
 > For the historical sequence of developmental milestones and releases, refer to [Architecture — Industrial-scale roadmap and adoption evolution](roadmap-industrial-scale.md) and [Changelog — Historical internal development milestones](../changelog/legacy-internal-releases.md).
 
