@@ -613,7 +613,7 @@ def read_handoff(
                     extracted_lines.append(line)
 
             extracted_str = "\n".join(extracted_lines).strip()
-            hint = "\n\n> ℹ️ Call `brain79_handoff_read(...)` to inspect the complete cross-branch handoff."
+            hint = "\n\n> ℹ️ Run `brain79 handoff-read` to inspect the complete cross-branch handoff."
             rendered_content = banner + extracted_str + hint
         else:
             rendered_content = banner + content

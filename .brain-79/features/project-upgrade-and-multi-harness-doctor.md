@@ -2,7 +2,7 @@
 type: feature
 summary: non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
 status: shipped
-version: 0.13.0
+version: 0.14.0
 allow_overlapping_governance: true
 applies_to:
   - src/brain79/core/init_project.py
@@ -18,8 +18,8 @@ related:
   - architecture/current-state.md
   - features/cross-platform-and-lock-isolation.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
-last_updated: 2026-11-17
-applies_to_digest: "sha256:9ea774a06f72e6bf"
+last_updated: 2026-11-23
+applies_to_digest: "sha256:391b9f7d14888320"
 applies_to_count: 16
 ---
 

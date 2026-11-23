@@ -16,7 +16,6 @@ from brain79.core.navigation import (
     unregister_article,
 )
 from brain79.core.wiki import write_article
-from brain79.server import brain79_navigate
 
 
 @pytest.fixture
@@ -211,8 +210,8 @@ def test_cli_navigate(setup_wiki_root: Path, capsys: pytest.CaptureFixture[str])
     assert "INDEX.md Quick navigation regenerated." in captured.out
 
 
-def test_mcp_navigate(setup_wiki_root: Path) -> None:
-    res = brain79_navigate(regenerate=True)
+def test_core_regenerate_navigation(setup_wiki_root: Path) -> None:
+    res = regenerate_index_navigation(setup_wiki_root / ".brain-79")
     assert res == "INDEX.md Quick navigation regenerated."
 
 

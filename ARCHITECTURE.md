@@ -44,16 +44,16 @@ Technical design, component architecture, and mechanical invariants of `brain-79
 
 ---
 
-## 2. Interface symmetry (CLI and FastMCP)
+## 2. Interface symmetry (MCP subset and CLI superset)
 
-`brain-79` provides strict 1:1 parity between terminal subcommands (`24`) and FastMCP server tools (`22`). Automated test suites (`tests/test_symmetry.py`) enforce identical parameter signatures across both interfaces.
+`brain-79` exposes **9 focused FastMCP server tools** as a strict subset of the **24 CLI subcommands**. Automated test suites (`tests/test_symmetry.py`) enforce `MCP_TOOLS` ⊂ `WHITELIST` and parameter parity across retained interfaces.
 
-| Category | CLI subcommands (24) | FastMCP server tools (22) |
+| Category | CLI subcommands (24) | FastMCP server tools (9) |
 |:---|:---|:---|
-| **Session & workflow** | `orient`, `session-commit`, `context`, `index`, `ingest` | `brain79_orient`, `brain79_session_commit`, `brain79_context`, `brain79_index`, `brain79_ingest` |
-| **Handoff continuity** | `handoff-write`, `handoff-read`, `handoff-purge` | `brain79_handoff_write`, `brain79_handoff_read`, `brain79_handoff_purge` |
-| **Reading & writing** | `read`, `read-batch`, `write`, `write-many`, `edit`, `list`, `search` | `brain79_read`, `brain79_read_batch`, `brain79_write`, `brain79_write_many`, `brain79_edit`, `brain79_list`, `brain79_search` |
-| **Governance & health** | `lint`, `schema`, `navigate`, `migrate`, `bootstrap`, `doctor`, `update-project` | `brain79_lint`, `brain79_schema`, `brain79_navigate`, `brain79_migrate`, `brain79_bootstrap`, `brain79_doctor`, `brain79_update_project` |
+| **Session & workflow** | `orient`, `session-commit`, `context`, `index`, `ingest` | `brain79_orient`, `brain79_session_commit`, `brain79_context` |
+| **Handoff continuity** | `handoff-write`, `handoff-read`, `handoff-purge` | *Use `brain79_session_commit` / `brain79_orient` or CLI* |
+| **Reading & writing** | `read`, `read-batch`, `write`, `write-many`, `edit`, `list`, `search` | `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_search` |
+| **Governance & health** | `lint`, `schema`, `navigate`, `migrate`, `bootstrap`, `doctor`, `update-project` | `brain79_lint`, `brain79_bootstrap` |
 | **Host CLI only** | `init`, `update` | *N/A (Host setup & self-update operations)* |
 
 ---
@@ -90,7 +90,7 @@ src/brain79/
 ├── __init__.py                 <- Package metadata and single-source __version__ declaration
 ├── __main__.py                 <- CLI entrypoint, global flag parser, and FastMCP fallback
 ├── config.py                   <- Dynamic ancestor root discovery and path resolution
-├── server.py                   <- FastMCP stdio server registering 22 JSON-RPC tools
+├── server.py                   <- FastMCP stdio server registering 9 focused JSON-RPC tools
 ├── cli/
 │   ├── __init__.py             <- Whitelist registration and CLI runner entrypoint
 │   ├── dispatch.py             <- Subcommand argument parsing, POSIX exit codes, and routing

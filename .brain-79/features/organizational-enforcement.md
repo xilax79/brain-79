@@ -35,7 +35,7 @@ The Organizational Enforcement system prevents organic quality degradation of re
 4. **Structural Decision & Tech Debt Leakage (`lint_organizational.py`)**: uses CommonMark code-fence masking (`_mask_code_fences`) to search for un-nested decision bullets while ignoring code examples.
 5. **Thread-Safe Navigation Registry (`navigation.py`)**: maintains `.navigation_registry.json` under `filelock` and updates `INDEX.md` Quick navigation atomically, prioritizing frontmatter `summary:` declarations with hardened fallback heuristics.
 6. **Git Pre-Commit Hook (`init_project.py`)**: Deploys `.git/hooks/pre-commit` during `brain79 init` to execute `brain79 lint --strict` before commits are accepted.
-7. **Back-Navigation Convention**: Standardizes footer back-links (`[← Volver al Índice](../INDEX.md)`) for high-connectivity graphs and seamless editor navigation.
+7. **Back-Navigation Convention**: Standardizes footer back-links (`[← Back to Index](../INDEX.md)`) for high-connectivity graphs and seamless editor navigation.
 8. **Temporal Decontamination & Living Manual Governance (`lint_organizational.py`)**: Enforces rule `temporal_contamination_in_title` on living manual ontologies (`features/`, `architecture/`, `product/`), ensuring titles, summaries, and headings remain evergreen and free of temporal project management milestone tags (`Phase X`, `Sprint Y`, `WIP`), while exempting immutable audit folders and roadmaps (ADR-018).
 
 ## Commands and tools
@@ -44,7 +44,6 @@ The Organizational Enforcement system prevents organic quality degradation of re
 |---|---|---|
 | CLI | `brain79 lint [--strict] [--suggest-extract] [--format json]` | Run organizational linter |
 | CLI | `brain79 navigate [--regenerate]` | Query or sync navigation registry |
-| MCP | `brain79_navigate(regenerate)` | Query or sync navigation registry via MCP |
 | MCP | `brain79_lint()` | Run organizational health scan via MCP |
 
 ## Usage examples

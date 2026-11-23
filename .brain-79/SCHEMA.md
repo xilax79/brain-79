@@ -1,13 +1,13 @@
 ---
 profile: software
 schema_version: 2
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 ---
 
 # Brain-79 — Wiki schema (normative)
 
 This file defines the **enforced rules** for maintaining this project's wiki.
-The rules in this file are mechanically validated by `brain79_write` and `brain79_lint`.
+The rules in this file are mechanically validated by `brain79_session_commit`, `brain79_edit`, and `brain79_lint`.
 Violations will be rejected at write time and reported by the linter.
 
 ---
@@ -38,7 +38,7 @@ type: feature
 summary: one-line summary for INDEX.md entry
 status: planned  # planned | in_progress | shipped | deprecated | archived | legacy
 version: 1.0.0
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 ---
 
 # Decision (decisions/adr-*.md)
@@ -46,9 +46,9 @@ last_updated: 2026-11-22
 type: decision
 summary: one-line summary of architectural decision
 status: proposed  # proposed | accepted | superseded | rejected | legacy
-date: 2026-11-22
+date: 2026-11-23
 deciders: [author]
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 ---
 
 # Architecture (architecture/*.md)
@@ -56,14 +56,14 @@ last_updated: 2026-11-22
 type: architecture
 summary: one-line summary of subsystem or pattern
 stability: experimental  # experimental | stable | archived | legacy
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 ---
 
 # Product (product/*.md)
 ---
 type: product
 summary: one-line summary of domain or vision
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 ---
 
 # Topic (topics/*.md)
@@ -71,7 +71,7 @@ last_updated: 2026-11-22
 type: topic
 summary: one-line summary of research, benchmark, or domain topic
 status: active  # active | archived | draft | legacy
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 ---
 ```
 
@@ -95,7 +95,7 @@ Articles must include standard structural sections per document type:
 - `architecture`: Requires `## Overview`, `## General Description`, or `## State`.
 - `product`: Requires `## Overview`, `## Problem`, or `## Executive Summary`.
 
-Inspect complete document skeletons via `brain79_schema(type)`.
+Inspect complete document skeletons via `brain79 schema --type <type>`.
 
 ### Deterministic drift detection (`applies_to`)
 

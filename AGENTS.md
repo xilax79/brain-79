@@ -1,4 +1,4 @@
-<!-- brain79:start v0.13.1 -->
+<!-- brain79:start v0.14.0 -->
 # Brain-79 AI memory protocol
 
 ## Prerequisites (one-time setup)
@@ -11,22 +11,22 @@
 - **If using `opencode`, `claude`, `cursor`, or other MCP clients**: ensure `brain79` is registered in your client's MCP configuration (`.mcp.json` or `.cursor/mcp.json`).
 
 ## Cold start (start of task)
-1. Always use `brain79_orient(task?, paths?)` to orient yourself in a single turn before touching code (ingests `INDEX.md`, active handoff, and inlined governing articles & ADRs). Use `brain79_index` for quick index lookups.
-2. If working on a project with an empty wiki, call `brain79_bootstrap` to generate a scan manifest and seed the wiki via `brain79_write`.
+1. Always use `brain79_orient(task?, paths?)` to orient yourself in a single turn before touching code (ingests `INDEX.md`, active handoff, and inlined governing articles & ADRs). Use `brain79 index` for quick index lookups.
+2. If working on a project with an empty wiki, call `brain79_bootstrap` to generate a scan manifest and seed the wiki via `brain79_session_commit(writes=[...])`.
 3. The `.brain-79/` directory contains the ultimate source of truth.
 
 ## Mid-session and handoffs (end of task)
-- **On-demand handoff policy**: in interactive sessions, write a handoff (`brain79_handoff_write` or `brain79_session_commit(handoff=...)`) **only when explicitly requested by the user** (e.g. "save handoff", "wrap up"). In autonomous headless sub-agent sessions, write a handoff upon terminating the process. Do not write handoffs after every interactive conversational turn.
-- To resume a task, `brain79_orient` automatically provides the latest handoff state (or use `brain79_handoff_read` directly).
+- **On-demand handoff policy**: in interactive sessions, write a handoff (`brain79_session_commit(handoff=...)` or `brain79 handoff-write`) **only when explicitly requested by the user** (e.g. "save handoff", "wrap up"). In autonomous headless sub-agent sessions, write a handoff upon terminating the process. Do not write handoffs after every interactive conversational turn.
+- To resume a task, `brain79_orient` automatically provides the latest handoff state (or run `brain79 handoff-read` directly).
 - **Handoff freshness and authority decay**: a handoff is a perishable transition note, not a source of truth. If a handoff is marked as stale (due to subsequent wiki or code changes) or comes from another branch, treat its pending work and boot instruction as historical context; verify against current code and governing articles before executing instructions.
 
 ## Tools and execution protocol
-- **MCP preferred, CLI fallback**: prefer MCP tools (`brain79_*`) when connected; use symmetric CLI commands (`brain79 <subcommand>`) as fallback. The MCP server defaults to the compact `core` profile (8 hot-path tools); pass `--mcp-profile full` or set `BRAIN79_MCP_PROFILE=full` to expose all 22 tools.
+- **MCP preferred, CLI fallback**: prefer the 9 focused MCP tools (`brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`, `brain79_bootstrap`) for hot-path session work; use the 24-command CLI (`brain79 <subcommand>`) for administrative tasks and fallback.
 - **Two-call session workflow**:
   1. Cold start: `brain79_orient(task?, paths?)`.
   2. Final wrap-up: apply writes, edits, and handoffs atomically via `brain79_session_commit(writes=[...], handoff={...})`.
 - **Quality enforcement**: run `brain79_lint()` (or `brain79 lint --strict`) before completing wiki work.
-- **Detailed command manual**: consult the on-demand `brain79-wiki` skill, inspect schemas via `brain79_schema()`, or run `brain79 --help` for full MCP/CLI tables and migration procedures.
+- **Detailed command manual**: consult the on-demand `brain79-wiki` skill, inspect schemas via `brain79 schema`, or run `brain79 --help` for full CLI tables and migration procedures.
 
 ## Documentation and style guidelines (human-first, clean B2)
 

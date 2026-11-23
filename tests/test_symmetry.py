@@ -1,81 +1,46 @@
+import inspect
+
 import pytest
 
 from brain79.cli.dispatch import WHITELIST
-from brain79.server import ADMIN_TOOLS, CORE_TOOLS, create_mcp_server, mcp
+from brain79.server import MCP_TOOLS, create_mcp_server, mcp
 
 
 @pytest.mark.asyncio
 async def test_mcp_cli_symmetry() -> None:
-    """Validate static symmetry for both full (22 tools) and default core (8 tools) profiles."""
-    full_server = create_mcp_server(profile="full")
+    """Validate MCP-subset / CLI-superset invariant (9 focused MCP tools subset of 24 CLI subcommands)."""
+    server = create_mcp_server()
     try:
-        full_tools = await full_server.list_tools()
-        full_tool_names = {
-            t.name.removeprefix("brain79_").replace("_", "-") for t in full_tools
+        tools = await server.list_tools()
+        raw_names = {t.name for t in tools}
+        mcp_cli_names = {
+            t.name.removeprefix("brain79_").replace("_", "-") for t in tools
         }
 
         cli_subs = set(WHITELIST)
 
         assert len(cli_subs) == 24, f"Expected 24 CLI subcommands, got {len(cli_subs)}"
-        assert len(full_tool_names) == 22, f"Expected 22 MCP full tools, got {len(full_tool_names)}"
-        assert full_tool_names.issubset(cli_subs), (
-            f"MCP tools {full_tool_names - cli_subs} not present in CLI subcommands"
-        )
-        assert cli_subs - full_tool_names == {"init", "update"}, (
-            f"Unexpected difference between CLI and MCP: {cli_subs - full_tool_names}"
+        assert len(MCP_TOOLS) == 9, f"Expected 9 MCP tools, got {len(MCP_TOOLS)}"
+        assert raw_names == MCP_TOOLS
+        assert mcp_cli_names.issubset(cli_subs), (
+            f"MCP tools {mcp_cli_names - cli_subs} not present in CLI subcommands"
         )
 
-        # Default module-level mcp uses core profile (8 hot-path tools), all present in full
-        core_tools = await mcp.list_tools()
-        core_raw_names = {t.name for t in core_tools}
-        core_tool_names = {
-            t.name.removeprefix("brain79_").replace("_", "-") for t in core_tools
-        }
-        assert len(CORE_TOOLS) == 8
-        assert len(ADMIN_TOOLS) == 14
-        assert CORE_TOOLS.isdisjoint(ADMIN_TOOLS)
-        assert len(CORE_TOOLS | ADMIN_TOOLS) == 22
-        assert core_raw_names == CORE_TOOLS
-        assert core_tool_names.issubset(full_tool_names)
+        # Module-level mcp matches create_mcp_server()
+        default_tools = await mcp.list_tools()
+        assert {t.name for t in default_tools} == MCP_TOOLS
     finally:
-        for srv in (full_server, mcp):
+        for srv in (server, mcp):
             if hasattr(srv, "close") and callable(getattr(srv, "close")):
                 res = srv.close()
                 if hasattr(res, "__await__"):
                     await res
 
 
-def test_update_project_and_doctor_parameter_symmetry() -> None:
-    """Validate parameter symmetry for update-project and doctor between MCP and core."""
-    import inspect
-    from brain79.core.doctor import run_doctor
-    from brain79.core.init_project import update_project
-    from brain79.server import brain79_doctor, brain79_update_project
-
-    # 1. update_project
-    mcp_up = inspect.signature(brain79_update_project)
-    core_up = inspect.signature(update_project)
-    for p in ("dry_run", "commit_transition", "include_desktop"):
-        assert p in mcp_up.parameters
-        assert p in core_up.parameters
-        assert mcp_up.parameters[p].default is False
-
-    # 2. doctor
-    mcp_doc = inspect.signature(brain79_doctor)
-    core_doc = inspect.signature(run_doctor)
-    for p in ("fix", "force", "include_desktop"):
-        assert p in mcp_doc.parameters
-        assert p in core_doc.parameters
-        assert mcp_doc.parameters[p].default is False
-    assert "format" in mcp_doc.parameters
-    assert mcp_doc.parameters["format"].default == "text"
-
-
 def test_session_commit_parameter_symmetry() -> None:
     """SLA-2: verified_articles and allow_partial_ripple maintain 100% parameter parity across MCP, core, and CLI."""
-    import inspect
-    from brain79.server import brain79_session_commit
     from brain79.core.session_commit import commit_session
+    from brain79.server import brain79_session_commit
 
     mcp_sig = inspect.signature(brain79_session_commit)
     core_sig = inspect.signature(commit_session)
@@ -93,14 +58,11 @@ def test_session_commit_parameter_symmetry() -> None:
     assert core_sig.parameters["verified_articles"].default is None
 
 
-def test_bootstrap_and_navigate_parameter_symmetry() -> None:
-    """Phase 12 AC-12.10: bootstrap (auto_map, max_modules) and navigate (rebuild) maintain CLI/MCP/core parity."""
-    import inspect
+def test_bootstrap_parameter_symmetry() -> None:
+    """Phase 12/13: retained brain79_bootstrap (auto_map, max_modules) maintains CLI/MCP/core parity."""
     from brain79.core.bootstrap import run_bootstrap
-    from brain79.core.navigation import regenerate_index_navigation
-    from brain79.server import brain79_bootstrap, brain79_navigate
+    from brain79.server import brain79_bootstrap
 
-    # 1. bootstrap
     mcp_bs = inspect.signature(brain79_bootstrap)
     core_bs = inspect.signature(run_bootstrap)
     assert "auto_map" in mcp_bs.parameters and "auto_map" in core_bs.parameters
@@ -109,11 +71,3 @@ def test_bootstrap_and_navigate_parameter_symmetry() -> None:
     assert "max_modules" in mcp_bs.parameters and "max_modules" in core_bs.parameters
     assert mcp_bs.parameters["max_modules"].default == 12
     assert core_bs.parameters["max_modules"].default == 12
-
-    # 2. navigate
-    mcp_nav = inspect.signature(brain79_navigate)
-    core_nav = inspect.signature(regenerate_index_navigation)
-    assert "rebuild" in mcp_nav.parameters and "rebuild" in core_nav.parameters
-    assert mcp_nav.parameters["rebuild"].default is False
-    assert core_nav.parameters["rebuild"].default is False
-

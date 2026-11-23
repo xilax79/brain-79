@@ -1,15 +1,16 @@
 ---
 type: feature
-summary: model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
+summary: model Context Protocol server exposing 9 focused hot-path tools over stdio JSON-RPC
 status: shipped
-version: 0.13.0
-last_updated: 2026-11-21
+version: 0.14.0
+last_updated: 2026-11-23
 applies_to:
   - src/brain79/server.py
 related:
   - architecture/symmetry.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:fcc13c6153fefd71"
+  - decisions/adr-020-focused-mcp-surface-and-cli-superset.md
+applies_to_digest: "sha256:5e9cc7da6d2eae27"
 applies_to_count: 1
 ---
 
@@ -17,47 +18,34 @@ applies_to_count: 1
 
 ## Overview
 
-The Model Context Protocol (MCP) server feature exposes `brain-79` operations as structured tools over JSON-RPC over stdio, integrating seamlessly with AI clients such as Antigravity, Pi, OpenCode, Claude Desktop, and Cursor.
+The Model Context Protocol (MCP) server feature exposes `brain-79` hot-path operations as 9 focused tools over JSON-RPC stdio, integrating with AI clients such as Antigravity, Pi, OpenCode, Claude Desktop, and Cursor.
 
-Built using `FastMCP 2.0+`, it suppresses standard error banners during initialization, configures `output_schema=None` across tools to prevent redundant response wrapping, and defaults to the compact `core` profile (8 hot-path tools: `orient`, `session_commit`, `read`, `read_batch`, `edit`, `context`, `search`, `lint`) to cut per-turn schema token overhead by ~64%. Pass `--mcp-profile full` or set `BRAIN79_MCP_PROFILE=full` to expose all 22 tools (including the 14 administrative tools).
+Built using `FastMCP 2.0+`, it suppresses standard error banners during initialization, configures `output_schema=None` across tools to prevent redundant response wrapping, and keeps per-turn schema token overhead minimal. Administrative commands are invoked through the 24-command `brain79 <command>` CLI.
 
-## MCP tools reference
+## MCP tools reference (`MCP_TOOLS`)
 
-| MCP Tool | CLI Equivalent | Purpose |
+| MCP tool | CLI equivalent | Purpose |
 |---|---|---|
-| `brain79_orient(task?, paths?)` | `brain79 orient` | Collapsed 1-call cold start orientation with inlined governing context |
-| `brain79_index()` | `brain79 index` | Retrieve `INDEX.md` entry point |
-| `brain79_schema(target_type?)` | `brain79 schema` | Inspect schema constraints and copy-paste templates |
+| `brain79_orient(task?, paths?, max_articles?)` | `brain79 orient` | Collapsed 1-call cold start orientation with inlined governing context |
+| `brain79_session_commit(...)` | `brain79 session-commit` | 1-call atomic session finalization with Hard Session Ripple Gate |
 | `brain79_read(path, sections?)` | `brain79 read <path>` | Read wiki article safely with section projection |
 | `brain79_read_batch(requests)` | `brain79 read-batch` | Read multiple articles in a single call |
-| `brain79_write(path, content, ...)` | `brain79 write <path>` | Write or update wiki article with validation and auto-navigation |
 | `brain79_edit(path, edits, ...)` | `brain79 edit <path>` | Targeted text replacement without re-emitting entire article |
-| `brain79_write_many(articles, ...)` | `brain79 write-many` | Batch validate and atomically write multiple articles |
-| `brain79_session_commit(...)` | `brain79 session-commit` | 1-call atomic session finalization with Hard Session Ripple Gate |
-| `brain79_list(section?)` | `brain79 list [--section <name>]` | List available wiki articles |
-| `brain79_search(query)` | `brain79 search <query>` | High-speed keyword search via ripgrep |
-| `brain79_ingest(session_summary, ...)` | `brain79 ingest` | Ingest raw session summary to `_raw/sessions/` |
-| `brain79_handoff_write(...)` | `brain79 handoff-write` | Create structured, immutable session handoff |
-| `brain79_handoff_read(ref?)` | `brain79 handoff-read` | Read referenced session handoff |
-| `brain79_handoff_purge(apply?)` | `brain79 handoff-purge` | Purge short-term handoffs |
+| `brain79_context(task, top_n?, paths?)` | `brain79 context` | Retrieve relevant articles via 3-signal ranking |
+| `brain79_search(query)` | `brain79 search <query>` | High-speed keyword search |
 | `brain79_lint()` | `brain79 lint` | Run deterministic health check scan |
 | `brain79_bootstrap(scope?, force?, auto_map?, max_modules?)` | `brain79 bootstrap` | Scan repository and optionally emit zero-overlap `--auto-map` governance proposals |
-| `brain79_navigate(regenerate?, rebuild?)` | `brain79 navigate` | Query, rebuild from disk, or regenerate navigation registry and `INDEX.md` |
-| `brain79_context(task, top_n?, paths?)` | `brain79 context` | Retrieve relevant articles via 3-signal ranking |
-| `brain79_migrate(apply?, dry_run?)` | `brain79 migrate` | Migrate legacy articles to frontmatter V3 |
-| `brain79_update_project(...)` | `brain79 update-project` | Non-destructively upgrade templates, schemas, and MCP harnesses |
-| `brain79_doctor(fix?, force?, ...)` | `brain79 doctor` | Run 7-point operational diagnostic checks and auto-repair |
 
 ## Usage examples
 
 In an AI assistant session:
-- Call `brain79_index()` at cold-start.
-- Call `brain79_read("architecture/mcp-server.md")` to inspect system design.
-- Call `brain79_write("decisions/adr-001.md", content)` to persist architectural decisions.
+- Call `brain79_orient(task=..., paths=...)` at cold-start.
+- Call `brain79_read("architecture/mcp-server.md")` or `brain79_read_batch(...)` to inspect system design.
+- Call `brain79_session_commit(writes=[...], edits=[...], handoff={...})` to persist architectural updates atomically.
 
 ## Known edge cases
 
-- Stderr output during handshake drops connection on strict clients (`agy`, `pi`); suppressed via `FASTMCP_SHOW_SERVER_BANNER=false`.
+- Stderr output during handshake drops connection on strict clients (`agy`, `pi`); suppressed via `FASTMCP_SHOW_SERVER_BANNER=false` and silent ignoring of `BRAIN79_MCP_PROFILE`.
 - Writes are guarded by inter-process `filelock` to ensure atomic mutations during concurrent execution.
 
 ---

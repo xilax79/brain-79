@@ -6,6 +6,23 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-23
+
+### Changed
+- **Focused 9-tool MCP surface & CLI superset (Phase 13, SPEC-013, ADR-020)**:
+  - Pruned 13 redundant/administrative MCP wrapper tools from `src/brain79/server.py` (`brain79_index`, `brain79_schema`, `brain79_write`, `brain79_write_many`, `brain79_list`, `brain79_ingest`, `brain79_handoff_read`, `brain79_handoff_write`, `brain79_handoff_purge`, `brain79_navigate`, `brain79_migrate`, `brain79_update_project`, `brain79_doctor`) and removed `ADMIN_TOOLS` and dual-profile branching (`create_mcp_server(profile=...)`).
+  - Standardized a single fixed 9-tool `MCP_TOOLS` surface (`brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`, `brain79_bootstrap`) while preserving all 24 CLI subcommands in `WHITELIST` untouched.
+  - Updated runtime hints (`core/orient.py`, `core/handoff.py`, `core/bootstrap.py`), packaged templates (`AGENTS.md`, `SKILL.md`, `SCHEMA.md`, `SCHEMA_GENERAL.md`), and `tests/test_symmetry.py` (`MCP_TOOLS` ⊂ `WHITELIST`).
+
+### Removed
+- **`--mcp-profile` CLI flag and `BRAIN79_MCP_PROFILE` routing (`__main__.py`)**:
+  - Passing `--mcp-profile` or `--mcp-profile=<value>` now emits an actionable migration error to `stderr` and exits with code `2`.
+  - Legacy `BRAIN79_MCP_PROFILE` environment variables are silently ignored during MCP stdio startup with zero `stderr` output so strict MCP host handshakes never fail.
+
+### Migration notes
+- Users whose MCP client configuration previously passed `--mcp-profile full` should remove that flag; run administrative commands (`doctor`, `migrate`, `update-project`, `navigate`, `handoff-purge`, `schema`, `write`) via the `brain79 <command>` CLI.
+- Run `brain79 update-project` in existing repositories to refresh `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/brain79.mdc`, `.github/copilot-instructions.md`, and `.agents/plugins/brain79/skills/brain79-wiki/SKILL.md` to `v0.14.0`.
+
 ## [0.13.1] - 2026-11-22
 
 ### Fixed

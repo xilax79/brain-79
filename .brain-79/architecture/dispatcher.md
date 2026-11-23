@@ -2,7 +2,7 @@
 type: architecture
 summary: CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 stability: stable
-last_updated: 2026-11-17
+last_updated: 2026-11-23
 applies_to:
   - src/brain79/__main__.py
   - src/brain79/cli/dispatch.py
@@ -11,7 +11,7 @@ related:
   - architecture/symmetry.md
   - features/cli.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:3752776e3d479ad6"
+applies_to_digest: "sha256:d26a042577a8f78d"
 applies_to_count: 3
 ---
 
@@ -38,12 +38,13 @@ Global flags can appear before or after subcommands without breaking parsing:
 The dispatcher maintains a strict whitelist (`WHITELIST`) of 24 subcommands:
 `init`, `update`, `update-project`, `doctor`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
 
-Routing order in `src/brain79/__main__.py`:
-1. **Empty arguments** (e.g. `brain79` or `brain79 --project-root .`): Launches `_cmd_serve()`, starting the FastMCP server on standard IO.
-2. **Help flags/commands** (`-h`, `--help`, `help [subcmd]`): Prints domain-agnostic root usage or delegates to `<subcmd> --help` and exits with `0`.
-3. **Version flags** (`-v`, `--version`): Prints `brain79 <version>` and exits with `0`.
-4. **Whitelisted subcommands**: Routes to `run_cli(cmd, sub_args, debug)`.
-5. **Unknown commands or flags**: Emits an actionable error to `stderr` and exits with code `2` (never falling through to the MCP stdio loop).
+Routing order in `src/brain79/__main__.py` (immediately after `parse_global_flags()`):
+1. **Removed `--mcp-profile` flag**: Emits a `v0.14.0` migration error to `stderr` directing callers to the `brain79 <command>` CLI and exits with code `2`.
+2. **Empty arguments** (e.g. `brain79` or `brain79 --project-root .`): Launches `_cmd_serve()`, starting the FastMCP server on standard IO.
+3. **Help flags/commands** (`-h`, `--help`, `help [subcmd]`): Prints domain-agnostic root usage or delegates to `<subcmd> --help` and exits with `0`.
+4. **Version flags** (`-v`, `--version`): Prints `brain79 <version>` and exits with `0`.
+5. **Whitelisted subcommands**: Routes to `run_cli(cmd, sub_args, debug)`.
+6. **Unknown commands or flags**: Emits an actionable error to `stderr` and exits with code `2` (never falling through to the MCP stdio loop).
 
 ## Exit code mapping policy
 

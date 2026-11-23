@@ -17,7 +17,7 @@ How-to workflows, MCP communication protocol, and operational reference for `bra
        v                                              v
 +-----------------------------+               +-------------------------------------+
 | AGENTS.md (Protocol block)  |               | brain-79 FastMCP server (server.py) |
-| - Cold start: orient()      |               | - 22 registered tools               |
+| - Cold start: orient()      |               | - 9 focused hot-path MCP tools      |
 | - Wrap up: session_commit() |               | - Bounded context ranking           |
 | - On-demand handoff policy  |               | - Mechanical write validation       |
 +-----------------------------+               +-------------------------------------+
@@ -233,7 +233,7 @@ In interactive sessions with humans, handoffs are written **only when explicitly
 
 #### Cryptographic provenance and authority decay
 
-Every handoff written via `brain79_handoff_write` or `brain79_session_commit(handoff=...)` records cryptographic provenance in its frontmatter:
+Every handoff written via `brain79 handoff-write` or `brain79_session_commit(handoff=...)` records cryptographic provenance in its frontmatter:
 
 ```yaml
 ---
@@ -255,47 +255,42 @@ When an incoming assistant runs `orient`, the engine calculates freshness agains
 
 #### Purging historical handoffs
 
-Handoffs are ephemeral transition bridges. When closing a major milestone, purge historical handoff files:
+When closing a major milestone, purge historical handoff files via CLI:
 
 ```bash
-brain79 handoff-purge
-```
-
-Or via MCP (`brain79_handoff_purge`):
-```json
-{}
+brain79 handoff-purge --apply
 ```
 
 ---
 
 ## 3. Interface reference: MCP tools and CLI subcommands
 
-`brain-79` maintains 1:1 symmetry between terminal subcommands and FastMCP tools.
+`brain-79` exposes a **9-tool focused MCP surface** for session hot paths and a **24-command CLI superset** for all session, authoring, and administrative operations.
 
-| Category | FastMCP server tool | CLI subcommand | Purpose |
+| Category | FastMCP server tool (9) | CLI subcommand (24) | Purpose |
 |:---|:---|:---|:---|
 | **Session & workflow** | `brain79_orient` | `orient` | Cold-start orientation and budgeted context assembly. |
 | | `brain79_session_commit` | `session-commit` | Atomic commit of writes, edits, and handoffs with ripple check. |
 | | `brain79_context` | `context` | 3-Signal context search for specific tasks or paths. |
-| | `brain79_index` | `index` | Quick read of `INDEX.md` routing table. |
-| | `brain79_ingest` | `ingest` | Ingest external session notes into `_raw/sessions/`. |
-| **Handoff continuity** | `brain79_handoff_write` | `handoff-write` | Write an immutable, provenance-stamped session handoff. |
-| | `brain79_handoff_read` | `handoff-read` | Read the latest handoff with computed freshness state. |
-| | `brain79_handoff_purge` | `handoff-purge` | Purge archived handoff files. |
+| | *CLI only* | `index` | Quick read of `INDEX.md` routing table. |
+| | *CLI only* | `ingest` | Ingest external session notes into `_raw/sessions/`. |
+| **Handoff continuity** | *Use `session_commit`* | `handoff-write` | Write an immutable, provenance-stamped session handoff. |
+| | *Included in `orient`* | `handoff-read` | Read the latest handoff with computed freshness state. |
+| | *CLI only* | `handoff-purge` | Purge archived handoff files. |
 | **Reading & writing** | `brain79_read` | `read` | Read a single wiki article by relative path. |
 | | `brain79_read_batch` | `read-batch` | Read multiple wiki articles in one turn with section projection. |
-| | `brain79_write` | `write` | Write or overwrite a single wiki article with schema validation. |
-| | `brain79_write_many` | `write-many` | Atomically write multiple articles with schema validation. |
+| | *Use `session_commit`* | `write` | Write or overwrite a single wiki article with schema validation. |
+| | *Use `session_commit`* | `write-many` | Atomically write multiple articles with schema validation. |
 | | `brain79_edit` | `edit` | Apply targeted string replacements to a wiki article. |
-| | `brain79_list` | `list` | List all tracked wiki articles with metadata. |
+| | *CLI only* | `list` | List all tracked wiki articles with metadata. |
 | | `brain79_search` | `search` | Full-text search across all managed wiki articles. |
 | **Governance & health** | `brain79_lint` | `lint` | Run structural, organizational, and drift lint checks. |
-| | `brain79_schema` | `schema` | Inspect active schema rules and required frontmatter keys. |
-| | `brain79_navigate` | `navigate` | Regenerate navigation registry and `INDEX.md`. |
-| | `brain79_migrate` | `migrate` | Add frontmatter and normalize legacy markdown files. |
+| | *CLI only* | `schema` | Inspect active schema rules and required frontmatter keys. |
+| | *CLI only* | `navigate` | Regenerate navigation registry and `INDEX.md`. |
+| | *CLI only* | `migrate` | Add frontmatter and normalize legacy markdown files. |
 | | `brain79_bootstrap` | `bootstrap` | Generate repository scan manifest and seed wiki. |
-| | `brain79_doctor` | `doctor` | Run 7-point operational diagnostic suite (`--fix` in CLI). |
-| | `brain79_update_project`| `update-project` | Upgrade `AGENTS.md`, `SCHEMA.md`, and MCP harnesses. |
+| | *CLI only* | `doctor` | Run 7-point operational diagnostic suite (`--fix` in CLI). |
+| | *CLI only* | `update-project` | Upgrade `AGENTS.md`, `SCHEMA.md`, and MCP harnesses. |
 | **Host CLI only** | *N/A* | `init` | Initialize `.brain-79/` wiki and configure MCP harnesses. |
 | | *N/A* | `update` | Upgrade installed `brain79` binary from upstream Git. |
 

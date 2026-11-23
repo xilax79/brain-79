@@ -15,7 +15,7 @@ from brain79.core.handoff import write_handoff
 from brain79.core.init_project import init_project
 from brain79.core.navigation import load_registry, regenerate_index_navigation
 from brain79.core.wiki import edit_article, read_article, write_article, write_many_articles
-from brain79.server import brain79_write, mcp
+from brain79.server import brain79_session_commit, mcp
 
 
 @pytest.fixture
@@ -53,15 +53,15 @@ def test_multi_error_validation_contains_all_violations_and_template() -> None:
     assert "status: planned" in user_msg
 
 
-def test_mcp_write_error_includes_actionable() -> None:
-    """P0.1: MCP brain79_write error includes format_user_message with actionable guidance."""
+def test_mcp_write_error_includes_actionable(setup_wiki: Path) -> None:
+    """P0.1: MCP brain79_session_commit error includes format_user_message with actionable guidance."""
     bad_content = """---
 type: feature
 ---
 # Incomplete Feature
 """
-    res = brain79_write("features/bad.md", bad_content)
-    assert res.startswith("Error:")
+    res = brain79_session_commit(writes=[{"path": "features/bad.md", "content": bad_content}])
+    assert res.startswith("Commit Validation Failed:")
     assert "status" in res
     assert "version" in res
     assert "Action:" in res or "Fix:" in res
@@ -168,7 +168,7 @@ This is a newly added feature.
 
 
 def test_per_file_health_check_in_write_response(setup_wiki: Path) -> None:
-    """P1.2: Server brain79_write returns inline lint OK or warnings."""
+    """P1.2: Server brain79_session_commit returns inline health status or warnings."""
     # Write valid article
     valid_content = """---
 type: feature
@@ -182,10 +182,10 @@ last_updated: 2026-10-29
 ## Overview
 Description.
 """
-    res = brain79_write("features/valid.md", valid_content)
-    assert "Written: features/valid.md" in res
-    assert "lint OK" in res
-    assert "INDEX.md auto-synced" in res
+    res = brain79_session_commit(writes=[{"path": "features/valid.md", "content": valid_content}])
+    assert "features/valid.md" in res
+    assert "`ok`" in res
+    assert "Transaction Committed Successfully" in res
 
     # Write article with decision leakage
     leaking_content = """---
@@ -200,8 +200,8 @@ last_updated: 2026-10-29
 ## Decision
 We decided to use Redis.
 """
-    res2 = brain79_write("features/leak.md", leaking_content)
-    assert "Lint warnings:" in res2
+    res2 = brain79_session_commit(writes=[{"path": "features/leak.md", "content": leaking_content}])
+    assert "Warnings:" in res2
     assert "decision leakage" in res2.lower()
 
 

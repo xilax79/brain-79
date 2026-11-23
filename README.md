@@ -1,6 +1,6 @@
 # brain-79
 
-[![Version](https://img.shields.io/badge/version-0.13.1-blue.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-0.14.0-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 
@@ -93,11 +93,11 @@ This command creates:
 
 To install only a subset of harnesses, pass `--harnesses` (for example, `brain79 init --harnesses agents,claude`). For non-code research repositories, pass `--profile general`.
 
-### MCP tool profiles (`core` default vs `full`)
+### Focused MCP surface and CLI superset
 
-By default, the FastMCP server starts in the compact **`core` profile** exposing 8 hot-path tools (`brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`) to minimize per-turn LLM schema token overhead.
+The FastMCP server exposes a single focused surface of **9 hot-path tools** (`brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`, `brain79_bootstrap`) to minimize per-turn LLM schema token overhead.
 
-To expose all 22 tools (including administrative operations such as `migrate`, `doctor`, `bootstrap`, and `update-project`), pass `--mcp-profile full` or set `BRAIN79_MCP_PROFILE=full` (or invoke any command directly via the symmetric `brain79 <command>` CLI).
+Administrative and operational commands (`migrate`, `doctor`, `update-project`, `navigate`, `handoff-read`, `handoff-purge`, `schema`, `write`, `write-many`, `index`, `list`, `ingest`, `init`, `update`) are exposed through the **24-command `brain79 <command>` CLI**.
 
 ### 3. Verify repository health
 

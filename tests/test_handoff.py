@@ -222,7 +222,7 @@ def test_round_trip() -> None:
 
 
 def test_knowledge_promotion_trigger() -> None:
-    from brain79.server import brain79_handoff_read
+    from brain79.server import brain79_orient
 
     write_handoff(
         session_type="feature",
@@ -239,10 +239,10 @@ def test_knowledge_promotion_trigger() -> None:
     assert has_promo is True
     assert "Warning" not in content
 
-    # Check MCP tool injects the warning
-    mcp_output = brain79_handoff_read("latest")
-    assert "Warning" in mcp_output
-    assert "Knowledge pending promotion" in mcp_output
+    # Check brain79_orient surfaces knowledge_pending_promotion
+    orient_output = brain79_orient()
+    assert "Knowledge pending promotion" in orient_output
+    assert "Crucial architectural insight" in orient_output
 
 
 def test_wiki_deviation_section_renders() -> None:

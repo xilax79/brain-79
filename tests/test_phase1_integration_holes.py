@@ -23,7 +23,7 @@ from brain79.core.handoff import write_handoff
 from brain79.core.init_project import init_project
 from brain79.core.migration import migrate_wiki
 from brain79.core.wiki import check_file_health
-from brain79.server import brain79_handoff_write
+from brain79.server import brain79_session_commit
 
 
 @pytest.fixture(autouse=True)
@@ -57,16 +57,18 @@ def test_handoff_supports_general_profile_session_types(tmp_path: Path, monkeypa
         wiki_root=tmp_path / ".brain-79",
     )
 
-    # Server tool brain79_handoff_write should also succeed
-    result = brain79_handoff_write(
-        session_type="writing",
-        summary="Drafted executive summary.",
-        previous_handoff_ref=path,
-        completed_work=["First draft written"],
-        pending_work=["Grammar pass"],
-        boot_instruction="Review draft in topics/",
+    # Server tool brain79_session_commit(handoff=...) should also succeed
+    result = brain79_session_commit(
+        handoff={
+            "session_type": "writing",
+            "summary": "Drafted executive summary.",
+            "previous_handoff_ref": path,
+            "completed_work": ["First draft written"],
+            "pending_work": ["Grammar pass"],
+            "boot_instruction": "Review draft in topics/",
+        }
     )
-    assert "Handoff successfully saved" in result
+    assert "Transaction Committed Successfully" in result
 
 
 def test_autofill_preserves_tags_and_autofills_date_for_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

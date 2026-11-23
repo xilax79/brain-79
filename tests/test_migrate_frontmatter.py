@@ -8,7 +8,6 @@ from brain79.core.frontmatter import parse_frontmatter
 from brain79.core.init_project import init_project
 from brain79.core.lint import lint_wiki
 from brain79.core.wiki import write_article
-from brain79.server import brain79_migrate
 from brain79.core.migration import migrate_wiki, suggest_relocations
 
 
@@ -94,8 +93,8 @@ def test_cli_migrate(setup_wiki_root: Path, capsys: pytest.CaptureFixture[str]) 
     assert "# Suggested Article Relocations" in captured_reloc.out
 
 
-def test_mcp_migrate(setup_wiki_root: Path) -> None:
-    res = brain79_migrate(dry_run=True)
+def test_core_migrate_dry_run_default(setup_wiki_root: Path) -> None:
+    res = migrate_wiki(setup_wiki_root / ".brain-79", dry_run=True)
     assert "# Migration Report (DRY RUN)" in res
 
 

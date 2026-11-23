@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 import sys
-from typing import Literal
 
 # Must be set before fastmcp is imported so the banner is suppressed.
 # MCP hosts (agy, opencode, etc.) treat any stderr output during the
@@ -55,7 +54,6 @@ Global options:
   -h, --help            Show this help message and exit
   -v, --version         Show installed version and exit
   --project-root PATH   Target project directory (default: current working directory)
-  --mcp-profile MODE    MCP server tool profile: 'core' (8 tools) or 'full' (22 tools) (default: core; env: BRAIN79_MCP_PROFILE)
   --debug               Print full error tracebacks for troubleshooting
 
 Session & workflow:
@@ -96,70 +94,27 @@ Server mode:
 """
 
 
-def _extract_mcp_profile(args: list[str]) -> tuple[Literal["core", "full"], list[str]]:
-    """Extract --mcp-profile <core|full> with precedence: CLI flag > BRAIN79_MCP_PROFILE > 'core'."""
-    cli_profile: Literal["core", "full"] | None = None
-    remaining: list[str] = []
-    i = 0
-    while i < len(args):
-        arg = args[i]
-        if arg == "--mcp-profile":
-            if i + 1 >= len(args):
-                sys.stderr.write("Error: --mcp-profile requires a value ('core' or 'full').\n")
-                sys.exit(2)
-            raw = args[i + 1].strip().lower()
-            if raw not in ("core", "full"):
-                sys.stderr.write(f"Error: Invalid --mcp-profile '{args[i + 1]}'. Expected 'core' or 'full'.\n")
-                sys.exit(2)
-            cli_profile = "core" if raw == "core" else "full"
-            i += 2
-        elif arg.startswith("--mcp-profile="):
-            raw_orig = arg.split("=", 1)[1]
-            raw = raw_orig.strip().lower()
-            if raw not in ("core", "full"):
-                sys.stderr.write(f"Error: Invalid --mcp-profile '{raw_orig}'. Expected 'core' or 'full'.\n")
-                sys.exit(2)
-            cli_profile = "core" if raw == "core" else "full"
-            i += 1
-        else:
-            remaining.append(arg)
-            i += 1
-
-    if cli_profile is not None:
-        return cli_profile, remaining
-
-    env_raw = os.environ.get("BRAIN79_MCP_PROFILE")
-    if env_raw is not None and env_raw.strip() != "":
-        env_clean = env_raw.strip().lower()
-        if env_clean not in ("core", "full"):
-            sys.stderr.write(
-                f"Error: Invalid BRAIN79_MCP_PROFILE '{env_raw}'. Expected 'core' or 'full'.\n"
-            )
-            sys.exit(2)
-        return ("core" if env_clean == "core" else "full"), remaining
-
-    return "core", remaining
-
-
-def _cmd_serve(project_root: Path | None, mcp_profile: Literal["core", "full"] = "core") -> None:
+def _cmd_serve(project_root: Path | None) -> None:
     from brain79 import config
+    from brain79.server import mcp
 
     if project_root is not None:
         config.set_project_root(project_root)
-    if mcp_profile == "core":
-        from brain79.server import mcp
-
-        mcp.run()
-    else:
-        from brain79.server import create_mcp_server
-
-        create_mcp_server(profile=mcp_profile).run()
+    mcp.run()
 
 
 def main(argv: list[str] | None = None) -> None:
     args = sys.argv[1:] if argv is None else argv
     project_root, debug, filtered = parse_global_flags(args)
-    mcp_profile, filtered = _extract_mcp_profile(filtered)
+
+    for arg in filtered:
+        if arg == "--mcp-profile" or arg.startswith("--mcp-profile="):
+            sys.stderr.write(
+                "Error: --mcp-profile was removed in v0.14.0. "
+                "brain79 now exposes a single focused 9-tool MCP surface; "
+                "use 'brain79 <command>' CLI for administrative tasks.\n"
+            )
+            sys.exit(2)
 
     if project_root is not None:
         from brain79 import config
@@ -168,10 +123,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # 1. No subcommand or arguments -> FastMCP stdio server fallback (ADR-001)
     if not filtered:
-        if mcp_profile == "core":
-            _cmd_serve(project_root)
-        else:
-            _cmd_serve(project_root, mcp_profile=mcp_profile)
+        _cmd_serve(project_root)
         return
 
     first = filtered[0]

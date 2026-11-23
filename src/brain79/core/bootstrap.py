@@ -523,7 +523,7 @@ Scope: {scope_label}
 You have received a project scan manifest. Follow these steps exactly:
 
 1. Call `brain79_read("SCHEMA.md")` to review curation rules.
-2. Write the following wiki articles using `brain79_write`. Use ONLY information
+2. Write the following wiki articles using `brain79_session_commit(writes=[...])`. Use ONLY information
    present in this manifest. Do not invent details not shown here.
    If a section has insufficient data, write what is known and mark gaps
    with `<!-- insufficient data: <reason> -->`.

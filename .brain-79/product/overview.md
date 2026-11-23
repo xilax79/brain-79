@@ -1,12 +1,12 @@
 ---
 type: product
 summary: deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
-last_updated: 2026-11-21
+last_updated: 2026-11-23
 applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:60b46e1c5280da0f"
+applies_to_digest: "sha256:a4ad68324ed1ee55"
 applies_to_count: 12
 ---
 
@@ -33,6 +33,7 @@ LLMs maintain wikis that degrade organically:
 5. **Handoff continuity**: Ephemeral tactical transitions with cryptographic freshness tracking and operational purge (`brain79 handoff-purge`).
 6. **Organizational enforcement**: mechanical linter detecting structural quality violations, unanchored governance, and target sprawl.
 7. **Team-safe Git collaboration**: git-ignored derived caches with deterministic rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map`, and configurable `strict`/`balanced`/`advisory` enforcement tiers.
+8. **Focused MCP surface and CLI superset**: 9 hot-path MCP tools paired with the complete 24-command CLI.
 
 ## Target users
 

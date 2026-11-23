@@ -18,7 +18,7 @@ related:
   - decisions/adr-011-session-commit-and-batch-reading.md
   - architecture/roadmap-industrial-scale.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:a340841246625867"
+applies_to_digest: "sha256:e036a18707d58b00"
 applies_to_count: 6
 ---
 

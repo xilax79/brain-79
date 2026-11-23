@@ -31,7 +31,6 @@ from brain79.core.navigation import (
 )
 from brain79.core.session_commit import commit_session
 from brain79.core.frontmatter import ValidationError
-from brain79.server import brain79_navigate
 
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -361,13 +360,6 @@ class TestNavigationRegistryRebuild:
         assert rc == 0
         reg_after_cli = json.loads((wiki_root / REGISTRY_FILENAME).read_text(encoding="utf-8"))
         assert len(reg_after_cli["articles"]) == 1
-
-        # MCP brain79_navigate(regenerate=True, rebuild=True)
-        (wiki_root / REGISTRY_FILENAME).write_text('{"articles": []}\n', encoding="utf-8")
-        mcp_res = brain79_navigate(regenerate=True, rebuild=True)
-        assert "regenerated" in mcp_res.lower()
-        reg_after_mcp = json.loads((wiki_root / REGISTRY_FILENAME).read_text(encoding="utf-8"))
-        assert len(reg_after_mcp["articles"]) == 1
 
 
 # =============================================================================

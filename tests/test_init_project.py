@@ -37,7 +37,7 @@ def test_init_project_fresh(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
     manifest_content = agents_manifest.read_text(encoding="utf-8")
     assert "# Brain-79 AI memory protocol" in manifest_content
     assert "pi-mcp-adapter" in manifest_content
-    assert "brain79_index" in manifest_content
+    assert "brain79_orient" in manifest_content
 
     # Check .mcp.json
     mcp_json = tmp_path / ".mcp.json"
@@ -344,7 +344,7 @@ def test_agents_manifest_size_and_compatibility_anchors() -> None:
     assert "<!-- brain79:end -->" in template_raw
     assert "# Brain-79 AI memory protocol" in template_raw
     assert "pi-mcp-adapter" in template_raw
-    assert "brain79_index" in template_raw
+    assert "brain79_orient" in template_raw
     assert "No-Op Idempotence" in template_raw
     assert "Zero-Modification Rule" in template_raw
     assert "## Project notes" in template_raw

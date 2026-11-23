@@ -273,7 +273,7 @@ def orient(
             "## ⚠️ Documentation Drift Alerts",
             *drift_alerts,
             "",
-            "> **Action**: Update drifted articles via `brain79_edit`/`brain79_write`, or pass eligible "
+            "> **Action**: Update drifted articles via `brain79_edit` or `brain79_session_commit`, or pass eligible "
             "internal leaf code refactors in `verified_articles=[{\"path\": \"...\", \"reason\": \"...\"}]` "
             "during `brain79_session_commit`.",
         ])

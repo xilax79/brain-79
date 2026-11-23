@@ -10,7 +10,7 @@ applies_to:
 related:
   - decisions/adr-002-immutable-handoffs.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
-applies_to_digest: "sha256:ee9f52bfcb991188"
+applies_to_digest: "sha256:3dffd21d8c8d991d"
 applies_to_count: 2
 ---
 
@@ -29,9 +29,8 @@ They track completed tasks, pending work items, boot instructions, and knowledge
 | CLI | `brain79 handoff-write --session-type <type> ...` | Write structured session handoff |
 | CLI | `brain79 handoff-read [ref]` | Resolve and display handoff by ref ("latest", stem, or timestamp) |
 | CLI | `brain79 handoff-purge [--apply]` | Purge short-term handoffs with dry-run default guard |
-| MCP | `brain79_handoff_write(...)` | Write structured session handoff |
-| MCP | `brain79_handoff_read(ref)` | Resolve and display handoff |
-| MCP | `brain79_handoff_purge(apply)` | Purge short-term handoffs with dry-run default guard |
+| MCP | `brain79_session_commit(handoff={...})` | Write structured session handoff atomically |
+| MCP | `brain79_orient(...)` | Surface active handoff state with freshness diagnostics (`handoff-purge` is CLI-only) |
 
 ## Invariants and guardrails
 

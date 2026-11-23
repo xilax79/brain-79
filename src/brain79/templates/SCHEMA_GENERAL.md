@@ -6,7 +6,7 @@ enforcement: strict
 # Brain-79 — Wiki Schema (General Knowledge & Research)
 
 This file defines the **enforced rules** for maintaining this project's wiki under the `general` profile.
-The rules are mechanically validated by `brain79_write` and `brain79_lint`.
+The rules are mechanically validated by `brain79_session_commit`, `brain79_edit`, and `brain79_lint`.
 
 ---
 

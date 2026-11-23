@@ -1,12 +1,11 @@
 import logging
-from typing import Any, Literal
+from typing import Any
 
 from fastmcp import FastMCP
 
 from brain79 import __version__
 from brain79.config import get_wiki_root
 from brain79.core import context as context_ops
-from brain79.core import handoff as handoff_ops
 from brain79.core import lint as lint_ops
 from brain79.core import wiki as wiki_ops
 from brain79.core.frontmatter import ValidationError
@@ -16,7 +15,6 @@ from brain79.core.frontmatter import ValidationError
 # stderr output as a failure signal during the handshake phase.
 logging.getLogger("fastmcp").setLevel(logging.WARNING)
 logging.getLogger("mcp").setLevel(logging.WARNING)
-
 
 
 def _unpack_nested_args(args: dict[str, Any] | None) -> dict[str, Any]:
@@ -57,17 +55,6 @@ def brain79_orient(
         max_articles = unpacked.get("max_articles", max_articles)
 
     return orient(task=task, paths=paths, max_articles=max_articles)
-
-
-def brain79_index(
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Return the complete INDEX.md routing table only.
-    For session cold start, prefer `brain79_orient` which loads index, active schema summary, latest handoff, and governing articles in a single call.
-    """
-    return wiki_ops.get_index()
 
 
 def brain79_read(
@@ -133,75 +120,6 @@ def brain79_read_batch(
         return f"Error reading batch: {exc}"
 
 
-def brain79_schema(
-    target_type: str | None = None,
-    type: str | None = None,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Inspect frontmatter schema requirements and copy-paste templates.
-
-    Respects the project's active profile and custom types declared in .brain-79/SCHEMA.md.
-
-    Args:
-        target_type: Optional type to inspect (e.g., "feature", "decision", "topic", "context").
-                     If omitted, returns the complete schema reference for the active profile.
-        type: Alias for target_type.
-    """
-    from brain79.config import get_wiki_root
-    from brain79.core.frontmatter import get_schema_documentation, load_active_schema
-
-    if args:
-        unpacked = _unpack_nested_args(args)
-        target_type = target_type or unpacked.get("target_type")
-        type = type or unpacked.get("type")
-
-    try:
-        active_schema = load_active_schema(get_wiki_root())
-    except Exception:
-        active_schema = None
-
-    effective_type = type or target_type
-    return get_schema_documentation(effective_type, schema=active_schema)
-
-
-def brain79_write(
-    path: str = "",
-    content: str = "",
-    force_validation_skip: bool = False,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Write or update a wiki article. Creates the file and parent directories if needed.
-
-    Args:
-        path: Relative path within .brain-79/ (e.g., "decisions/use-fastmcp.md")
-        content: Full markdown content for the article
-        force_validation_skip: If True, bypasses organizational validation
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        path = path or unpacked.get("path", "")
-        content = content or unpacked.get("content", "")
-        force_validation_skip = force_validation_skip or unpacked.get("force_validation_skip", False)
-
-    try:
-        clean_path = wiki_ops.normalize_wiki_rel_path(path)
-        msg = wiki_ops.write_article(
-            clean_path, content, force_validation_skip=force_validation_skip
-        )
-        health = wiki_ops.check_file_health(get_wiki_root(), clean_path, content)
-        if health:
-            return f"{msg} · INDEX.md auto-synced\nLint warnings:\n" + "\n".join(f"- {w}" for w in health)
-        return f"{msg} · INDEX.md auto-synced · lint OK"
-    except ValidationError as exc:
-        return f"Error: {exc.format_user_message()}"
-    except (ValueError, OSError) as exc:
-        return f"Error: {exc}"
-
-
 def brain79_edit(
     path: str = "",
     edits: list[dict[str, str]] | None = None,
@@ -240,59 +158,6 @@ def brain79_edit(
         return f"Error: {exc}"
 
 
-def brain79_write_many(
-    articles: list[dict[str, str]] | None = None,
-    force_validation_skip: bool = False,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Validate and atomically write multiple wiki articles in a single batch call.
-
-    All articles are validated before any files are written (all-or-nothing).
-
-    Args:
-        articles: List of articles, each with {"path": "...", "content": "..."}
-        force_validation_skip: If True, bypasses organizational validation
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        articles = articles if articles is not None else unpacked.get("articles")
-        force_validation_skip = force_validation_skip or unpacked.get("force_validation_skip", False)
-    articles = articles or []
-
-    try:
-        return wiki_ops.write_many_articles(
-            articles, force_validation_skip=force_validation_skip
-        )
-    except ValidationError as exc:
-        return f"Error: {exc.format_user_message()}"
-    except (ValueError, OSError) as exc:
-        return f"Error: {exc}"
-
-
-def brain79_list(
-    section: str | None = None,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    List all wiki articles, optionally filtered by section directory.
-
-    Args:
-        section: Optional section to filter by (e.g., "architecture", "features")
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        section = section or unpacked.get("section")
-
-    articles = wiki_ops.list_articles(section)
-    if not articles:
-        label = f"in '{section}'" if section else "in the wiki"
-        return f"No articles found {label}."
-    return "\n".join(articles)
-
-
 def brain79_search(
     query: str = "",
     tool: str | None = None,
@@ -318,232 +183,6 @@ def brain79_search(
         if r["excerpt"]:
             lines.append(f"  > {r['excerpt']}")
     return "\n".join(lines)
-
-
-def brain79_ingest(
-    session_summary: str = "",
-    instructions: str | None = None,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Save a session summary to raw sources and return state-aware curation guide.
-
-    Call this first when the developer asks to update the wiki after a session.
-    The session summary is saved as-is to _raw/sessions/ (immutable).
-    The agent then curates the wiki using state-aware guidance.
-
-    Args:
-        session_summary: What happened in the session (free text or structured)
-        instructions: Optional curation hints from the developer
-                      (e.g., "focus on architecture changes, ignore debugging")
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        session_summary = session_summary or unpacked.get("session_summary", "")
-        instructions = instructions or unpacked.get("instructions")
-
-    saved_path = wiki_ops.save_raw_session(session_summary, instructions)
-    from brain79.core.curate import prepare_curation_guide
-
-    guide = prepare_curation_guide(get_wiki_root(), session_summary)
-    return f"Session saved to: {saved_path}\n\n{guide}"
-
-
-def brain79_handoff_write(
-    session_type: str = "",
-    previous_handoff_ref: str = "latest",
-    summary: str = "",
-    completed_work: list[str] | None = None,
-    pending_work: list[str] | None = None,
-    knowledge_pending_promotion: list[str] | None = None,
-    resources: list[str] | None = None,
-    gotchas: list[str] | None = None,
-    boot_instruction: str = "",
-    wiki_deviation_justification: str = "",
-    decisions: list[str] | None = None,
-    next_steps: list[str] | None = None,
-    open_questions: list[str] | None = None,
-    boot_instructions: str = "",
-    decisions_made: list[str] | None = None,
-    session_summary: str = "",
-    pending_tasks: list[str] | None = None,
-    open_issues: list[str] | None = None,
-    resolved_issues: list[str] | None = None,
-    files_modified: list[str] | None = None,
-    open_loops: list[str] | None = None,
-    action_items: list[str] | None = None,
-    todo: list[str] | None = None,
-    risks_and_blockers: list[str] | None = None,
-    blockers: list[str] | None = None,
-    risks: list[str] | None = None,
-    key_decisions: list[str] | None = None,
-    findings: list[str] | None = None,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Write an immutable handoff document for the next session.
-
-    ON-DEMAND POLICY:
-    Call this ONLY when explicitly requested by the user (e.g. 'save handoff', 'wrap up session', 'haz handoff')
-    or when terminating an autonomous headless sub-agent process. Do NOT call automatically after every conversational turn.
-
-    RECOMMENDED 1-CALL SESSION WRAP-UP:
-    If this session produced research findings, analyses, or new wiki articles, prefer calling
-    `brain79_session_commit(writes=[...], handoff={...})` in a single atomic transaction.
-
-    PARAMETER ALIASES:
-    - `decisions` / `decisions_made` / `key_decisions` / `findings`: automatically merged into `completed_work`.
-    - `next_steps` / `pending_tasks` / `open_loops` / `action_items` / `todo`: automatically merged into `pending_work` (generic filler like 'wait for user' is filtered out).
-    - `open_questions` / `open_issues` / `risks_and_blockers` / `blockers` / `risks`: automatically merged into `gotchas` (placeholders like 'None' or 'Ninguna' are filtered out).
-    - `session_summary`: accepted as fallback for `summary`.
-    - `boot_instructions`: accepted as alias for `boot_instruction`.
-
-    SYSTEM INSTRUCTION:
-    1. The wiki ALWAYS wins. If you contradict the wiki, you MUST use wiki_deviation_justification.
-    2. Valid session types: "feature", "bugfix", "research", "brainstorming", "writing", "analysis".
-    3. boot_instruction must provide clear orientation for resuming work in the next session (cannot be empty).
-    4. Unpersisted research sessions will be blocked unless wiki articles are persisted or wiki_deviation_justification is provided.
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        session_type = session_type or unpacked.get("session_type", "")
-        previous_handoff_ref = unpacked.get("previous_handoff_ref", previous_handoff_ref)
-        summary = summary or unpacked.get("summary", "")
-        completed_work = completed_work if completed_work is not None else unpacked.get("completed_work")
-        pending_work = pending_work if pending_work is not None else unpacked.get("pending_work")
-        knowledge_pending_promotion = (
-            knowledge_pending_promotion
-            if knowledge_pending_promotion is not None
-            else unpacked.get("knowledge_pending_promotion")
-        )
-        resources = resources if resources is not None else unpacked.get("resources")
-        gotchas = gotchas if gotchas is not None else unpacked.get("gotchas")
-        boot_instruction = boot_instruction or unpacked.get("boot_instruction", "")
-        wiki_deviation_justification = (
-            wiki_deviation_justification or unpacked.get("wiki_deviation_justification", "")
-        )
-        decisions = decisions if decisions is not None else unpacked.get("decisions")
-        next_steps = next_steps if next_steps is not None else unpacked.get("next_steps")
-        open_questions = open_questions if open_questions is not None else unpacked.get("open_questions")
-        boot_instructions = boot_instructions or unpacked.get("boot_instructions", "")
-        decisions_made = decisions_made if decisions_made is not None else unpacked.get("decisions_made")
-        session_summary = session_summary or unpacked.get("session_summary", "")
-        pending_tasks = pending_tasks if pending_tasks is not None else unpacked.get("pending_tasks")
-        open_issues = open_issues if open_issues is not None else unpacked.get("open_issues")
-        resolved_issues = resolved_issues if resolved_issues is not None else unpacked.get("resolved_issues")
-        files_modified = files_modified if files_modified is not None else unpacked.get("files_modified")
-        open_loops = open_loops if open_loops is not None else unpacked.get("open_loops")
-        action_items = action_items if action_items is not None else unpacked.get("action_items")
-        todo = todo if todo is not None else unpacked.get("todo")
-        risks_and_blockers = (
-            risks_and_blockers if risks_and_blockers is not None else unpacked.get("risks_and_blockers")
-        )
-        blockers = blockers if blockers is not None else unpacked.get("blockers")
-        risks = risks if risks is not None else unpacked.get("risks")
-        key_decisions = key_decisions if key_decisions is not None else unpacked.get("key_decisions")
-        findings = findings if findings is not None else unpacked.get("findings")
-
-    try:
-        rel_path = handoff_ops.write_handoff(
-            session_type=session_type,
-            previous_handoff_ref=previous_handoff_ref,
-            summary=summary,
-            completed_work=completed_work or [],
-            pending_work=pending_work or [],
-            knowledge_pending_promotion=knowledge_pending_promotion or [],
-            resources=resources or [],
-            gotchas=gotchas or [],
-            boot_instruction=boot_instruction,
-            wiki_deviation_justification=wiki_deviation_justification,
-            decisions=decisions,
-            next_steps=next_steps,
-            open_questions=open_questions,
-            boot_instructions=boot_instructions,
-            decisions_made=decisions_made,
-            session_summary=session_summary,
-            pending_tasks=pending_tasks,
-            open_issues=open_issues,
-            resolved_issues=resolved_issues,
-            files_modified=files_modified,
-            open_loops=open_loops,
-            action_items=action_items,
-            todo=todo,
-            risks_and_blockers=risks_and_blockers,
-            blockers=blockers,
-            risks=risks,
-            key_decisions=key_decisions,
-            findings=findings,
-        )
-        return f"Handoff successfully saved at: {rel_path}"
-    except (ValueError, FileNotFoundError, OSError) as exc:
-        return f"Validation Error: {exc}"
-
-
-def brain79_handoff_read(
-    handoff_ref: str = "latest",
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Read a handoff document.
-
-    Args:
-        handoff_ref: "latest" (default), "none", or "" to get the latest handoff,
-                     or a specific timestamp with or without milliseconds or file extension
-                     (e.g., "2024-01-01-120000", "2024-01-01-120000-123", or "handoff-2024-01-01-120000.md").
-                     Timestamp prefixes are supported (e.g., "2024" or "2024-08" returns the latest handoff matching that prefix).
-
-    If the handoff contains "knowledge_pending_promotion", the response will
-    include a warning instructing you to call brain79_ingest immediately.
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        handoff_ref = unpacked.get("handoff_ref", handoff_ref)
-    try:
-        content, has_promotion = handoff_ops.read_handoff(handoff_ref)
-        if has_promotion:
-            content += (
-                "\n\n> ⚠️ **Warning**: this handoff contains items in "
-                "'Knowledge pending promotion'. Your immediate responsibility "
-                "is to distill them into permanent wiki articles using brain79_session_commit or brain79_write."
-            )
-        return content
-    except (handoff_ops.HandoffsDirNotFoundError, handoff_ops.NoHandoffsExistError) as exc:
-        return str(exc)
-    except (ValueError, FileNotFoundError, OSError) as exc:
-        return f"Error reading handoff: {exc}"
-
-
-def brain79_handoff_purge(
-    apply: bool = False,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Wipe all handoff files and unregister them from the navigation registry.
-
-    Handoffs are supertemporal transitional artifacts. This command is the
-    explicit exception to handoff immutability, intended for cleanup of
-    legacy wikis or operational resets.
-
-    Args:
-        apply: If False (default), only preview what would be deleted.
-               If True, actually delete the files.
-
-    Returns:
-        Markdown-formatted report listing files affected.
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        apply = unpacked.get("apply", apply)
-    try:
-        from brain79.core.handoff import purge_handoffs
-
-        return purge_handoffs(get_wiki_root(), apply=apply)
-    except (OSError, ValueError) as exc:
-        return f"Handoff Purge Error: {exc}"
 
 
 def brain79_lint(
@@ -619,43 +258,6 @@ def brain79_bootstrap(
         return f"Bootstrap Error: {exc}"
 
 
-def brain79_navigate(
-    regenerate: bool = False,
-    rebuild: bool = False,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Manage INDEX.md navigation.
-
-    Note: brain79_write, brain79_edit, brain79_write_many, and brain79_session_commit automatically
-    sync INDEX.md. Only call brain79_navigate(regenerate=True) after manual filesystem edits outside MCP.
-
-    Args:
-        regenerate: If True, regenerates INDEX.md Quick navigation section from registry.
-        rebuild: If True, rebuilds .navigation_registry.json from Markdown files on disk first.
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        regenerate = unpacked.get("regenerate", regenerate)
-        rebuild = unpacked.get("rebuild", rebuild)
-    try:
-        from brain79.core.navigation import (
-            generate_quick_navigation,
-            rebuild_navigation_registry,
-            regenerate_index_navigation,
-        )
-
-        wiki_root = get_wiki_root()
-        if regenerate:
-            return regenerate_index_navigation(wiki_root, rebuild=rebuild)
-        if rebuild:
-            rebuild_navigation_registry(wiki_root, persist=True)
-        return generate_quick_navigation(wiki_root)
-    except (OSError, ValueError, FileNotFoundError) as exc:
-        return f"Navigation Error: {exc}"
-
-
 def brain79_session_commit(
     writes: list[dict[str, str]] | None = None,
     edits: list[dict[str, Any]] | None = None,
@@ -686,7 +288,7 @@ def brain79_session_commit(
     Args:
         writes: Optional list of articles to create/overwrite [{"path": "...", "content": "..."}]
         edits: Optional list of targeted text replacements [{"path": "...", "edits": [{"old_text": "...", "new_text": "..."}]}]
-        handoff: Optional dict matching brain79_handoff_write parameters (session_type, summary, completed_work, pending_work, boot_instruction)
+        handoff: Optional dict with handoff fields (session_type, summary, completed_work, pending_work, boot_instruction)
         session_summary: Optional high-level summary for raw session archiving (_raw/sessions/)
         instructions: Optional user prompt instructions for raw session archiving
         verified_articles: Optional list of internal non-breaking refactors [{"path": "...", "reason": "..."}]
@@ -750,122 +352,7 @@ def brain79_session_commit(
         return f"Commit Aborted: {exc}"
 
 
-def brain79_migrate(
-    dry_run: bool = True,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Add frontmatter to legacy wiki articles.
-
-    Args:
-        dry_run: If True, only preview changes without modifying files. Default True for safety.
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        dry_run = unpacked.get("dry_run", dry_run)
-    try:
-        from brain79.core.migration import migrate_wiki
-
-        return migrate_wiki(get_wiki_root(), dry_run=dry_run)
-    except (OSError, ValueError) as exc:
-        return f"Migration Error: {exc}"
-
-
-def brain79_update_project(
-    dry_run: bool = False,
-    commit_transition: bool = False,
-    include_desktop: bool = False,
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Non-destructively upgrade project templates, schemas, and multi-harness registrations.
-
-    Args:
-        dry_run: If True, simulate updates without modifying files on disk. Default False.
-        commit_transition: If True, write a fresh maintenance handoff after reconditioning. Default False.
-        include_desktop: If True, configure host desktop application configs (Claude Desktop, Windsurf). Default False.
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        dry_run = unpacked.get("dry_run", dry_run)
-        commit_transition = unpacked.get("commit_transition", commit_transition)
-        include_desktop = unpacked.get("include_desktop", include_desktop)
-    try:
-        from brain79.config import get_project_root
-        from brain79.core.init_project import update_project
-
-        res = update_project(
-            get_project_root(),
-            dry_run=dry_run,
-            commit_transition=commit_transition,
-            include_desktop=include_desktop,
-        )
-        lines = [
-            f"# Brain-79 Project Upgrade ({'DRY RUN' if res.get('dry_run') else 'APPLIED'})",
-            f"- **Status**: {res.get('status', 'ok')}",
-            f"- **AGENTS.md updated**: {res.get('manifest_updated')}",
-            f"- **SCHEMA.md updated**: {res.get('schema_updated')}",
-            f"- **MCP configurations**: {', '.join(res.get('mcp_configs', [])) if res.get('mcp_configs') else 'none'}",
-            f"- **Git hook**: {res.get('git_hook')}",
-        ]
-        if res.get("transition_handoff"):
-            lines.append(f"- **Transition handoff**: `{res['transition_handoff']}`")
-        if res.get("migration_report"):
-            lines.append("")
-            lines.append(str(res["migration_report"]))
-        return "\n".join(lines)
-    except Exception as exc:
-        return f"Project Upgrade Error: {exc}"
-
-
-def brain79_doctor(
-    fix: bool = False,
-    force: bool = False,
-    include_desktop: bool = False,
-    format: str = "text",
-    tool: str | None = None,
-    args: dict[str, Any] | None = None,
-) -> str:
-    """
-    Run 7-point operational diagnostic checks and optionally auto-repair defects.
-
-    Args:
-        fix: If True, automatically repair discovered defects and skew. Default False.
-        force: If True, bypass git safety guard during --fix even if working tree is dirty. Default False.
-        include_desktop: If True, include desktop application configurations during --fix. Default False.
-        format: Output format: 'text' (default) or 'json'. Default text.
-    """
-    if args:
-        unpacked = _unpack_nested_args(args)
-        fix = unpacked.get("fix", fix)
-        force = unpacked.get("force", force)
-        include_desktop = unpacked.get("include_desktop", include_desktop)
-        format = unpacked.get("format", format)
-    try:
-        import json
-        from brain79.config import get_project_root, get_wiki_root
-        from brain79.core.doctor import run_doctor
-
-        p_root = get_project_root()
-        w_root = get_wiki_root()
-        report = run_doctor(
-            project_root=p_root,
-            wiki_root=w_root,
-            fix=fix,
-            force=force,
-            include_desktop=include_desktop,
-            format=format,
-        )
-        if format == "json":
-            return json.dumps(report.to_dict(), indent=2)
-        return report.format_text()
-    except Exception as exc:
-        return f"Doctor Diagnostic Error: {exc}"
-
-
-CORE_TOOLS: frozenset[str] = frozenset({
+MCP_TOOLS: frozenset[str] = frozenset({
     "brain79_orient",
     "brain79_session_commit",
     "brain79_read",
@@ -874,83 +361,44 @@ CORE_TOOLS: frozenset[str] = frozenset({
     "brain79_context",
     "brain79_search",
     "brain79_lint",
-})
-
-ADMIN_TOOLS: frozenset[str] = frozenset({
-    "brain79_index",
-    "brain79_schema",
-    "brain79_write",
-    "brain79_write_many",
-    "brain79_list",
-    "brain79_ingest",
-    "brain79_handoff_read",
-    "brain79_handoff_write",
-    "brain79_handoff_purge",
     "brain79_bootstrap",
-    "brain79_navigate",
-    "brain79_migrate",
-    "brain79_update_project",
-    "brain79_doctor",
 })
 
-_CORE_INSTRUCTIONS = (
-    "brain79 is a per-project AI memory system running in the compact 'core' MCP profile (8 hot-path tools). "
+_SERVER_INSTRUCTIONS = (
+    "brain79 is a per-project AI memory system exposing 9 focused hot-path MCP tools. "
     "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation "
     "(including INDEX.md, active schema summary, latest handoff, and governing articles). "
-    "Use brain79_session_commit(writes?, edits?, handoff?) to apply article writes, edits, and handoffs atomically, "
+    "Use brain79_read, brain79_read_batch, brain79_context, and brain79_search to inspect knowledge, "
+    "brain79_bootstrap to scan an empty wiki, brain79_edit for targeted single-article edits, "
+    "brain79_session_commit(writes?, edits?, handoff?) to apply article writes, edits, and handoffs atomically, "
     "and brain79_lint() to verify wiki health. "
-    "For administrative operations (migrate, doctor, bootstrap, update-project), run the symmetric CLI `brain79 <command>` "
-    "or start the server with `--mcp-profile full` / `BRAIN79_MCP_PROFILE=full`."
+    "For administrative operations (migrate, doctor, update-project, navigate, handoff-read, handoff-purge, schema), "
+    "run the `brain79 <command>` CLI."
 )
 
-_FULL_INSTRUCTIONS = (
-    "brain79 is a per-project AI memory system running in the 'full' MCP profile (22 tools). "
-    "Always call brain79_orient(task?, paths?) at the start of a session for complete cold start orientation. "
-    "Call brain79_schema() before writing or updating articles to inspect exact frontmatter rules, "
-    "and prefer brain79_session_commit() for atomic end-of-session updates."
-)
-
-_ALL_TOOL_FUNCS = (
+_TOOL_FUNCS = (
     brain79_orient,
-    brain79_index,
+    brain79_session_commit,
     brain79_read,
     brain79_read_batch,
-    brain79_schema,
-    brain79_write,
     brain79_edit,
-    brain79_write_many,
-    brain79_list,
-    brain79_search,
-    brain79_ingest,
-    brain79_handoff_write,
-    brain79_handoff_read,
-    brain79_handoff_purge,
-    brain79_lint,
     brain79_context,
+    brain79_search,
+    brain79_lint,
     brain79_bootstrap,
-    brain79_navigate,
-    brain79_session_commit,
-    brain79_migrate,
-    brain79_update_project,
-    brain79_doctor,
 )
 
 
-def create_mcp_server(profile: Literal["core", "full"] = "core") -> FastMCP:
-    """Create a configured FastMCP server instance for the requested tool profile."""
-    if profile not in ("core", "full"):
-        raise ValueError(f"Invalid MCP profile: {profile!r}. Expected 'core' or 'full'.")
-
+def create_mcp_server() -> FastMCP:
+    """Create a configured FastMCP server instance exposing the focused 9-tool surface."""
     server = FastMCP(
         "brain79",
         version=__version__,
-        instructions=_CORE_INSTRUCTIONS if profile == "core" else _FULL_INSTRUCTIONS,
+        instructions=_SERVER_INSTRUCTIONS,
     )
-    allowed = CORE_TOOLS if profile == "core" else (CORE_TOOLS | ADMIN_TOOLS)
-    for fn in _ALL_TOOL_FUNCS:
-        if fn.__name__ in allowed:
-            server.tool(output_schema=None)(fn)
+    for fn in _TOOL_FUNCS:
+        server.tool(output_schema=None)(fn)
     return server
 
 
-mcp = create_mcp_server(profile="core")
+mcp = create_mcp_server()

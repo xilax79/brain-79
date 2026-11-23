@@ -314,7 +314,7 @@ def test_7_foreign_branch_rendering(tmp_path: Path) -> None:
     assert "Main branch handoff." in rendered_orient
     assert "Pending on main" not in rendered_orient
     assert "Instruction for main." not in rendered_orient
-    assert "brain79_handoff_read" in rendered_orient
+    assert "brain79 handoff-read" in rendered_orient
 
     # read_handoff must return full content
     rendered_read, _ = read_handoff(handoff_rel, wiki_root=wiki_root)

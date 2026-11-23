@@ -466,24 +466,37 @@ def test_prepare_curation_guide_profile_aware_software(tmp_path: Path) -> None:
 def test_server_tools_unpack_nested_proxy_args(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """FastMCP server tools unpack nested args dictionary passed by LLM proxy wrappers."""
     from brain79.config import set_project_root
-    from brain79.server import brain79_read, brain79_session_commit, brain79_write
+    from brain79.server import brain79_edit, brain79_read, brain79_session_commit
 
     init_project(tmp_path, profile="general", install_git_hooks_flag=False)
     monkeypatch.chdir(tmp_path)
     set_project_root(tmp_path)
 
-    # 1. brain79_write with args wrapper
-    write_res = brain79_write(
+    # 1. brain79_session_commit with args wrapper
+    commit_write_res = brain79_session_commit(
         args={
-            "path": "topics/proxy-test.md",
-            "content": "---\ntype: topic\nsummary: proxy test topic\nstatus: active\nlast_updated: 2026-11-05\n---\n# Proxy test\n\n## Overview\nTest.",
+            "writes": [
+                {
+                    "path": "topics/proxy-test.md",
+                    "content": "---\ntype: topic\nsummary: proxy test topic\nstatus: active\nlast_updated: 2026-11-05\n---\n# Proxy test\n\n## Overview\nTest.",
+                }
+            ]
         }
     )
-    assert "INDEX.md auto-synced" in write_res
+    assert "Transaction Committed Successfully" in commit_write_res
 
-    # 2. brain79_read with args wrapper
+    # 2. brain79_edit with args wrapper
+    edit_res = brain79_edit(
+        args={
+            "path": "topics/proxy-test.md",
+            "edits": [{"old_text": "Test.", "new_text": "Updated test."}],
+        }
+    )
+    assert "INDEX.md auto-synced" in edit_res
+
+    # 3. brain79_read with args wrapper
     read_res = brain79_read(args={"path": "topics/proxy-test.md"})
-    assert "Proxy test" in read_res
+    assert "Updated test." in read_res
 
     # 3. brain79_session_commit with double-nested proxy wrapper {"tool": "...", "args": {...}}
     nested_call = {

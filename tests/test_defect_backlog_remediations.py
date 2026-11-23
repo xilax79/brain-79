@@ -8,7 +8,7 @@ from brain79.core.init_project import init_project
 from brain79.core.lint import lint_wiki
 from brain79.core.lint_organizational import check_article_atomicity
 from brain79.core.orient import orient
-from brain79.server import brain79_write, brain79_edit, brain79_write_many
+from brain79.server import brain79_edit, brain79_session_commit
 
 
 # ==============================================================================
@@ -296,26 +296,30 @@ def test_atomicity_checklist_flags_over_15_h2(tmp_path: Path) -> None:
 # ==============================================================================
 
 def test_server_write_receipt_includes_auto_synced(tmp_path: Path) -> None:
-    """brain79_write, brain79_edit, and brain79_write_many receipts must state that INDEX.md was auto-synced."""
+    """brain79_session_commit and brain79_edit receipts must report health and INDEX.md sync."""
     init_project(tmp_path)
     set_project_root(tmp_path)
 
-    write_res = brain79_write(
-        path="features/test-receipt.md",
-        content=(
-            "---\n"
-            "type: feature\n"
-            "summary: Testing receipt wording\n"
-            "status: planned\n"
-            "version: 0.1.0\n"
-            "---\n\n"
-            "# Test Receipt\n\n"
-            "## Overview\n"
-            "Overview here.\n"
-        ),
+    commit_res = brain79_session_commit(
+        writes=[
+            {
+                "path": "features/test-receipt.md",
+                "content": (
+                    "---\n"
+                    "type: feature\n"
+                    "summary: Testing receipt wording\n"
+                    "status: planned\n"
+                    "version: 0.1.0\n"
+                    "---\n\n"
+                    "# Test Receipt\n\n"
+                    "## Overview\n"
+                    "Overview here.\n"
+                ),
+            }
+        ]
     )
-    assert "INDEX.md auto-synced" in write_res
-    assert "lint OK" in write_res
+    assert "Transaction Committed Successfully" in commit_res
+    assert "`ok`" in commit_res
 
     edit_res = brain79_edit(
         path="features/test-receipt.md",
@@ -324,8 +328,8 @@ def test_server_write_receipt_includes_auto_synced(tmp_path: Path) -> None:
     assert "INDEX.md auto-synced" in edit_res
     assert "lint OK" in edit_res
 
-    batch_res = brain79_write_many(
-        articles=[
+    batch_res = brain79_session_commit(
+        writes=[
             {
                 "path": "features/test-batch-receipt.md",
                 "content": (
@@ -342,7 +346,7 @@ def test_server_write_receipt_includes_auto_synced(tmp_path: Path) -> None:
             }
         ]
     )
-    assert "INDEX.md auto-synced" in batch_res
+    assert "Transaction Committed Successfully" in batch_res
 
 
 # ==============================================================================

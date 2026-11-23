@@ -389,16 +389,18 @@ def test_migrate_apply_explicit(setup_cli_project: Path) -> None:
     assert content_after.startswith("---\n")
 
 
-def test_mcp_migrate_defaults_to_dry_run(setup_cli_project: Path) -> None:
-    """BUG-1: MCP `brain79_migrate()` defaults to dry-run (safe)."""
-    from brain79.server import brain79_migrate
-
+def test_cli_migrate_defaults_to_dry_run(
+    setup_cli_project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """BUG-1: CLI `brain79 migrate` defaults to dry-run (safe)."""
     features_dir = setup_cli_project / ".brain-79" / "features"
     features_dir.mkdir(exist_ok=True)
     bad_file = features_dir / "no-frontmatter.md"
     bad_file.write_text("# No frontmatter\n", encoding="utf-8")
 
-    result = brain79_migrate()
+    code = run_cli("migrate", [])
+    assert code == 0
+    result = capsys.readouterr().out
     assert "DRY RUN" in result
     content_after = bad_file.read_text(encoding="utf-8")
     assert not content_after.startswith("---\n")
@@ -430,15 +432,15 @@ def test_cli_handoff_purge_apply(setup_cli_project: Path) -> None:
     assert not (handoffs_dir / "handoff-X.md").exists()
 
 
-def test_mcp_handoff_purge_default_dry_run(setup_cli_project: Path) -> None:
-    """MCP brain79_handoff_purge() defaults to dry-run (safe)."""
-    from brain79.server import brain79_handoff_purge
+def test_core_handoff_purge_default_dry_run(setup_cli_project: Path) -> None:
+    """purge_handoffs() defaults to dry-run (safe)."""
+    from brain79.core.handoff import purge_handoffs
 
     handoffs_dir = setup_cli_project / ".brain-79" / "handoffs"
     handoffs_dir.mkdir(exist_ok=True)
     (handoffs_dir / "handoff-X.md").write_text("# X", encoding="utf-8")
 
-    result = brain79_handoff_purge()  # no args = apply=False default
+    result = purge_handoffs(setup_cli_project / ".brain-79")  # no args = apply=False default
     assert "DRY RUN" in result
     assert (handoffs_dir / "handoff-X.md").exists()  # not deleted
 

@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed foundation (phases 0-12) and prioritized evolution (v0.13.1 integrity patch, phases 13-14, longitudinal anti-rot validation, and PyPI release)
+summary: project roadmap covering completed foundation (phases 0-12 and v0.13.1) and prioritized evolution (phase 13 MCP pruning, phase 14 hooks and PR gate, phase 15 polyglot AST, anti-rot proof, and PyPI release)
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -24,8 +24,8 @@ related:
   - features/project-upgrade-and-multi-harness-doctor.md
   - features/team-collaboration-and-onboarding.md
   - topics/v0-13-0-navigation-registry-and-lint-defects.md
-last_updated: 2026-11-22
-applies_to_digest: "sha256:37816ca34ef275a0"
+last_updated: 2026-11-23
+applies_to_digest: "sha256:acc21a26ef28ac3b"
 applies_to_count: 10
 ---
 
@@ -43,7 +43,7 @@ Per **ADR-019**, upcoming phase specifications are authored under `specs/` outsi
 
 ---
 
-## Completed foundation (phases 0–12)
+## Completed foundation (phases 0–13)
 
 Shipped capabilities live in their dedicated `.brain-79/features/` living manuals and release changelogs; archived pre-ADR-019 phase design specs live under `specs/archive/legacy/`.
 
@@ -66,19 +66,20 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 - **[x] Phase 10 (`v0.11.0`)**: core architectural refactoring and hardening (`OrderedFileLock`, full Pass 3 rollback, `core/git_ops.py`, fail-closed guardrails, symlink/CLI security, `core/ast_guards/`, `core/harnesses/`, `--mcp-profile`, `ProjectContext`). Archived spec: `specs/archive/legacy/core-refactoring-and-hardening-design.md`.
 - **[x] Phase 11 (`v0.12.0`)**: public release readiness and friction removal (English-first backlinks, native Claude/Cursor MDC/Copilot instruction adapters, `core` 8-tool MCP default, honest `README.md` limitations, Windows CI `orient()` hot-path optimization). Archived spec: `specs/archive/legacy/public-release-readiness-design.md`.
 - **[x] Phase 12 (`v0.13.0`)**: team-safe Git collaboration and low-friction onboarding (git-ignored derived caches with deterministic zero-masking rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map` with zero-overlap proposals, and configurable `strict`/`balanced`/`advisory` enforcement tiers). Living manual: [team-collaboration-and-onboarding.md](../features/team-collaboration-and-onboarding.md); archived spec: `specs/archive/legacy/team-collaboration-and-onboarding-design.md`.
-- **[x] Patch (`v0.13.1`)**: integrity and version-skew hardening (`BUG-008` `load_registry()` disk reconciliation, `BUG-009` `index_desync` organizational lint rule, and `BUG-010` symmetric reverse version-skew warning in `orient()`).
+- **[x] Patch `v0.13.1`**: integrity and version-skew hardening (`BUG-008` navigation registry disk reconciliation, `BUG-009` `index_desync` lint rule, `BUG-010` symmetric semver reverse version skew detection in `orient()`). Changelog: [v0-13-1.md](../changelog/v0-13-1.md).
+- **[x] Phase 13 (`v0.14.0`)**: MCP surface pruning and focused CLI-superset architecture (pruned 13 redundant/administrative MCP wrappers and `--mcp-profile`, standardized 9-tool `MCP_TOOLS` ⊂ 24-command `WHITELIST`, ADR-020). Changelog: [v0-14-0.md](../changelog/v0-14-0.md); archived spec: `specs/archive/phase-13-mcp-surface-pruning.md`.
 
 ---
 
-## Strategic evolution roadmap (`v0.14.0` onward)
+## Strategic evolution roadmap (`v0.15.0` onward)
 
 ```
 +-----------------------------------------------------------------------------------+
-| Patch (P0): Integrity & version-skew hardening (v0.13.1)                          | [x] Done
+| Phase 13 (P0): MCP surface pruning & focused CLI-superset architecture (v0.14.0)  | [x] Shipped
 +-----------------------------------------------------------------------------------+
-| Phase 13 (P0): Passive lifecycle hooks & GitHub Action PR gate (v0.14.0)          | [ ] Next
+| Phase 14 (P0): Passive lifecycle hooks & GitHub Action PR gate (v0.15.0)          | [ ] Next
 +-----------------------------------------------------------------------------------+
-| Phase 14 (P1): Polyglot AST guards, stats, anti-rot proof & PyPI release (v0.15.0)| [ ] Planned
+| Phase 15 (P1): Polyglot AST guards, stats, anti-rot proof & PyPI release (v0.16.0)| [ ] Planned
 +-----------------------------------------------------------------------------------+
 | Deferred backlog (demand-driven only): FTS5, worktree isolation, report/graph     | [ ] Deferred
 +-----------------------------------------------------------------------------------+
@@ -90,41 +91,41 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 
 | Priority | Milestone | Target version | Primary objective |
 |---|---|---|---|
-| **P0 (Patch)** | Integrity patch | `v0.13.1` | Fix `BUG-008`, `BUG-009`, and `BUG-010` so `INDEX.md` cannot silently truncate or desync without detection. |
-| **P0** | Phase 13 | `v0.14.0` | Eliminate voluntary-compliance failures via native lifecycle hooks and bring drift visibility into team PR reviews. |
-| **P1** | Phase 14 | `v0.15.0` | Extend AST Guard C to TypeScript/JS, Go, and Rust; prove anti-rot durability over multi-session LLM runs; publish to PyPI. |
+| **P0** | Phase 13 | `v0.14.0` | Prune redundant MCP admin wrappers and `--mcp-profile` before PyPI; formalize MCP hot-path subset vs. full CLI superset (`SPEC-013`). |
+| **P0** | Phase 14 | `v0.15.0` | Eliminate voluntary-compliance failures via native lifecycle hooks and bring drift visibility into team PR reviews. |
+| **P1** | Phase 15 | `v0.16.0` | Extend AST Guard C to TypeScript/JS, Go, and Rust; prove anti-rot durability over multi-session LLM runs; publish to PyPI. |
 | **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`). |
 
 ---
 
-## Patch `v0.13.1` — Integrity and version-skew hardening (P0)
+## Phase 13 (`v0.14.0`) — MCP surface pruning and focused CLI-superset architecture (P0, shipped)
 
-Tracked defects: [v0-13-0-navigation-registry-and-lint-defects.md](../topics/v0-13-0-navigation-registry-and-lint-defects.md).
+Archived specification: `specs/archive/phase-13-mcp-surface-pruning.md` (`SPEC-013`).
 
-Status: **Done (`v0.13.1`)** — closed integrity and version-skew gaps discovered during live `v0.13.0` usage (`BUG-008`, `BUG-009`, `BUG-010`).
+Goal: reduce codebase surface area and maintenance drag before PyPI by eliminating redundant/administrative MCP tool wrappers and dual-profile branching while keeping all 24 CLI subcommands intact.
 
-- **BUG-008 (`load_registry` disk reconciliation)**: compare cached `.navigation_registry.json` entries against on-disk indexable `.md` files and deterministically rebuild whenever paths diverge.
-- **BUG-009 (`index_desync` lint rule)**: add an explicit organizational lint check comparing on-disk indexable articles against `INDEX.md` `## Quick navigation` entries, preventing silent truncation from passing `lint --strict`.
-- **BUG-010 (reverse version skew warning in `orient()`)**: detect and warn when a stale long-lived MCP server runs an older version than the repository's `AGENTS.md` protocol marker.
+- **Single focused MCP surface**: remove the 13 redundant/administrative MCP wrappers (`index`, `schema`, `write`, `write_many`, `list`, `ingest`, `handoff_*`, `navigate`, `migrate`, `update_project`, `doctor`), `ADMIN_TOOLS`, `--mcp-profile`, and `BRAIN79_MCP_PROFILE` branching; expose a single compact MCP tool set (`orient`, `session_commit`, `read`, `read_batch`, `edit`, `context`, `search`, `lint`, and `bootstrap`).
+- **MCP-subset / CLI-superset contract (`ADR-020`)**: retain all 24 CLI subcommands in `WHITELIST`, update `tests/test_symmetry.py` to enforce `MCP_TOOLS ⊂ WHITELIST` and parameter parity for retained tools, and establish CLI-only default for future administrative/CI commands (`ci-check`, `stats`).
+- **Template and runtime alignment**: clean up references to pruned MCP tools and `--mcp-profile` across `core/` hints, `templates/` (`AGENTS.md`, `SKILL.md`, `SCHEMA.md`), `README.md`, `USER_GUIDE.md`, `ARCHITECTURE.md`, and migrated tests.
 
 ---
 
-## Phase 13 (`v0.14.0`) — Passive lifecycle hooks and CI PR gate (P0)
+## Phase 14 (`v0.15.0`) — Passive lifecycle hooks and CI PR gate (P0)
 
 Goal: close the voluntary-compliance gap where agents ignore `AGENTS.md`, and make `.brain-79/` immediately valuable to human reviewers during code review.
 
 - **Native agent lifecycle hooks**: ship opt-in hook templates via `core/harnesses/` for clients that support lifecycle events (Claude Code `SessionStart` / `Stop` hooks, plus Cursor and Antigravity hooks) to inject `brain79 orient` automatically on startup and surface drifted targets before session exit.
-- **Reusable GitHub Action PR Gate (`brain79 ci-check`)**: post concise Pull Request summaries listing drifted governing articles, relevant ADRs for the PR diff, and `lint --strict` status—enabling teams to catch documentation rot in CI even when local enforcement runs in `balanced` mode.
+- **Reusable GitHub Action PR Gate (`brain79 ci-check`, CLI-only)**: post concise Pull Request summaries listing drifted governing articles, relevant ADRs for the PR diff, and `lint --strict` status—enabling teams to catch documentation rot in CI even when local enforcement runs in `balanced` mode.
 - **Default enforcement tier evaluation**: evaluate shifting default onboarding enforcement (e.g., `balanced` locally paired with `strict` / `--fail-on-warnings` in CI PR gates) based on trade-off analysis.
 
 ---
 
-## Phase 14 (`v0.15.0`) — Polyglot AST guards, telemetry, anti-rot proof, and PyPI release (P1)
+## Phase 15 (`v0.16.0`) — Polyglot AST guards, telemetry, anti-rot proof, and PyPI release (P1)
 
 Goal: extend `brain-79`'s core mechanical moat beyond Python, empirically prove that wikis resist rot across long multi-session LLM development runs, and publish the validated package to PyPI.
 
 - **Polyglot AST Guard C via optional Tree-sitter extra**: plug an optional `brain79[polyglot]` extra into `core/ast_guards/` powered by `tree-sitter` prioritizing **TypeScript/JavaScript**, plus **Go** and **Rust** public symbol and signature verification while keeping Python stdlib `ast` zero-dependency by default.
-- **Context budget telemetry (`brain79 stats`)**: report real token estimates, `orient()` budget utilization, and drift/coverage metrics so teams can quantify context savings against raw `CLAUDE.md` files.
+- **Context budget telemetry (`brain79 stats`, CLI-only)**: report real token estimates, `orient()` budget utilization, and drift/coverage metrics so teams can quantify context savings against raw `CLAUDE.md` files.
 - **Longitudinal anti-rot release gate (pre-release validation)**: run an automated multi-session (10–15 independent cold-start sessions) real-LLM stress harness comparing `brain-79` against an unmanaged `CLAUDE.md`/Markdown baseline across feature additions, bugfixes, refactors, and stack changes; gate PyPI publication on passing objective structural, coverage, and blind semantic-recall criteria.
 - **PyPI distribution (post-validation)**: once the longitudinal anti-rot gate passes, publish `brain79` to PyPI via automated GitHub Actions Trusted Publishers, enabling `uvx brain79`, `uv tool install brain79`, and `pipx install brain79` without raw Git URLs.
 
@@ -137,7 +138,7 @@ These items are intentionally excluded from active phases until real user adopti
 - **SQLite FTS5 lexical index**: build only if Signal 2 lexical retrieval exhibits measurable recall or latency gaps on wikis exceeding ~100 articles.
 - **Multi-agent / worktree session isolation**: `agent_id` and `worktree` handoff scoping (built on `ProjectContext`), deferred until concurrent multi-worktree users report collisions.
 - **Human-facing observability (`brain79 report` / `graph`)**: terminal and Mermaid coverage graphs, deferred as non-critical nice-to-have.
-- **Explicitly removed — local dense embeddings**: dropped from the roadmap; contradicts `brain-79`'s zero-vector-DB thesis and introduces high cross-platform model-runtime overhead for marginal gain on `<= 150`-line indexed wikis.
+- **Explicitly removed — local dense embeddings & MCP Code Mode**: dropped from the roadmap; local embeddings contradict `brain-79`'s zero-vector-DB thesis, and Code Mode adds latency/round-trips and native Rust sandbox overhead (`pydantic-monty`) on top of an already compact ~2K-token two-call MCP surface.
 
 ---
 
@@ -145,7 +146,7 @@ These items are intentionally excluded from active phases until real user adopti
 
 Every active milestone is achievable **incrementally on the existing Python codebase** (`src/brain79/`) without rewriting from scratch:
 
-- **Phase 10 seams**: `core/git_ops.py`, `core/ast_guards/`, `core/harnesses/`, `create_mcp_server()`, and `ProjectContext` isolate every extension point needed by Phases 13–14.
+- **Phase 10 seams**: `core/git_ops.py`, `core/ast_guards/`, `core/harnesses/`, `create_mcp_server()`, and `ProjectContext` isolate every extension point needed by Phases 13–15.
 - **Zero-dependency core preserved**: Tree-sitter polyglot AST stays isolated behind `brain79[polyglot]`, keeping base installation fast and portable.
 - **Distribution fallback**: if non-Python developer adoption stalls after PyPI due to Python/uv prerequisites, a thin wrapper (`npx` over `uvx` or Homebrew formula) solves distribution without rewriting the core engine.
 

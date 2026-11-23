@@ -6,7 +6,7 @@ enforcement: strict
 # Brain-79 — Wiki schema (normative)
 
 This file defines the **enforced rules** for maintaining this project's wiki.
-The rules in this file are mechanically validated by `brain79_write` and `brain79_lint`.
+The rules in this file are mechanically validated by `brain79_session_commit`, `brain79_edit`, and `brain79_lint`.
 Violations will be rejected at write time and reported by the linter.
 
 ---
@@ -94,7 +94,7 @@ Articles must include standard structural sections per document type:
 - `architecture`: Requires `## Overview`, `## General Description`, or `## State`.
 - `product`: Requires `## Overview`, `## Problem`, or `## Executive Summary`.
 
-Inspect complete document skeletons via `brain79_schema(type)`.
+Inspect complete document skeletons via `brain79 schema --type <type>`.
 
 ### Deterministic drift detection (`applies_to`)
 

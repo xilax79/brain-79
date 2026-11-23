@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 ---
 
 # Project index
@@ -11,11 +11,11 @@ last_updated: 2026-11-22
 ## Quick navigation
 
 ### Architecture
-- [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces strict 1:1 symmetry between CLI subcommands and FastMCP server tools
+- [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 24 CLI subcommands
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-12) and prioritized evolution (v0.13.1 integrity patch, phases 13-14, longitudinal anti-rot validation, and PyPI release)
-- [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, tool definitions, and lifecycle management
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-12 and v0.13.1) and prioritized evolution (phase 13 MCP pruning, phase 14 hooks and PR gate, phase 15 polyglot AST, anti-rot proof, and PyPI release)
+- [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, focused 9-tool surface, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
 ### Changelog
@@ -30,6 +30,7 @@ last_updated: 2026-11-22
 - [Changelog — v0.12.0](changelog/v0-12-0.md) — release notes for v0.12.0 (Phase 11 public release readiness, English backlinks, native harnesses, core MCP default, and Windows CI latency recovery)
 - [Changelog — v0.13.0](changelog/v0-13-0.md) — release notes for v0.13.0 (Phase 12 team-safe Git collaboration, INDEX.md merge driver, bootstrap --auto-map, and configurable enforcement tiers)
 - [Changelog — v0.13.1](changelog/v0-13-1.md) — release notes for v0.13.1 (BUG-008 navigation registry disk reconciliation, BUG-009 index\_desync lint rule, and BUG-010 symmetric version skew detection)
+- [Changelog — v0.14.0](changelog/v0-14-0.md) — release notes for v0.14.0 (Phase 13 MCP surface pruning, focused 9-tool MCP\_TOOLS, CLI superset, and --mcp-profile removal)
 - [Release v0.11.0 — Core refactoring and hardening](changelog/v0-11-0.md) — core architectural refactoring, concurrency hardening, centralized Git layer, security fixes, and modular decomposition
 
 ### Decisions
@@ -50,12 +51,13 @@ last_updated: 2026-11-22
 - [ADR-015: Sentence case first policy for documentation and wiki generation](decisions/adr-015-sentence-case-first-policy.md) — enforce sentence case first across all documentation, headings, lists, and wiki generation
 - [ADR-016: Handoff freshness, provenance, and authority decay](decisions/adr-016-handoff-freshness-and-authority-decay.md) — treat handoffs as perishable transition notes with authority decaying based on deterministic workspace drift
 - [ADR-017: Semantic versioning calibration for pre-GA maturation](decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md) — semantic versioning calibration to 0.7.2 for pre-GA maturation prior to public release
+- [ADR-020 — Focused MCP surface and CLI superset](decisions/adr-020-focused-mcp-surface-and-cli-superset.md) — prune redundant MCP wrappers and dual-profile branching to formalize a focused 9-tool MCP surface as a strict subset of the 24-command CLI
 - [Decision — ADR-018: Living manuals, temporal decontamination, and the three-class document ontology](decisions/adr-018-living-manuals-and-temporal-decontamination.md) — architectural foundation for living manuals, temporal decontamination, Chesterton's Fence for ADRs, and epocal changelog consolidation
 - [Decision — ADR-019: External feature specifications and requirements standard](decisions/adr-019-external-specs-and-requirements-standard.md) — isolate repository feature specifications in specs/ outside .brain-79/ using EARS, BDD Given/When/Then, explicit non-goals, and CI governance tests
 
 ### Features
 - [Feature — Cross-platform portability and centralized lock isolation](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
-- [Feature — FastMCP integration](features/mcp-server.md) — model Context Protocol server exposing wiki operations as JSON-RPC tools with token de-duplication
+- [Feature — FastMCP integration](features/mcp-server.md) — model Context Protocol server exposing 9 focused hot-path tools over stdio JSON-RPC
 - [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
 - [Feature — Session knowledge triage and research persistence](features/session-triage-and-research-persistence.md) — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics
 - [Feature — Short-term handoff continuity, freshness, and lifecycle operations](features/handoff-continuity.md) — tactical session transitions, freshness evaluation, authority decay, anti-hallucination work tracking, and operational purge

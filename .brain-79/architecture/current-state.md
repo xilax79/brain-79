@@ -2,7 +2,7 @@
 type: architecture
 summary: high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-11-22
+last_updated: 2026-11-23
 applies_to:
   - README.md
   - USER_GUIDE.md
@@ -13,15 +13,15 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:8496c927e7037cf8"
-applies_to_count: 34
+applies_to_digest: "sha256:b1a1bf89b2ec903b"
+applies_to_count: 35
 ---
 
 # Architecture — System current state
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.13.1.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.14.0.
 
 ## Active subsystem topology
 
@@ -46,15 +46,15 @@ This document maintains a high-level summary of the repository's current archite
 - **Zero-Modification Idempotence**: Wiki updates strictly require real repository mutations (code, tests, decisions); synthetic documentation churn is rejected.
 - **Synchronous Write Validation**: writes to `.brain-79/` are validated against schema rules prior to disk mutation.
 - **Code Fence Masking**: Regex linter rules mask code blocks before scanning to eliminate false positive leakage errors.
-- **1:1 CLI & MCP Symmetry**: Every operational subcommand has a matching `@mcp.tool()` equivalent in `server.py` (24 subcommands, 22 MCP tools).
+- **MCP-Subset / CLI-Superset Symmetry**: `MCP_TOOLS` (9 focused hot-path MCP tools) is a strict subset of `WHITELIST` (24 CLI subcommands) per ADR-020.
 - **Centralized Lock Isolation**: File mutexes are strictly isolated into `.brain-79/.locks/`, maintaining 100% clean content directories.
 - **Cross-Platform Determinism**: Strict POSIX path serialization (`.as_posix()`), pure LF (`\n`) line endings, and segment-by-segment character casing parity across macOS, Linux, and Windows.
 - **Hard Session Ripple Gate**: Commits modifying code or intra-wiki targets must atomically update or verify all impacted leaf and umbrella articles.
 
 ## Immediate focus and maintenance
 
-- Completion of `v0.13.1` (integrity and version-skew hardening: `BUG-008` `load_registry()` disk reconciliation, `BUG-009` `index_desync` organizational lint rule, and `BUG-010` symmetric reverse version-skew warning in `orient()`).
-- Next up: `v0.14.0` (Phase 13: passive lifecycle hooks and CI PR gate).
+- Completion of `v0.14.0` (Phase 13: MCP surface pruning to 9 focused tools, `--mcp-profile` removal, CLI-superset architecture per ADR-020, and living manual alignment).
+- Next up: `v0.15.0` (Phase 14: passive lifecycle hooks and CI PR gate).
 
 ---
 

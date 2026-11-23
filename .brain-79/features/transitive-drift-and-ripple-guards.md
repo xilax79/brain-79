@@ -20,7 +20,7 @@ related:
   - architecture/current-state.md
   - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-13
-applies_to_digest: "sha256:0c4b7a6080027bf2"
+applies_to_digest: "sha256:770cf4a2f18b71e3"
 applies_to_count: 7
 ---
 
