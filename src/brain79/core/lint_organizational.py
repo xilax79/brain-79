@@ -1211,10 +1211,14 @@ def check_temporal_contamination(
     return issues
 
 
-def lint_organizational(wiki_root: Path) -> list[OrganizationalIssue]:
+def lint_organizational(
+    wiki_root: Path,
+    *,
+    workspace_index: WorkspaceIndex | None = None,
+) -> list[OrganizationalIssue]:
     """Run all organizational health checks on the wiki."""
     p_root = wiki_root.parent
-    ws = WorkspaceIndex.build(p_root, wiki_root)
+    ws = workspace_index if workspace_index is not None else WorkspaceIndex.build(p_root, wiki_root)
     md_files = _filter_md_files(wiki_root)
     issues: list[OrganizationalIssue] = []
     issues.extend(check_git_repository(wiki_root))

@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import collections
+from dataclasses import dataclass
 import os
 import posixpath
 import re
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 import filelock
@@ -14,6 +18,9 @@ from brain79.core.locks import (
     get_lock_path,
     has_exact_case_path,
 )
+
+if TYPE_CHECKING:
+    from brain79.core.drift import WorkspaceIndex
 
 # Directories excluded from article listings (raw sources and locks are not wiki articles)
 _EXCLUDED_DIRS = {"_raw", ".locks"}
@@ -77,13 +84,26 @@ def _extract_raw_link_targets(content: str) -> list[str]:
     return raw_targets
 
 
-def lint_wiki(wiki_root: Path | None = None) -> str:
-    """
-    Run a deterministic health check scan on the project wiki (.brain-79/).
+@dataclass(frozen=True)
+class WikiLintResult:
+    """Structured result of wiki link, structural, and organizational lint checks."""
 
-    Returns a Markdown-formatted report listing broken local links, namespace violations,
-    structural errors/warnings, and orphan articles.
-    """
+    status: str
+    timeout_reached: bool
+    broken_links: list[tuple[str, str]]
+    namespace_violations: list[tuple[str, str]]
+    structural_errors: list[tuple[str, str]]
+    orphans: list[str]
+    org_issues: list[OrganizationalIssue]
+    enforcement: str
+
+
+def collect_wiki_lint_results(
+    wiki_root: Path | None = None,
+    *,
+    workspace_index: WorkspaceIndex | None = None,
+) -> WikiLintResult:
+    """Collect structured link, structural, and organizational lint results for the wiki."""
     w_root = (wiki_root or get_wiki_root()).resolve()
     start_time = time.time()
     timeout_reached = False
@@ -94,13 +114,15 @@ def lint_wiki(wiki_root: Path | None = None) -> str:
     file_graph: dict[str, set[str]] = collections.defaultdict(set)
 
     if not w_root.exists() or not w_root.is_dir():
-        return _format_report(
+        return WikiLintResult(
             status="OK",
             timeout_reached=False,
             broken_links=[],
             namespace_violations=[],
             structural_errors=[],
             orphans=[],
+            org_issues=[],
+            enforcement="strict",
         )
 
     # Gather all .md files excluding _EXCLUDED_DIRS (follow_symlinks=False)
@@ -266,7 +288,7 @@ def lint_wiki(wiki_root: Path | None = None) -> str:
     from brain79.core.lint_organizational import OrganizationalIssue, lint_organizational
 
     active_schema = load_active_schema(w_root)
-    org_issues = lint_organizational(w_root)
+    org_issues = lint_organizational(w_root, workspace_index=workspace_index)
     for sw in active_schema.schema_warnings:
         org_issues.append(
             OrganizationalIssue(
@@ -288,7 +310,7 @@ def lint_wiki(wiki_root: Path | None = None) -> str:
         else ("WARNING" if (structural_errors or orphans or org_warnings) else "OK")
     )
 
-    return _format_report(
+    return WikiLintResult(
         status=status,
         timeout_reached=timeout_reached,
         broken_links=broken_links,
@@ -297,6 +319,26 @@ def lint_wiki(wiki_root: Path | None = None) -> str:
         orphans=orphans,
         org_issues=org_issues,
         enforcement=active_schema.enforcement,
+    )
+
+
+def lint_wiki(wiki_root: Path | None = None) -> str:
+    """
+    Run a deterministic health check scan on the project wiki (.brain-79/).
+
+    Returns a Markdown-formatted report listing broken local links, namespace violations,
+    structural errors/warnings, and orphan articles.
+    """
+    res = collect_wiki_lint_results(wiki_root=wiki_root)
+    return _format_report(
+        status=res.status,
+        timeout_reached=res.timeout_reached,
+        broken_links=res.broken_links,
+        namespace_violations=res.namespace_violations,
+        structural_errors=res.structural_errors,
+        orphans=res.orphans,
+        org_issues=res.org_issues,
+        enforcement=res.enforcement,
     )
 
 

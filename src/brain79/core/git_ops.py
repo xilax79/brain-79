@@ -316,7 +316,10 @@ def git_ls_files(
         check_repo=True,
     )
     if res.returncode != 0:
-        return []
+        stderr_text = res.stderr.decode("utf-8", errors="replace")
+        if _is_not_a_git_repo_stderr(stderr_text):
+            raise NotAGitRepoError(stderr_text.strip())
+        raise GitError(stderr_text.strip() or f"git ls-files failed (rc={res.returncode})")
     paths: list[str] = []
     for raw_path in res.stdout.split(b"\x00"):
         if not raw_path:
@@ -358,6 +361,89 @@ def _validate_git_ref_arg(value: str, label: str) -> str:
     if not value or value.startswith("-"):
         raise ValueError(f"Invalid Git {label} '{value}': must not start with '-'.")
     return value
+
+
+def _validate_git_range_ref(value: str, label: str) -> str:
+    """Validate a Git ref used in diff range expressions."""
+    if not value or not value.strip():
+        raise ValueError(f"Invalid Git {label}: ref must not be empty.")
+    if value != value.strip():
+        raise ValueError(f"Invalid Git {label} '{value}': must not have leading or trailing whitespace.")
+    if any(ch in value for ch in ("\x00", "\r", "\n")):
+        raise ValueError(f"Invalid Git {label}: must not contain control characters.")
+    if ".." in value:
+        raise ValueError(f"Invalid Git {label} '{value}': must not contain '..' range operators.")
+    return _validate_git_ref_arg(value, label)
+
+
+def _is_merge_base_or_shallow_failure(stderr_text: str) -> bool:
+    lowered = stderr_text.lower()
+    return (
+        "no merge base" in lowered
+        or "merge-base" in lowered
+        or "shallow" in lowered
+        or "unrelated histories" in lowered
+    )
+
+
+def git_diff_range_names(
+    cwd: Path,
+    base_ref: str,
+    head_ref: str = "HEAD",
+    *,
+    timeout: float = 5.0,
+) -> list[str]:
+    """Return deduplicated normalized POSIX paths changed between `base_ref` and `head_ref`.
+
+    Uses three-dot diff (`<base_ref>...<head_ref>`) first and falls back to two-dot
+    (`<base_ref>..<head_ref>`) only when the three-dot invocation fails due to
+    missing merge-base or shallow history. Propagates `ValueError`, `NotAGitRepoError`,
+    and `GitTimeoutError` immediately without fallback, and raises `GitError` if diff fails.
+    """
+    _validate_git_range_ref(base_ref, "base_ref")
+    _validate_git_range_ref(head_ref, "head_ref")
+
+    res = run_git_bytes(
+        ["-c", "core.quotepath=false", "diff", "--name-only", "-z", f"{base_ref}...{head_ref}", "--"],
+        cwd=cwd,
+        timeout=timeout,
+        check_repo=True,
+    )
+    if res.returncode != 0:
+        stderr_text = res.stderr.decode("utf-8", errors="replace")
+        if _is_not_a_git_repo_stderr(stderr_text):
+            raise NotAGitRepoError(stderr_text.strip())
+        if _is_merge_base_or_shallow_failure(stderr_text):
+            fallback_res = run_git_bytes(
+                ["-c", "core.quotepath=false", "diff", "--name-only", "-z", f"{base_ref}..{head_ref}", "--"],
+                cwd=cwd,
+                timeout=timeout,
+                check_repo=True,
+            )
+            if fallback_res.returncode != 0:
+                fb_stderr = fallback_res.stderr.decode("utf-8", errors="replace")
+                if _is_not_a_git_repo_stderr(fb_stderr):
+                    raise NotAGitRepoError(fb_stderr.strip())
+                raise GitError(
+                    fb_stderr.strip() or f"git diff {base_ref}..{head_ref} failed (rc={fallback_res.returncode})"
+                )
+            res = fallback_res
+        else:
+            raise GitError(
+                stderr_text.strip() or f"git diff {base_ref}...{head_ref} failed (rc={res.returncode})"
+            )
+
+    seen: set[str] = set()
+    paths: list[str] = []
+    for raw_path in res.stdout.split(b"\x00"):
+        if not raw_path:
+            continue
+        p_str = raw_path.decode("utf-8", errors="replace")
+        norm = normalize_posix_input(p_str).lstrip("/")
+        if norm and norm not in seen:
+            seen.add(norm)
+            paths.append(norm)
+    return paths
 
 
 def git_remote_get_url(cwd: Path, remote: str = "origin", *, timeout: float = 5.0) -> GitResult:
