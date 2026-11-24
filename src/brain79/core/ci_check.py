@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
+import math
 import os
 from pathlib import Path
+import sys
 from typing import Any, Literal
 
 from brain79.config import get_project_root, get_wiki_root, project_context
@@ -37,6 +40,19 @@ from brain79.core.navigation import (
     extract_graph_metadata,
     extract_title_and_summary,
     load_registry,
+)
+from brain79.core.orient import orient
+
+MAX_INPUT_BYTES = 1_048_576
+_MAX_TASK_HINT_CHARS = 2_000
+_AGY_PAYLOAD_KEYS: frozenset[str] = frozenset(
+    {
+        "hookEventName",
+        "workspacePaths",
+        "continuationActive",
+        "terminationReason",
+        "conversationId",
+    }
 )
 
 _EPHEMERAL_WIKI_DIRS: frozenset[str] = frozenset({"_raw", ".locks", "handoffs"})
@@ -619,3 +635,227 @@ def run_ci_check(
             write_step_summary=write_step_summary,
         )
         return report
+
+
+def _read_hook_payload(stdin_payload: str | None) -> dict[str, Any] | None:
+    """Read and parse bounded JSON hook payload; return None to fail open."""
+    if stdin_payload is not None:
+        raw_text = stdin_payload
+    elif sys.stdin is not None and not sys.stdin.isatty():
+        raw_text = sys.stdin.read(MAX_INPUT_BYTES + 1)
+    else:
+        raw_text = ""
+
+    if len(raw_text) > MAX_INPUT_BYTES or len(raw_text.encode("utf-8", errors="replace")) > MAX_INPUT_BYTES:
+        return None
+
+    if not raw_text.strip():
+        return {}
+
+    try:
+        parsed = json.loads(raw_text)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _infer_hook_client(
+    client: Literal["auto", "claude", "agy", "cursor"],
+    payload: dict[str, Any],
+) -> Literal["claude", "agy", "cursor"] | None:
+    """Resolve target lifecycle hook client protocol."""
+    if client != "auto":
+        return client if client in ("claude", "agy", "cursor") else None
+
+    if any(key in payload for key in _AGY_PAYLOAD_KEYS):
+        return "agy"
+    if (
+        "workspace_roots" in payload
+        or "loop_count" in payload
+        or payload.get("hook_event_name") == "sessionStart"
+    ):
+        return "cursor"
+    return "claude"
+
+
+def _walk_for_wiki_root(start_dir: Path) -> tuple[Path | None, bool]:
+    """Walk ancestors of `start_dir` for `.brain-79/`, stopping after any `.git` directory."""
+    for candidate in (start_dir, *start_dir.parents):
+        if (candidate / ".brain-79").is_dir():
+            return candidate, True
+        if (candidate / ".git").exists():
+            return None, True
+    return None, False
+
+
+def _resolve_hook_project_root(
+    explicit_root: Path | None,
+    payload: dict[str, Any],
+) -> Path:
+    """Resolve project_root from override, payload workspace candidates, or config fallback."""
+    if explicit_root is not None:
+        return explicit_root.resolve()
+
+    raw_candidates: list[str] = []
+    cwd_val = payload.get("cwd")
+    if isinstance(cwd_val, str) and cwd_val.strip():
+        raw_candidates.append(cwd_val.strip())
+
+    for list_key in ("workspacePaths", "workspace_roots"):
+        list_val = payload.get(list_key)
+        if isinstance(list_val, list) and list_val:
+            first = list_val[0]
+            if isinstance(first, str) and first.strip():
+                raw_candidates.append(first.strip())
+
+    first_valid_dir: Path | None = None
+    for raw in raw_candidates:
+        try:
+            cand_path = Path(raw).resolve()
+        except (OSError, ValueError):
+            continue
+        if not cand_path.exists():
+            continue
+        if cand_path.is_file():
+            cand_path = cand_path.parent
+        if first_valid_dir is None:
+            first_valid_dir = cand_path
+
+        found_root, _ = _walk_for_wiki_root(cand_path)
+        if found_root is not None:
+            return found_root
+
+    if first_valid_dir is not None:
+        return first_valid_dir
+
+    return get_project_root().resolve()
+
+
+def _should_skip_stop_hook(payload: dict[str, Any]) -> bool:
+    """Return True if loop-immunity or non-normal termination guards trigger."""
+    if payload.get("continuationActive") is True or payload.get("stop_hook_active") is True:
+        return True
+
+    if "loop_count" in payload and payload["loop_count"] is not None:
+        raw_loop = payload["loop_count"]
+        if isinstance(raw_loop, bool):
+            return True
+        try:
+            loop_val = float(raw_loop)
+        except (TypeError, ValueError):
+            return True
+        if math.isnan(loop_val) or loop_val >= 1:
+            return True
+
+    term_reason = payload.get("terminationReason")
+    if term_reason is not None:
+        if not isinstance(term_reason, str):
+            return True
+        if term_reason.strip() and term_reason.strip() != "NO_TOOL_CALL":
+            return True
+
+    status_val = payload.get("status")
+    if status_val is not None:
+        if not isinstance(status_val, str):
+            return True
+        if status_val.strip() and status_val.strip() != "completed":
+            return True
+
+    return False
+
+
+def _format_session_start_response(
+    client: Literal["claude", "agy", "cursor"],
+    orient_report: str,
+) -> dict[str, Any]:
+    """Wrap `orient()` markdown in the target client's SessionStart JSON schema."""
+    if client == "agy":
+        return {"injectSteps": [{"systemMessage": {"systemMessage": orient_report}}]}
+    if client == "cursor":
+        return {"additional_context": orient_report}
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": orient_report,
+        }
+    }
+
+
+def _format_stop_response(
+    client: Literal["claude", "agy", "cursor"],
+    reason: str,
+) -> dict[str, Any]:
+    """Wrap drift remediation reason in the target client's Stop JSON schema."""
+    if client == "agy":
+        return {"decision": "continue", "reason": reason}
+    if client == "cursor":
+        return {"followup_message": reason}
+    return {"decision": "block", "reason": reason}
+
+
+def run_lifecycle_hook(
+    event: Literal["session-start", "stop"],
+    *,
+    client: Literal["auto", "claude", "agy", "cursor"] = "auto",
+    stdin_payload: str | None = None,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    """Execute a passive fail-open lifecycle hook (`session-start` or `stop`)."""
+    try:
+        payload = _read_hook_payload(stdin_payload)
+        if payload is None:
+            return {}
+
+        resolved_client = _infer_hook_client(client, payload)
+        if resolved_client is None:
+            return {}
+
+        if event == "stop" and _should_skip_stop_hook(payload):
+            return {}
+
+        p_root = _resolve_hook_project_root(project_root, payload)
+        w_root = (p_root / ".brain-79").resolve()
+        if not w_root.is_dir() or not (w_root / "INDEX.md").is_file():
+            return {}
+
+        with project_context(p_root, w_root):
+            if event == "session-start":
+                task_hint: str | None = None
+                for key in ("lastUserInput", "prompt"):
+                    val = payload.get(key)
+                    if isinstance(val, str):
+                        stripped = val.strip()
+                        if stripped:
+                            task_hint = stripped[:_MAX_TASK_HINT_CHARS]
+                            break
+                orient_report = orient(task=task_hint, wiki_root=w_root, max_articles=4)
+                return _format_session_start_response(resolved_client, orient_report)
+
+            if event == "stop":
+                active_schema = load_active_schema(w_root)
+                if active_schema.enforcement == "advisory":
+                    return {}
+                drifts = detect_all_drift(wiki_root=w_root, project_root=p_root)
+                if not drifts:
+                    return {}
+                drifted_paths = sorted(
+                    {
+                        str(d.get("article_path", "")).strip()
+                        for d in drifts
+                        if d.get("article_path")
+                    }
+                )
+                shown = drifted_paths[:10]
+                suffix = f" (+{len(drifted_paths) - 10} more)" if len(drifted_paths) > 10 else ""
+                articles_str = ", ".join(shown) + suffix
+                reason = (
+                    f"Brain-79 detected documentation drift in: {articles_str}. "
+                    "Please update the affected wiki articles or mark them via "
+                    "brain79_session_commit (verified_articles) before finishing."
+                )
+                return _format_stop_response(resolved_client, reason)
+
+        return {}
+    except Exception:
+        return {}

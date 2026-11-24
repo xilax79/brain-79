@@ -8,7 +8,12 @@ from unittest.mock import patch
 
 import pytest
 
-from brain79.core.ci_check import CiCheckReport, run_ci_check
+from brain79.core.ci_check import (
+    MAX_INPUT_BYTES,
+    CiCheckReport,
+    run_ci_check,
+    run_lifecycle_hook,
+)
 from brain79.core.drift import WorkspaceIndex
 from brain79.core.git_ops import (
     GitError,
@@ -362,3 +367,141 @@ def test_ci_check_formats_and_step_summary_output(
             project_root=repo,
             summary_file=tmp_path / "nonexistent_dir" / "summary.md",
         )
+
+
+# ---------------------------------------------------------------------------
+# AC-5: Lifecycle hook session-start across agy, claude, cursor, auto
+# ---------------------------------------------------------------------------
+
+
+def test_lifecycle_hook_session_start_all_clients(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AC-5 / R-2.1, R-2.2, R-2.3: Session-start payload shapes, auto inference, stdin cap, and ASCII JSON."""
+    import io
+    import json
+    import sys
+
+    repo = tmp_path / "repo"
+    _setup_governed_repo(repo)
+    agy_subdir = repo / ".agents" / "plugins" / "brain79"
+    agy_subdir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.chdir(agy_subdir)
+
+    # 1. Antigravity with auto client inference and cwd in payload
+    agy_payload = json.dumps(
+        {
+            "hookEventName": "SessionStart",
+            "cwd": str(repo),
+            "lastUserInput": "update auth",
+        }
+    )
+    res_agy = run_lifecycle_hook("session-start", client="auto", stdin_payload=agy_payload)
+    assert "injectSteps" in res_agy
+    msg_agy = res_agy["injectSteps"][0]["systemMessage"]["systemMessage"]
+    assert "Brain-79 — Session Cold Start Orientation" in msg_agy
+    assert json.loads(json.dumps(res_agy, ensure_ascii=True)) == res_agy
+
+    # 2. Claude Code (explicit and auto fallback)
+    claude_payload = json.dumps({"cwd": str(repo), "prompt": "check auth " * 500})
+    res_claude = run_lifecycle_hook("session-start", client="auto", stdin_payload=claude_payload)
+    assert res_claude["hookSpecificOutput"]["hookEventName"] == "SessionStart"
+    assert "Brain-79 — Session Cold Start Orientation" in res_claude["hookSpecificOutput"]["additionalContext"]
+    assert json.loads(json.dumps(res_claude, ensure_ascii=True)) == res_claude
+
+    # 3. Cursor (auto inference via hook_event_name == "sessionStart" and workspace_roots)
+    cursor_payload = json.dumps(
+        {
+            "hook_event_name": "sessionStart",
+            "workspace_roots": [str(repo)],
+        }
+    )
+    res_cursor = run_lifecycle_hook("session-start", client="auto", stdin_payload=cursor_payload)
+    assert "additional_context" in res_cursor
+    assert "Brain-79 — Session Cold Start Orientation" in res_cursor["additional_context"]
+    assert json.loads(json.dumps(res_cursor, ensure_ascii=True)) == res_cursor
+
+    # 4. Bounded sys.stdin reading (oversized > 1 MB fails open to {})
+    oversized = '{"cwd": "' + ("a" * (MAX_INPUT_BYTES + 100)) + '"}'
+    fake_stdin = io.StringIO(oversized)
+    monkeypatch.setattr(sys, "stdin", fake_stdin)
+    assert run_lifecycle_hook("session-start", client="claude") == {}
+
+    # 5. Non-object JSON and malformed JSON fail open to {}
+    assert run_lifecycle_hook("session-start", client="claude", stdin_payload="[]") == {}
+    assert run_lifecycle_hook("session-start", client="claude", stdin_payload="{bad") == {}
+
+    # 6. Missing .brain-79/ fails open to {}
+    empty_dir = tmp_path / "no_wiki"
+    empty_dir.mkdir()
+    assert run_lifecycle_hook("session-start", client="claude", project_root=empty_dir) == {}
+
+
+# ---------------------------------------------------------------------------
+# AC-6: Lifecycle hook stop drift interception and loop-prevention guards
+# ---------------------------------------------------------------------------
+
+
+def test_lifecycle_hook_stop_drift_and_loop_guards(tmp_path: Path) -> None:
+    """AC-6 / R-2.2, R-2.4: Stop drift reporting, loop/termination guards, advisory, and .git boundary."""
+    import json
+
+    repo = tmp_path / "repo"
+    _setup_governed_repo(repo)
+
+    # Clean repo -> {}
+    assert run_lifecycle_hook("stop", client="claude", project_root=repo, stdin_payload="{}") == {}
+
+    # Introduce drift on src/auth.py leaving features/auth.md drifted
+    (repo / "src" / "auth.py").write_text("def login() -> bool:\n    return False\n", encoding="utf-8")
+
+    # 1. Clean initial stop payloads for agy, claude, cursor
+    res_agy = run_lifecycle_hook(
+        "stop",
+        client="auto",
+        stdin_payload=json.dumps({"hookEventName": "Stop", "cwd": str(repo), "terminationReason": "NO_TOOL_CALL"}),
+    )
+    assert res_agy["decision"] == "continue"
+    assert "features/auth.md" in res_agy["reason"]
+    assert "brain79_session_commit" in res_agy["reason"]
+
+    res_claude = run_lifecycle_hook(
+        "stop",
+        client="claude",
+        stdin_payload=json.dumps({"cwd": str(repo), "stop_hook_active": False}),
+    )
+    assert res_claude["decision"] == "block"
+    assert "features/auth.md" in res_claude["reason"]
+
+    res_cursor = run_lifecycle_hook(
+        "stop",
+        client="auto",
+        stdin_payload=json.dumps({"workspace_roots": [str(repo)], "status": "completed", "loop_count": 0}),
+    )
+    assert "followup_message" in res_cursor
+    assert "features/auth.md" in res_cursor["followup_message"]
+
+    # 2. Loop-immunity and non-normal termination guards -> {}
+    assert run_lifecycle_hook("stop", client="agy", project_root=repo, stdin_payload=json.dumps({"continuationActive": True})) == {}
+    assert run_lifecycle_hook("stop", client="agy", project_root=repo, stdin_payload=json.dumps({"terminationReason": "USER_CANCELED"})) == {}
+    assert run_lifecycle_hook("stop", client="claude", project_root=repo, stdin_payload=json.dumps({"stop_hook_active": True})) == {}
+    assert run_lifecycle_hook("stop", client="cursor", project_root=repo, stdin_payload=json.dumps({"loop_count": 1})) == {}
+    assert run_lifecycle_hook("stop", client="cursor", project_root=repo, stdin_payload=json.dumps({"loop_count": "not_a_number"})) == {}
+    assert run_lifecycle_hook("stop", client="cursor", project_root=repo, stdin_payload=json.dumps({"status": "aborted", "loop_count": 0})) == {}
+
+    # 3. Malformed stdin -> {}
+    assert run_lifecycle_hook("stop", client="claude", project_root=repo, stdin_payload="{bad") == {}
+
+    # 4. .git boundary walk: child .git repo inside parent with .brain-79/ must NOT inherit parent's .brain-79/
+    child_repo = repo / "packages" / "child_service"
+    _init_git_repo(child_repo)
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=json.dumps({"cwd": str(child_repo)})) == {}
+
+    # 5. Advisory enforcement -> {}
+    schema_path = repo / ".brain-79" / "SCHEMA.md"
+    schema_path.write_text(
+        schema_path.read_text(encoding="utf-8").replace("enforcement: strict", "enforcement: advisory"),
+        encoding="utf-8",
+    )
+    assert run_lifecycle_hook("stop", client="claude", project_root=repo, stdin_payload="{}") == {}
