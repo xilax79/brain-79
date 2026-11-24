@@ -55,6 +55,9 @@ jobs:
       - name: Run brain79 lint
         run: uv run brain79 lint --strict
 
+      - name: Run brain79 ci-check
+        run: uv run brain79 ci-check --write-step-summary
+
       - name: Run brain79 doctor
         run: |
           uv run brain79 doctor --format json > doctor_report.json || true

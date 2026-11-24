@@ -683,3 +683,184 @@ def test_lifecycle_hook_adapters_sync_and_doctor(tmp_path: Path) -> None:
     assert ClaudeHooksAdapter().detect(cli_repo2) is True
     assert AntigravityHooksAdapter().detect(cli_repo2) is True
     assert CursorHooksAdapter().detect(cli_repo2) is True
+
+
+# ---------------------------------------------------------------------------
+# Stage 4: CLI dispatcher (`brain79 ci-check`), action.yml, and ci.yml
+# ---------------------------------------------------------------------------
+
+
+def test_cli_ci_check_git_errors_enforcement_and_formats(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """AC-1, AC-3, AC-4, AC-5 / R-4.1, R-4.2: CLI dispatcher ci-check behavior and exit codes."""
+    import json
+
+    from brain79.__main__ import ROOT_HELP
+    from brain79.cli.dispatch import WHITELIST, dispatch_cmd, run_cli
+
+    assert "ci-check" in WHITELIST
+    assert len(WHITELIST) == 25
+    assert "ci-check" in ROOT_HELP
+
+    # Help output
+    assert run_cli("ci-check", ["--help"]) == 0
+    help_out = capsys.readouterr().out
+    assert "brain79 ci-check" in help_out
+    assert "--lifecycle-hook" in help_out
+    assert "--write-step-summary" in help_out
+
+    repo = tmp_path / "repo"
+    _setup_governed_repo(repo)
+    monkeypatch.chdir(repo)
+
+    # AC-1: option-injection --base=-o -> exit 2, stderr
+    code_opt = dispatch_cmd("ci-check", ["--base=-o"])
+    assert code_opt == 2
+    assert capsys.readouterr().err.strip()
+
+    # AC-1: unresolvable --base nonexistent_branch_ref -> exit 2, stderr
+    code_bad_ref = dispatch_cmd("ci-check", ["--base", "nonexistent_branch_ref"])
+    assert code_bad_ref == 2
+    assert capsys.readouterr().err.strip()
+
+    # AC-1: GitTimeoutError -> exit 3, stderr
+    with patch("brain79.core.ci_check.run_ci_check", side_effect=GitTimeoutError("git diff timed out")):
+        code_timeout = dispatch_cmd("ci-check", ["--base", "main"])
+    assert code_timeout == 3
+    assert "timed out" in capsys.readouterr().err.lower()
+
+    # AC-3: CLI enforcement tiers on drifted repo with SCHEMA.md enforcement: balanced
+    schema_path = repo / ".brain-79" / "SCHEMA.md"
+    schema_path.write_text(
+        schema_path.read_text(encoding="utf-8").replace("enforcement: strict", "enforcement: balanced"),
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".brain-79/SCHEMA.md")
+    _git(repo, "commit", "-m", "set balanced enforcement")
+    (repo / "src" / "auth.py").write_text("def login() -> bool:\n    return False\n", encoding="utf-8")
+
+    assert dispatch_cmd("ci-check", ["--project-root", str(repo)]) == 1
+    capsys.readouterr()
+
+    assert dispatch_cmd("ci-check", ["--project-root", str(repo), "--enforcement", "schema"]) == 0
+    capsys.readouterr()
+
+    assert (
+        dispatch_cmd(
+            "ci-check",
+            ["--project-root", str(repo), "--enforcement", "schema", "--fail-on-warnings"],
+        )
+        == 1
+    )
+    capsys.readouterr()
+
+    # AC-4: --write-step-summary --format json and invalid --summary-file -> exit 2
+    step_summary = tmp_path / "cli_step_summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(step_summary))
+    code_json = dispatch_cmd(
+        "ci-check",
+        ["--project-root", str(repo), "--enforcement", "advisory", "--write-step-summary", "--format", "json"],
+    )
+    assert code_json == 0
+    json_out = capsys.readouterr().out
+    parsed = json.loads(json_out)
+    assert parsed["status"] == "warning"
+    assert "<!-- brain79:ci-check -->" in step_summary.read_text(encoding="utf-8")
+
+    code_bad_sum = dispatch_cmd(
+        "ci-check",
+        ["--project-root", str(repo), "--summary-file", str(tmp_path / "missing_dir" / "out.md")],
+    )
+    assert code_bad_sum == 2
+    assert capsys.readouterr().err.strip()
+
+    # AC-5: CLI --lifecycle-hook session-start emits ASCII-escaped JSON and exits 0
+    import io
+    import sys
+
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        io.StringIO(json.dumps({"hookEventName": "SessionStart", "cwd": str(repo), "lastUserInput": "auth"})),
+    )
+    code_hook = dispatch_cmd("ci-check", ["--lifecycle-hook", "session-start", "--client", "auto"])
+    assert code_hook == 0
+    hook_out = capsys.readouterr().out
+    assert hook_out.isascii()
+    hook_json = json.loads(hook_out)
+    assert "injectSteps" in hook_json
+
+
+def test_github_action_manifest_and_ci_workflow() -> None:
+    """AC-8 / R-4.3, R-4.4, R-4.5: Composite action.yml and ci.yml governance & security checks."""
+    import re
+    import yaml
+
+    root = Path(__file__).resolve().parent.parent
+    action_path = root / "action.yml"
+    ci_path = root / ".github" / "workflows" / "ci.yml"
+
+    assert action_path.is_file(), "action.yml must exist at repository root"
+    assert ci_path.is_file(), ".github/workflows/ci.yml must exist"
+
+    action_data = yaml.safe_load(action_path.read_text(encoding="utf-8"))
+    assert isinstance(action_data, dict)
+    assert action_data.get("name") == "Brain-79 CI governance and PR gate"
+
+    # Inputs & outputs
+    inputs = action_data.get("inputs", {})
+    expected_inputs = {
+        "python-version",
+        "base-ref",
+        "head-ref",
+        "enforcement",
+        "fail-on-warnings",
+        "project-root",
+        "comment-on-pr",
+        "github-token",
+    }
+    assert expected_inputs.issubset(inputs.keys())
+    assert inputs["python-version"]["default"] == "3.12"
+    assert inputs["head-ref"]["default"] == "HEAD"
+    assert inputs["enforcement"]["default"] == "strict"
+
+    outputs = action_data.get("outputs", {})
+    assert {"status", "exit-code", "drifted-count", "report-json-path"}.issubset(outputs.keys())
+
+    runs = action_data.get("runs", {})
+    assert runs.get("using") == "composite"
+    steps = runs.get("steps", [])
+    assert steps
+
+    pinned_pattern = re.compile(r"^[^@]+@v\d+(\.\d+)*$")
+    all_run_scripts: list[str] = []
+    for step in steps:
+        if "uses" in step:
+            assert pinned_pattern.match(step["uses"]), f"Unpinned action: {step['uses']}"
+        if "run" in step:
+            assert step.get("shell") == "bash", f"Every run step in action.yml must declare shell: bash: {step}"
+            script = step["run"]
+            all_run_scripts.append(script)
+            # Zero ${{ inputs.* }} or ${{ github.* }} inside run: bodies (script injection defense)
+            assert "${{ inputs." not in script, "Do not interpolate ${{ inputs.* }} directly in run:"
+            assert "${{ github." not in script, "Do not interpolate ${{ github.* }} directly in run:"
+
+    combined_scripts = "\n".join(all_run_scripts)
+    assert "$GITHUB_ACTION_PATH" in combined_scripts
+    assert "set +e" in combined_scripts
+    assert "<!-- brain79:ci-check -->" in combined_scripts
+    assert "gh api" in combined_scripts
+    assert "--input -" in combined_scripts
+
+    # ci.yml ordering: Run brain79 ci-check BEFORE Run brain79 doctor
+    ci_data = yaml.safe_load(ci_path.read_text(encoding="utf-8"))
+    ci_steps = ci_data["jobs"]["test"]["steps"]
+    step_names = [s.get("name", "") for s in ci_steps]
+    assert "Run brain79 ci-check" in step_names
+    assert "Run brain79 doctor" in step_names
+    assert step_names.index("Run brain79 ci-check") < step_names.index("Run brain79 doctor")
+    ci_check_step = ci_steps[step_names.index("Run brain79 ci-check")]
+    assert "uv run brain79 ci-check --write-step-summary" in ci_check_step.get("run", "")

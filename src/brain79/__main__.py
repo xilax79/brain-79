@@ -86,6 +86,7 @@ Maintenance & governance:
   update                Update the installed brain79 CLI tool
   update-project        Upgrade AGENTS.md, SCHEMA.md, and MCP harnesses in this repo
   doctor                Run 7-point operational diagnostics and optional --fix
+  ci-check              Run read-only CI governance gate or passive lifecycle hooks
   bootstrap             Analyze an existing project and generate initial documentation templates
 
 Server mode:

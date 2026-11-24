@@ -1,0 +1,153 @@
+name: "Brain-79 CI governance and PR gate"
+description: "Run Brain-79 read-only documentation drift, lint, and ADR governance checks in CI and PRs."
+
+inputs:
+  python-version:
+    description: "Python version to provision with uv"
+    required: false
+    default: "3.12"
+  base-ref:
+    description: "Base Git ref for PR diff comparison"
+    required: false
+    default: ""
+  head-ref:
+    description: "Head Git ref for PR diff comparison"
+    required: false
+    default: "HEAD"
+  enforcement:
+    description: "Effective enforcement tier (strict, balanced, advisory, schema)"
+    required: false
+    default: "strict"
+  fail-on-warnings:
+    description: "Fail with exit code 1 on warnings under any enforcement tier"
+    required: false
+    default: "false"
+  project-root:
+    description: "Target project root directory"
+    required: false
+    default: "."
+  comment-on-pr:
+    description: "Create or update an idempotent PR comment with the governance report"
+    required: false
+    default: "false"
+  github-token:
+    description: "GitHub token used for PR commenting when comment-on-pr is true"
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  status:
+    description: "CI gate status (ok, warning, failed)"
+    value: ${{ steps.ci-check.outputs.status }}
+  exit-code:
+    description: "CI gate exit code"
+    value: ${{ steps.ci-check.outputs.exit-code }}
+  drifted-count:
+    description: "Number of drifted governing articles"
+    value: ${{ steps.ci-check.outputs.drifted-count }}
+  report-json-path:
+    description: "Path to the generated JSON report file"
+    value: ${{ steps.ci-check.outputs.report-json-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v10.4.0
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Run brain79 ci-check
+      id: ci-check
+      shell: bash
+      env:
+        INPUT_BASE_REF: ${{ inputs.base-ref }}
+        INPUT_HEAD_REF: ${{ inputs.head-ref }}
+        INPUT_ENFORCEMENT: ${{ inputs.enforcement }}
+        INPUT_FAIL_ON_WARNINGS: ${{ inputs.fail-on-warnings }}
+        INPUT_PROJECT_ROOT: ${{ inputs.project-root }}
+        INPUT_COMMENT_ON_PR: ${{ inputs.comment-on-pr }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        EVENT_NAME: ${{ github.event_name }}
+      run: |
+        REPORT_PATH="${RUNNER_TEMP:-/tmp}/brain79-ci-check.json"
+        ARGS=(
+          --project-root "$INPUT_PROJECT_ROOT"
+          ci-check
+          --write-step-summary
+          --format json
+          --head "$INPUT_HEAD_REF"
+          --enforcement "$INPUT_ENFORCEMENT"
+        )
+        if [ -n "$INPUT_BASE_REF" ]; then
+          ARGS+=(--base "$INPUT_BASE_REF")
+        fi
+        if [ "$INPUT_FAIL_ON_WARNINGS" = "true" ]; then
+          ARGS+=(--fail-on-warnings)
+        fi
+
+        set +e
+        uv run --with "$GITHUB_ACTION_PATH" brain79 "${ARGS[@]}" > "$REPORT_PATH"
+        EXIT_CODE=$?
+        set -e
+
+        export REPORT_PATH EXIT_CODE
+        uv run --with "$GITHUB_ACTION_PATH" python - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        report_path = Path(os.environ["REPORT_PATH"])
+        exit_code = os.environ["EXIT_CODE"]
+        status = "failed"
+        drifted_count = "0"
+        if report_path.is_file():
+            try:
+                data = json.loads(report_path.read_text(encoding="utf-8"))
+                status = str(data.get("status", "failed"))
+                drifted = data.get("drifted_articles", [])
+                drifted_count = str(len(drifted) if isinstance(drifted, list) else 0)
+            except Exception:
+                pass
+
+        gh_out = os.environ.get("GITHUB_OUTPUT", "")
+        if gh_out:
+            with Path(gh_out).open("a", encoding="utf-8", newline="\n") as f:
+                f.write(f"status={status}\n")
+                f.write(f"exit-code={exit_code}\n")
+                f.write(f"drifted-count={drifted_count}\n")
+                f.write(f"report-json-path={report_path}\n")
+        PY
+
+        if [ "$INPUT_COMMENT_ON_PR" = "true" ] && [ "$EVENT_NAME" = "pull_request" ] && [ -n "$PR_NUMBER" ] && [ -s "$REPORT_PATH" ]; then
+          COMMENT_PAYLOAD="${RUNNER_TEMP:-/tmp}/brain79-pr-comment.json"
+          MARKER="<!-- brain79:ci-check -->"
+          uv run --with "$GITHUB_ACTION_PATH" python - "$REPORT_PATH" "$COMMENT_PAYLOAD" <<'PY'
+        import json
+        import sys
+        from pathlib import Path
+
+        data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        body = str(data.get("markdown_summary", "")).strip()
+        if "<!-- brain79:ci-check -->" not in body:
+            body = "<!-- brain79:ci-check -->\n" + body
+        Path(sys.argv[2]).write_text(json.dumps({"body": body}), encoding="utf-8")
+        PY
+
+          set +e
+          EXISTING_ID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" 2>/dev/null | head -n 1)
+          if [ -n "$EXISTING_ID" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$EXISTING_ID" --input - < "$COMMENT_PAYLOAD" >/dev/null 2>&1
+          else
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --input - < "$COMMENT_PAYLOAD" >/dev/null 2>&1
+          fi
+          GH_STATUS=$?
+          set -e
+          if [ "$GH_STATUS" -ne 0 ]; then
+            echo "::warning::Unable to post or update Brain-79 PR comment (gh api exited $GH_STATUS; likely read-only fork token)."
+          fi
+        fi
+
+        exit "$EXIT_CODE"

@@ -33,6 +33,7 @@ WHITELIST = {
     "handoff-purge",
     "orient",
     "session-commit",
+    "ci-check",
 }
 
 
@@ -1159,6 +1160,124 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         else:
             _write_stdout(doc_report.format_text())
         return int(doc_report.exit_code)
+
+    elif cmd == "ci-check":
+        parser = argparse.ArgumentParser(
+            prog="brain79 ci-check",
+            description=(
+                "Run read-only CI governance gate (drift, lint, diff impact, ADR surfacing)\n"
+                "or execute passive IDE/CLI lifecycle hooks (--lifecycle-hook)."
+            ),
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+        )
+        parser.add_argument(
+            "--project-root",
+            default=None,
+            metavar="PATH",
+            help="Project root directory (default: current directory)",
+        )
+        parser.add_argument(
+            "--base",
+            default=None,
+            metavar="REF",
+            help="Optional base Git ref for PR diff comparison",
+        )
+        parser.add_argument(
+            "--head",
+            default="HEAD",
+            metavar="REF",
+            help="Head Git ref for PR diff comparison (default: HEAD)",
+        )
+        parser.add_argument(
+            "--enforcement",
+            choices=["strict", "balanced", "advisory", "schema"],
+            default="strict",
+            help="Effective enforcement tier (default: strict)",
+        )
+        parser.add_argument(
+            "--fail-on-warnings",
+            action="store_true",
+            default=False,
+            help="Fail with exit code 1 on warnings under any enforcement tier",
+        )
+        parser.add_argument(
+            "--format",
+            choices=["markdown", "text", "json"],
+            default="markdown",
+            help="Output format on stdout: markdown (default), text, or json",
+        )
+        parser.add_argument(
+            "--summary-file",
+            default=None,
+            metavar="PATH",
+            help="Optional file path to write the Markdown summary",
+        )
+        parser.add_argument(
+            "--write-step-summary",
+            action="store_true",
+            default=False,
+            help="Append the Markdown summary to $GITHUB_STEP_SUMMARY when set",
+        )
+        parser.add_argument(
+            "--lifecycle-hook",
+            choices=["session-start", "stop"],
+            default=None,
+            help="Run passive lifecycle hook handler instead of CI report (always exits 0)",
+        )
+        parser.add_argument(
+            "--client",
+            choices=["auto", "claude", "agy", "cursor"],
+            default="auto",
+            help="Target client protocol for --lifecycle-hook (default: auto)",
+        )
+        parsed = parser.parse_args(sub_args)
+        from pathlib import Path
+        from brain79.core.ci_check import run_ci_check, run_lifecycle_hook
+        from brain79.core.git_ops import GitError, GitTimeoutError, NotAGitRepoError
+
+        p_root = Path(parsed.project_root).resolve() if parsed.project_root else None
+
+        if parsed.lifecycle_hook is not None:
+            hook_result = run_lifecycle_hook(
+                parsed.lifecycle_hook,
+                client=parsed.client,
+                project_root=p_root,
+            )
+            sys.stdout.write(json.dumps(hook_result, ensure_ascii=True) + "\n")
+            sys.stdout.flush()
+            return 0
+
+        w_root = (p_root / ".brain-79") if p_root is not None else None
+        summary_path = Path(parsed.summary_file) if parsed.summary_file else None
+        try:
+            ci_report = run_ci_check(
+                project_root=p_root,
+                wiki_root=w_root,
+                base_ref=parsed.base,
+                head_ref=parsed.head,
+                enforcement=parsed.enforcement,
+                fail_on_warnings=parsed.fail_on_warnings,
+                summary_file=summary_path,
+                write_step_summary=parsed.write_step_summary,
+            )
+        except GitTimeoutError as exc:
+            sys.stderr.write(f"Error: Git operation timed out during ci-check: {exc}\n")
+            return 3
+        except (ValueError, NotAGitRepoError, GitError) as exc:
+            sys.stderr.write(f"Error: Invalid Git reference or repository state: {exc}\n")
+            return 2
+        except FileNotFoundError as exc:
+            sys.stderr.write(f"Error: Summary file path not found: {exc}\n")
+            return 2
+        except (IsADirectoryError, OSError) as exc:
+            sys.stderr.write(f"Error: Filesystem error during ci-check: {exc}\n")
+            return 3
+
+        if parsed.format == "json":
+            _write_stdout(json.dumps(ci_report.to_dict(), indent=2))
+        else:
+            _write_stdout(ci_report.markdown_summary)
+        return int(ci_report.exit_code)
 
     raise ValueError(f"Unknown command: {cmd}")
 
