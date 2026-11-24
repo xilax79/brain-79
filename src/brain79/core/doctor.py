@@ -101,6 +101,8 @@ def run_doctor(
                         ".agents/mcp_config.json",
                         ".agents/plugins/brain79",
                         ".cursor/mcp.json",
+                        ".claude/settings.json",
+                        ".cursor/hooks.json",
                     ],
                     check_repo=False,
                 )
@@ -131,6 +133,8 @@ def run_doctor(
                 fixed.append(f"Configured MCP harnesses: {', '.join(up_res['mcp_configs'])}")
             if up_res.get("instruction_harnesses"):
                 fixed.append(f"Synchronized native instruction harnesses: {', '.join(up_res['instruction_harnesses'])}")
+            if up_res.get("lifecycle_hooks"):
+                fixed.append(f"Synchronized lifecycle hooks: {', '.join(up_res['lifecycle_hooks'])}")
             if up_res.get("git_hook") and "updated" in str(up_res["git_hook"]):
                 fixed.append("Installed/updated git pre-commit hook")
             if up_res.get("merge_driver_updated"):
@@ -693,10 +697,13 @@ def run_doctor(
     _builtin_harnesses = {"agents_md", "mcp_json", "antigravity", "cursor"}
     for h_name, h_issues in diagnose_all_harnesses(p_root).items():
         if h_name not in _builtin_harnesses and h_issues:
+            issue_status: Literal["warning", "error"] = (
+                "error" if any("corrupt JSON" in issue for issue in h_issues) else "warning"
+            )
             checks.append(
                 DoctorCheck(
                     category=f"harness:{h_name}",
-                    status="warning",
+                    status=issue_status,
                     message="; ".join(h_issues),
                     actionable="Run 'brain79 update-project' or 'brain79 doctor --fix' to repair harness configuration.",
                 )

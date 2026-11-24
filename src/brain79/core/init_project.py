@@ -524,6 +524,7 @@ def update_project(
     commit_transition: bool = False,
     include_desktop: bool = False,
     desktop_config_dir: Path | None = None,
+    install_lifecycle_hooks: bool = False,
 ) -> dict[str, Any]:
     """Non-destructively upgrade project templates, schemas, and multi-harness registrations."""
     from brain79 import __version__
@@ -546,14 +547,26 @@ def update_project(
         dry_run=dry_run,
     )
     from brain79.core.harnesses import (
+        AntigravityHooksAdapter,
         ClaudeCodeAdapter,
+        ClaudeHooksAdapter,
         CopilotAdapter,
+        CursorHooksAdapter,
         CursorRulesAdapter,
+        get_lifecycle_hook_adapters,
     )
 
     instruction_harnesses: list[str] = []
     for inst_adapter in (ClaudeCodeAdapter(), CursorRulesAdapter(), CopilotAdapter()):
         instruction_harnesses.extend(inst_adapter.sync(project_root, dry_run=dry_run))
+
+    lifecycle_hooks: list[str] = []
+    for hook_adapter in get_lifecycle_hook_adapters():
+        if install_lifecycle_hooks or hook_adapter.detect(project_root):
+            if isinstance(hook_adapter, (ClaudeHooksAdapter, AntigravityHooksAdapter, CursorHooksAdapter)):
+                lifecycle_hooks.extend(hook_adapter.sync(project_root, dry_run=dry_run))
+            else:
+                lifecycle_hooks.extend(hook_adapter.sync(project_root))
 
     git_hook_updated, g_msg = sync_git_hooks(project_root, dry_run=dry_run)
     merge_driver_updated, md_msg = sync_git_merge_driver(project_root, install=True, dry_run=dry_run)
@@ -586,6 +599,7 @@ def update_project(
         "gitignore": gi_msg,
         "mcp_configs": mcp_configs,
         "instruction_harnesses": instruction_harnesses,
+        "lifecycle_hooks": lifecycle_hooks,
         "git_hook": g_msg,
         "merge_driver_updated": merge_driver_updated,
         "merge_driver": md_msg,
@@ -604,6 +618,7 @@ def init_project(
     harnesses: list[str] | None = None,
     install_merge_driver: bool = True,
     enforcement: str = "strict",
+    install_lifecycle_hooks: bool = False,
 ) -> None:
     """Bootstrap .brain-79/ in a project directory and register MCP configurations."""
     wiki_root = project_root / ".brain-79"
@@ -611,7 +626,11 @@ def init_project(
     if wiki_root.exists():
         if upgrade:
             print(f"Upgrading existing project protocol and configurations at {project_root}...")
-            update_project(project_root, include_desktop=include_desktop)
+            update_project(
+                project_root,
+                include_desktop=include_desktop,
+                install_lifecycle_hooks=install_lifecycle_hooks,
+            )
             print("Project upgrade complete.")
             return
         else:
@@ -675,9 +694,15 @@ def init_project(
     cleanup_legacy_inline_locks(wiki_root)
 
     # Synchronize selected (or all registered) harness adapters via core/harnesses registry
-    from brain79.core.harnesses import resolve_harness_selection
+    from brain79.core.harnesses import get_lifecycle_hook_adapters, resolve_harness_selection
 
     selected_adapters = resolve_harness_selection(harnesses)
+    if install_lifecycle_hooks:
+        selected_names = {a.name for a in selected_adapters}
+        for hook_adapter in get_lifecycle_hook_adapters():
+            if hook_adapter.name not in selected_names:
+                selected_adapters.append(hook_adapter)
+                selected_names.add(hook_adapter.name)
     for adapter in selected_adapters:
         adapter.sync(project_root)
 

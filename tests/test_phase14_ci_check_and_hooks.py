@@ -505,3 +505,181 @@ def test_lifecycle_hook_stop_drift_and_loop_guards(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert run_lifecycle_hook("stop", client="claude", project_root=repo, stdin_payload="{}") == {}
+
+
+def test_lifecycle_hook_adapters_sync_and_doctor(tmp_path: Path) -> None:
+    """AC-7 / R-3.1..R-3.5: Opt-in lifecycle hook adapters, non-destructive merging, and doctor diagnostics."""
+    import json
+
+    from brain79.cli.dispatch import dispatch_cmd
+    from brain79.core.doctor import run_doctor
+    from brain79.core.harnesses import (
+        AntigravityHooksAdapter,
+        ClaudeHooksAdapter,
+        CursorHooksAdapter,
+        diagnose_all_harnesses,
+        get_harness_adapters,
+        get_lifecycle_hook_adapters,
+        resolve_harness_selection,
+    )
+    from brain79.core.init_project import init_project, update_project
+
+    # 1. Registry invariants (R-3.3)
+    assert len(get_harness_adapters()) == 7
+    hook_adapters = get_lifecycle_hook_adapters()
+    assert [a.name for a in hook_adapters] == ["claude_hooks", "agy_hooks", "cursor_hooks"]
+    assert [a.name for a in resolve_harness_selection(None)] == [a.name for a in get_harness_adapters()]
+    assert [a.name for a in resolve_harness_selection("all")] == [a.name for a in get_harness_adapters()]
+    assert [a.name for a in resolve_harness_selection("hooks")] == ["claude_hooks", "agy_hooks", "cursor_hooks"]
+    all_plus_hooks = [a.name for a in resolve_harness_selection("all,hooks")]
+    assert len(all_plus_hooks) == 10
+    assert "claude_hooks" in all_plus_hooks and "agents_md" in all_plus_hooks
+
+    # 2. Pre-existing unrelated Claude and Cursor configs (AC-7 Given)
+    repo = tmp_path / "repo"
+    _init_git_repo(repo)
+    (repo / ".claude").mkdir(parents=True, exist_ok=True)
+    claude_settings = repo / ".claude" / "settings.json"
+    claude_settings.write_text(json.dumps({"permissions": {"allow": ["Bash"]}}, indent=2) + "\n", encoding="utf-8")
+    (repo / ".cursor").mkdir(parents=True, exist_ok=True)
+    cursor_hooks = repo / ".cursor" / "hooks.json"
+    cursor_hooks.write_text(
+        json.dumps({"version": 1, "hooks": {"stop": [{"command": "echo custom"}]}}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    # Default init_project and update_project MUST NOT inject hooks (R-3.4)
+    init_project(repo, auto_git_init=False)
+    up_default = update_project(repo)
+    assert up_default["lifecycle_hooks"] == []
+    assert ClaudeHooksAdapter().detect(repo) is False
+    assert AntigravityHooksAdapter().detect(repo) is False
+    assert CursorHooksAdapter().detect(repo) is False
+    assert not (repo / ".agents" / "plugins" / "brain79" / "hooks.json").exists()
+    assert json.loads(claude_settings.read_text(encoding="utf-8")) == {"permissions": {"allow": ["Bash"]}}
+    assert json.loads(cursor_hooks.read_text(encoding="utf-8")) == {
+        "version": 1,
+        "hooks": {"stop": [{"command": "echo custom"}]},
+    }
+
+    # Doctor preserves 9 canonical checks when hooks are not installed
+    doc_clean = run_doctor(repo)
+    assert doc_clean.exit_code == 0
+    assert len(doc_clean.checks) == 9
+    assert "claude_hooks" not in diagnose_all_harnesses(repo)
+
+    # 3. Opt-in installation via update_project(install_lifecycle_hooks=True)
+    up_hooks = update_project(repo, install_lifecycle_hooks=True)
+    assert set(up_hooks["lifecycle_hooks"]) == {
+        ".claude/settings.json",
+        ".agents/plugins/brain79/hooks.json",
+        ".cursor/hooks.json",
+    }
+    assert ClaudeHooksAdapter().detect(repo) is True
+    assert AntigravityHooksAdapter().detect(repo) is True
+    assert CursorHooksAdapter().detect(repo) is True
+
+    # Verify exact host schemas & non-destructive preservation (R-3.1)
+    c_data = json.loads(claude_settings.read_text(encoding="utf-8"))
+    assert c_data["permissions"] == {"allow": ["Bash"]}
+    assert c_data["hooks"]["SessionStart"] == [
+        {"matcher": "", "hooks": [{"type": "command", "command": "brain79 ci-check --lifecycle-hook session-start --client claude", "timeout": 15}]}
+    ]
+    assert c_data["hooks"]["Stop"] == [
+        {"matcher": "", "hooks": [{"type": "command", "command": "brain79 ci-check --lifecycle-hook stop --client claude", "timeout": 15}]}
+    ]
+
+    agy_hooks_file = repo / ".agents" / "plugins" / "brain79" / "hooks.json"
+    a_data = json.loads(agy_hooks_file.read_text(encoding="utf-8"))
+    assert a_data["brain79-lifecycle"]["enabled"] is True
+    assert a_data["brain79-lifecycle"]["SessionStart"] == [
+        {"type": "command", "command": "brain79 ci-check --lifecycle-hook session-start --client agy", "timeout": 15}
+    ]
+    assert a_data["brain79-lifecycle"]["Stop"] == [
+        {"type": "command", "command": "brain79 ci-check --lifecycle-hook stop --client agy", "timeout": 15}
+    ]
+
+    cur_data = json.loads(cursor_hooks.read_text(encoding="utf-8"))
+    assert cur_data["version"] == 1
+    assert cur_data["hooks"]["sessionStart"] == [
+        {"command": "brain79 ci-check --lifecycle-hook session-start --client cursor", "timeout": 15}
+    ]
+    assert cur_data["hooks"]["stop"] == [
+        {"command": "echo custom"},
+        {"command": "brain79 ci-check --lifecycle-hook stop --client cursor", "timeout": 15},
+    ]
+
+    # Idempotence: second update_project (even without install_lifecycle_hooks=True) detects installed hooks and makes 0 changes
+    up_idem = update_project(repo)
+    assert up_idem["lifecycle_hooks"] == []
+
+    # Preserve Antigravity enabled: false without error or warning
+    a_data["brain79-lifecycle"]["enabled"] = False
+    agy_hooks_file.write_text(json.dumps(a_data, indent=2) + "\n", encoding="utf-8")
+    assert update_project(repo)["lifecycle_hooks"] == []
+    assert json.loads(agy_hooks_file.read_text(encoding="utf-8"))["brain79-lifecycle"]["enabled"] is False
+    doc_healthy = run_doctor(repo)
+    assert doc_healthy.exit_code == 0
+    assert len(doc_healthy.checks) == 9
+
+    # 4. dry_run=True on corrupt JSON makes zero disk mutations, and repeated corruption overwrites .bak (R-3.2)
+    agy_hooks_file.write_text("{corrupt", encoding="utf-8")
+    assert AntigravityHooksAdapter().detect(repo) is True
+    up_dry = update_project(repo, dry_run=True)
+    assert ".agents/plugins/brain79/hooks.json" in up_dry["lifecycle_hooks"]
+    assert agy_hooks_file.read_text(encoding="utf-8") == "{corrupt"
+    assert not agy_hooks_file.with_name("hooks.json.bak").exists()
+
+    # Corrupt Claude command (warning) + corrupt Agy JSON (error) -> Doctor checks & --fix (R-3.5)
+    c_data["hooks"]["Stop"][0]["hooks"][0]["command"] = "/usr/local/bin/brain79 ci-check --lifecycle-hook stop --client claude"
+    claude_settings.write_text(json.dumps(c_data, indent=2) + "\n", encoding="utf-8")
+
+    doc_bad = run_doctor(repo)
+    assert doc_bad.exit_code == 1
+    by_cat = {c.category: c for c in doc_bad.checks}
+    assert by_cat["harness:claude_hooks"].status == "warning"
+    assert by_cat["harness:agy_hooks"].status == "error"
+
+    # Dirty working-tree guard includes .claude/settings.json / .cursor/hooks.json
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-m", "chore: commit hooks")
+    cur_data["hooks"]["stop"].append({"command": "echo dirty"})
+    cursor_hooks.write_text(json.dumps(cur_data, indent=2) + "\n", encoding="utf-8")
+    doc_dirty = run_doctor(repo, fix=True, force=False)
+    assert doc_dirty.exit_code == 1
+    assert doc_dirty.checks[0].category == "dirty_working_tree"
+
+    # Force fix repairs both and creates .bak
+    doc_fixed = run_doctor(repo, fix=True, force=True)
+    assert doc_fixed.exit_code == 0
+    assert len(doc_fixed.checks) == 9
+    assert agy_hooks_file.with_name("hooks.json.bak").is_file()
+    assert any("lifecycle hooks" in item.lower() for item in doc_fixed.fixed)
+
+    # Repeated corruption overwrites .bak cleanly without FileExistsError
+    agy_hooks_file.write_text("{corrupt2", encoding="utf-8")
+    update_project(repo)
+    assert agy_hooks_file.with_name("hooks.json.bak").read_text(encoding="utf-8") == "{corrupt2"
+
+    # 5. Directory collision guard (R-3.2)
+    collision_repo = tmp_path / "collision_repo"
+    collision_repo.mkdir()
+    (collision_repo / ".claude" / "settings.json").mkdir(parents=True)
+    assert ClaudeHooksAdapter().sync(collision_repo) == []
+
+    # 6. CLI flags & init_project(harnesses=["all", "hooks"]) + init --upgrade --install-lifecycle-hooks (R-3.3, R-3.4)
+    cli_repo = tmp_path / "cli_repo"
+    _init_git_repo(cli_repo)
+    assert dispatch_cmd("init", ["--project-root", str(cli_repo), "--harnesses", "all,hooks"]) == 0
+    assert ClaudeHooksAdapter().detect(cli_repo) is True
+    assert AntigravityHooksAdapter().detect(cli_repo) is True
+    assert CursorHooksAdapter().detect(cli_repo) is True
+
+    cli_repo2 = tmp_path / "cli_repo2"
+    _init_git_repo(cli_repo2)
+    assert dispatch_cmd("init", ["--project-root", str(cli_repo2)]) == 0
+    assert ClaudeHooksAdapter().detect(cli_repo2) is False
+    assert dispatch_cmd("update-project", ["--project-root", str(cli_repo2), "--install-lifecycle-hooks"]) == 0
+    assert ClaudeHooksAdapter().detect(cli_repo2) is True
+    assert AntigravityHooksAdapter().detect(cli_repo2) is True
+    assert CursorHooksAdapter().detect(cli_repo2) is True

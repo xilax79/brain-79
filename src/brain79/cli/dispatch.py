@@ -123,7 +123,15 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             "--harnesses",
             default="all",
             metavar="LIST",
-            help="Comma-separated harnesses to install (default: all; e.g. agents,claude,cursor,copilot,agy,mcp)",
+            help="Comma-separated harnesses to install (default: all; e.g. agents,claude,cursor,copilot,agy,mcp,hooks)",
+        )
+        parser.add_argument(
+            "--install-lifecycle-hooks",
+            "--lifecycle-hooks",
+            dest="install_lifecycle_hooks",
+            action="store_true",
+            default=False,
+            help="Install opt-in native lifecycle hooks for Claude Code, Antigravity, and Cursor",
         )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
@@ -151,6 +159,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             harnesses=selected_harnesses,
             install_merge_driver=parsed.install_merge_driver,
             enforcement=parsed.enforcement,
+            install_lifecycle_hooks=parsed.install_lifecycle_hooks,
         )
         return 0
 
@@ -1048,6 +1057,14 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             default=False,
             help="Also configure host desktop application configs (Claude Desktop, Windsurf)",
         )
+        parser.add_argument(
+            "--install-lifecycle-hooks",
+            "--lifecycle-hooks",
+            dest="install_lifecycle_hooks",
+            action="store_true",
+            default=False,
+            help="Install or sync opt-in native lifecycle hooks for Claude Code, Antigravity, and Cursor",
+        )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
         from brain79.config import get_project_root
@@ -1063,6 +1080,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             dry_run=parsed.dry_run,
             commit_transition=parsed.commit_transition,
             include_desktop=parsed.include_desktop,
+            install_lifecycle_hooks=parsed.install_lifecycle_hooks,
         )
         lines = [
             f"# Brain-79 Project Upgrade ({'DRY RUN' if up_res.get('dry_run') else 'APPLIED'})",
@@ -1072,6 +1090,8 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
             f"- **MCP configurations**: {', '.join(up_res.get('mcp_configs', [])) if up_res.get('mcp_configs') else 'none'}",
             f"- **Git hook**: {up_res.get('git_hook')}",
         ]
+        if up_res.get("lifecycle_hooks"):
+            lines.append(f"- **Lifecycle hooks**: {', '.join(up_res['lifecycle_hooks'])}")
         if up_res.get("transition_handoff"):
             lines.append(f"- **Transition handoff**: `{up_res['transition_handoff']}`")
         if up_res.get("migration_report"):
