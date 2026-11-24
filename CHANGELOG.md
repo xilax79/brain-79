@@ -6,6 +6,24 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-24
+
+### Added
+- **Passive lifecycle hooks and CI PR gate (Phase 14, SPEC-014, ADR-021)**:
+  - **Read-only CI governance and PR gate (`core/ci_check.py`, `brain79 ci-check`)**: added `run_ci_check()` and `CiCheckReport` with Git diff range resolution (`git_diff_range_names()`), impacted governing article detection, 1-hop active ADR surfacing, full structural + organizational lint parity, dual-tier enforcement evaluation (`strict` default in CI, `balanced`/`advisory`/`schema`, `--fail-on-warnings`), Markdown/JSON output, and `--summary-file` / `$GITHUB_STEP_SUMMARY` persistence (`<!-- brain79:ci-check -->`).
+  - **Native passive lifecycle hook runtime (`--lifecycle-hook <session-start|stop>`)**: added cross-platform, fail-open (`{}` on error/oversized stdin/missing wiki), ASCII-safe JSON handler for Claude Code (`claude`), Antigravity (`agy`), and Cursor (`cursor`) with loop-immunity and non-normal termination guards (`continuationActive`, `stop_hook_active`, `loop_count`, `terminationReason`, `status`).
+  - **Opt-in lifecycle hook harness adapters (`core/harnesses/lifecycle_hooks.py`)**: added `ClaudeHooksAdapter` (`.claude/settings.json`), `AntigravityHooksAdapter` (`.agents/plugins/brain79/hooks.json`), and `CursorHooksAdapter` (`.cursor/hooks.json`), wired to `--install-lifecycle-hooks` on `brain79 init` and `brain79 update-project` (plus `--harnesses hooks`), with non-destructive JSON merging, corrupt-file `.bak` backup, and `brain79 doctor [--fix]` diagnostics.
+  - **Composite GitHub Action (`action.yml`)**: added reusable composite action with pinned `astral-sh/setup-uv@v10.4.0`, injection-safe `env:` variable passing, `$GITHUB_OUTPUT` exports, and idempotent `<!-- brain79:ci-check -->` PR commenting via `gh api`; integrated `brain79 ci-check --write-step-summary` into `.github/workflows/ci.yml`.
+  - **Git diff range and `git_ls_files()` hardening (`core/git_ops.py`)**: added `git_diff_range_names()` with option/range-injection validation and three-dot to two-dot shallow fallback, and updated `git_ls_files()` to raise `GitError` on non-zero exit so `WorkspaceIndex.build()` cleanly falls back to filesystem scanning.
+
+### Changed
+- **25-command CLI superset**: expanded `WHITELIST` in `cli/dispatch.py` from 24 to 25 subcommands (`ci-check` is CLI-only; `MCP_TOOLS` remains fixed at 9 tools per ADR-020).
+
+### Migration notes
+- Default `brain79 init` behavior is unchanged; opt into native lifecycle hooks with `brain79 init --install-lifecycle-hooks` or `brain79 update-project --install-lifecycle-hooks` (or `--harnesses hooks`).
+- Teams preferring low-friction local iteration with strict mainline protection can set `enforcement: balanced` in `.brain-79/SCHEMA.md` and run `brain79 ci-check` (or `uses: xilax79/brain-79@v0.15.0`) in Pull Request workflows.
+- Run `brain79 update-project` in existing repositories to synchronize `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/brain79.mdc`, `.github/copilot-instructions.md`, and `.agents/plugins/brain79/skills/brain79-wiki/SKILL.md` to `v0.15.0`.
+
 ## [0.14.0] - 2026-11-23
 
 ### Changed

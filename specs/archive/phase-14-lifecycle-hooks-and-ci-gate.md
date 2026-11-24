@@ -2,7 +2,7 @@
 spec_id: SPEC-014
 title: Passive lifecycle hooks and CI PR gate
 target_version: v0.15.0
-status: in_progress
+status: implemented
 owner: xilax
 last_updated: 2026-11-24
 related_wiki:
@@ -227,7 +227,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-1 — Git diff range resolution, option-injection defense, and `git_ls_files` resilience
 - **Verifies**: `R-1.1`, `R-4.2`
 - **Method**: `test`
-- **Test ref**: `TBD`  # tests/test_phase14_ci_check_and_hooks.py::test_git_diff_range_names_and_option_injection_guard
+- **Test ref**: `tests/test_phase14_ci_check_and_hooks.py::test_git_diff_range_names_and_option_injection_guard`
 - **Given**: a temporary Git repository with a `main` branch and a feature branch modifying `src/app.py` and `.brain-79/features/app.md`.
 - **When**: calling `git_diff_range_names(repo, "main", "HEAD")`, calling with option/range-injection refs `"-o"` and `"main..HEAD"`, simulating a `GitTimeoutError`, simulating a non-zero `git ls-files` failure, and invoking `dispatch_cmd("ci-check", ["--base=-o"])` and `dispatch_cmd("ci-check", ["--base", "nonexistent_branch_ref"])`.
 - **Then**: `git_diff_range_names` returns `["src/app.py", ".brain-79/features/app.md"]` (falling back to two-dot `main..HEAD` when three-dot merge-base fails); `"-o"` and `"main..HEAD"` raise `ValueError`; `dispatch_cmd("ci-check", ["--base=-o"])` and `--base nonexistent_branch_ref` write actionable errors to `stderr` and return exit code `2`; `GitTimeoutError` returns exit code `3`; and `git_ls_files` raises `GitError` on non-zero returncode so `WorkspaceIndex.build()` falls back to filesystem scanning without false `deleted` drift.
@@ -235,7 +235,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-2 — `run_ci_check` diff impact, 1-hop ADR surfacing, full lint parity, and drift detection on fresh CI checkout
 - **Verifies**: `R-1.2`, `R-1.3`, `R-1.4`
 - **Method**: `test`
-- **Test ref**: `TBD`  # tests/test_phase14_ci_check_and_hooks.py::test_run_ci_check_diff_impact_adrs_and_fresh_checkout_drift
+- **Test ref**: `tests/test_phase14_ci_check_and_hooks.py::test_run_ci_check_diff_impact_adrs_and_fresh_checkout_drift`
 - **Given**: a Git repository where `features/auth.md` (`applies_to: ["src/auth.py"]`, `related: ["decisions/adr-001-auth.md"]`) governs `src/auth.py`, `.drift_manifest.json` and `.navigation_registry.json` are deleted (simulating a fresh CI checkout), and a branch modifies `src/auth.py` without updating `features/auth.md`.
 - **When**: calling `run_ci_check(project_root=repo, base_ref="main", head_ref="HEAD")` (and again after adding a broken local Markdown link inside `features/auth.md`).
 - **Then**: `report.changed_files` includes `"src/auth.py"`, `report.impacted_articles` lists `features/auth.md` with `updated_in_diff=False`, `report.relevant_adrs` includes `decisions/adr-001-auth.md`, `report.drifted_articles` flags `features/auth.md`, neither `.drift_manifest.json` nor `.navigation_registry.json` is written to disk (`persist=False`), and introducing a broken local link yields `lint_status == "CRITICAL"` with `lint_errors_count >= 1` and a matching entry in `report.issues`.
@@ -243,7 +243,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-3 — Dual-tier enforcement matrix in `ci-check` (`strict`, `balanced`, `advisory`, `schema`, `--fail-on-warnings`)
 - **Verifies**: `R-1.5`
 - **Method**: `test`
-- **Test ref**: `TBD`  # tests/test_phase14_ci_check_and_hooks.py::test_ci_check_enforcement_tier_matrix
+- **Test ref**: `tests/test_phase14_ci_check_and_hooks.py::test_ci_check_enforcement_tier_matrix`
 - **Given**: a repository whose `.brain-79/SCHEMA.md` declares `enforcement: balanced` and which currently has an unresolved drifted article (`features/auth.md`) but `0` `CRITICAL` lint errors.
 - **When**: running `brain79 ci-check` with default flags (`--enforcement strict`), with `--enforcement schema`, with `--enforcement schema --fail-on-warnings`, and after introducing a broken local link (`CRITICAL` lint error) under `--enforcement advisory`.
 - **Then**: default `brain79 ci-check` enforces `strict` and exits `1` (`status == "failed"`); `--enforcement schema` honors `SCHEMA.md` (`balanced`) and exits `0` (`status == "warning"`); `--enforcement schema --fail-on-warnings` exits `1`; and a `CRITICAL` lint error exits `1` even under `advisory`.
@@ -251,7 +251,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-4 — Markdown report marker, JSON serialization, and `$GITHUB_STEP_SUMMARY` output
 - **Verifies**: `R-1.6`, `R-1.7`, `R-4.1`
 - **Method**: `test`
-- **Test ref**: `TBD`  # tests/test_phase14_ci_check_and_hooks.py::test_ci_check_formats_and_step_summary_output
+- **Test ref**: `tests/test_phase14_ci_check_and_hooks.py::test_ci_check_formats_and_step_summary_output`, `tests/test_phase14_ci_check_and_hooks.py::test_cli_ci_check_git_errors_enforcement_and_formats`
 - **Given**: a repository with governed articles and a mocked `GITHUB_STEP_SUMMARY` file path in `os.environ`.
 - **When**: running `dispatch_cmd("ci-check", ["--write-step-summary", "--format", "json"])` and `dispatch_cmd("ci-check", ["--summary-file", str(tmp_path / "nonexistent_dir" / "summary.md")])`.
 - **Then**: `stdout` parses as valid JSON containing `status`, `exit_code`, `enforcement`, `diff_range`, `changed_files`, `drifted_articles`, `impacted_articles`, `relevant_adrs`, `lint_status`, `lint_errors_count`, `lint_warnings_count`, `issues`, and `markdown_summary`; the `$GITHUB_STEP_SUMMARY` file contains `<!-- brain79:ci-check -->` and `# Brain-79 CI governance report` with LF endings; and the invalid `--summary-file` path exits with code `2`.
@@ -259,7 +259,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-5 — Lifecycle hook `session-start` contract across Claude Code, Antigravity, and Cursor
 - **Verifies**: `R-2.1`, `R-2.2`, `R-2.3`
 - **Method**: `test`
-- **Test ref**: `TBD`  # tests/test_phase14_ci_check_and_hooks.py::test_lifecycle_hook_session_start_all_clients
+- **Test ref**: `tests/test_phase14_ci_check_and_hooks.py::test_lifecycle_hook_session_start_all_clients`
 - **Given**: an initialized repository with a governing article and subdirectory `.agents/plugins/brain79/`.
 - **When**: invoking `run_lifecycle_hook("session-start", client=...)` (and CLI `brain79 ci-check --lifecycle-hook session-start`) for `"agy"` (from working directory `.agents/plugins/brain79/` with stdin `{"hookEventName": "SessionStart", "cwd": "<repo>", "lastUserInput": "update auth"}`), `"claude"`, and `"cursor"`, plus oversized (`> 1 MB`) and non-object (`"[]"`) stdin payloads.
 - **Then**:
@@ -271,7 +271,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-6 — Lifecycle hook `stop` drift interception, loop-prevention guards, and fail-open safety
 - **Verifies**: `R-2.2`, `R-2.4`
 - **Method**: `test`
-- **Test ref**: `TBD`  # tests/test_phase14_ci_check_and_hooks.py::test_lifecycle_hook_stop_drift_and_loop_guards
+- **Test ref**: `tests/test_phase14_ci_check_and_hooks.py::test_lifecycle_hook_stop_drift_and_loop_guards`
 - **Given**: a repository with a modified governed source file (`src/auth.py`) leaving `features/auth.md` drifted.
 - **When**:
   1. Invoking `run_lifecycle_hook("stop")` with clean initial payloads for `"agy"`, `"claude"`, and `"cursor"` (including `{"status": "completed", "loop_count": 0}` for Cursor).
@@ -284,7 +284,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-7 — Opt-in lifecycle hook adapters, non-destructive JSON merging, and `doctor` diagnostics
 - **Verifies**: `R-3.1`, `R-3.2`, `R-3.3`, `R-3.4`, `R-3.5`
 - **Method**: `test`
-- **Test ref**: `TBD`  # tests/test_phase14_ci_check_and_hooks.py::test_lifecycle_hook_adapters_sync_and_doctor
+- **Test ref**: `tests/test_phase14_ci_check_and_hooks.py::test_lifecycle_hook_adapters_sync_and_doctor`
 - **Given**: a project directory with pre-existing unrelated custom keys in `.claude/settings.json` (`{"permissions": {"allow": ["Bash"]}}`) and `.cursor/hooks.json` (`{"version": 1, "hooks": {"stop": [{"command": "echo custom"}]}}`).
 - **When**:
   1. Running default `init_project(tmp_path)` and `update_project(tmp_path)` without `install_lifecycle_hooks`, then running `run_doctor(tmp_path)`.
@@ -298,7 +298,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-8 — Composite GitHub Action (`action.yml`) and repository CI workflow integration
 - **Verifies**: `R-4.3`, `R-4.4`, `R-4.5`
 - **Method**: `test`
-- **Test ref**: `TBD`  # tests/test_phase14_ci_check_and_hooks.py::test_github_action_manifest_and_ci_workflow
+- **Test ref**: `tests/test_phase14_ci_check_and_hooks.py::test_github_action_manifest_and_ci_workflow`
 - **Given**: `action.yml` at the repository root and `.github/workflows/ci.yml`.
 - **When**: parsing both YAML manifests and running `tests/test_ci_workflow.py`.
 - **Then**: `action.yml` is a valid `using: "composite"` action with `shell: bash` on every `run:` step, declares `base-ref`, `head-ref`, `enforcement`, `fail-on-warnings`, `project-root`, `comment-on-pr`, and `github-token` inputs, uses pinned action tags (`@v10.4.0`), passes all inputs exclusively via step `env:` variables (zero `${{ inputs.* }}` inside `run:` bodies), invokes `brain79` from `"$GITHUB_ACTION_PATH"`, captures exit code before exporting `$GITHUB_OUTPUT` and upserting the idempotent `<!-- brain79:ci-check -->` PR comment, and `.github/workflows/ci.yml` places `uv run brain79 ci-check --write-step-summary` before `Run brain79 doctor` while passing all `tests/test_ci_workflow.py` assertions.
@@ -306,7 +306,7 @@ Aligned with [dispatcher.md](../.brain-79/architecture/dispatcher.md) (`0` succe
 ### AC-9 — 25-command CLI superset symmetry, release `v0.15.0` parity, and zero wiki drift
 - **Verifies**: `R-5.1`, `R-5.2`, `R-5.3`
 - **Method**: `ci`
-- **Test ref**: `TBD`  # tests/test_symmetry.py::test_mcp_cli_symmetry, tests/test_version_governance.py::test_changelog_entry_parity
+- **Test ref**: `tests/test_symmetry.py::test_mcp_cli_symmetry`, `tests/test_version_governance.py::test_changelog_entry_parity`
 - **Given**: version bumped to `0.15.0`, `WHITELIST` containing 25 CLI subcommands, `ADR-021` and `features/lifecycle-hooks-and-ci-gate.md` created, and all impacted living manuals updated via `brain79_session_commit`.
 - **When**: running `uv run pytest`, `uv run mypy src tests`, `uv run brain79 lint --strict`, `uv run brain79 ci-check`, and `uv run brain79 doctor`.
 - **Then**: all verification commands exit `0` with `[Status: OK]` / `[Status: PASSED]`, `templates/AGENTS.md` is `<= 6,500` bytes (with `"25-command"` parity), and zero documentation drift exists across `.brain-79/`.
@@ -351,9 +351,9 @@ Note: `uv run pytest` includes `tests/test_specs_governance.py`, which mechanica
 
 Every item MUST be checked (`[x]`) before setting `status: implemented` and moving this file to `specs/archive/`:
 
-- [ ] Execute every row in `## Wiki impact map` (ADR-018 compliant, `<= 20 KB`, non-overlapping `applies_to`).
-- [ ] Populate `Test ref` on every `AC-*` entry and ensure all amendments are recorded in `## Amendments`.
-- [ ] Record `decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md`.
-- [ ] Add release notes in `CHANGELOG.md` and `.brain-79/changelog/v0-15-0.md`.
-- [ ] Update `.brain-79/architecture/roadmap-industrial-scale.md` status and archive link.
-- [ ] Set frontmatter `status: implemented` and move this file to `specs/archive/`.
+- [x] Execute every row in `## Wiki impact map` (ADR-018 compliant, `<= 20 KB`, non-overlapping `applies_to`).
+- [x] Populate `Test ref` on every `AC-*` entry and ensure all amendments are recorded in `## Amendments`.
+- [x] Record `decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md`.
+- [x] Add release notes in `CHANGELOG.md` and `.brain-79/changelog/v0-15-0.md`.
+- [x] Update `.brain-79/architecture/roadmap-industrial-scale.md` status and archive link.
+- [x] Set frontmatter `status: implemented` and move this file to `specs/archive/`.

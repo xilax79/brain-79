@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 ---
 
 # Project index
@@ -11,10 +11,10 @@ last_updated: 2026-11-23
 ## Quick navigation
 
 ### Architecture
-- [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 24 CLI subcommands
-- [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
+- [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 25 CLI subcommands
+- [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing across 25 commands, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-12 and v0.13.1) and prioritized evolution (phase 13 MCP pruning, phase 14 hooks and PR gate, phase 15 polyglot AST, anti-rot proof, and PyPI release)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-14 and v0.15.0) and prioritized evolution (phase 15 polyglot AST, anti-rot proof, and PyPI release)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, focused 9-tool surface, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
@@ -31,6 +31,7 @@ last_updated: 2026-11-23
 - [Changelog — v0.13.0](changelog/v0-13-0.md) — release notes for v0.13.0 (Phase 12 team-safe Git collaboration, INDEX.md merge driver, bootstrap --auto-map, and configurable enforcement tiers)
 - [Changelog — v0.13.1](changelog/v0-13-1.md) — release notes for v0.13.1 (BUG-008 navigation registry disk reconciliation, BUG-009 index\_desync lint rule, and BUG-010 symmetric version skew detection)
 - [Changelog — v0.14.0](changelog/v0-14-0.md) — release notes for v0.14.0 (Phase 13 MCP surface pruning, focused 9-tool MCP\_TOOLS, CLI superset, and --mcp-profile removal)
+- [Changelog — v0.15.0](changelog/v0-15-0.md) — release notes for v0.15.0 (Phase 14 passive lifecycle hooks, read-only CI PR gate, composite GitHub Action, and 25-command CLI)
 - [Release v0.11.0 — Core refactoring and hardening](changelog/v0-11-0.md) — core architectural refactoring, concurrency hardening, centralized Git layer, security fixes, and modular decomposition
 
 ### Decisions
@@ -52,20 +53,22 @@ last_updated: 2026-11-23
 - [ADR-016: Handoff freshness, provenance, and authority decay](decisions/adr-016-handoff-freshness-and-authority-decay.md) — treat handoffs as perishable transition notes with authority decaying based on deterministic workspace drift
 - [ADR-017: Semantic versioning calibration for pre-GA maturation](decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md) — semantic versioning calibration to 0.7.2 for pre-GA maturation prior to public release
 - [ADR-020 — Focused MCP surface and CLI superset](decisions/adr-020-focused-mcp-surface-and-cli-superset.md) — prune redundant MCP wrappers and dual-profile branching to formalize a focused 9-tool MCP surface as a strict subset of the 24-command CLI
+- [ADR-021 — Passive lifecycle hooks and CI PR gate](decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md) — adopt opt-in native lifecycle hooks backed by a read-only CLI CI gate and composite GitHub Action with dual-tier enforcement
 - [Decision — ADR-018: Living manuals, temporal decontamination, and the three-class document ontology](decisions/adr-018-living-manuals-and-temporal-decontamination.md) — architectural foundation for living manuals, temporal decontamination, Chesterton's Fence for ADRs, and epocal changelog consolidation
 - [Decision — ADR-019: External feature specifications and requirements standard](decisions/adr-019-external-specs-and-requirements-standard.md) — isolate repository feature specifications in specs/ outside .brain-79/ using EARS, BDD Given/When/Then, explicit non-goals, and CI governance tests
 
 ### Features
 - [Feature — Cross-platform portability and centralized lock isolation](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
 - [Feature — FastMCP integration](features/mcp-server.md) — model Context Protocol server exposing 9 focused hot-path tools over stdio JSON-RPC
-- [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP setup, and brain79 doctor diagnostics
+- [Feature — Passive lifecycle hooks and CI PR gate](features/lifecycle-hooks-and-ci-gate.md) — read-only CI governance PR gate, composite GitHub Action, and cross-platform passive lifecycle hook runtime
+- [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP and lifecycle hook setup, and brain79 doctor diagnostics
 - [Feature — Session knowledge triage and research persistence](features/session-triage-and-research-persistence.md) — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics
 - [Feature — Short-term handoff continuity, freshness, and lifecycle operations](features/handoff-continuity.md) — tactical session transitions, freshness evaluation, authority decay, anti-hallucination work tracking, and operational purge
-- [Feature — Standalone CLI interface](features/cli.md) — deterministic CLI subcommands for managing wiki knowledge, executing linters, and managing handoffs
-- [Feature — Team-safe Git collaboration and low-friction onboarding](features/team-collaboration-and-onboarding.md) — team-safe Git collaboration, git-ignored derived caches with deterministic rebuilds, 3-way INDEX.md merge driver, bootstrap --auto-map, centralized git\_ops, and configurable enforcement tiers
+- [Feature — Standalone CLI interface](features/cli.md) — 25 deterministic CLI subcommands for managing wiki knowledge, CI governance, lifecycle hooks, linters, and handoffs
+- [Feature — Team-safe Git collaboration and low-friction onboarding](features/team-collaboration-and-onboarding.md) — team-safe Git collaboration, git-ignored derived caches with deterministic rebuilds, 3-way INDEX.md merge driver, bootstrap --auto-map, centralized git\_ops, and dual-tier enforcement
 - [Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context](features/transitive-drift-and-ripple-guards.md) — merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
 - [Feature — Versioning and release governance](features/version-governance.md) — single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
-- [Feature — Wiki organizational enforcement](features/organizational-enforcement.md) — prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing
+- [Feature — Wiki organizational enforcement](features/organizational-enforcement.md) — prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, unified lint collection, and navigation indexing
 
 ### Product
 - [Brain-79 — Product vision](product/overview.md) — deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.

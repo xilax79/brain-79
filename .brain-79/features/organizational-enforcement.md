@@ -1,9 +1,9 @@
 ---
 type: feature
-summary: prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, and navigation indexing
+summary: prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, unified lint collection, and navigation indexing
 status: shipped
-version: 0.8.1
-last_updated: 2026-11-13
+version: 0.15.0
+last_updated: 2026-11-24
 applies_to:
   - src/brain79/core/lint.py
   - src/brain79/core/lint_organizational.py
@@ -17,7 +17,7 @@ related:
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - decisions/adr-012-structural-quality-and-drift-detection.md
   - decisions/adr-018-living-manuals-and-temporal-decontamination.md
-applies_to_digest: "sha256:f47ed46397419d06"
+applies_to_digest: "sha256:2306bef211d06102"
 applies_to_count: 7
 ---
 
@@ -33,10 +33,11 @@ The Organizational Enforcement system prevents organic quality degradation of re
 2. **Anti-Sprawl Governance (`validation.py`)**: `check_anti_sprawl_overlap` prevents creating redundant articles whose target files are already subsumed by an existing active article without declaring `supersedes`.
 3. **Target Existence & Unanchored Governance (`lint_organizational.py`)**: Enforces that strictly active software articles declare `applies_to` (`unanchored_governance_article`) and validates that governed files resolve to real workspace files (`applies_to_target_missing`).
 4. **Structural Decision & Tech Debt Leakage (`lint_organizational.py`)**: uses CommonMark code-fence masking (`_mask_code_fences`) to search for un-nested decision bullets while ignoring code examples.
-5. **Thread-Safe Navigation Registry (`navigation.py`)**: maintains `.navigation_registry.json` under `filelock` and updates `INDEX.md` Quick navigation atomically, prioritizing frontmatter `summary:` declarations with hardened fallback heuristics.
-6. **Git Pre-Commit Hook (`init_project.py`)**: Deploys `.git/hooks/pre-commit` during `brain79 init` to execute `brain79 lint --strict` before commits are accepted.
-7. **Back-Navigation Convention**: Standardizes footer back-links (`[← Back to Index](../INDEX.md)`) for high-connectivity graphs and seamless editor navigation.
-8. **Temporal Decontamination & Living Manual Governance (`lint_organizational.py`)**: Enforces rule `temporal_contamination_in_title` on living manual ontologies (`features/`, `architecture/`, `product/`), ensuring titles, summaries, and headings remain evergreen and free of temporal project management milestone tags (`Phase X`, `Sprint Y`, `WIP`), while exempting immutable audit folders and roadmaps (ADR-018).
+5. **Unified Structural + Organizational Lint Collection (`lint.py`, `lint_organizational.py`)**: `collect_wiki_lint_results()` returns a typed `WikiLintResult` combining `lint_wiki` structural/link checks and `lint_organizational` checks using an optionally shared `WorkspaceIndex` so `brain79 lint` and `brain79 ci-check` share identical issue counts and status parity.
+6. **Thread-Safe Navigation Registry (`navigation.py`)**: maintains `.navigation_registry.json` under `filelock` and updates `INDEX.md` Quick navigation atomically, prioritizing frontmatter `summary:` declarations with hardened fallback heuristics.
+7. **Git Pre-Commit Hook (`init_project.py`)**: Deploys `.git/hooks/pre-commit` during `brain79 init` to execute `brain79 lint --strict` before commits are accepted.
+8. **Back-Navigation Convention**: Standardizes footer back-links (`[← Back to Index](../INDEX.md)`) for high-connectivity graphs and seamless editor navigation.
+9. **Temporal Decontamination & Living Manual Governance (`lint_organizational.py`)**: Enforces rule `temporal_contamination_in_title` on living manual ontologies (`features/`, `architecture/`, `product/`), ensuring titles, summaries, and headings remain evergreen and free of temporal project management milestone tags (`Phase X`, `Sprint Y`, `WIP`), while exempting immutable audit folders and roadmaps (ADR-018).
 
 ## Commands and tools
 

@@ -10,7 +10,7 @@ description: Comprehensive operational manual and command reference for the brai
 > [!IMPORTANT]
 > Prefer **MCP tools** when the brain79 MCP server is connected (most reliable).
 > The MCP server exposes **9 focused hot-path tools**: `brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`, and `brain79_bootstrap`.
-> For administrative and operational commands, use the **24-command CLI** (`brain79 <subcommand>`).
+> For administrative, CI, and operational commands, use the **25-command CLI** (`brain79 <subcommand>`).
 
 ### Session & knowledge operations (MCP preferred, CLI superset)
 
@@ -42,6 +42,8 @@ degradation. Always run these checks before declaring wiki work complete.
 |---|---|---|
 | **Lint wiki** (find violations) | `brain79_lint()` | `brain79 lint` |
 | **Strict lint** (CI mode, exits 1 on issues) | — | `brain79 lint --strict` |
+| **CI governance & PR gate** | — | `brain79 ci-check [--base <ref>] [--enforcement <tier>]` |
+| **Opt-in lifecycle hooks** | — | `brain79 update-project --install-lifecycle-hooks` |
 | **Machine-readable lint** | — | `brain79 lint --strict --format json \| jq '.issues'` |
 | **Extraction suggestions** for INDEX.md | — | `brain79 lint --suggest-extract` |
 | **Preview migration** (dry-run, safe) | — | `brain79 migrate` |

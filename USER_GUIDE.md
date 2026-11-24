@@ -265,9 +265,9 @@ brain79 handoff-purge --apply
 
 ## 3. Interface reference: MCP tools and CLI subcommands
 
-`brain-79` exposes a **9-tool focused MCP surface** for session hot paths and a **24-command CLI superset** for all session, authoring, and administrative operations.
+`brain-79` exposes a **9-tool focused MCP surface** for session hot paths and a **25-command CLI superset** for all session, authoring, CI, and administrative operations.
 
-| Category | FastMCP server tool (9) | CLI subcommand (24) | Purpose |
+| Category | FastMCP server tool (9) | CLI subcommand (25) | Purpose |
 |:---|:---|:---|:---|
 | **Session & workflow** | `brain79_orient` | `orient` | Cold-start orientation and budgeted context assembly. |
 | | `brain79_session_commit` | `session-commit` | Atomic commit of writes, edits, and handoffs with ripple check. |
@@ -285,6 +285,7 @@ brain79 handoff-purge --apply
 | | *CLI only* | `list` | List all tracked wiki articles with metadata. |
 | | `brain79_search` | `search` | Full-text search across all managed wiki articles. |
 | **Governance & health** | `brain79_lint` | `lint` | Run structural, organizational, and drift lint checks. |
+| | *CLI only* | `ci-check` | Run read-only CI governance PR gate and passive lifecycle hooks (`--lifecycle-hook`). |
 | | *CLI only* | `schema` | Inspect active schema rules and required frontmatter keys. |
 | | *CLI only* | `navigate` | Regenerate navigation registry and `INDEX.md`. |
 | | *CLI only* | `migrate` | Add frontmatter and normalize legacy markdown files. |

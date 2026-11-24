@@ -1,13 +1,13 @@
 ---
 type: product
 summary: deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:a4ad68324ed1ee55"
-applies_to_count: 12
+applies_to_digest: "sha256:eff3629695ca1648"
+applies_to_count: 13
 ---
 
 # Brain-79 — Product vision
@@ -29,11 +29,12 @@ LLMs maintain wikis that degrade organically:
 1. **Cold start (`brain79_orient`)**: the agent retrieves the routing table (`INDEX.md`), active handoff state with authority decay diagnostics, and inlined governing articles in a single call.
 2. **Two-call session protocol**: Cold start orientation followed by single-call atomic session finalization (`brain79_session_commit`), validating transitive drift and ripple gates.
 3. **Write-time validation**: Mechanical write operations validate frontmatter schemas, file locations, and target existence.
-4. **Pre-commit hook**: Direct editing bypasses are mechanically blocked before commit via `brain79 lint --strict`.
-5. **Handoff continuity**: Ephemeral tactical transitions with cryptographic freshness tracking and operational purge (`brain79 handoff-purge`).
-6. **Organizational enforcement**: mechanical linter detecting structural quality violations, unanchored governance, and target sprawl.
-7. **Team-safe Git collaboration**: git-ignored derived caches with deterministic rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map`, and configurable `strict`/`balanced`/`advisory` enforcement tiers.
-8. **Focused MCP surface and CLI superset**: 9 hot-path MCP tools paired with the complete 24-command CLI.
+4. **Pre-commit hook & CI PR gate**: Direct editing bypasses are mechanically blocked before commit via `brain79 lint --strict`, and Pull Requests are gated via `brain79 ci-check` and the composite GitHub Action (`action.yml`).
+5. **Opt-in passive lifecycle hooks**: Native `SessionStart` and `Stop` hooks for Claude Code, Antigravity, and Cursor automate cold-start orientation and drift checks before exit.
+6. **Handoff continuity**: Ephemeral tactical transitions with cryptographic freshness tracking and operational purge (`brain79 handoff-purge`).
+7. **Organizational enforcement**: mechanical linter detecting structural quality violations, unanchored governance, and target sprawl.
+8. **Team-safe Git collaboration**: git-ignored derived caches with deterministic rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map`, and dual-tier `strict`/`balanced`/`advisory` enforcement.
+9. **Focused MCP surface and CLI superset**: 9 hot-path MCP tools paired with the complete 25-command CLI.
 
 ## Target users
 

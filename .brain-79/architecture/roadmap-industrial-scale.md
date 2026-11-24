@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed foundation (phases 0-12 and v0.13.1) and prioritized evolution (phase 13 MCP pruning, phase 14 hooks and PR gate, phase 15 polyglot AST, anti-rot proof, and PyPI release)
+summary: project roadmap covering completed foundation (phases 0-14 and v0.15.0) and prioritized evolution (phase 15 polyglot AST, anti-rot proof, and PyPI release)
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -16,6 +16,8 @@ related:
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
   - decisions/adr-018-living-manuals-and-temporal-decontamination.md
   - decisions/adr-019-external-specs-and-requirements-standard.md
+  - decisions/adr-020-focused-mcp-surface-and-cli-superset.md
+  - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
   - features/version-governance.md
   - features/cross-platform-and-lock-isolation.md
   - features/session-triage-and-research-persistence.md
@@ -23,10 +25,11 @@ related:
   - features/transitive-drift-and-ripple-guards.md
   - features/project-upgrade-and-multi-harness-doctor.md
   - features/team-collaboration-and-onboarding.md
+  - features/lifecycle-hooks-and-ci-gate.md
   - topics/v0-13-0-navigation-registry-and-lint-defects.md
-last_updated: 2026-11-23
-applies_to_digest: "sha256:acc21a26ef28ac3b"
-applies_to_count: 10
+last_updated: 2026-11-24
+applies_to_digest: "sha256:f9b2ffcc767800c4"
+applies_to_count: 11
 ---
 
 # Architecture — Industrial-scale roadmap and adoption evolution
@@ -43,7 +46,7 @@ Per **ADR-019**, upcoming phase specifications are authored under `specs/` outsi
 
 ---
 
-## Completed foundation (phases 0–13)
+## Completed foundation (phases 0–14)
 
 Shipped capabilities live in their dedicated `.brain-79/features/` living manuals and release changelogs; archived pre-ADR-019 phase design specs live under `specs/archive/legacy/`.
 
@@ -68,18 +71,19 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 - **[x] Phase 12 (`v0.13.0`)**: team-safe Git collaboration and low-friction onboarding (git-ignored derived caches with deterministic zero-masking rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map` with zero-overlap proposals, and configurable `strict`/`balanced`/`advisory` enforcement tiers). Living manual: [team-collaboration-and-onboarding.md](../features/team-collaboration-and-onboarding.md); archived spec: `specs/archive/legacy/team-collaboration-and-onboarding-design.md`.
 - **[x] Patch `v0.13.1`**: integrity and version-skew hardening (`BUG-008` navigation registry disk reconciliation, `BUG-009` `index_desync` lint rule, `BUG-010` symmetric semver reverse version skew detection in `orient()`). Changelog: [v0-13-1.md](../changelog/v0-13-1.md).
 - **[x] Phase 13 (`v0.14.0`)**: MCP surface pruning and focused CLI-superset architecture (pruned 13 redundant/administrative MCP wrappers and `--mcp-profile`, standardized 9-tool `MCP_TOOLS` ⊂ 24-command `WHITELIST`, ADR-020). Changelog: [v0-14-0.md](../changelog/v0-14-0.md); archived spec: `specs/archive/phase-13-mcp-surface-pruning.md`.
+- **[x] Phase 14 (`v0.15.0`)**: passive lifecycle hooks and CI PR gate (opt-in `SessionStart`/`Stop` adapters for Claude Code, Antigravity, and Cursor, read-only `brain79 ci-check` engine, composite `action.yml`, dual-tier enforcement, 25-command `WHITELIST`, ADR-021). Living manual: [lifecycle-hooks-and-ci-gate.md](../features/lifecycle-hooks-and-ci-gate.md); changelog: [v0-15-0.md](../changelog/v0-15-0.md); archived spec: `specs/archive/phase-14-lifecycle-hooks-and-ci-gate.md`.
 
 ---
 
-## Strategic evolution roadmap (`v0.15.0` onward)
+## Strategic evolution roadmap (`v0.16.0` onward)
 
 ```
 +-----------------------------------------------------------------------------------+
 | Phase 13 (P0): MCP surface pruning & focused CLI-superset architecture (v0.14.0)  | [x] Shipped
 +-----------------------------------------------------------------------------------+
-| Phase 14 (P0): Passive lifecycle hooks & GitHub Action PR gate (v0.15.0)          | [ ] Next
+| Phase 14 (P0): Passive lifecycle hooks & GitHub Action PR gate (v0.15.0)          | [x] Shipped
 +-----------------------------------------------------------------------------------+
-| Phase 15 (P1): Polyglot AST guards, stats, anti-rot proof & PyPI release (v0.16.0)| [ ] Planned
+| Phase 15 (P1): Polyglot AST guards, stats, anti-rot proof & PyPI release (v0.16.0)| [ ] Next
 +-----------------------------------------------------------------------------------+
 | Deferred backlog (demand-driven only): FTS5, worktree isolation, report/graph     | [ ] Deferred
 +-----------------------------------------------------------------------------------+
@@ -92,31 +96,21 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 | Priority | Milestone | Target version | Primary objective |
 |---|---|---|---|
 | **P0** | Phase 13 | `v0.14.0` | Prune redundant MCP admin wrappers and `--mcp-profile` before PyPI; formalize MCP hot-path subset vs. full CLI superset (`SPEC-013`). |
-| **P0** | Phase 14 | `v0.15.0` | Eliminate voluntary-compliance failures via native lifecycle hooks and bring drift visibility into team PR reviews. |
+| **P0** | Phase 14 | `v0.15.0` | Eliminate voluntary-compliance failures via native lifecycle hooks and bring drift visibility into team PR reviews (`SPEC-014`). |
 | **P1** | Phase 15 | `v0.16.0` | Extend AST Guard C to TypeScript/JS, Go, and Rust; prove anti-rot durability over multi-session LLM runs; publish to PyPI. |
 | **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`). |
 
 ---
 
-## Phase 13 (`v0.14.0`) — MCP surface pruning and focused CLI-superset architecture (P0, shipped)
+## Phase 14 (`v0.15.0`) — Passive lifecycle hooks and CI PR gate (P0, shipped)
 
-Archived specification: `specs/archive/phase-13-mcp-surface-pruning.md` (`SPEC-013`).
-
-Goal: reduce codebase surface area and maintenance drag before PyPI by eliminating redundant/administrative MCP tool wrappers and dual-profile branching while keeping all 24 CLI subcommands intact.
-
-- **Single focused MCP surface**: remove the 13 redundant/administrative MCP wrappers (`index`, `schema`, `write`, `write_many`, `list`, `ingest`, `handoff_*`, `navigate`, `migrate`, `update_project`, `doctor`), `ADMIN_TOOLS`, `--mcp-profile`, and `BRAIN79_MCP_PROFILE` branching; expose a single compact MCP tool set (`orient`, `session_commit`, `read`, `read_batch`, `edit`, `context`, `search`, `lint`, and `bootstrap`).
-- **MCP-subset / CLI-superset contract (`ADR-020`)**: retain all 24 CLI subcommands in `WHITELIST`, update `tests/test_symmetry.py` to enforce `MCP_TOOLS ⊂ WHITELIST` and parameter parity for retained tools, and establish CLI-only default for future administrative/CI commands (`ci-check`, `stats`).
-- **Template and runtime alignment**: clean up references to pruned MCP tools and `--mcp-profile` across `core/` hints, `templates/` (`AGENTS.md`, `SKILL.md`, `SCHEMA.md`), `README.md`, `USER_GUIDE.md`, `ARCHITECTURE.md`, and migrated tests.
-
----
-
-## Phase 14 (`v0.15.0`) — Passive lifecycle hooks and CI PR gate (P0)
+Archived specification: `specs/archive/phase-14-lifecycle-hooks-and-ci-gate.md` (`SPEC-014`). Living manual: [lifecycle-hooks-and-ci-gate.md](../features/lifecycle-hooks-and-ci-gate.md); changelog: [v0-15-0.md](../changelog/v0-15-0.md).
 
 Goal: close the voluntary-compliance gap where agents ignore `AGENTS.md`, and make `.brain-79/` immediately valuable to human reviewers during code review.
 
-- **Native agent lifecycle hooks**: ship opt-in hook templates via `core/harnesses/` for clients that support lifecycle events (Claude Code `SessionStart` / `Stop` hooks, plus Cursor and Antigravity hooks) to inject `brain79 orient` automatically on startup and surface drifted targets before session exit.
-- **Reusable GitHub Action PR Gate (`brain79 ci-check`, CLI-only)**: post concise Pull Request summaries listing drifted governing articles, relevant ADRs for the PR diff, and `lint --strict` status—enabling teams to catch documentation rot in CI even when local enforcement runs in `balanced` mode.
-- **Default enforcement tier evaluation**: evaluate shifting default onboarding enforcement (e.g., `balanced` locally paired with `strict` / `--fail-on-warnings` in CI PR gates) based on trade-off analysis.
+- **Native agent lifecycle hooks (`--install-lifecycle-hooks`)**: opt-in adapters in `core/harnesses/lifecycle_hooks.py` for Claude Code (`.claude/settings.json`), Antigravity (`.agents/plugins/brain79/hooks.json`), and Cursor (`.cursor/hooks.json`) invoking `brain79 ci-check --lifecycle-hook <session-start|stop>` cross-platform with fail-open `{}` safety and loop-immunity guards.
+- **Reusable GitHub Action PR gate (`brain79 ci-check`, `action.yml`)**: read-only `run_ci_check()` engine and composite GitHub Action reporting drifted governing articles, PR diff impact, 1-hop active ADRs, and full structural + organizational lint status via `$GITHUB_STEP_SUMMARY` and idempotent PR comments (`<!-- brain79:ci-check -->`).
+- **Dual-tier decoupled default (`ADR-021`)**: `.brain-79/SCHEMA.md` retains `strict` by default while `brain79 ci-check` enforces `strict` independently in CI so teams can run `balanced` locally with strict mainline PR gating.
 
 ---
 
@@ -146,7 +140,7 @@ These items are intentionally excluded from active phases until real user adopti
 
 Every active milestone is achievable **incrementally on the existing Python codebase** (`src/brain79/`) without rewriting from scratch:
 
-- **Phase 10 seams**: `core/git_ops.py`, `core/ast_guards/`, `core/harnesses/`, `create_mcp_server()`, and `ProjectContext` isolate every extension point needed by Phases 13–15.
+- **Phase 10 seams**: `core/git_ops.py`, `core/ast_guards/`, `core/harnesses/`, `create_mcp_server()`, and `ProjectContext` isolate every extension point needed by Phases 14–15.
 - **Zero-dependency core preserved**: Tree-sitter polyglot AST stays isolated behind `brain79[polyglot]`, keeping base installation fast and portable.
 - **Distribution fallback**: if non-Python developer adoption stalls after PyPI due to Python/uv prerequisites, a thin wrapper (`npx` over `uvx` or Homebrew formula) solves distribution without rewriting the core engine.
 

@@ -1,8 +1,8 @@
 ---
 type: architecture
-summary: CLI argument parsing, closed-whitelist subcommand routing, and POSIX exit code mappings
+summary: CLI argument parsing, closed-whitelist subcommand routing across 25 commands, and POSIX exit code mappings
 stability: stable
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 applies_to:
   - src/brain79/__main__.py
   - src/brain79/cli/dispatch.py
@@ -11,7 +11,8 @@ related:
   - architecture/symmetry.md
   - features/cli.md
   - architecture/mcp-server.md
-applies_to_digest: "sha256:d26a042577a8f78d"
+  - features/lifecycle-hooks-and-ci-gate.md
+applies_to_digest: "sha256:f77c086144820027"
 applies_to_count: 3
 ---
 
@@ -35,8 +36,8 @@ Global flags can appear before or after subcommands without breaking parsing:
 
 ## Whitelist routing and fallback execution
 
-The dispatcher maintains a strict whitelist (`WHITELIST`) of 24 subcommands:
-`init`, `update`, `update-project`, `doctor`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
+The dispatcher maintains a strict whitelist (`WHITELIST`) of 25 subcommands:
+`init`, `update`, `update-project`, `doctor`, `ci-check`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
 
 Routing order in `src/brain79/__main__.py` (immediately after `parse_global_flags()`):
 1. **Removed `--mcp-profile` flag**: Emits a `v0.14.0` migration error to `stderr` directing callers to the `brain79 <command>` CLI and exits with code `2`.
@@ -49,10 +50,10 @@ Routing order in `src/brain79/__main__.py` (immediately after `parse_global_flag
 ## Exit code mapping policy
 
 Subcommand execution maps exceptions to deterministic POSIX exit codes:
-- `0`: Clean success.
-- `1`: Validation or operational failure (e.g., linter issues in `--strict` mode).
-- `2`: Invalid argument or missing required parameter (`FileNotFoundError` also maps to 2).
-- `3`: File access error or concurrency timeout (`PermissionError`, `TimeoutError`, `OSError`).
+- `0`: Clean success (and all `ci-check --lifecycle-hook` fail-open invocations).
+- `1`: Validation or operational failure (e.g., linter issues in `--strict` mode or failed `ci-check` gate).
+- `2`: Invalid argument or missing required parameter (`FileNotFoundError`, as well as `ValueError`, `NotAGitRepoError`, and `GitError` in `ci-check`).
+- `3`: File access error or concurrency timeout (`PermissionError`, `TimeoutError`, `OSError`, as well as `GitTimeoutError` in `ci-check`).
 - `130`: Process interrupted via `KeyboardInterrupt` / `SIGINT`.
 
 ---

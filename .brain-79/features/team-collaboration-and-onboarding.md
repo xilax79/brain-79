@@ -1,8 +1,8 @@
 ---
 type: feature
-summary: team-safe Git collaboration, git-ignored derived caches with deterministic rebuilds, 3-way INDEX.md merge driver, bootstrap --auto-map, centralized git_ops, and configurable enforcement tiers
+summary: team-safe Git collaboration, git-ignored derived caches with deterministic rebuilds, 3-way INDEX.md merge driver, bootstrap --auto-map, centralized git_ops, and dual-tier enforcement
 status: shipped
-version: 0.13.0
+version: 0.15.0
 applies_to:
   - src/brain79/core/auto_map.py
   - src/brain79/core/git_ops.py
@@ -12,10 +12,12 @@ related:
   - features/cross-platform-and-lock-isolation.md
   - features/transitive-drift-and-ripple-guards.md
   - features/project-upgrade-and-multi-harness-doctor.md
+  - features/lifecycle-hooks-and-ci-gate.md
   - decisions/adr-012-structural-quality-and-drift-detection.md
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
-last_updated: 2026-11-21
-applies_to_digest: "sha256:f5e785862375fdd7"
+  - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
+last_updated: 2026-11-24
+applies_to_digest: "sha256:2af61670222fa04c"
 applies_to_count: 2
 ---
 
@@ -23,13 +25,15 @@ applies_to_count: 2
 
 ## Overview
 
-This subsystem eliminates multi-developer Git merge collisions on derived wiki files, automates brownfield repository onboarding, centralizes subprocess Git operations, and allows teams to graduate gradually into strict governance enforcement.
+This subsystem eliminates multi-developer Git merge collisions on derived wiki files, automates brownfield repository onboarding, centralizes subprocess Git operations, and allows teams to combine low-friction local iteration (`balanced`) with strict CI Pull Request gating (`strict`).
 
 ## Core capabilities
 
 ### 1. Centralized Git layer (`src/brain79/core/git_ops.py`)
 All Git invocations route through `core/git_ops.py` with `shell=False`, explicit timeouts, UTF-8 / `-c core.quotepath=false` handling, and structured exceptions (`NotAGitRepoError`, `GitTimeoutError`, `GitError`):
-- Repository status and history helpers (`git_dirty_paths`, `git_ls_files`, `git_recent_file_churn`, `GitSessionCache`).
+- Repository status, diff, and history helpers (`git_dirty_paths`, `git_ls_files`, `git_diff_range_names`, `git_recent_file_churn`, `GitSessionCache`).
+- `git_diff_range_names()` validates `base_ref` and `head_ref` against option/range injection, executes three-dot `diff --name-only -z`, and falls back to two-dot diff only on merge-base/shallow-history failures.
+- `git_ls_files()` raises `GitError` on non-zero exit so `WorkspaceIndex.build()` cleanly falls back to filesystem scanning in containerized or dubious-ownership CI runners.
 - Local-only Git config helpers (`git_config_get_local`, `git_config_set_local`) used by the `INDEX.md` merge driver setup.
 
 ### 2. Merge-conflict-free derived state and deterministic rebuilds
@@ -51,8 +55,8 @@ All Git invocations route through `core/git_ops.py` with `shell=False`, explicit
   3. Recent Git churn (`git_recent_file_churn()`, gracefully degrading to `0` on non-Git repos).
 - **Zero-overlap guarantee by construction**: narrows parent patterns to single-level globs whenever child directories are proposed, guaranteeing zero pairwise `applies_to` file intersection across emitted `ModuleProposal` entries.
 
-### 5. Configurable enforcement tiers (`strict` / `balanced` / `advisory`)
-Declared via `enforcement:` in `.brain-79/SCHEMA.md` (default `strict`; configurable via `brain79 init --enforcement <tier>` and preserved by `update-project`):
+### 5. Configurable enforcement tiers (`strict` / `balanced` / `advisory`) and dual-tier CI gate
+Declared via `enforcement:` in `.brain-79/SCHEMA.md` (default `strict`; configurable via `brain79 init --enforcement <tier>` and preserved by `update-project`), while `brain79 ci-check` defaults to `strict` independently (`--enforcement <strict|balanced|advisory|schema>`):
 
 | Guard / check | `strict` (default) | `balanced` | `advisory` |
 |---|---|---|---|
@@ -65,6 +69,7 @@ Declared via `enforcement:` in `.brain-79/SCHEMA.md` (default `strict`; configur
 | Operational Git errors (`git_status_verification_failed`, AST Git errors) | **BLOCK** | **BLOCK** | **WARN** |
 
 - `brain79 lint --strict` exits `1` on `CRITICAL` or `WARNING` under `strict`, exits `1` on `CRITICAL` only under `balanced`/`advisory`, and supports `--fail-on-warnings` to enforce warning failures under any tier.
+- Teams pairing `enforcement: balanced` in `SCHEMA.md` with `brain79 ci-check` (default `strict`) in CI get low-friction local iteration with strict Pull Request protection.
 
 ---
 

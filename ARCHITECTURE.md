@@ -46,14 +46,14 @@ Technical design, component architecture, and mechanical invariants of `brain-79
 
 ## 2. Interface symmetry (MCP subset and CLI superset)
 
-`brain-79` exposes **9 focused FastMCP server tools** as a strict subset of the **24 CLI subcommands**. Automated test suites (`tests/test_symmetry.py`) enforce `MCP_TOOLS` ⊂ `WHITELIST` and parameter parity across retained interfaces.
+`brain-79` exposes **9 focused FastMCP server tools** as a strict subset of the **25 CLI subcommands**. Automated test suites (`tests/test_symmetry.py`) enforce `MCP_TOOLS` ⊂ `WHITELIST` and parameter parity across retained interfaces.
 
-| Category | CLI subcommands (24) | FastMCP server tools (9) |
+| Category | CLI subcommands (25) | FastMCP server tools (9) |
 |:---|:---|:---|
 | **Session & workflow** | `orient`, `session-commit`, `context`, `index`, `ingest` | `brain79_orient`, `brain79_session_commit`, `brain79_context` |
 | **Handoff continuity** | `handoff-write`, `handoff-read`, `handoff-purge` | *Use `brain79_session_commit` / `brain79_orient` or CLI* |
 | **Reading & writing** | `read`, `read-batch`, `write`, `write-many`, `edit`, `list`, `search` | `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_search` |
-| **Governance & health** | `lint`, `schema`, `navigate`, `migrate`, `bootstrap`, `doctor`, `update-project` | `brain79_lint`, `brain79_bootstrap` |
+| **Governance & health** | `lint`, `ci-check`, `schema`, `navigate`, `migrate`, `bootstrap`, `doctor`, `update-project` | `brain79_lint`, `brain79_bootstrap` |
 | **Host CLI only** | `init`, `update` | *N/A (Host setup & self-update operations)* |
 
 ---
