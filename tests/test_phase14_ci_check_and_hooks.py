@@ -1,4 +1,4 @@
-"""Tests for Phase 14 Stage 1: Git diff range resolution and core CI gate engine."""
+"""Tests for Phase 14: Git diff range resolution, ci-check PR gate, passive lifecycle hooks, and composite GitHub Action."""
 
 from __future__ import annotations
 
@@ -250,6 +250,31 @@ def test_run_ci_check_diff_impact_adrs_and_fresh_checkout_drift(tmp_path: Path) 
         for issue in report_broken.issues
     )
 
+    # Orphan article produces lint_status == "WARNING", lint_warnings_count >= 1, and appears in markdown_summary
+    orphan_repo = tmp_path / "orphan_repo"
+    _setup_governed_repo(orphan_repo)
+    orphan_path = orphan_repo / ".brain-79" / "topics" / "unlinked-note.md"
+    orphan_path.parent.mkdir(parents=True, exist_ok=True)
+    orphan_path.write_text(
+        "---\n"
+        "type: topic\n"
+        "summary: unlinked orphan topic\n"
+        "status: active\n"
+        "last_updated: 2026-11-24\n"
+        "---\n\n"
+        "# Unlinked orphan topic\n\n"
+        "Content.\n\n"
+        "---\n\n"
+        "[← Back to Index](../INDEX.md)\n",
+        encoding="utf-8",
+    )
+    with patch("brain79.core.lint_organizational.lint_organizational", return_value=[]):
+        report_orphan = run_ci_check(project_root=orphan_repo, base_ref="main", head_ref="HEAD")
+    assert report_orphan.lint_status == "WARNING"
+    assert report_orphan.lint_warnings_count >= 1
+    assert any(issue["rule"] == "orphan_article" and issue["severity"] == "warning" for issue in report_orphan.issues)
+    assert "unlinked-note.md" in report_orphan.markdown_summary
+
 
 # ---------------------------------------------------------------------------
 # AC-3: Dual-tier enforcement matrix
@@ -422,10 +447,23 @@ def test_lifecycle_hook_session_start_all_clients(
     assert "Brain-79 — Session Cold Start Orientation" in res_cursor["additional_context"]
     assert json.loads(json.dumps(res_cursor, ensure_ascii=True)) == res_cursor
 
-    # 4. Bounded sys.stdin reading (oversized > 1 MB fails open to {})
+    # 4. Bounded sys.stdin reading (oversized > 1 MB fails open to {}, binary UTF-8 succeeds, multi-byte > 1 MB fails open)
     oversized = '{"cwd": "' + ("a" * (MAX_INPUT_BYTES + 100)) + '"}'
     fake_stdin = io.StringIO(oversized)
     monkeypatch.setattr(sys, "stdin", fake_stdin)
+    assert run_lifecycle_hook("session-start", client="claude") == {}
+
+    utf8_payload = json.dumps({"cwd": str(repo), "prompt": "café naïve résumé 日本語"}, ensure_ascii=False).encode("utf-8")
+    bin_stdin = io.TextIOWrapper(io.BytesIO(utf8_payload), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdin", bin_stdin)
+    res_utf8 = run_lifecycle_hook("session-start", client="claude")
+    assert "hookSpecificOutput" in res_utf8
+
+    # Multi-byte UTF-8: 400_000 'é' chars = 400_000 chars (< MAX_INPUT_BYTES) but ~800 KB+, use 600_000 'é' = 1.2 MB
+    multibyte_over = ('{"cwd": "' + ("é" * 600_000) + '"}').encode("utf-8")
+    assert len(multibyte_over) > MAX_INPUT_BYTES
+    bin_over = io.TextIOWrapper(io.BytesIO(multibyte_over), encoding="utf-8")
+    monkeypatch.setattr(sys, "stdin", bin_over)
     assert run_lifecycle_hook("session-start", client="claude") == {}
 
     # 5. Non-object JSON and malformed JSON fail open to {}
@@ -684,6 +722,33 @@ def test_lifecycle_hook_adapters_sync_and_doctor(tmp_path: Path) -> None:
     assert AntigravityHooksAdapter().detect(cli_repo2) is True
     assert CursorHooksAdapter().detect(cli_repo2) is True
 
+    # 7. Cursor version: 2 / version: True repair and Claude flat-entry detection & repair
+    cursor_repo_file = cli_repo2 / ".cursor" / "hooks.json"
+    for bad_ver in (2, True):
+        bad_cursor = json.loads(cursor_repo_file.read_text(encoding="utf-8"))
+        bad_cursor["version"] = bad_ver
+        cursor_repo_file.write_text(json.dumps(bad_cursor, indent=2) + "\n", encoding="utf-8")
+        assert CursorHooksAdapter().diagnose(cli_repo2)
+        assert CursorHooksAdapter().sync(cli_repo2) == [".cursor/hooks.json"]
+        assert CursorHooksAdapter().diagnose(cli_repo2) == []
+
+    claude_repo_file = cli_repo2 / ".claude" / "settings.json"
+    flat_claude = {
+        "hooks": {
+            "SessionStart": [
+                {"type": "command", "command": "brain79 ci-check --lifecycle-hook session-start --client claude", "timeout": 15}
+            ],
+            "Stop": [
+                {"type": "command", "command": "brain79 ci-check --lifecycle-hook stop --client claude", "timeout": 15}
+            ],
+        }
+    }
+    claude_repo_file.write_text(json.dumps(flat_claude, indent=2) + "\n", encoding="utf-8")
+    claude_issues = ClaudeHooksAdapter().diagnose(cli_repo2)
+    assert any("flat" in msg.lower() for msg in claude_issues)
+    assert ClaudeHooksAdapter().sync(cli_repo2) == [".claude/settings.json"]
+    assert ClaudeHooksAdapter().diagnose(cli_repo2) == []
+
 
 # ---------------------------------------------------------------------------
 # Stage 4: CLI dispatcher (`brain79 ci-check`), action.yml, and ci.yml
@@ -793,6 +858,24 @@ def test_cli_ci_check_git_errors_enforcement_and_formats(
     hook_json = json.loads(hook_out)
     assert "injectSteps" in hook_json
 
+    # Explicit global set_project_root(repo) overrides payload["cwd"]
+    from brain79.config import set_project_root
+
+    other_dir = tmp_path / "other_empty_dir"
+    other_dir.mkdir()
+    set_project_root(repo)
+    try:
+        monkeypatch.setattr(
+            sys,
+            "stdin",
+            io.StringIO(json.dumps({"hookEventName": "SessionStart", "cwd": str(other_dir), "lastUserInput": "auth"})),
+        )
+        assert dispatch_cmd("ci-check", ["--lifecycle-hook", "session-start", "--client", "auto"]) == 0
+        global_hook_out = json.loads(capsys.readouterr().out)
+        assert "injectSteps" in global_hook_out
+    finally:
+        set_project_root(None)
+
 
 def test_github_action_manifest_and_ci_workflow() -> None:
     """AC-8 / R-4.3, R-4.4, R-4.5: Composite action.yml and ci.yml governance & security checks."""
@@ -850,6 +933,8 @@ def test_github_action_manifest_and_ci_workflow() -> None:
 
     combined_scripts = "\n".join(all_run_scripts)
     assert "$GITHUB_ACTION_PATH" in combined_scripts
+    assert "uv run --no-project --with \"$GITHUB_ACTION_PATH\" brain79" in combined_scripts
+    assert "uv run --no-project python -" in combined_scripts
     assert "set +e" in combined_scripts
     assert "<!-- brain79:ci-check -->" in combined_scripts
     assert "gh api" in combined_scripts

@@ -1232,10 +1232,11 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         )
         parsed = parser.parse_args(sub_args)
         from pathlib import Path
+        from brain79.config import get_explicit_project_root
         from brain79.core.ci_check import run_ci_check, run_lifecycle_hook
         from brain79.core.git_ops import GitError, GitTimeoutError, NotAGitRepoError
 
-        p_root = Path(parsed.project_root).resolve() if parsed.project_root else None
+        p_root = Path(parsed.project_root).resolve() if parsed.project_root else get_explicit_project_root()
 
         if parsed.lifecycle_hook is not None:
             hook_result = run_lifecycle_hook(

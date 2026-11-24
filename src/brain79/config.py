@@ -52,6 +52,14 @@ def set_project_root(path: Path | None) -> None:
         _project_root = path.resolve()
 
 
+def get_explicit_project_root() -> Path | None:
+    """Return the explicitly configured project root from ContextVar or global override, if any."""
+    ctx = _PROJECT_CONTEXT.get()
+    if ctx is not None:
+        return ctx.project_root
+    return _project_root
+
+
 def get_project_root() -> Path:
     """Resolve project root from scoped ProjectContext, explicit override, BRAIN79_PROJECT_ROOT, or ancestor walk."""
     ctx = _PROJECT_CONTEXT.get()

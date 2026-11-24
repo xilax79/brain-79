@@ -12,7 +12,7 @@ related:
   - features/cli.md
   - features/mcp-server.md
   - decisions/adr-020-focused-mcp-surface-and-cli-superset.md
-applies_to_digest: "sha256:ac2b1c0ec4d78eff"
+applies_to_digest: "sha256:d6afaddcb26b91de"
 applies_to_count: 3
 ---
 

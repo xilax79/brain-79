@@ -12,7 +12,7 @@ related:
   - features/cli.md
   - architecture/mcp-server.md
   - features/lifecycle-hooks-and-ci-gate.md
-applies_to_digest: "sha256:f77c086144820027"
+applies_to_digest: "sha256:ce429ff0f4bf4a37"
 applies_to_count: 3
 ---
 

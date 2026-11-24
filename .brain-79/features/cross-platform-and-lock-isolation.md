@@ -10,7 +10,7 @@ related:
   - architecture/roadmap-industrial-scale.md
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
 last_updated: 2026-11-12
-applies_to_digest: "sha256:bed348818df9d481"
+applies_to_digest: "sha256:8d117d09fc0fc314"
 applies_to_count: 2
 ---
 

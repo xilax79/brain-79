@@ -451,7 +451,7 @@ def _serialize_lint_issues(lint_res: WikiLintResult) -> tuple[list[dict[str, Any
                 "rule": "orphan_article",
                 "path": orphan,
                 "line": None,
-                "severity": "info",
+                "severity": "warning",
                 "message": "Article is not reachable from INDEX.md.",
                 "actionable": "Link this article from INDEX.md or a linked article.",
             }
@@ -642,7 +642,17 @@ def _read_hook_payload(stdin_payload: str | None) -> dict[str, Any] | None:
     if stdin_payload is not None:
         raw_text = stdin_payload
     elif sys.stdin is not None and not sys.stdin.isatty():
-        raw_text = sys.stdin.read(MAX_INPUT_BYTES + 1)
+        raw_buf = getattr(sys.stdin, "buffer", None)
+        if raw_buf is not None:
+            raw_bytes = raw_buf.read(MAX_INPUT_BYTES + 1)
+            if len(raw_bytes) > MAX_INPUT_BYTES:
+                return None
+            try:
+                raw_text = raw_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                return None
+        else:
+            raw_text = sys.stdin.read(MAX_INPUT_BYTES + 1)
     else:
         raw_text = ""
 

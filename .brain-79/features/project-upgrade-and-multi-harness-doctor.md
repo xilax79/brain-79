@@ -21,7 +21,7 @@ related:
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
   - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
 last_updated: 2026-11-24
-applies_to_digest: "sha256:6f09d14e5be50d52"
+applies_to_digest: "sha256:88be52d4bc399b20"
 applies_to_count: 17
 ---
 

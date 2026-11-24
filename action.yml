@@ -78,23 +78,23 @@ runs:
           ci-check
           --write-step-summary
           --format json
-          --head "$INPUT_HEAD_REF"
+          "--head=$INPUT_HEAD_REF"
           --enforcement "$INPUT_ENFORCEMENT"
         )
         if [ -n "$INPUT_BASE_REF" ]; then
-          ARGS+=(--base "$INPUT_BASE_REF")
+          ARGS+=("--base=$INPUT_BASE_REF")
         fi
         if [ "$INPUT_FAIL_ON_WARNINGS" = "true" ]; then
           ARGS+=(--fail-on-warnings)
         fi
 
         set +e
-        uv run --with "$GITHUB_ACTION_PATH" brain79 "${ARGS[@]}" > "$REPORT_PATH"
+        uv run --no-project --with "$GITHUB_ACTION_PATH" brain79 "${ARGS[@]}" > "$REPORT_PATH"
         EXIT_CODE=$?
         set -e
 
         export REPORT_PATH EXIT_CODE
-        uv run --with "$GITHUB_ACTION_PATH" python - <<'PY'
+        uv run --no-project python - <<'PY'
         import json
         import os
         from pathlib import Path
@@ -124,30 +124,40 @@ runs:
         if [ "$INPUT_COMMENT_ON_PR" = "true" ] && [ "$EVENT_NAME" = "pull_request" ] && [ -n "$PR_NUMBER" ] && [ -s "$REPORT_PATH" ]; then
           COMMENT_PAYLOAD="${RUNNER_TEMP:-/tmp}/brain79-pr-comment.json"
           MARKER="<!-- brain79:ci-check -->"
-          uv run --with "$GITHUB_ACTION_PATH" python - "$REPORT_PATH" "$COMMENT_PAYLOAD" <<'PY'
+          set +e
+          uv run --no-project python - "$REPORT_PATH" "$COMMENT_PAYLOAD" <<'PY'
         import json
         import sys
         from pathlib import Path
 
-        data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        try:
+            data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        except Exception as exc:
+            sys.stderr.write(f"Failed to parse ci-check JSON report: {exc}\n")
+            sys.exit(1)
+        if not isinstance(data, dict):
+            sys.exit(1)
         body = str(data.get("markdown_summary", "")).strip()
         if "<!-- brain79:ci-check -->" not in body:
             body = "<!-- brain79:ci-check -->\n" + body
         Path(sys.argv[2]).write_text(json.dumps({"body": body}), encoding="utf-8")
         PY
-
-          set +e
-          EXISTING_ID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" 2>/dev/null | head -n 1)
-          if [ -n "$EXISTING_ID" ]; then
-            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$EXISTING_ID" --input - < "$COMMENT_PAYLOAD" >/dev/null 2>&1
+          PAYLOAD_STATUS=$?
+          if [ "$PAYLOAD_STATUS" -ne 0 ]; then
+            echo "::warning::Skipping Brain-79 PR comment because report JSON could not be parsed."
           else
-            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --input - < "$COMMENT_PAYLOAD" >/dev/null 2>&1
+            EXISTING_ID=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --jq ".[] | select((.body // \"\") | contains(\"$MARKER\")) | .id" 2>/dev/null | head -n 1)
+            if [ -n "$EXISTING_ID" ]; then
+              gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$EXISTING_ID" --input - < "$COMMENT_PAYLOAD" >/dev/null 2>&1
+            else
+              gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --input - < "$COMMENT_PAYLOAD" >/dev/null 2>&1
+            fi
+            GH_STATUS=$?
+            if [ "$GH_STATUS" -ne 0 ]; then
+              echo "::warning::Unable to post or update Brain-79 PR comment (gh api exited $GH_STATUS; likely read-only fork token)."
+            fi
           fi
-          GH_STATUS=$?
           set -e
-          if [ "$GH_STATUS" -ne 0 ]; then
-            echo "::warning::Unable to post or update Brain-79 PR comment (gh api exited $GH_STATUS; likely read-only fork token)."
-          fi
         fi
 
         exit "$EXIT_CODE"

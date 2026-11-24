@@ -12,7 +12,7 @@ related:
   - architecture/symmetry.md
   - architecture/dispatcher.md
   - features/lifecycle-hooks-and-ci-gate.md
-applies_to_digest: "sha256:cecd6a5b3f9fb6ce"
+applies_to_digest: "sha256:1767578bfa14d21f"
 applies_to_count: 3
 ---
 

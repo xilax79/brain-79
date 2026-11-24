@@ -1,4 +1,4 @@
-"""Opt-in native lifecycle hook harness adapters (Phase 14 Stage 3: R-3.1, R-3.2, R-3.5)."""
+"""Opt-in native lifecycle hook harness adapters."""
 
 from __future__ import annotations
 
@@ -206,6 +206,7 @@ class ClaudeHooksAdapter:
             expected_cmd = _expected_command("claude", event_arg)
             groups = hooks_obj.get(event_key)
             found_cmds: list[str] = []
+            has_flat_entry = False
             if isinstance(groups, list):
                 for group in groups:
                     if isinstance(group, dict) and isinstance(group.get("hooks"), list):
@@ -213,9 +214,13 @@ class ClaudeHooksAdapter:
                             if _is_brain79_hook_entry(sub):
                                 found_cmds.append(str(sub.get("command", "")))
                     elif _is_brain79_hook_entry(group):
-                        found_cmds.append(str(group.get("command", "")))
+                        has_flat_entry = True
+                        issues.append(
+                            f"{self._rel_path} '{event_key}' contains flat brain79 hook entry; "
+                            "expected grouped '{matcher, hooks}' object."
+                        )
 
-            if not found_cmds:
+            if not found_cmds and not has_flat_entry:
                 issues.append(f"{self._rel_path} is missing '{event_key}' brain79 lifecycle hook.")
             else:
                 for cmd in found_cmds:
@@ -294,7 +299,7 @@ class CursorHooksAdapter:
             return []
 
         data, old_raw, corrupt = _load_json_dict_for_sync(target, dry_run=dry_run)
-        if not isinstance(data.get("version"), int):
+        if type(data.get("version")) is not int or data.get("version") != 1:
             data["version"] = 1
 
         hooks_obj = data.get("hooks")
@@ -317,7 +322,7 @@ class CursorHooksAdapter:
             return parse_issues
 
         issues: list[str] = []
-        if data.get("version") != 1:
+        if type(data.get("version")) is not int or data.get("version") != 1:
             issues.append(f"{self._rel_path} is missing valid 'version': 1.")
 
         hooks_obj = data.get("hooks")

@@ -12,7 +12,7 @@ related:
   - features/team-collaboration-and-onboarding.md
   - features/cli.md
 last_updated: 2026-11-24
-applies_to_digest: "sha256:5c36ba2d09b931c7"
+applies_to_digest: "sha256:491f833364ed2263"
 applies_to_count: 2
 ---
 
