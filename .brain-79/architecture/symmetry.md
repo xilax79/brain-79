@@ -2,7 +2,7 @@
 type: architecture
 summary: enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 26 CLI subcommands
 stability: stable
-last_updated: 2026-11-24
+last_updated: 2026-11-26
 applies_to:
   - src/brain79/cli/dispatch.py
   - src/brain79/server.py
@@ -12,7 +12,7 @@ related:
   - features/cli.md
   - features/mcp-server.md
   - decisions/adr-020-focused-mcp-surface-and-cli-superset.md
-applies_to_digest: "sha256:2cc09ae3909a96c2"
+applies_to_digest: "sha256:f1e4b2287d3812af"
 applies_to_count: 3
 ---
 
@@ -27,7 +27,7 @@ applies_to_count: 3
 Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite inspects:
 - `len(WHITELIST) == 26` CLI subcommands.
 - Every tool registered on `create_mcp_server()` and module-level `mcp` equals `MCP_TOOLS` (9 tools) and maps 1:1 into `WHITELIST` (`mcp_cli_names.issubset(WHITELIST)`).
-- Parameter signatures and defaults for retained MCP tools (`brain79_session_commit`, `brain79_bootstrap`) match their `brain79.core.*` implementations.
+- Parameter signatures and defaults for retained MCP tools (`brain79_session_commit`, `brain79_bootstrap`, `brain79_read_batch`) match their `brain79.core.*` implementations.
 
 ## Operational mapping table
 
@@ -39,7 +39,7 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 | Read `INDEX.md` entrypoint | `brain79 index` | *(CLI only; included in `orient`)* |
 | Inspect schema and templates | `brain79 schema [--type <t>]` | *(CLI only; summary in `orient`)* |
 | Read wiki article | `brain79 read <path> [--sections ...]` | `brain79_read(path, sections?)` |
-| Batch read articles | `brain79 read-batch --file <f>` | `brain79_read_batch(requests)` |
+| Batch read articles | `brain79 read-batch [--paths ...] [--file <f>] [--stdin]` | `brain79_read_batch(requests?, paths?)` |
 | Write wiki article | `brain79 write <path>` | *(Use `brain79_session_commit`)* |
 | Partial in-place edit | `brain79 edit <path>` | `brain79_edit(path, edits, ...)` |
 | Batch write articles | `brain79 write-many --file <f>` | *(Use `brain79_session_commit`)* |
@@ -50,7 +50,7 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 | Write session handoff | `brain79 handoff-write` | *(Use `brain79_session_commit`)* |
 | Read session handoff | `brain79 handoff-read [ref]` | *(CLI only; included in `orient`)* |
 | Purge session handoffs | `brain79 handoff-purge [--apply]` | *(CLI only)* |
-| Bootstrap legacy project | `brain79 bootstrap` | `brain79_bootstrap(scope?, force?, auto_map?, max_modules?)` |
+| Bootstrap legacy project | `brain79 bootstrap [--auto-map \| --no-auto-map]` | `brain79_bootstrap(scope?, force?, auto_map?, max_modules?)` |
 | Sync navigation registry | `brain79 navigate [--regenerate]` | *(CLI only)* |
 | Query relevant context | `brain79 context <query>` | `brain79_context(task, top_n?, paths?)` |
 | Migrate legacy frontmatter | `brain79 migrate [--apply]` | *(CLI only)* |

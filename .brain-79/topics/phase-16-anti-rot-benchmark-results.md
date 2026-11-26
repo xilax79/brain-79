@@ -1,6 +1,6 @@
 ---
 type: topic
-summary: phase 16 longitudinal anti-rot benchmark harness, LedgerPulse testbed, calibrated baseline AC-6 results (FAIL 4/7), and SPEC-202611 remediation tracker
+summary: phase 16 longitudinal anti-rot benchmark harness, LedgerPulse testbed, calibrated baseline AC-6 results, and SPEC-202611 remediation tracker
 status: active
 applies_to:
   - benchmarks/anti_rot/*.py
@@ -12,13 +12,15 @@ related:
   - features/lifecycle-hooks-and-ci-gate.md
   - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-26
+applies_to_digest: "sha256:1e7c5b8df4670325"
+applies_to_count: 10
 ---
 
 # Phase 16 — Longitudinal anti-rot benchmark harness and release gate
 
-## Live benchmark status: BASELINE RUN COMPLETE — `FAIL` (4/7), `SPEC-202611` APPROVED
+## Live benchmark status: `SPEC-202611` IMPLEMENTED — `AC-6` LIVE RE-RUN PENDING UAT
 
-The first full 24-session (`S1`–`S12` Arm A & Arm B) + 2 blind-recall live run on `agy 1.5.18` + `gemini-4-hydrogen-low` completed and was re-evaluated with the calibrated evaluator (`GATE_FAIL_EXIT_CODE = 4`). It produced **`Verdict: FAIL` (4/7 criteria passed)**, surfacing 3 real `brain-79` product defects now captured in approved specification `specs/2026-11-agent-ergonomics-and-strict-governance.md` (`SPEC-202611`). Phase 17 (PyPI release) remains blocked until `SPEC-202611` lands and a live re-run achieves `PASS` (`exit 0`).
+The first full 24-session (`S1`–`S12` Arm A & Arm B) + 2 blind-recall live run on `agy 1.5.18` + `gemini-4-hydrogen-low` completed and was re-evaluated with the calibrated evaluator (`GATE_FAIL_EXIT_CODE = 4`). It produced **`Verdict: FAIL` (4/7 criteria passed)**, surfacing 3 real `brain-79` product defects captured in `specs/2026-11-agent-ergonomics-and-strict-governance.md` (`SPEC-202611`). All 5 implementation capabilities (`AC-1`–`AC-5`) are now implemented on `feat/agent-ergonomics-strict-governance`, including `R-5.1` segment-bounded suffix-path matching in `benchmarks/anti_rot/evaluator.py`; the live `AC-6` re-run remains pending UAT approval and global `brain79` installation.
 
 ### Calibrated baseline results (`v0.16.0` on `gemini-4-hydrogen-low`)
 
@@ -31,6 +33,11 @@ The first full 24-session (`S1`–`S12` Arm A & Arm B) + 2 blind-recall live run
 | Structural and drift health | **FAIL** | `0` errors, `0` drift, `3` warnings (`exit 1`) | N/A | `architecture/*.md` lacked `applies_to:` due to `bootstrap` example & default |
 | Canonical governance coverage | **FAIL** | `50.0%` | `57.14%` | `bootstrap` `auto_map` defaulted to `False` |
 | Blind semantic recall | **FAIL** | `70.83%` | `87.50%` | `brain79_read_batch(paths=[...])` Pydantic rejection + meta-file `top_n` noise |
+
+### Evaluator calibration (`R-5.1` / `AC-5`)
+
+- `benchmarks/anti_rot/evaluator.py` now resolves backticked relative paths containing `/` that do not exist directly at repo root using segment-bounded suffix matching (`rel == pref or rel.endswith("/" + pref)`) against `_collect_non_doc_repo_files(workspace)` (preserving `.brain-79/` and `docs/` exclusions).
+- Non-empty matches prevent false stale-reference flags, while unique matches (`len(matches) == 1`) are recorded in `valid_paths_in_doc` for Arm B canonical coverage (ambiguous matches such as `utils/helpers.py` matching multiple packages are not credited to canonical coverage).
 
 ### UAT runbook (`AC-6` re-run after `SPEC-202611`)
 
@@ -52,7 +59,7 @@ The benchmark suite lives under `benchmarks/anti_rot/` and is orchestrated by `s
 
 - **`workspace.py`**: clones the `LedgerPulse` fixture into two isolated temporary Git repositories (`arm_a` and `arm_b`) from an identical `commit 0`, configures Arm A via `brain79 init --profile software --harnesses agents,agy,agy_hooks --no-git-hooks` with `strict` enforcement, installs `control_agents.md` (`AGENTS.md` + `docs/`) in Arm B, and runs fail-closed pre-flight probes (`agy --output-format stream-json` tool inventory verifying zero `brain79*` tools in Arm B and active lifecycle hooks in Arm A).
 - **`scenarios.py` and `runner.py`**: defines the 12-session sequence (`S1`–`S12`) with byte-identical functional prompts, executes cold-start `agy` sessions (`gemini-4-hydrogen-low`, `--effort low`), commits cleanly between sessions (`git add -A && git commit`), collects `stream-json` token/tool telemetry, runs fixture unit + hidden contract tests, and records Arm A `brain79 stats --format json` and `brain79 ci-check --format json --enforcement strict` snapshots into JSONL.
-- **`evaluator.py`**: computes active-doc rot rate (excluding superseded/archived/changelog docs, paired with minimum reference-density checks), canonical `src/**` governance coverage, `orient_chars` and doc-read token footprint, `S9` (Type A) / `S10` (Type B) triage compliance, and autonomous completion rate.
+- **`evaluator.py`**: computes active-doc rot rate (excluding superseded/archived/changelog docs, paired with minimum reference-density checks, and segment-bounded package-relative suffix matching), canonical `src/**` governance coverage, `orient_chars` and doc-read token footprint, `S9` (Type A) / `S10` (Type B) triage compliance, and autonomous completion rate.
 - **`recall.py` and `deny_src_reads.py`**: executes blind semantic-recall probes using a temporary `.agents/hooks.json` `PreToolUse` hook that denies `src/` reads while keeping `src/` intact on disk, requests structured `--json-schema` responses (`RECALL_JSON_SCHEMA`), verifies zero `src/` reads in `stream-json`, and scores 24 atomic factual assertions (including negative checks against superseded `S4` rules).
 - **`gate.py`**: evaluates the 7 mandatory release gate criteria and writes `results.json` and `report.md`.
 
@@ -96,7 +103,7 @@ The benchmark suite lives under `benchmarks/anti_rot/` and is orchestrated by `s
 
 ## Offline dry-run verification summary
 
-- **Offline test coverage**: `tests/test_phase16_fixture_and_isolation.py`, `tests/test_phase16_runner.py`, and `tests/test_phase16_evaluator_and_gate.py` verify fixture integrity, Arm B isolation probes, 12-session `--mode dry-run` execution with simulated timeout logging, rot/coverage/triage scoring, 24-assertion recall scoring with `.agents/hooks.json` cleanup, and `--mode evaluate` report reproduction.
+- **Offline test coverage**: `tests/test_phase16_fixture_and_isolation.py`, `tests/test_phase16_runner.py`, `tests/test_phase16_evaluator_and_gate.py`, and `tests/test_phase17_evaluator_suffix_matching.py` verify fixture integrity, Arm B isolation probes, 12-session `--mode dry-run` execution with simulated timeout logging, rot/coverage/triage scoring, segment-bounded suffix matching, 24-assertion recall scoring with `.agents/hooks.json` cleanup, and `--mode evaluate` report reproduction.
 - **Type safety**: `uv run mypy src tests benchmarks/anti_rot scripts/run_anti_rot_benchmark.py` verifies strict typing across the harness and tests.
 
 ---

@@ -144,7 +144,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-1 — Profile-aware `auto_map` default, disjoint bootstrap examples, and template guidance
 - **Verifies**: `R-1.1`, `R-1.2`, `R-1.4`, `R-1.5`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_bootstrap_orient_templates.py`
 - **Given**: repositories initialized with `brain79 init --profile software` (containing Python/JS files under `src/`, plus a flat non-`src/` repo and an empty repo) and `brain79 init --profile general`.
 - **When**: `brain79_bootstrap()` and CLI `brain79 bootstrap` are called with default arguments (`auto_map=None`), with explicit `auto_map=False` / `--no-auto-map`, and `generate_frontmatter_template()` is called for `architecture` and `feature`.
 - **Then**: default `software` bootstrap resolves `auto_map=True`, emits disjoint partitioning guidance (`overview.md` umbrella `.brain-79/features/*.md` / `README.md`, `stack.md` manifest files, `auto_map` source modules) with zero hardcoded `src/**` failures on flat/empty repos and sentence-case `summary:`; `general` profile and `--no-auto-map` skip `auto_map`; `generate_frontmatter_template()`, `templates/SCHEMA.md`, and `templates/AGENTS.md` include `applies_to:` and concise public-signature/constants guidance without re-introducing pruned MCP tool names.
@@ -152,7 +152,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-2 — `brain79_orient` schema parity, slot-stealing fix, and bounded unread-article reminder
 - **Verifies**: `R-1.3`, `R-2.4`, `R-4.1`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_bootstrap_orient_templates.py`
 - **Given**: a `software` wiki configured with `enforcement: strict` containing `INDEX.md`, `SCHEMA.md`, 6 active articles, 1 `superseded` article, and a second large-wiki fixture with 25 active articles.
 - **When**: `brain79_orient(task="review pricing and late fee rules")` is called without `paths`.
 - **Then**: `Active Schema Summary` marks `applies_to` as strict-required for `architecture/` and `features/`; `INDEX.md` and `SCHEMA.md` do not steal `top_n` inline slots; active articles are inlined over the `superseded` article within `MAX_ORIENT_INLINE_CHARS`; the output appends a `brain79_read_batch(paths=[...])` reminder excluding `INACTIVE_STATUSES` and capped at `<= 20` paths with `(+N more in INDEX.md)` on the 25-article wiki.
@@ -160,7 +160,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-3 — `brain79_read_batch` MCP and CLI normalization, wire-schema check, and error handling
 - **Verifies**: `R-2.1`, `R-2.2`, `R-2.3`, `R-2.5`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_read_batch_parity.py`
 - **Given**: a wiki with 3 articles, the FastMCP server (`mcp.list_tools()`), and CLI `brain79 read-batch`.
 - **When**: invoked via `brain79_read_batch(paths=[...])`, `brain79_read_batch(requests=["a.md", {"path": "b.md", "sections": ["Overview"]}])`, nested `args={"paths": [...]}`, overlapping `paths` + `requests`, empty/malformed inputs (`[123]`, `[{}]`), and CLI `brain79 read-batch --paths a.md b.md` + `--stdin` string array.
 - **Then**: valid calls return deterministic deduplicated markdown in both MCP and CLI; invalid or empty calls return an actionable usage error without unhandled exceptions; `await mcp.list_tools()` confirms `brain79_read_batch` exposes a flat schema free of nested `anyOf` inside `array.items`; `MCP_TOOLS` remains 9 and CLI `WHITELIST` remains 26.
@@ -168,7 +168,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-4 — Strict-mode `unanchored_governance_article` pre-flight parity and `check_file_health`
 - **Verifies**: `R-3.1`, `R-3.2`, `R-3.3`, `R-3.4`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_strict_preflight_parity.py`
 - **Given**: test wikis under `software` (`strict`, `balanced`, `advisory`) and `general` (`strict`).
 - **When**: `commit_session`, `write_article` / `brain79_edit`, and `write_many_articles` attempt to commit active `architecture/` and `features/` articles lacking `applies_to:`, as well as `status: planned` / `status: superseded` / `stability: deprecated` articles and `force_validation_skip=True` writes.
 - **Then**: under `software` + `strict`, active unanchored writes fail atomically with `ValidationError(rule="unanchored_governance_article")`, zero disk mutations, and all offending paths listed in one response; `planned`/`superseded`/`deprecated`, `general` profile, `balanced`/`advisory`, and `force_validation_skip=True` succeed, with `check_file_health()` emitting an explicit `unanchored_governance_article` warning (never false `lint OK`) for active `software` articles lacking `applies_to:`.
@@ -176,7 +176,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-5 — Segment-bounded suffix matching and unique Arm B canonical coverage in Phase 16 evaluator
 - **Verifies**: `R-5.1`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_evaluator_suffix_matching.py`
 - **Given**: a synthetic workspace containing `src/ledgerpulse/reconciliation/matcher.py`, `src/a/utils/helpers.py`, and `src/b/utils/helpers.py`, with active docs referencing `reconciliation/matcher.py`, `old_reconciliation/matcher.py`, `utils/helpers.py`, `reconciliation/legacy.py`, and `reconcile.py`.
 - **When**: `evaluate_arm()` runs.
 - **Then**: `reconciliation/matcher.py` is valid AND credited to `valid_paths_in_doc` (`len(matches) == 1`); `utils/helpers.py` is not stale but is NOT credited to canonical coverage (`len(matches) == 2`, ambiguous); `old_reconciliation/matcher.py`, `reconciliation/legacy.py`, and `reconcile.py` are all flagged as stale.

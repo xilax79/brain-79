@@ -14,7 +14,7 @@ last_updated: 2026-11-26
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 26 CLI subcommands
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing across 26 commands, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-14 and v0.15.0) and prioritized evolution (phase 15 polyglot AST and stats, phase 16 anti-rot proof, and phase 17 PyPI release)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-15 and v0.16.0) and prioritized evolution (phase 16 anti-rot proof + SPEC-202611, phase 17 PyPI release, and phase 18 external drift lockfile)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, focused 9-tool surface, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
@@ -77,5 +77,5 @@ last_updated: 2026-11-26
 - [Brain-79 — Product vision](product/overview.md) — deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
 
 ### Topics
-- [Phase 16 — Longitudinal anti-rot benchmark harness and release gate](topics/phase-16-anti-rot-benchmark-results.md) — phase 16 longitudinal anti-rot benchmark harness, LedgerPulse testbed, deterministic evaluator, blind recall probe, and pending AC-6 UAT runbook
+- [Phase 16 — Longitudinal anti-rot benchmark harness and release gate](topics/phase-16-anti-rot-benchmark-results.md) — phase 16 longitudinal anti-rot benchmark harness, LedgerPulse testbed, calibrated baseline AC-6 results, and SPEC-202611 remediation tracker
 - [Resolved v0.13.0 defects — Navigation registry completeness, lint index desynchronization, and MCP version skew](topics/v0-13-0-navigation-registry-and-lint-defects.md) — resolved v0.13.0 defects in navigation registry completeness, lint index desynchronization, and stale MCP version skew detection (fixed in v0.13.1)

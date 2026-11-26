@@ -222,17 +222,26 @@ def _add_py_fn_params(fn: ast.FunctionDef | ast.AsyncFunctionDef, symbols: set[s
         symbols.add(fn.args.kwarg.arg)
 
 
-def _collect_repo_basenames(workspace: Path) -> set[str]:
-    basenames: set[str] = set()
-    excluded_dirs = {".git", "__pycache__", ".brain-79", "docs", ".pytest_cache", ".agents"}
+_NON_DOC_EXCLUDED_DIRS: frozenset[str] = frozenset(
+    {".git", "__pycache__", ".brain-79", "docs", ".pytest_cache", ".agents"}
+)
+
+
+def _collect_non_doc_repo_files(workspace: Path) -> list[str]:
+    """Return sorted repo-relative POSIX paths for all non-doc repository files."""
+    rel_files: list[str] = []
     for path in workspace.rglob("*"):
         if not path.is_file():
             continue
-        rel_parts = path.relative_to(workspace).parts
-        if any(part in excluded_dirs for part in rel_parts):
+        rel = path.relative_to(workspace)
+        if any(part in _NON_DOC_EXCLUDED_DIRS for part in rel.parts):
             continue
-        basenames.add(path.name)
-    return basenames
+        rel_files.append(rel.as_posix())
+    return sorted(rel_files)
+
+
+def _collect_repo_basenames(workspace: Path) -> set[str]:
+    return {Path(rel).name for rel in _collect_non_doc_repo_files(workspace)}
 
 
 def _collect_src_symbols(workspace: Path) -> set[str]:
@@ -495,7 +504,8 @@ def evaluate_arm(
     """Compute deterministic rot, canonical coverage, budget, triage, and compliance for one arm."""
     active_docs = _discover_active_docs(arm, workspace)
     src_symbols = _collect_src_symbols(workspace)
-    repo_basenames = _collect_repo_basenames(workspace)
+    repo_rel_files = _collect_non_doc_repo_files(workspace)
+    repo_basenames = {Path(rel).name for rel in repo_rel_files}
 
     total_refs = 0
     stale_refs = 0
@@ -509,8 +519,20 @@ def evaluate_arm(
 
         for pref in path_refs:
             total_refs += 1
-            if (workspace / pref).exists():
-                valid_paths_in_doc.add(pref)
+            norm_pref = pref.replace("\\", "/").lstrip("./")
+            if (workspace / norm_pref).exists():
+                valid_paths_in_doc.add(norm_pref)
+            elif "/" in norm_pref:
+                matches = [
+                    rel for rel in repo_rel_files
+                    if rel == norm_pref or rel.endswith("/" + norm_pref)
+                ]
+                if matches:
+                    if len(matches) == 1:
+                        valid_paths_in_doc.add(matches[0])
+                else:
+                    stale_refs += 1
+                    stale_details.append(f"{rel_doc}: missing path `{pref}`")
             else:
                 stale_refs += 1
                 stale_details.append(f"{rel_doc}: missing path `{pref}`")

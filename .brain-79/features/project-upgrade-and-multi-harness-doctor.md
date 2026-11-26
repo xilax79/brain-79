@@ -20,8 +20,8 @@ related:
   - features/lifecycle-hooks-and-ci-gate.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
   - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
-last_updated: 2026-11-24
-applies_to_digest: "sha256:97116753fc501d9e"
+last_updated: 2026-11-26
+applies_to_digest: "sha256:e007d561a5a53d1e"
 applies_to_count: 17
 ---
 
@@ -78,7 +78,7 @@ The project protocol upgrade and multi-harness doctor subsystem provides non-des
 
 ### 3. Portable multi-harness adapter registry (`core/harnesses/`)
 - **Shared delimited engine (`_delimited.py`)**: manages `<!-- brain79:start vX.Y.Z -->` / `<!-- brain79:end -->` blocks non-destructively across `AGENTS.md` (`AgentsMdAdapter`), `CLAUDE.md` (`ClaudeCodeAdapter`), `.cursor/rules/brain79.mdc` (`CursorRulesAdapter` with MDC frontmatter), and `.github/copilot-instructions.md` (`CopilotAdapter`).
-- **MCP config adapters**: configures `.mcp.json` (`McpJsonAdapter`), `.agents/plugins/brain79/` (`AntigravityAdapter` with `plugin.json`, `mcp_config.json`, and `SKILL.md`), and `.cursor/mcp.json` (`CursorAdapter`) using portable `"command": "brain79"` + `"args": ["--project-root", "."]`.
+- **MCP config adapters**: configures `.mcp.json` (`McpJsonAdapter`), `.agents/plugins/brain79/` (`AntigravityAdapter` with `plugin.json`, `mcp_config.json`, and `SKILL.md` aligned with `brain79_read_batch(paths=...)` and `brain79_bootstrap(auto_map=None)`), and `.cursor/mcp.json` (`CursorAdapter`) using portable `"command": "brain79"` + `"args": ["--project-root", "."]`.
 - **Opt-in lifecycle hook adapters (`lifecycle_hooks.py`)**: `ClaudeHooksAdapter` (`claude_hooks` in `.claude/settings.json`), `AntigravityHooksAdapter` (`agy_hooks` in `.agents/plugins/brain79/hooks.json`), and `CursorHooksAdapter` (`cursor_hooks` in `.cursor/hooks.json`) merge `SessionStart` / `Stop` entries invoking `brain79 ci-check --lifecycle-hook ...` non-destructively, backing up corrupt JSON to `<filename>.bak` (unless `dry_run=True`), and are registered via `get_lifecycle_hook_adapters()` and `--harnesses hooks`.
 - **Selective and opt-in installation**: `brain79 init --harnesses <all|csv>` filters installed adapters; `--install-lifecycle-hooks` on `init` or `update-project` installs all three hook adapters, while `update-project` without `--install-lifecycle-hooks` refreshes only hook adapters already detected on disk.
 - **Tier 2 desktop opt-in**: supports safe registration in host desktop configurations (Claude Desktop, Windsurf) via `--include-desktop` using project-scoped server keys (`brain79-<project_name>`).

@@ -14,8 +14,8 @@ related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-12
-applies_to_digest: "sha256:78f4aec3b31971e1"
+last_updated: 2026-11-26
+applies_to_digest: "sha256:078ec6ee9c943408"
 applies_to_count: 4
 ---
 
@@ -43,7 +43,7 @@ We introduced **Phase 3: Zero-Turn Session Execution**, completing the Two-Call 
 
 1. **Section-Projected & Batch Reading (`brain79_read` with `sections` & `brain79_read_batch`)**:
    - `read_article(path, sections=[...])`: Extracts only YAML frontmatter, `# H1`, and the requested `## H2` sections (case-insensitive substring/equality matching).
-   - `read_batch_articles(requests)`: Reads multiple articles in a single call, supporting section projection per request.
+   - `read_batch_articles(requests, paths)`: Reads multiple articles in a single call, supporting section projection per request, `paths=[...]` normalization via `normalize_batch_requests()`, and unified formatting via `format_batch_results()`.
    - **Governing ADR Hints**: Both single and batch reads automatically append active governing ADR hints (`💡 Linked ADRs: decisions/adr-...`) extracted from `related` frontmatter and markdown links.
 
 2. **1-Call Atomic Session Finalization (`brain79_session_commit` / `brain79 session-commit`)**:
@@ -55,7 +55,7 @@ We introduced **Phase 3: Zero-Turn Session Execution**, completing the Two-Call 
 
 3. **Strict 1:1 Symmetry**:
    - FastMCP tools: `brain79_read` (with `sections`), `brain79_read_batch`, `brain79_session_commit`.
-   - CLI subcommands: `brain79 read <path> [--sections ...]`, `brain79 read-batch (--file JSON | --stdin)`, `brain79 session-commit (--file JSON | --stdin)`.
+   - CLI subcommands: `brain79 read <path> [--sections ...]`, `brain79 read-batch (--paths ... | --file JSON | --stdin)`, `brain79 session-commit (--file JSON | --stdin)`.
 
 ## Consequences
 

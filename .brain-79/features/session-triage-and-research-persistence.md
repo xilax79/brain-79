@@ -15,8 +15,8 @@ related:
   - architecture/roadmap-industrial-scale.md
   - architecture/defect-backlog.md
   - features/handoff-continuity.md
-last_updated: 2026-11-12
-applies_to_digest: "sha256:2b91bb261a003798"
+last_updated: 2026-11-26
+applies_to_digest: "sha256:5452f6909979cb7f"
 applies_to_count: 7
 ---
 
@@ -42,7 +42,7 @@ In `handoff.py` and `session_commit.py`, attempting to finalize a session of typ
 ### 3. Handoff schema ergonomics and path tolerance
 - **Native parameter aliases**: FastMCP, core engines, and CLI dispatch accept `decisions` (merged into `completed_work`), `next_steps` (merged into `pending_work`), and `open_questions` (merged into `gotchas`).
 - **Filler and placeholder filtering**: conversational placeholders (such as `"None"`, `"Ninguna"`, or `"Wait for user"`) are stripped automatically so empty queues remain truly empty.
-- **Path prefix normalization (`normalize_wiki_rel_path`)**: strips redundant leading `.brain-79/` or `./.brain-79/` prefixes so paths passed by agents resolve seamlessly.
+- **Path prefix normalization (`normalize_wiki_rel_path`) & batch ergonomics (`wiki.py`)**: strips redundant leading `.brain-79/` or `./.brain-79/` prefixes so paths passed by agents resolve seamlessly; `normalize_batch_requests()` and `format_batch_results()` power ergonomic `paths`/`requests` batch reads.
 
 ### 4. Profile-aware curation guide (`curate.py`)
 `prepare_curation_guide()` inspects `load_active_schema(wiki_root)` dynamically to:

@@ -31,7 +31,7 @@ related:
   - topics/v0-13-0-navigation-registry-and-lint-defects.md
   - topics/phase-16-anti-rot-benchmark-results.md
 last_updated: 2026-11-26
-applies_to_digest: "sha256:9d52d54f63d1d038"
+applies_to_digest: "sha256:93eb4177afa38ce3"
 applies_to_count: 12
 ---
 

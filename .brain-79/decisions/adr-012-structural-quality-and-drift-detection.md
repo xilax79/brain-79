@@ -17,8 +17,8 @@ related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-011-session-commit-and-batch-reading.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-12
-applies_to_digest: "sha256:51140703770cf524"
+last_updated: 2026-11-26
+applies_to_digest: "sha256:148b1d25d69bb9e6"
 applies_to_count: 6
 ---
 
@@ -44,7 +44,7 @@ We implemented **Phase 4: Structural Article Quality & Deterministic Drift Detec
    - Skeletons support alternatives and synonyms while masking fenced code blocks to prevent false positive heading matches.
    - `brain79_schema()` and `get_schema_documentation()` expose full markdown document skeletons (frontmatter, H1 title, H2 headings, and backlink footer).
    - `check_article_structural_sections` flags missing structural sections with rule `article_missing_required_sections` (severity `warning`).
-   - `check_file_health` provides inline write-time warnings for missing structural sections without hard-aborting saves.
+   - `check_file_health` provides inline write-time warnings for missing structural sections without hard-aborting saves, and enforces strict-mode `unanchored_governance_article` parity via `has_non_empty_applies_to`, `is_unanchored_governance_article`, `unanchored_governance_message`, `unanchored_governance_actionable`, and `build_unanchored_batch_error` (alongside `normalize_batch_requests` and `format_batch_results` in `wiki.py`).
 
 2. **Automatic Backlink Invariant Normalization**:
    - Write normalization (`validate_article_content`, `write_article`, `edit_article`, `commit_session`, and `migrate_wiki`) automatically verifies and injects the standard backlink navigation footer (`[← Volver al Índice](../INDEX.md)`) for any article in a subfolder.

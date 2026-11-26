@@ -2,7 +2,7 @@
 type: architecture
 summary: high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 stability: stable
-last_updated: 2026-11-24
+last_updated: 2026-11-26
 applies_to:
   - README.md
   - USER_GUIDE.md
@@ -13,7 +13,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:1b512fea3b3e3342"
+applies_to_digest: "sha256:ef76a2ff4a7af5d0"
 applies_to_count: 39
 ---
 

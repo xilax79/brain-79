@@ -2,7 +2,7 @@
 type: feature
 summary: team-safe Git collaboration, git-ignored derived caches with deterministic rebuilds, 3-way INDEX.md merge driver, bootstrap --auto-map, centralized git_ops, and dual-tier enforcement
 status: shipped
-version: 0.15.0
+version: 0.16.0
 applies_to:
   - src/brain79/core/auto_map.py
   - src/brain79/core/git_ops.py
@@ -16,7 +16,7 @@ related:
   - decisions/adr-012-structural-quality-and-drift-detection.md
   - decisions/adr-014-centralized-locks-and-cross-platform-io.md
   - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
-last_updated: 2026-11-24
+last_updated: 2026-11-26
 applies_to_digest: "sha256:2af61670222fa04c"
 applies_to_count: 2
 ---
@@ -48,12 +48,10 @@ All Git invocations route through `core/git_ops.py` with `shell=False`, explicit
   - Deterministically merges `## Quick navigation` entries (respecting single-side deletions, preserving additions, re-extracting from disk on concurrent edits) and writes canonically sorted LF output with exit code `0`.
 - Wired automatically via `.brain-79/.gitattributes` (`INDEX.md merge=brain79-index`) and local `.git/config` during `init` (opt-out: `--no-merge-driver`), `update-project`, and `doctor --fix`.
 
-### 4. Automated brownfield onboarding (`src/brain79/core/auto_map.py`)
-- `brain79 bootstrap --auto-map [--max-modules N]` (and `brain79_bootstrap(auto_map=True, max_modules=N)`) analyzes repositories using stdlib-only signals:
-  1. Package manifests (`pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`).
-  2. Bounded directory topology (`depth <= 3`, `followlinks=False`, capped at `max_walk_files=5000`).
-  3. Recent Git churn (`git_recent_file_churn()`, gracefully degrading to `0` on non-Git repos).
-- **Zero-overlap guarantee by construction**: narrows parent patterns to single-level globs whenever child directories are proposed, guaranteeing zero pairwise `applies_to` file intersection across emitted `ModuleProposal` entries.
+### 4. Automated brownfield onboarding (`src/brain79/core/auto_map.py`, `bootstrap.py`)
+- `brain79 bootstrap` (`auto_map: bool | None = None`) resolves `None` to `True` when `active_schema.profile == "software"` (opt-out via `--no-auto-map` or `auto_map=False`) and `False` under `profile == "general"`.
+- Analyzes repositories using stdlib-only signals: package manifests (`pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`), bounded directory topology (`depth <= 3`, `followlinks=False`, capped at `max_walk_files=5000`), and recent Git churn (`git_recent_file_churn()`, gracefully degrading to `0` on non-Git repos).
+- **Disjoint partitioning & zero-overlap guarantee**: `auto_map` narrows parent patterns to single-level globs whenever child directories are proposed; `bootstrap` derives `architecture/overview.md` (intra-wiki `.brain-79/features/*.md` umbrella / detected root docs, sentence-case `summary:`) and `architecture/stack.md` (detected manifest files only) without hardcoded `src/**` globs, degrading gracefully on empty repositories and noting `allow_overlapping_governance: true` for intentional cross-cutting docs.
 
 ### 5. Configurable enforcement tiers (`strict` / `balanced` / `advisory`) and dual-tier CI gate
 Declared via `enforcement:` in `.brain-79/SCHEMA.md` (default `strict`; configurable via `brain79 init --enforcement <tier>` and preserved by `update-project`), while `brain79 ci-check` defaults to `strict` independently (`--enforcement <strict|balanced|advisory|schema>`):
@@ -62,6 +60,7 @@ Declared via `enforcement:` in `.brain-79/SCHEMA.md` (default `strict`; configur
 |---|---|---|---|
 | Core structural integrity (YAML, required fields/enums, path containment, pure `INDEX.md`) | **BLOCK** | **BLOCK** | **BLOCK** |
 | Hard Session Ripple Gate (`unresolved_session_ripple`) | **BLOCK** | **WARN** | **WARN** |
+| Unanchored governance article (`unanchored_governance_article`) | **BLOCK** | **WARN** | **WARN** |
 | `verified_articles` Guards A & B (structural / umbrella) | **BLOCK** | **BLOCK** | **WARN** |
 | `verified_articles` Guard C (Python AST public API diff) | **BLOCK** | **WARN** | **WARN** |
 | Anti-Sprawl Overlap (`anti_sprawl_overlap_violation`) | **BLOCK** | **BLOCK** | **WARN** |
@@ -70,6 +69,10 @@ Declared via `enforcement:` in `.brain-79/SCHEMA.md` (default `strict`; configur
 
 - `brain79 lint --strict` exits `1` on `CRITICAL` or `WARNING` under `strict`, exits `1` on `CRITICAL` only under `balanced`/`advisory`, and supports `--fail-on-warnings` to enforce warning failures under any tier.
 - Teams pairing `enforcement: balanced` in `SCHEMA.md` with `brain79 ci-check` (default `strict`) in CI get low-friction local iteration with strict Pull Request protection.
+
+### 6. Clean context discovery and schema parity (`context.py`, `orient.py`)
+- `context.py` and `orient.py` exclude `INDEX.md` and `SCHEMA.md` before `top_n` truncation so meta-files never consume inline article slots, and prefer active articles over `INACTIVE_STATUSES`.
+- `orient()` marks `applies_to` as strict-required in `Active Schema Summary` under `software` + `strict` and appends a bounded reminder of remaining unread active articles (`<= 20` paths with `(+N more in INDEX.md)` when truncated) fetchable via `brain79_read_batch(paths=[...])`, even when lexical task tokens match zero ranked articles.
 
 ---
 

@@ -15,8 +15,8 @@ applies_to:
 related:
   - architecture/roadmap-industrial-scale.md
   - features/version-governance.md
-last_updated: 2026-11-17
-applies_to_digest: "sha256:95fb61597d81730d"
+last_updated: 2026-11-26
+applies_to_digest: "sha256:e7d4de39a9ce14c7"
 applies_to_count: 6
 ---
 
@@ -52,7 +52,7 @@ We implemented **Phase 5: Single-Source Semantic Versioning and Mechanical Relea
 
 2. **FastMCP Server Version Exposure:**
    - In `src/brain79/server.py`, `__version__` is imported from `brain79` and passed explicitly to `FastMCP("brain79", version=__version__, ...)`.
-   - MCP client harnesses (Cursor, Claude Desktop, Pi) receive accurate package version metadata in the JSON-RPC `initialize` handshake response.
+   - MCP client harnesses (Cursor, Claude Desktop, Pi) receive accurate package version metadata in the JSON-RPC `initialize` handshake response alongside registered tools such as `brain79_bootstrap`.
 
 3. **Semantic Versioning Policy (`MAJOR.MINOR.PATCH`):**
    - **`MAJOR` (`X.0.0`)**: Paradigm shifts in the session protocol, breaking schema changes, or CLI/MCP tool restructuring.

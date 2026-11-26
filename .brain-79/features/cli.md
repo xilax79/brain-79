@@ -3,7 +3,7 @@ type: feature
 summary: 26 deterministic CLI subcommands for managing wiki knowledge, context telemetry, CI governance, lifecycle hooks, linters, and handoffs
 status: shipped
 version: 0.16.0
-last_updated: 2026-11-24
+last_updated: 2026-11-26
 applies_to:
   - src/brain79/cli/dispatch.py
   - src/brain79/cli/io.py
@@ -12,7 +12,7 @@ related:
   - architecture/symmetry.md
   - architecture/dispatcher.md
   - features/lifecycle-hooks-and-ci-gate.md
-applies_to_digest: "sha256:7dc490ef2aea3b15"
+applies_to_digest: "sha256:185a7f20911d6083"
 applies_to_count: 3
 ---
 
@@ -26,7 +26,7 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 
 ## Subcommands and options
 
-| Command | Description | Inputs / Flags | Exit Codes |
+| Command | Description | Inputs / flags | Exit codes |
 |---|---|---|---|
 | `brain79 init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root`, `--harnesses`, `--install-lifecycle-hooks`, `--install-git-hooks` / `--no-git-hooks`, `--upgrade`, `--include-desktop` | `0`, `1`, `2` |
 | `brain79 update-project` | Non-destructively upgrade templates, schemas, and harnesses | `[--project-root]`, `[--install-lifecycle-hooks]`, `[--dry-run]`, `[--commit-transition]`, `[--include-desktop]` | `0`, `1` |
@@ -38,7 +38,7 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 | `brain79 index` | Print `INDEX.md` entry point | None | `0`, `3` |
 | `brain79 schema` | Print schema rules and frontmatter templates | `[--type <type>]` | `0` |
 | `brain79 read` | Read a wiki article by relative path | `<path>`, `[--sections ...]` | `0`, `3` |
-| `brain79 read-batch` | Batch read multiple articles from JSON payload file | `--file` | `0`, `1`, `3` |
+| `brain79 read-batch` | Batch read multiple articles from paths or JSON payload | `--paths`, `--file`, `--stdin` | `0`, `1`, `2`, `3` |
 | `brain79 write` | Write or update a wiki article | `<path>`, `--content-file`, `--content-stdin`, `--force-validation-skip` | `0`, `1`, `3` |
 | `brain79 edit` | Partial in-place text replacement in an article | `<path>`, `--old-text`, `--new-text`, `--edits-file` | `0`, `1`, `3` |
 | `brain79 write-many` | Batch validate and atomically write multiple articles | `--file`, `--stdin` | `0`, `1`, `3` |
@@ -53,7 +53,7 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 | `brain79 context` | Retrieve relevant articles via 3-signal ranking | `<task>`, `[--paths ...]` | `0` |
 | `brain79 migrate` | Apply or preview V3 frontmatter migration | `[--apply]`, `[--suggest-relocations]` | `0`, `1` |
 | `brain79 lint` | Run organizational linter | `[--strict]`, `[--fail-on-warnings]`, `[--suggest-extract]`, `[--format json]` | `0`, `1` |
-| `brain79 bootstrap` | Generate project scan manifest | `[--scope <scope>]`, `[--auto-map]`, `[--max-modules <n>]`, `[--force]` | `0` |
+| `brain79 bootstrap` | Generate project scan manifest | `[--scope <scope>]`, `[--auto-map \| --no-auto-map]`, `[--max-modules <n>]`, `[--force]` | `0` |
 
 ## Usage examples
 
