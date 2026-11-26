@@ -106,30 +106,6 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 
 ---
 
-## Phase 14 (`v0.15.0`) — Passive lifecycle hooks and CI PR gate (P0, shipped)
-
-Archived specification: `specs/archive/phase-14-lifecycle-hooks-and-ci-gate.md` (`SPEC-014`). Living manual: [lifecycle-hooks-and-ci-gate.md](../features/lifecycle-hooks-and-ci-gate.md); changelog: [v0-15-0.md](../changelog/v0-15-0.md).
-
-Goal: close the voluntary-compliance gap where agents ignore `AGENTS.md`, and make `.brain-79/` immediately valuable to human reviewers during code review.
-
-- **Native agent lifecycle hooks (`--install-lifecycle-hooks`)**: opt-in adapters in `core/harnesses/lifecycle_hooks.py` for Claude Code (`.claude/settings.json`), Antigravity (`.agents/plugins/brain79/hooks.json`), and Cursor (`.cursor/hooks.json`) invoking `brain79 ci-check --lifecycle-hook <session-start|stop>` cross-platform with fail-open `{}` safety and loop-immunity guards.
-- **Reusable GitHub Action PR gate (`brain79 ci-check`, `action.yml`)**: read-only `run_ci_check()` engine and composite GitHub Action reporting drifted governing articles, PR diff impact, 1-hop active ADRs, and full structural + organizational lint status via `$GITHUB_STEP_SUMMARY` and idempotent PR comments (`<!-- brain79:ci-check -->`).
-- **Dual-tier decoupled default (`ADR-021`)**: `.brain-79/SCHEMA.md` retains `strict` by default while `brain79 ci-check` enforces `strict` independently in CI so teams can run `balanced` locally with strict mainline PR gating.
-
----
-
-## Phase 15 (`v0.16.0`) — Polyglot AST guards, context budget telemetry, and language-agnostic docs (P1, shipped)
-
-Archived specification: `specs/archive/phase-15-polyglot-ast-and-stats.md` (`SPEC-015`). Living manual: [polyglot-ast-guards-and-stats.md](../features/polyglot-ast-guards-and-stats.md); changelog: [v0-16-0.md](../changelog/v0-16-0.md).
-
-Goal: extend `brain-79`'s mechanical AST moat beyond Python with 10 polyglot parsers across 9 grammar packages (11 parsers total with built-in Python) while keeping the core zero-dependency, add deterministic CLI telemetry for context budgets and coverage, and communicate language-agnostic design clearly in public docs.
-
-- **Polyglot AST Guard C via optional Tree-sitter extra (`brain79[polyglot]`)**: generalize Guard C across the pluggable `LanguageInspector` registry and plug a single declarative `TreeSitterInspector` engine into `core/ast_guards/` covering **TypeScript, TSX, JavaScript/JSX, Go, Rust, Java, C#, PHP, Ruby, and Bash** alongside built-in stdlib `ast` **Python**.
-- **Context budget telemetry (`brain79 stats`, CLI-only)**: read-only command reporting deterministic token estimates, `orient()` budget utilization, workspace & AST coverage, drift summary, and oversized articles (`WHITELIST` expands from 25 to 26 commands; `MCP_TOOLS` remains 9).
-- **Language-agnostic public positioning**: update `README.md`, `USER_GUIDE.md`, and `ARCHITECTURE.md` to emphasize that core drift tracking, `orient()`, hooks, and CI gates work in any language, while `brain79[polyglot]` adds deep AST signature guards and open extension points.
-
----
-
 ## Phase 16 (`v0.17.0`) — Longitudinal anti-rot release gate and agent ergonomics remediation (P1, in progress)
 
 Specifications: `specs/phase-16-longitudinal-anti-rot-gate.md` (`SPEC-016`) and `specs/2026-11-agent-ergonomics-and-strict-governance.md` (`SPEC-202611`, `approved`). Topic summary and calibrated baseline results: [phase-16-anti-rot-benchmark-results.md](../topics/phase-16-anti-rot-benchmark-results.md).
