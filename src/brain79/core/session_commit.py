@@ -292,7 +292,7 @@ def commit_session(
     )
 
     unanchored_offenders: list[tuple[str, str]] = []
-    for rel_str in list(written_article_keys) + list(edited_article_keys):
+    for rel_str in dict.fromkeys(list(written_article_keys) + list(edited_article_keys)):
         try:
             meta, _ = parse_frontmatter(virtual_fs[rel_str])
         except Exception:
@@ -318,7 +318,7 @@ def commit_session(
         manifest_staging.setdefault("articles", {})
 
         # Pass 2a: Target check (applies_to_target_missing) and Anti-Sprawl Guard
-        for rel_str in list(written_article_keys) + list(edited_article_keys):
+        for rel_str in dict.fromkeys(list(written_article_keys) + list(edited_article_keys)):
             content = virtual_fs[rel_str]
             meta, body = parse_frontmatter(content)
             st = str(meta.get("status", "")).lower()

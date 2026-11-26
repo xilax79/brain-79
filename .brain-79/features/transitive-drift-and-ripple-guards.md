@@ -24,7 +24,7 @@ related:
   - features/session-triage-and-research-persistence.md
   - features/polyglot-ast-guards-and-stats.md
 last_updated: 2026-11-24
-applies_to_digest: "sha256:93f8a435e9e618fe"
+applies_to_digest: "sha256:14f749cc4ee3b288"
 applies_to_count: 8
 ---
 

@@ -343,6 +343,13 @@ def _looks_like_code_symbol(token: str) -> bool:
     return False
 
 
+def _normalize_rel_ref(raw: str) -> str:
+    norm = raw.replace("\\", "/")
+    while norm.startswith("./"):
+        norm = norm[2:]
+    return norm.lstrip("/")
+
+
 def _extract_refs_from_doc(text: str) -> tuple[list[str], list[str], list[str]]:
     path_refs: list[str] = []
     basename_refs: list[str] = []
@@ -351,7 +358,7 @@ def _extract_refs_from_doc(text: str) -> tuple[list[str], list[str], list[str]]:
         tok = match.group(1).strip()
         if not tok or " " in tok:
             continue
-        norm = tok.replace("\\", "/").lstrip("./")
+        norm = _normalize_rel_ref(tok)
         if norm.startswith("src/"):
             path_refs.append(norm.rstrip("/"))
         elif (
@@ -519,7 +526,7 @@ def evaluate_arm(
 
         for pref in path_refs:
             total_refs += 1
-            norm_pref = pref.replace("\\", "/").lstrip("./")
+            norm_pref = _normalize_rel_ref(pref)
             if (workspace / norm_pref).exists():
                 valid_paths_in_doc.add(norm_pref)
             elif "/" in norm_pref:

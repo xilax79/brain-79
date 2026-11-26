@@ -15,7 +15,7 @@ related:
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - architecture/roadmap-industrial-scale.md
 last_updated: 2026-11-26
-applies_to_digest: "sha256:078ec6ee9c943408"
+applies_to_digest: "sha256:74112623fd8232a5"
 applies_to_count: 4
 ---
 

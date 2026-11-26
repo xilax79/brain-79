@@ -156,15 +156,20 @@ def test_r5_1_doc_exclusion_invariance_and_dot_slash_normalization(tmp_path: Pat
     (ws / ".brain-79" / "reconciliation").mkdir(parents=True)
     (ws / ".brain-79" / "reconciliation" / "matcher.py").write_text("# wiki\n", encoding="utf-8")
 
+    # Dotfile path under .github/ must preserve its leading dot (F-2)
+    (ws / ".github" / "workflows").mkdir(parents=True)
+    (ws / ".github" / "workflows" / "ci.yml").write_text("name: ci\n", encoding="utf-8")
+
     (ws / "docs" / "guide.md").write_text(
         "# Guide\n\n"
         "- Doc-only path: `reconciliation/matcher.py`\n"
-        "- Dot-slash path: `./pkg/app.py`\n",
+        "- Dot-slash path: `./pkg/app.py`\n"
+        "- Dotfile path: `.github/workflows/ci.yml`\n",
         encoding="utf-8",
     )
 
     res = evaluate_arm("arm_b", ws, _dummy_records("arm_b"))
-    assert res.total_refs == 2
+    assert res.total_refs == 3
     assert res.stale_refs == 1
     assert any("reconciliation/matcher.py" in d for d in res.stale_details)
     assert res.canonical_sources_covered == 1

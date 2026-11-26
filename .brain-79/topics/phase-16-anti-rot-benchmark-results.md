@@ -12,7 +12,7 @@ related:
   - features/lifecycle-hooks-and-ci-gate.md
   - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-26
-applies_to_digest: "sha256:1e7c5b8df4670325"
+applies_to_digest: "sha256:16677e09453866cc"
 applies_to_count: 10
 ---
 
