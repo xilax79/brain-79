@@ -259,31 +259,126 @@ def read_article(
     return content
 
 
+_READ_BATCH_USAGE = (
+    "Accepted forms: paths=['architecture/overview.md', ...] or "
+    "requests=[{'path': 'architecture/overview.md', 'sections': ['Overview']}] "
+    "(string elements in requests are also accepted)."
+)
+
+
+def _normalize_batch_item(item: Any, source_name: str) -> tuple[str, list[str] | None]:
+    """Validate and normalize a single batch-read element into (rel_path, sections)."""
+    if isinstance(item, str):
+        norm_path = normalize_wiki_rel_path(item)
+        if not norm_path:
+            raise ValueError(f"Empty or whitespace-only path in '{source_name}'. {_READ_BATCH_USAGE}")
+        return norm_path, None
+
+    if source_name == "requests" and isinstance(item, dict):
+        raw_path = item.get("path")
+        if not isinstance(raw_path, str):
+            raise ValueError(
+                f"Each dict in 'requests' must contain a string 'path', got {item!r}. {_READ_BATCH_USAGE}"
+            )
+        norm_path = normalize_wiki_rel_path(raw_path)
+        if not norm_path:
+            raise ValueError(
+                f"Empty or whitespace-only 'path' in 'requests' item {item!r}. {_READ_BATCH_USAGE}"
+            )
+        raw_sections = item.get("sections")
+        if raw_sections is not None:
+            if not isinstance(raw_sections, list) or any(
+                not isinstance(sec, str) or not sec.strip() for sec in raw_sections
+            ):
+                raise ValueError(
+                    f"'sections' must be a list of non-empty strings, got {raw_sections!r}. {_READ_BATCH_USAGE}"
+                )
+            norm_sections: list[str] | None = list(raw_sections) if raw_sections else None
+        else:
+            norm_sections = None
+        return norm_path, norm_sections
+
+    expected = "str or dict" if source_name == "requests" else "str"
+    raise ValueError(
+        f"Invalid element in '{source_name}': expected {expected}, got {type(item).__name__} ({item!r}). "
+        f"{_READ_BATCH_USAGE}"
+    )
+
+
+def normalize_batch_requests(
+    requests: Any = None,
+    paths: Any = None,
+) -> list[dict[str, Any]]:
+    """Normalize and deduplicate batch-read inputs from requests and/or paths.
+
+    Accepts string paths or request dicts in ``requests`` and/or string paths in
+    ``paths``, strips leading ``.brain-79/`` prefixes, and deduplicates by
+    ``(normalized_path, tuple(sections) or None)`` in first-seen order
+    (``requests`` followed by ``paths``).
+    """
+    if requests is not None and not isinstance(requests, list):
+        raise ValueError(f"'requests' must be a list of request dicts or path strings. {_READ_BATCH_USAGE}")
+    if paths is not None and not isinstance(paths, list):
+        raise ValueError(f"'paths' must be a list of path strings. {_READ_BATCH_USAGE}")
+
+    normalized: list[dict[str, Any]] = []
+    seen: set[tuple[str, tuple[str, ...] | None]] = set()
+
+    for source_name, items in (("requests", requests or []), ("paths", paths or [])):
+        for item in items:
+            norm_path, norm_sections = _normalize_batch_item(item, source_name)
+            dedup_key = (norm_path, tuple(norm_sections) if norm_sections else None)
+            if dedup_key not in seen:
+                seen.add(dedup_key)
+                normalized.append({"path": norm_path, "sections": norm_sections})
+
+    if not normalized:
+        raise ValueError(
+            f"Empty batch: provide at least one path in 'paths' or 'requests'. {_READ_BATCH_USAGE}"
+        )
+
+    return normalized
+
+
+def format_batch_results(results: list[dict[str, Any]]) -> str:
+    """Format read_batch_articles results into multi-article markdown output."""
+    rendered_parts: list[str] = []
+    for item in results:
+        p = item["path"]
+        err = item.get("error")
+        content = item.get("content")
+        rendered_parts.append(f"## === Article: {p} ===")
+        if err:
+            rendered_parts.append(f"> ❌ Error: {err}")
+        else:
+            rendered_parts.append(content or "(empty)")
+    return "\n\n".join(rendered_parts)
+
+
 def read_batch_articles(
-    requests: list[dict[str, Any]],
+    requests: list[Any] | None = None,
     wiki_root: Path | None = None,
     include_adr_hints: bool = True,
+    paths: list[Any] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Read multiple articles in a single call with optional section projections.
 
     Args:
-        requests: List of dicts, e.g. [{"path": "features/auth.md", "sections": ["Endpoints"]}]
+        requests: List of path strings or dicts, e.g. [{"path": "features/auth.md", "sections": ["Endpoints"]}].
         wiki_root: Optional wiki root Path override.
         include_adr_hints: Whether to append governing ADR footer hints (default: True for batch presentation).
+        paths: Optional list of relative wiki path strings.
 
     Returns:
         List of dicts: [{"path": str, "content": str | None, "error": str | None}]
     """
+    normalized_requests = normalize_batch_requests(requests=requests, paths=paths)
     w_root = (wiki_root or get_wiki_root()).resolve()
     results: list[dict[str, Any]] = []
 
-    for req in requests:
-        path = req.get("path")
-        if not path:
-            results.append({"path": "", "content": None, "error": "Missing 'path' in request."})
-            continue
-
+    for req in normalized_requests:
+        path = req["path"]
         secs = req.get("sections")
         try:
             content = read_article(

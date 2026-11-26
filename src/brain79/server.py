@@ -83,7 +83,8 @@ def brain79_read(
 
 
 def brain79_read_batch(
-    requests: list[dict[str, Any]] | None = None,
+    requests: list[Any] | None = None,
+    paths: list[Any] | None = None,
     tool: str | None = None,
     args: dict[str, Any] | None = None,
 ) -> str:
@@ -91,33 +92,26 @@ def brain79_read_batch(
     Read multiple wiki articles in a single call with optional section projections.
 
     Args:
-        requests: List of request dicts, each with:
+        requests: List of path strings or request dicts, each dict with:
                   - "path": Relative path within .brain-79/ (required)
                   - "sections": Optional list of ## H2 section names to project
+        paths: Optional list of relative paths within .brain-79/.
 
     Returns:
         Formatted markdown output containing the read articles and linked ADR notices.
     """
     if args:
         unpacked = _unpack_nested_args(args)
-        requests = requests if requests is not None else unpacked.get("requests")
-    effective_requests = requests or []
+        if requests is None and "requests" in unpacked:
+            requests = unpacked.get("requests")
+        if paths is None and "paths" in unpacked:
+            paths = unpacked.get("paths")
 
     try:
-        results = wiki_ops.read_batch_articles(effective_requests)
-        rendered_parts: list[str] = []
-        for item in results:
-            p = item["path"]
-            err = item.get("error")
-            content = item.get("content")
-            rendered_parts.append(f"## === Article: {p} ===")
-            if err:
-                rendered_parts.append(f"> ❌ Error: {err}")
-            else:
-                rendered_parts.append(content or "(empty)")
-        return "\n\n".join(rendered_parts)
+        results = wiki_ops.read_batch_articles(requests=requests, paths=paths)
+        return wiki_ops.format_batch_results(results)
     except Exception as exc:
-        return f"Error reading batch: {exc}"
+        return f"Error: {exc}"
 
 
 def brain79_edit(
