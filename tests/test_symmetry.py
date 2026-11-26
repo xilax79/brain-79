@@ -66,8 +66,8 @@ def test_bootstrap_parameter_symmetry() -> None:
     mcp_bs = inspect.signature(brain79_bootstrap)
     core_bs = inspect.signature(run_bootstrap)
     assert "auto_map" in mcp_bs.parameters and "auto_map" in core_bs.parameters
-    assert mcp_bs.parameters["auto_map"].default is False
-    assert core_bs.parameters["auto_map"].default is False
+    assert mcp_bs.parameters["auto_map"].default is None
+    assert core_bs.parameters["auto_map"].default is None
     assert "max_modules" in mcp_bs.parameters and "max_modules" in core_bs.parameters
     assert mcp_bs.parameters["max_modules"].default == 12
     assert core_bs.parameters["max_modules"].default == 12

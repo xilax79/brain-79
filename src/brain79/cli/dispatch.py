@@ -811,11 +811,19 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser.add_argument(
             "--force", action="store_true", help="Force re-run bootstrap even if already initialized"
         )
-        parser.add_argument(
+        am_group = parser.add_mutually_exclusive_group()
+        am_group.add_argument(
             "--auto-map",
             action="store_true",
-            default=False,
-            help="Detect module boundaries and emit zero-overlap applies_to governance proposals",
+            dest="auto_map",
+            default=None,
+            help="Detect module boundaries and emit zero-overlap applies_to governance proposals (default for software profile)",
+        )
+        am_group.add_argument(
+            "--no-auto-map",
+            action="store_false",
+            dest="auto_map",
+            help="Disable automatic module boundary mapping",
         )
         parser.add_argument(
             "--max-modules",

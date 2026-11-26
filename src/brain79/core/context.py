@@ -301,7 +301,12 @@ def rank_context_articles(
     from brain79.core.navigation import extract_title_and_summary, load_registry
 
     w_root = (wiki_root or get_wiki_root()).resolve()
-    snapshot = get_wiki_snapshot(wiki_root=w_root)
+    raw_snapshot = get_wiki_snapshot(wiki_root=w_root)
+    snapshot = [
+        p
+        for p in raw_snapshot
+        if p.relative_to(w_root).as_posix() not in {"INDEX.md", "SCHEMA.md"}
+    ]
     if not snapshot:
         return []
 
@@ -360,6 +365,7 @@ def rank_context_articles(
                         break
 
     # SIGNAL 2: Field-Weighted TF-IDF (Keywords from task)
+    inactive_paths: set[Path] = set()
     keywords = extract_keywords(task or "")
     if keywords:
         n_docs = len(snapshot)
@@ -421,9 +427,11 @@ def rank_context_articles(
                     text_score += tf * idf_map[kw]
                     hits.append(kw)
 
-            # Deprioritize superseded/deprecated articles
+            # Deprioritize inactive (superseded/deprecated/archived/rejected/legacy) articles
             status = str(meta.get("status", "")).lower()
-            if status in ("superseded", "deprecated"):
+            stability = str(meta.get("stability", "")).lower()
+            if status in INACTIVE_STATUSES or stability in INACTIVE_STATUSES:
+                inactive_paths.add(p)
                 text_score *= 0.1
 
             if text_score > 0:
@@ -433,14 +441,18 @@ def rank_context_articles(
                         curr_reasons.append(h)
                 scored_map[p] = (curr_score + text_score, curr_reasons)
 
-    # Initial ranking before Signal 3 expansion
+    # Initial ranking before Signal 3 expansion (prefer active articles over inactive)
     candidates = [
         (score, p, reasons)
         for p, (score, reasons) in scored_map.items()
         if score > 0.0
     ]
     candidates.sort(
-        key=lambda item: (-item[0], item[1].relative_to(w_root).as_posix())
+        key=lambda item: (
+            item[1] in inactive_paths,
+            -item[0],
+            item[1].relative_to(w_root).as_posix(),
+        )
     )
 
     # UNBOUNDED SIGNAL 1: Never truncate deterministic path matches by top_n

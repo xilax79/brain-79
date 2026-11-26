@@ -456,18 +456,71 @@ def _build_manifest(
     scope_files: dict,
     project_type: str,
     warnings: list[str],
+    profile: str = "software",
 ) -> str:
     now_iso = datetime.now(UTC).isoformat()
     scope_label = scope_str if scope_str else "auto"
 
     tree_text = "\n".join(root_signals.get("tree", []))
 
+    key_files_map: dict[str, str] = root_signals.get("key_files", {})
     key_files_blocks: list[str] = []
-    for fname, content in root_signals.get("key_files", {}).items():
+    for fname, content in key_files_map.items():
         key_files_blocks.append(f"### {fname}\n```\n{content}\n```")
     key_files_text = (
         "\n\n".join(key_files_blocks) if key_files_blocks else "No key files found."
     )
+
+    detected_root_docs = [
+        f
+        for f in ("README.md", "README.rst", "README.txt", "README.adoc", "README")
+        if f in key_files_map
+    ]
+    detected_manifests = [
+        f
+        for f in (
+            "pyproject.toml",
+            "setup.py",
+            "setup.cfg",
+            "package.json",
+            "Cargo.toml",
+            "go.mod",
+            "go.sum",
+            "Gemfile",
+            "build.gradle",
+            "pom.xml",
+            "CMakeLists.txt",
+            "Dockerfile",
+            "docker-compose.yml",
+            "docker-compose.yaml",
+            "Makefile",
+        )
+        if f in key_files_map
+    ]
+
+    if profile == "software":
+        overview_targets = [".brain-79/features/*.md"] + detected_root_docs
+        applies_to_block = "\n".join(f"     - {t}" for t in overview_targets)
+        overview_applies_to_yaml = f"\n   applies_to:\n{applies_to_block}"
+        cross_cutting_note = (
+            "\n   For intentional cross-cutting architecture articles that overlap module boundaries, "
+            "declare `allow_overlapping_governance: true` in frontmatter."
+        )
+    else:
+        overview_applies_to_yaml = ""
+        cross_cutting_note = ""
+
+    if detected_manifests:
+        manifest_list = ", ".join(f"`{m}`" for m in detected_manifests)
+        stack_guidance = (
+            f"- `architecture/stack.md` — [include if tech stack signals detected; "
+            f"govern detected manifest/config files only ({manifest_list}), disjoint from module source files]"
+        )
+    else:
+        stack_guidance = (
+            "- `architecture/stack.md` — [include only if tech stack manifest/config signals "
+            "are detected, disjoint from module source files]"
+        )
 
     scope_section = ""
     if scope_str and scope_files:
@@ -538,23 +591,26 @@ You have received a project scan manifest. Follow these steps exactly:
    ---
    type: architecture
    summary: High-level architectural overview and component structure
-   stability: stable
+   stability: stable{overview_applies_to_yaml}
    bootstrap: true
    generated_by: brain79_bootstrap
    generated_at: {now_iso}
    project_type: {project_type}
    last_updated: {now_iso[:10]}
-   ---
+   ---{cross_cutting_note}
 
-4. After writing articles, navigation in `INDEX.md` will synchronize automatically.
-5. Call `brain79_lint()` to verify structural integrity.
+4. When authoring `architecture/` and `features/` living manuals, document public function/method
+   signatures (including parameter names) and key business constants or thresholds rather than
+   bare symbol name lists.
+5. After writing articles, navigation in `INDEX.md` will synchronize automatically.
+6. Call `brain79_lint()` to verify structural integrity.
 
 **Required articles:**
 - `product/overview.md` — Project context, vision, and high-level purpose.
 - `architecture/overview.md` — Project structure, components, and design patterns.
 
 **Conditional articles (write only if evidence exists in this manifest):**
-- `architecture/stack.md` — [include if tech stack signals detected]
+{stack_guidance}
 - `product/domain.md` — [include if domain entities mentioned in README/docs]{conditional_scope_articles}{warnings_section}"""
 
     return manifest
@@ -563,7 +619,7 @@ You have received a project scan manifest. Follow these steps exactly:
 def run_bootstrap(
     scope: str | None = None,
     force: bool = False,
-    auto_map: bool = False,
+    auto_map: bool | None = None,
     max_modules: int = 12,
 ) -> str:
     """Scan project and return a structured manifest for wiki bootstrapping."""
@@ -588,6 +644,12 @@ def run_bootstrap(
             "another bootstrap is already running. Retry in a few seconds."
         ) from exc
 
+    from brain79.core.frontmatter import load_active_schema
+
+    active_schema = load_active_schema(wiki_root)
+    effective_auto_map = (
+        active_schema.profile == "software" if auto_map is None else bool(auto_map)
+    )
 
     scope_str = _normalize_scope(scope)
     warnings: list[str] = []
@@ -609,9 +671,10 @@ def run_bootstrap(
         scope_files,
         project_type,
         warnings,
+        profile=active_schema.profile,
     )
 
-    if auto_map:
+    if effective_auto_map:
         from brain79.core.auto_map import analyze_repository_boundaries, render_auto_map_section
 
         am_report = analyze_repository_boundaries(project_root, max_modules=max_modules)

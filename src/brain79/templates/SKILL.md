@@ -22,7 +22,7 @@ description: Comprehensive operational manual and command reference for the brai
 | Inspect schema and templates | — (CLI only) | `brain79 schema [--type <type>]` |
 | Find articles | `brain79_search(query)` | `brain79 search <query>` |
 | Read article | `brain79_read(path, sections?)` | `brain79 read <path> [--sections ...]` |
-| Batch read articles | `brain79_read_batch(requests)` | `brain79 read-batch --file <path>` |
+| Batch read articles | `brain79_read_batch(paths=["architecture/overview.md", "features/auth.md"])` | `brain79 read-batch --paths <p1> [<p2> ...] \| --file <path>` |
 | Write or update article | Use `brain79_session_commit(writes=[...])` | `brain79 write <path> --content-file /dev/stdin` |
 | Partial edit | `brain79_edit(path, edits)` | `brain79 edit <path> --old-text ... --new-text ...` |
 | Batch write | Use `brain79_session_commit(writes=[...])` | `brain79 write-many --file <path>` |
@@ -58,7 +58,7 @@ degradation. Always run these checks before declaring wiki work complete.
 ### The two-call session protocol (industrial recipe: 2 calls)
 
 1. **Cold start**: `brain79_orient(task?, paths?)` — returns routing table (`INDEX.md`), latest handoff state with promotion warnings, and inlines top governing articles and ADRs.
-2. **Work phase**: edit codebase, optionally inspect specific sections via `brain79_read(path, sections=[...])` or `brain79_read_batch(requests)`.
+2. **Work phase**: edit codebase, optionally inspect specific sections via `brain79_read(path, sections=[...])` or `brain79_read_batch(paths=[...])`.
 3. **Session finalization**: `brain79_session_commit(writes?, edits?, handoff?, session_summary?)` — executes the entire wrap-up in a single atomic all-or-nothing transaction.
    Canonical call pattern:
    ```json

@@ -219,7 +219,7 @@ def brain79_context(
 def brain79_bootstrap(
     scope: str | None = None,
     force: bool = False,
-    auto_map: bool = False,
+    auto_map: bool | None = None,
     max_modules: int = 12,
     tool: str | None = None,
     args: dict[str, Any] | None = None,
@@ -230,7 +230,7 @@ def brain79_bootstrap(
     Args:
         scope: Optional comma-separated list of relative paths to focus on.
         force: If True, re-runs even if bootstrap was already executed.
-        auto_map: If True, detects module boundaries and appends zero-overlap applies_to proposals.
+        auto_map: If True/False, forces or disables auto-mapping; when None (default), enables automatically for software profile wikis.
         max_modules: Maximum number of auto-mapped module proposals to emit (default: 12).
     """
     if args:

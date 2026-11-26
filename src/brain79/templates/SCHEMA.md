@@ -37,6 +37,8 @@ type: feature
 summary: one-line summary for INDEX.md entry
 status: planned  # planned | in_progress | shipped | deprecated | archived | legacy
 version: 1.0.0
+applies_to:
+  - path/or/glob
 last_updated: YYYY-MM-DD
 ---
 
@@ -55,6 +57,8 @@ last_updated: YYYY-MM-DD
 type: architecture
 summary: one-line summary of subsystem or pattern
 stability: experimental  # experimental | stable | archived | legacy
+applies_to:
+  - path/or/glob
 last_updated: YYYY-MM-DD
 ---
 
@@ -99,6 +103,10 @@ Inspect complete document skeletons via `brain79 schema --type <type>`.
 ### Deterministic drift detection (`applies_to`)
 
 Articles declaring `applies_to` paths or globs in frontmatter are continuously checked against git commit timestamps and filesystem modification dates. Stale articles surface as `documentation_drift_suspected` warnings in `brain79 lint` and `brain79_orient`.
+
+### Living manual authoring guidance
+
+When writing or updating `architecture/` and `features/` living manuals, document public function/method signatures (including parameter names) and key business constants or thresholds rather than bare symbol name lists.
 
 ---
 

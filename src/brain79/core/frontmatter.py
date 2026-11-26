@@ -558,17 +558,19 @@ def infer_type_for_path(path: str, schema: ActiveSchema | None = None) -> str | 
 def generate_frontmatter_template(target_type: str, schema: ActiveSchema | None = None) -> str:
     """Generate a ready-to-paste frontmatter snippet for target type."""
     today = date.today().isoformat()
-    active_types = schema.types if schema else load_active_schema().types
+    active_schema = schema if schema is not None else load_active_schema()
+    active_types = active_schema.types
+    applies_line = "applies_to:\n  - <path/or/glob>\n" if active_schema.profile == "software" else ""
 
     if target_type == "feature":
-        return f"---\ntype: feature\nsummary: <one-line summary of feature>\nstatus: planned  # <planned|in_progress|shipped|deprecated|archived|legacy>\nversion: 0.1.0\nlast_updated: {today}\n---"
+        return f"---\ntype: feature\nsummary: <one-line summary of feature>\nstatus: planned  # <planned|in_progress|shipped|deprecated|archived|legacy>\nversion: 0.1.0\n{applies_line}last_updated: {today}\n---"
     elif target_type == "decision":
         dec_schema = active_types.get("decision", {})
         has_deciders = "deciders" in dec_schema.get("required", [])
         deciders_line = "deciders: [author]\n" if has_deciders else ""
         return f"---\ntype: decision\nsummary: <one-line summary of decision>\nstatus: proposed  # <proposed|accepted|superseded|rejected|legacy>\ndate: {today}\n{deciders_line}last_updated: {today}\n---"
     elif target_type == "architecture":
-        return f"---\ntype: architecture\nsummary: <one-line summary of architecture>\nstability: experimental  # <experimental|stable|archived|legacy>\nlast_updated: {today}\n---"
+        return f"---\ntype: architecture\nsummary: <one-line summary of architecture>\nstability: experimental  # <experimental|stable|archived|legacy>\n{applies_line}last_updated: {today}\n---"
     elif target_type == "product":
         return f"---\ntype: product\nsummary: <one-line summary of product vision or domain>\nlast_updated: {today}\n---"
     elif target_type == "context":

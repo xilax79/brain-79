@@ -153,7 +153,13 @@ def orient(
         for loc, tname in sorted(active_schema.location_to_type.items()):
             tcfg = active_schema.types.get(tname, {})
             req_fields = ", ".join(f"`{f}`" for f in tcfg.get("required", []))
-            sections.append(f"  - `{loc}/` → type: `{tname}` (required: {req_fields})")
+            extra_note = ""
+            if active_schema.profile == "software" and loc in ("architecture", "features"):
+                if active_schema.enforcement == "strict":
+                    extra_note = "; `applies_to` is strict-required"
+                else:
+                    extra_note = "; `applies_to` is recommended"
+            sections.append(f"  - `{loc}/` → type: `{tname}` (required: {req_fields}{extra_note})")
     except Exception as exc:
         sections.append(f"*Could not load active schema: {exc}*")
 
@@ -305,13 +311,14 @@ def orient(
             sections.append("No specific governing articles matched the task or paths.")
         else:
             inlined_count = 0
+            surfaced_rels: set[str] = set()
             manifest_articles: list[tuple[str, str, str, str]] = []
             current_chars = sum(len(s) for s in sections)
 
             for score, article_p, reasons in ranked:
                 try:
                     rel_p = article_p.relative_to(w_root).as_posix()
-                    if rel_p == "INDEX.md":
+                    if rel_p in ("INDEX.md", "SCHEMA.md"):
                         continue
                     content = read_article(rel_p, wiki_root=w_root)
                     reasons_str = ", ".join(reasons)
@@ -334,6 +341,7 @@ def orient(
                         ]
                         h2_str = ", ".join(h2_headers) if h2_headers else "*(none)*"
                         manifest_articles.append((rel_p, summary, applies_str, h2_str))
+                        surfaced_rels.add(rel_p)
                     else:
                         sections.append(f"### === Article: {rel_p} ===")
                         sections.append(f"*Relevance Score: {score:.1f} | Match Signals: {reasons_str}*")
@@ -342,6 +350,7 @@ def orient(
                         sections.append("")
                         current_chars += len(article_block)
                         inlined_count += 1
+                        surfaced_rels.add(rel_p)
                 except Exception:
                     continue
 
@@ -355,13 +364,44 @@ def orient(
                     "## 🚨 Mandatory Reading Manifest (Must Read Before Editing)",
                     "",
                     "The governing context exceeds the 64,000-character inline budget. The following governing articles "
-                    "must be read using `brain79_read_batch(requests=[...])` before modifying code or documentation:",
+                    "must be read using `brain79_read_batch(paths=[...])` before modifying code or documentation:",
                     "",
                 ])
                 for rel_p, summary, applies_str, h2_str in manifest_articles:
                     sections.append(f"- **`{rel_p}`**: {summary}")
                     sections.append(f"  - **Governs (`applies_to`)**: {applies_str}")
                     sections.append(f"  - **Key Sections**: {h2_str}")
+
+            if task and not paths:
+                from brain79.core.context import get_wiki_snapshot
+                from brain79.core.frontmatter import INACTIVE_STATUSES
+
+                unread_active: list[str] = []
+                for snap_p in get_wiki_snapshot(wiki_root=w_root):
+                    snap_rel = snap_p.relative_to(w_root).as_posix()
+                    if snap_rel in ("INDEX.md", "SCHEMA.md") or snap_rel in surfaced_rels:
+                        continue
+                    try:
+                        snap_text = snap_p.read_text(encoding="utf-8")
+                        snap_meta, _ = parse_frontmatter(snap_text) if snap_text.startswith("---\n") else ({}, snap_text)
+                        s_status = str((snap_meta or {}).get("status", "")).lower()
+                        s_stability = str((snap_meta or {}).get("stability", "")).lower()
+                        if s_status in INACTIVE_STATUSES or s_stability in INACTIVE_STATUSES:
+                            continue
+                    except Exception:
+                        pass
+                    unread_active.append(snap_rel)
+
+                if unread_active:
+                    shown = unread_active[:20]
+                    extra = len(unread_active) - len(shown)
+                    paths_arg = ", ".join(f'"{p}"' for p in shown)
+                    suffix = f" (+{extra} more in INDEX.md)" if extra > 0 else ""
+                    sections.extend([
+                        "",
+                        f"> **Unread active articles ({len(unread_active)} remaining)**: fetch via "
+                        f"`brain79_read_batch(paths=[{paths_arg}])`{suffix}.",
+                    ])
 
     return "\n".join(sections)
 
