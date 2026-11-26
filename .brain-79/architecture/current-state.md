@@ -56,8 +56,9 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Completion of `v0.16.0` (Phase 15: optional `brain79[polyglot]` Tree-sitter AST Guard C across 10 parsers, read-only `brain79 stats`, language-agnostic docs, and ADR-022).
-- Next up: `v0.17.0` (Phase 16: longitudinal anti-rot proof) and `v0.18.0` (Phase 17: PyPI release).
+- Shipped: `v0.16.0` (Phase 15: optional `brain79[polyglot]` Tree-sitter AST Guard C across 10 parsers, read-only `brain79 stats`, language-agnostic docs, and ADR-022).
+- Active: `v0.17.0` (Phase 16 longitudinal anti-rot proof + approved `SPEC-202611` agent ergonomics and strict governance remediation).
+- Upcoming: `v0.18.0` (Phase 17: PyPI Trusted Publishers release) and `v0.19.0` (Phase 18: external `.brain-79/drift.lock` per approved `SPEC-018`).
 
 ---
 

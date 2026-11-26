@@ -1,6 +1,6 @@
 ---
 type: topic
-summary: phase 16 longitudinal anti-rot benchmark harness, LedgerPulse testbed, deterministic evaluator, blind recall probe, and pending AC-6 UAT runbook
+summary: phase 16 longitudinal anti-rot benchmark harness, LedgerPulse testbed, calibrated baseline AC-6 results (FAIL 4/7), and SPEC-202611 remediation tracker
 status: active
 applies_to:
   - benchmarks/anti_rot/*.py
@@ -16,11 +16,23 @@ last_updated: 2026-11-26
 
 # Phase 16 — Longitudinal anti-rot benchmark harness and release gate
 
-## Live benchmark status: PENDING UAT EXECUTION (`AC-6`)
+## Live benchmark status: BASELINE RUN COMPLETE — `FAIL` (4/7), `SPEC-202611` APPROVED
 
-The Phase 16 evaluation harness (`benchmarks/anti_rot/` and `scripts/run_anti_rot_benchmark.py`) is implemented and verified offline across unit, dry-run, and static type checks. Live 12-session `agy` execution against `gemini-4-hydrogen-low` (`AC-6`) has **not** been executed yet and remains pending user UAT. Phase 17 (PyPI release) stays blocked until live UAT produces a `PASS` verdict.
+The first full 24-session (`S1`–`S12` Arm A & Arm B) + 2 blind-recall live run on `agy 1.5.18` + `gemini-4-hydrogen-low` completed and was re-evaluated with the calibrated evaluator (`GATE_FAIL_EXIT_CODE = 4`). It produced **`Verdict: FAIL` (4/7 criteria passed)**, surfacing 3 real `brain-79` product defects now captured in approved specification `specs/2026-11-agent-ergonomics-and-strict-governance.md` (`SPEC-202611`). Phase 17 (PyPI release) remains blocked until `SPEC-202611` lands and a live re-run achieves `PASS` (`exit 0`).
 
-### UAT runbook (`AC-6`)
+### Calibrated baseline results (`v0.16.0` on `gemini-4-hydrogen-low`)
+
+| Criterion | Status | Arm A (`brain-79`) | Arm B (`AGENTS.md` + `docs/`) | Root cause / note |
+|---|---|---|---|---|
+| Documentation rot rate | **PASS** | `0.82%` | `3.25%` | Arm A has 4x lower rot than Arm B |
+| Autonomous compliance | **PASS** | `12/12` | `12/12` | 100% clean completions on both arms |
+| Session triage discipline | **PASS** | `S9` + `S10` PASS | N/A | Zero churn on Type A; persisted research on Type B |
+| Context budget ceiling | **PASS** | `orient_chars = 2,818` (`0` extra doc tokens) | `17,237` doc-read tokens | Well below `64,000` ceiling |
+| Structural and drift health | **FAIL** | `0` errors, `0` drift, `3` warnings (`exit 1`) | N/A | `architecture/*.md` lacked `applies_to:` due to `bootstrap` example & default |
+| Canonical governance coverage | **FAIL** | `50.0%` | `57.14%` | `bootstrap` `auto_map` defaulted to `False` |
+| Blind semantic recall | **FAIL** | `70.83%` | `87.50%` | `brain79_read_batch(paths=[...])` Pydantic rejection + meta-file `top_n` noise |
+
+### UAT runbook (`AC-6` re-run after `SPEC-202611`)
 
 1. Remove any global `brain79` MCP registration so Arm B remains strictly isolated:
    ```bash

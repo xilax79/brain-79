@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed foundation (phases 0-14 and v0.15.0) and prioritized evolution (phase 15 polyglot AST and stats, phase 16 anti-rot proof, and phase 17 PyPI release)
+summary: project roadmap covering completed foundation (phases 0-15 and v0.16.0) and prioritized evolution (phase 16 anti-rot proof + SPEC-202611, phase 17 PyPI release, and phase 18 external drift lockfile)
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -49,7 +49,7 @@ Per **ADR-019**, upcoming phase specifications are authored under `specs/` outsi
 
 ---
 
-## Completed foundation (phases 0–14)
+## Completed foundation (phases 0–15)
 
 Shipped capabilities live in their dedicated `.brain-79/features/` living manuals and release changelogs; archived pre-ADR-019 phase design specs live under `specs/archive/legacy/`.
 
@@ -75,22 +75,19 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 - **[x] Patch `v0.13.1`**: integrity and version-skew hardening (`BUG-008` navigation registry disk reconciliation, `BUG-009` `index_desync` lint rule, `BUG-010` symmetric semver reverse version skew detection in `orient()`). Changelog: [v0-13-1.md](../changelog/v0-13-1.md).
 - **[x] Phase 13 (`v0.14.0`)**: MCP surface pruning and focused CLI-superset architecture (pruned 13 redundant/administrative MCP wrappers and `--mcp-profile`, standardized 9-tool `MCP_TOOLS` ⊂ 24-command `WHITELIST`, ADR-020). Changelog: [v0-14-0.md](../changelog/v0-14-0.md); archived spec: `specs/archive/phase-13-mcp-surface-pruning.md`.
 - **[x] Phase 14 (`v0.15.0`)**: passive lifecycle hooks and CI PR gate (opt-in `SessionStart`/`Stop` adapters for Claude Code, Antigravity, and Cursor, read-only `brain79 ci-check` engine, composite `action.yml`, dual-tier enforcement, 25-command `WHITELIST`, ADR-021). Living manual: [lifecycle-hooks-and-ci-gate.md](../features/lifecycle-hooks-and-ci-gate.md); changelog: [v0-15-0.md](../changelog/v0-15-0.md); archived spec: `specs/archive/phase-14-lifecycle-hooks-and-ci-gate.md`.
+- **[x] Phase 15 (`v0.16.0`)**: polyglot AST guards, context budget telemetry, and language-agnostic docs (10 Tree-sitter parsers behind `brain79[polyglot]`, read-only `brain79 stats`, 26-command `WHITELIST`, ADR-022). Living manual: [polyglot-ast-guards-and-stats.md](../features/polyglot-ast-guards-and-stats.md); changelog: [v0-16-0.md](../changelog/v0-16-0.md); archived spec: `specs/archive/phase-15-polyglot-ast-and-stats.md`.
 
 ---
 
-## Strategic evolution roadmap (`v0.16.0` onward)
+## Strategic evolution roadmap (`v0.17.0` onward)
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 13 (P0): MCP surface pruning & focused CLI-superset architecture (v0.14.0)  | [x] Shipped
+| Phase 16 (P1): Longitudinal anti-rot release gate + SPEC-202611 (v0.17.0)         | [~] In progress (baseline FAIL 4/7; SPEC-202611 approved)
 +-----------------------------------------------------------------------------------+
-| Phase 14 (P0): Passive lifecycle hooks & GitHub Action PR gate (v0.15.0)          | [x] Shipped
+| Phase 17 (P1): Automated PyPI distribution via Trusted Publishers (v0.18.0)       | [ ] Planned (blocked by Phase 16 AC-6 PASS)
 +-----------------------------------------------------------------------------------+
-| Phase 15 (P1): Polyglot AST guards, stats & language-agnostic docs (v0.16.0)      | [x] Shipped
-+-----------------------------------------------------------------------------------+
-| Phase 16 (P1): Longitudinal anti-rot release gate (v0.17.0)                       | [~] In progress (awaiting AC-6 UAT)
-+-----------------------------------------------------------------------------------+
-| Phase 17 (P1): Automated PyPI distribution via Trusted Publishers (v0.18.0)       | [ ] Planned
+| Phase 18 (P1): External drift lockfile (.brain-79/drift.lock) (v0.19.0)           | [ ] Approved (SPEC-018)
 +-----------------------------------------------------------------------------------+
 | Deferred backlog (demand-driven only): FTS5, worktree isolation, report/graph     | [ ] Deferred
 +-----------------------------------------------------------------------------------+
@@ -102,11 +99,9 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 
 | Priority | Milestone | Target version | Primary objective |
 |---|---|---|---|
-| **P0** | Phase 13 | `v0.14.0` | Prune redundant MCP admin wrappers and `--mcp-profile` before PyPI; formalize MCP hot-path subset vs. full CLI superset (`SPEC-013`). |
-| **P0** | Phase 14 | `v0.15.0` | Eliminate voluntary-compliance failures via native lifecycle hooks and bring drift visibility into team PR reviews (`SPEC-014`). |
-| **P1** | Phase 15 | `v0.16.0` | Extend AST Guard C with 10 polyglot parsers (`brain79[polyglot]`, 11 parsers total with Python), ship read-only `brain79 stats`, and clarify language-agnostic positioning (`SPEC-015`). |
-| **P1** | Phase 16 | `v0.17.0` | Empirically prove anti-rot durability across 12 cold-start `agy` (`gemini-4-hydrogen-low`) sessions against a realistic `AGENTS.md` + `docs/` baseline (`SPEC-016`, awaiting live `AC-6` UAT). |
+| **P1** | Phase 16 + `SPEC-202611` | `v0.17.0` | Empirically prove anti-rot durability across 12 cold-start `agy` (`gemini-4-hydrogen-low`) sessions against a realistic `AGENTS.md` + `docs/` baseline (`SPEC-016`), remediating the 3 real product defects uncovered in the first live run via `SPEC-202611` before re-running `AC-6`. |
 | **P1** | Phase 17 | `v0.18.0` | Publish validated `brain79` package to PyPI via GitHub Actions Trusted Publishers (`uvx brain79`, `uv tool install brain79`, `pipx install brain79`). |
+| **P1** | Phase 18 | `v0.19.0` | Eliminate hash-only frontmatter churn in Git history by moving `applies_to_digest` and `applies_to_count` into a centralized `.brain-79/drift.lock` with a 3-way Git merge driver (`SPEC-018`). |
 | **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`). |
 
 ---
@@ -135,15 +130,15 @@ Goal: extend `brain-79`'s mechanical AST moat beyond Python with 10 polyglot par
 
 ---
 
-## Phase 16 (`v0.17.0`) — Longitudinal anti-rot release gate (P1, in progress — awaiting live `AC-6` UAT)
+## Phase 16 (`v0.17.0`) — Longitudinal anti-rot release gate and agent ergonomics remediation (P1, in progress)
 
-Specification: `specs/phase-16-longitudinal-anti-rot-gate.md` (`SPEC-016`). Topic summary and UAT runbook: [phase-16-anti-rot-benchmark-results.md](../topics/phase-16-anti-rot-benchmark-results.md).
+Specifications: `specs/phase-16-longitudinal-anti-rot-gate.md` (`SPEC-016`) and `specs/2026-11-agent-ergonomics-and-strict-governance.md` (`SPEC-202611`, `approved`). Topic summary and calibrated baseline results: [phase-16-anti-rot-benchmark-results.md](../topics/phase-16-anti-rot-benchmark-results.md).
 
 Goal: empirically prove that `brain-79` wikis resist documentation rot across long multi-session LLM development runs before public PyPI publication.
 
-- **Status**: `In progress (harness verified offline; awaiting live AC-6 UAT gate)`. Phase 17 PyPI release remains blocked until live `AC-6` execution produces a `PASS` verdict.
+- **Status**: `In progress (first live AC-6 baseline run completed with calibrated FAIL 4/7; SPEC-202611 approved to remediate the 3 product defects before re-running AC-6)`. Phase 17 PyPI release remains blocked until live `AC-6` execution produces a `PASS` verdict.
 - **Multi-session cold-start stress harness (`benchmarks/anti_rot/`, `scripts/run_anti_rot_benchmark.py`)**: executes 12 independent cold-start `agy` (`gemini-4-hydrogen-low`) sessions on the `LedgerPulse` polyglot fixture (`S1`–`S12`), comparing `brain-79` (Arm A) against a realistic `AGENTS.md` + `docs/` baseline (Arm B) across feature additions, bugfixes, refactors, Type A/B triage, and module moves.
-- **Objective pre-release validation criteria**: evaluates structural health (`lint --strict`, `ci-check --enforcement strict`), active-doc rot rate, canonical `src/**` governance coverage, `orient_chars` context budget (`brain79 stats`), autonomous compliance (`>= 10/12`), and a mechanically enforced blind semantic-recall probe (`PreToolUse` `src/` deny hook + `--json-schema` 24-assertion scoring).
+- **Approved pre-gate remediation (`SPEC-202611`)**: addresses the 3 real product gaps surfaced by the baseline run — `bootstrap` `auto_map` default and `applies_to` guidance, `brain79_read_batch` ergonomic `paths` alias, `context` ranking exclusion of navigation meta-files, and `strict`-mode structural alignment.
 
 ---
 
@@ -152,6 +147,18 @@ Goal: empirically prove that `brain-79` wikis resist documentation rot across lo
 Goal: eliminate raw Git URL installation friction once Phase 16's longitudinal anti-rot gate passes.
 
 - **Automated PyPI Trusted Publishers**: configure GitHub Actions OIDC release workflow publishing `brain79` (including the `[polyglot]` extra metadata) to PyPI, enabling `uvx brain79`, `uv tool install brain79`, `uv tool install "brain79[polyglot]"`, and `pipx install brain79`.
+
+---
+
+## Phase 18 (`v0.19.0`) — External drift lockfile (P1, approved)
+
+Specification: `specs/phase-18-external-drift-lockfile.md` (`SPEC-018`, `approved`).
+
+Goal: eliminate hash-only frontmatter churn in Git commits and PR diffs without weakening Merkle drift detection, Guard C AST checks, or `git blame` readability.
+
+- **Centralized lockfile (`.brain-79/drift.lock`)**: relocates machine-managed `applies_to_digest` and `applies_to_count` out of individual Markdown frontmatters into a deterministic, sorted JSON lockfile tracked in Git (with `!drift.lock` exception in `.brain-79/.gitignore`).
+- **3-way Git merge driver (`brain79 merge-drift-lock`)**: expands `WHITELIST` from 26 to 27 commands (while keeping `MCP_TOOLS == 9`), resolving concurrent branch merges cleanly and emitting fail-closed conflict sentinels on same-key `add/add` collisions.
+- **Non-destructive migration**: `brain79 migrate-wiki` strips legacy frontmatter digest keys into `drift.lock` cleanly while preserving Guard C git-history semantics.
 
 ---
 
