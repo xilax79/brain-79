@@ -182,9 +182,10 @@ def _valid_recall_payload() -> dict[str, object]:
             "superseded_rule_summary": "Prior policy used 250 bps and 15 grace days without compound parameter.",
         },
         "s5_pricing_refactor": {
+            "module_path": "src/ledgerpulse/pricing.py",
             "current_function_name": "calculate_invoice_grand_total",
             "params": ["invoice", "include_tax"],
-            "removed_function_name": "compute_invoice_total",
+            "include_tax_default": True,
         },
         "s6_js_validator": {
             "schema_module_path": "src/reporter/schema.mjs",
@@ -205,9 +206,9 @@ def _valid_recall_payload() -> dict[str, object]:
             "rounding_strategy": "round_half_even",
         },
         "s11_reconciliation_move": {
-            "current_package_path": "src/ledgerpulse/reconciliation/matcher.py",
+            "current_module_path": "src/ledgerpulse/reconciliation/matcher.py",
             "function_name": "reconcile_payments",
-            "removed_module_path": "src/ledgerpulse/reconcile.py",
+            "report_class_name": "ReconciliationReport",
         },
         "s12_audit_freeze": {
             "python_module_path": "src/ledgerpulse/validation.py",
@@ -644,14 +645,15 @@ def test_recall_probe_assertions_hook_script_and_zero_src_read_check(tmp_path: P
         "grace_days": 15,
     }
     stale_payload["s5_pricing_refactor"] = {
+        "module_path": "src/ledgerpulse/pricing.py",
         "current_function_name": "compute_invoice_total",
         "params": ["invoice"],
-        "removed_function_name": "compute_invoice_total",
+        "include_tax_default": False,
     }
     stale_payload["s11_reconciliation_move"] = {
-        "current_package_path": "src/ledgerpulse/reconcile.py",
+        "current_module_path": "src/ledgerpulse/reconcile.py",
         "function_name": "reconcile_payments",
-        "removed_module_path": "src/ledgerpulse/reconcile.py",
+        "report_class_name": "ReconciliationReport",
     }
     stale_score = score_recall_response(stale_payload, stream_stdout=clean_stream)
     assert stale_score.passed_assertions < stale_score.total_assertions

@@ -63,11 +63,11 @@ RECALL_QUESTIONS: tuple[RecallQuestion, ...] = (
     RecallQuestion("Q1", "S2 bulk discount: module path, function name, threshold, and discount_bps."),
     RecallQuestion("Q2", "S3 invoice voiding: module path, class name, method name, and max_reason_len."),
     RecallQuestion("Q3", "S4/S7 current late fee: module path, function name, params, bps, grace days, and superseded summary."),
-    RecallQuestion("Q4", "S5 pricing refactor: current function name, params, and removed function name."),
+    RecallQuestion("Q4", "S5 pricing refactor: module path, current grand-total function name, params, and whether include_tax defaults to True."),
     RecallQuestion("Q5", "S6 JS validator: schema module path, index module path, function name, and params."),
     RecallQuestion("Q6", "S8 polyglot export: Python module/function, schema_version, and JS module/function."),
     RecallQuestion("Q7", "S10 rounding research: topic, currencies, and rounding strategy."),
-    RecallQuestion("Q8", "S11 reconciliation move: current package path, function name, and removed module path."),
+    RecallQuestion("Q8", "S11 reconciliation move: current matcher module file path (.py), function name, and report class name."),
     RecallQuestion("Q9", "S12 pre-audit freeze: Python module/function, audit_freeze_tag, and JS module/function."),
 )
 
@@ -126,11 +126,12 @@ RECALL_JSON_SCHEMA: dict[str, Any] = {
         },
         "s5_pricing_refactor": {
             "type": "object",
-            "required": ["current_function_name", "params", "removed_function_name"],
+            "required": ["module_path", "current_function_name", "params", "include_tax_default"],
             "properties": {
+                "module_path": {"type": "string"},
                 "current_function_name": {"type": "string"},
                 "params": {"type": "array", "items": {"type": "string"}},
-                "removed_function_name": {"type": "string"},
+                "include_tax_default": {"type": "boolean"},
             },
         },
         "s6_js_validator": {
@@ -171,11 +172,11 @@ RECALL_JSON_SCHEMA: dict[str, Any] = {
         },
         "s11_reconciliation_move": {
             "type": "object",
-            "required": ["current_package_path", "function_name", "removed_module_path"],
+            "required": ["current_module_path", "function_name", "report_class_name"],
             "properties": {
-                "current_package_path": {"type": "string"},
+                "current_module_path": {"type": "string"},
                 "function_name": {"type": "string"},
-                "removed_module_path": {"type": "string"},
+                "report_class_name": {"type": "string"},
             },
         },
         "s12_audit_freeze": {
@@ -273,9 +274,10 @@ RECALL_ASSERTIONS: tuple[RecallAssertion, ...] = (
     ),
     RecallAssertion(
         "A12",
-        "S5 removed function is compute_invoice_total",
-        lambda d: _norm_str(_sec(d, "s5_pricing_refactor").get("removed_function_name"))
-        == "compute_invoice_total",
+        "S5 pricing module is src/ledgerpulse/pricing.py and include_tax defaults to True (NOT removed compute_invoice_total)",
+        lambda d: _norm_str(_sec(d, "s5_pricing_refactor").get("module_path")) == "src/ledgerpulse/pricing.py"
+        and _sec(d, "s5_pricing_refactor").get("include_tax_default") is True
+        and _norm_str(_sec(d, "s5_pricing_refactor").get("current_function_name")) != "compute_invoice_total",
     ),
     RecallAssertion(
         "A13",
@@ -322,16 +324,17 @@ RECALL_ASSERTIONS: tuple[RecallAssertion, ...] = (
     ),
     RecallAssertion(
         "A20",
-        "S11 current reconciliation path is src/ledgerpulse/reconciliation/matcher.py (NOT reconcile.py)",
-        lambda d: _norm_str(_sec(d, "s11_reconciliation_move").get("current_package_path"))
+        "S11 current reconciliation matcher module path is src/ledgerpulse/reconciliation/matcher.py (NOT reconcile.py)",
+        lambda d: _norm_str(_sec(d, "s11_reconciliation_move").get("current_module_path"))
         == "src/ledgerpulse/reconciliation/matcher.py",
     ),
     RecallAssertion(
         "A21",
-        "S11 function is reconcile_payments and removed path is src/ledgerpulse/reconcile.py",
+        "S11 reconciliation exposes reconcile_payments and ReconciliationReport (NOT removed reconcile.py)",
         lambda d: _norm_str(_sec(d, "s11_reconciliation_move").get("function_name")) == "reconcile_payments"
-        and _norm_str(_sec(d, "s11_reconciliation_move").get("removed_module_path"))
-        == "src/ledgerpulse/reconcile.py",
+        and _norm_str(_sec(d, "s11_reconciliation_move").get("report_class_name")) == "ReconciliationReport"
+        and _norm_str(_sec(d, "s11_reconciliation_move").get("current_module_path"))
+        != "src/ledgerpulse/reconcile.py",
     ),
     RecallAssertion(
         "A22",

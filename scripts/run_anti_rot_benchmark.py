@@ -65,9 +65,10 @@ def _dry_run_recall_payload() -> dict[str, Any]:
             "grace_days": 7,
         },
         "s5_pricing_refactor": {
+            "module_path": "src/ledgerpulse/pricing.py",
             "current_function_name": "calculate_invoice_grand_total",
             "params": ["invoice", "include_tax"],
-            "removed_function_name": "compute_invoice_total",
+            "include_tax_default": True,
         },
         "s6_js_validator": {
             "schema_module_path": "src/reporter/schema.mjs",
@@ -88,9 +89,9 @@ def _dry_run_recall_payload() -> dict[str, Any]:
             "rounding_strategy": "round_half_even",
         },
         "s11_reconciliation_move": {
-            "current_package_path": "src/ledgerpulse/reconciliation/matcher.py",
+            "current_module_path": "src/ledgerpulse/reconciliation/matcher.py",
             "function_name": "reconcile_payments",
-            "removed_module_path": "src/ledgerpulse/reconcile.py",
+            "report_class_name": "ReconciliationReport",
         },
         "s12_audit_freeze": {
             "python_module_path": "src/ledgerpulse/validation.py",

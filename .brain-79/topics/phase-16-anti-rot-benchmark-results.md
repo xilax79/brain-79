@@ -12,7 +12,7 @@ related:
   - features/lifecycle-hooks-and-ci-gate.md
   - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-26
-applies_to_digest: "sha256:16677e09453866cc"
+applies_to_digest: "sha256:2fa7ffb0d5090a27"
 applies_to_count: 10
 ---
 
@@ -38,6 +38,7 @@ The first full 24-session (`S1`–`S12` Arm A & Arm B) + 2 blind-recall live run
 
 - `benchmarks/anti_rot/evaluator.py` now resolves backticked relative paths containing `/` that do not exist directly at repo root using segment-bounded suffix matching (`rel == pref or rel.endswith("/" + pref)`) against `_collect_non_doc_repo_files(workspace)` (preserving `.brain-79/` and `docs/` exclusions).
 - Non-empty matches prevent false stale-reference flags, while unique matches (`len(matches) == 1`) are recorded in `valid_paths_in_doc` for Arm B canonical coverage (ambiguous matches such as `utils/helpers.py` matching multiple packages are not credited to canonical coverage).
+- `benchmarks/anti_rot/recall.py` recalibrated `A12`, `A20`, and `A21` to remove rubric contradictions with ADR-018 and `rot_rate`: renamed `current_package_path` to `current_module_path` for `src/ledgerpulse/reconciliation/matcher.py` (`A20`), and replaced deleted-symbol/path recitation checks with current-state negative assertions (`module_path` + `include_tax_default` on `S5`, and `reconcile_payments` + `ReconciliationReport` on `S11`).
 
 ### UAT runbook (`AC-6` re-run after `SPEC-202611`)
 
