@@ -180,7 +180,7 @@ Must enforce 2FA.
         """---
 type: feature
 summary: User login system
-status: in_progress
+status: planned
 version: 2.0.0
 last_updated: 2026-11-02
 related:

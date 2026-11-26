@@ -55,6 +55,8 @@ def test_bootstrap_manifest_instructions_for_overview_pass_validation(project_en
         "type: architecture\n"
         "summary: Overview of project architecture\n"
         "stability: stable\n"
+        "applies_to:\n"
+        "  - AGENTS.md\n"
         "last_updated: 2026-11-02\n"
         "---\n\n"
         "# Architecture — Overview\n\n"

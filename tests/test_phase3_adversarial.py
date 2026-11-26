@@ -139,6 +139,8 @@ last_updated: 2026-11-02
 type: architecture
 summary: Core architecture
 stability: stable
+applies_to:
+  - .brain-79/decisions/adr-001.md
 related:
   - decisions/adr-001.md
 last_updated: 2026-11-02
@@ -189,7 +191,7 @@ last_updated: 2026-11-02
         """---
 type: feature
 summary: Feature A
-status: shipped
+status: planned
 version: 1.0.0
 related:
   - decisions/adr-old.md

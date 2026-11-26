@@ -2,7 +2,7 @@
 spec_id: SPEC-202611-agent-ergonomics-and-strict-governance
 title: Agent ergonomics, strict bootstrap governance, and batch-read parity
 target_version: 0.17.0
-status: approved
+status: in_progress
 owner: xilax79
 last_updated: 2026-11-26
 related_wiki:

@@ -466,7 +466,7 @@ def test_session_commit_phase4_integration(clean_project: Path) -> None:
                 "content": """---
 type: feature
 summary: Billing integration
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-11-03
 ---

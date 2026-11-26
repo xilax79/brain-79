@@ -285,6 +285,30 @@ def commit_session(
     enforcement = active_schema.enforcement
     downgraded_warnings: list[str] = []
 
+    from brain79.core.lint_organizational import (
+        build_unanchored_batch_error,
+        is_unanchored_governance_article,
+        unanchored_governance_message,
+    )
+
+    unanchored_offenders: list[tuple[str, str]] = []
+    for rel_str in list(written_article_keys) + list(edited_article_keys):
+        try:
+            meta, _ = parse_frontmatter(virtual_fs[rel_str])
+        except Exception:
+            continue
+        if is_unanchored_governance_article(meta, active_schema, rel_path=rel_str):
+            doc_type = str(meta.get("type", "")).strip().lower()
+            if force_validation_skip or enforcement in ("balanced", "advisory"):
+                downgraded_warnings.append(
+                    f"[unanchored_governance_article] ({rel_str}) {unanchored_governance_message(rel_str, doc_type)}"
+                )
+            else:
+                unanchored_offenders.append((rel_str, doc_type))
+
+    if unanchored_offenders:
+        raise build_unanchored_batch_error(unanchored_offenders)
+
     tx_lock = acquire_wiki_lock(w_root, "_transaction.lock", timeout=timeout)
     with tx_lock:
         git_cache = GitSessionCache()

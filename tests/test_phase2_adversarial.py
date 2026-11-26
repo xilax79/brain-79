@@ -38,7 +38,7 @@ def adversarial_wiki(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.chdir(project_root)
     monkeypatch.setenv("BRAIN79_WIKI_PATH", str(wiki_root))
     set_project_root(project_root)
-    init_project(project_root=project_root, profile="software")
+    init_project(project_root=project_root, profile="software", enforcement="advisory")
     clear_schema_cache()
     return wiki_root
 

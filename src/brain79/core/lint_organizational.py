@@ -724,6 +724,83 @@ def check_documentation_drift(
     return issues
 
 
+def has_non_empty_applies_to(applies: Any) -> bool:
+    """Return True if applies_to contains at least one non-empty pattern."""
+    if applies is None:
+        return False
+    if isinstance(applies, str):
+        stripped = applies.strip()
+        return bool(stripped) and stripped.lower() not in ("none", "null")
+    if isinstance(applies, list):
+        return any(
+            (
+                isinstance(item, str)
+                and bool(item.strip())
+                and item.strip().lower() not in ("none", "null")
+            )
+            or (not isinstance(item, str) and item is not None and bool(item))
+            for item in applies
+        )
+    return bool(applies)
+
+
+def is_unanchored_governance_article(
+    meta: dict[str, Any],
+    schema: Any,
+    rel_path: str | None = None,
+) -> bool:
+    """Return True if an article is an active software architecture/feature doc missing applies_to."""
+    if schema is None or getattr(schema, "profile", None) != "software":
+        return False
+    if rel_path is not None and (
+        rel_path in ("INDEX.md", "SCHEMA.md")
+        or rel_path.startswith("_raw/")
+        or rel_path.startswith("handoffs/")
+    ):
+        return False
+
+    status = str(meta.get("status", "")).strip().lower()
+    stability = str(meta.get("stability", "")).strip().lower()
+    non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+    if status in non_active or stability in non_active:
+        return False
+
+    doc_type = str(meta.get("type", "")).strip().lower()
+    if doc_type not in ("architecture", "feature"):
+        return False
+
+    return not has_non_empty_applies_to(meta.get("applies_to"))
+
+
+def unanchored_governance_message(rel_path: str, doc_type: str) -> str:
+    """Return canonical diagnostic message for unanchored_governance_article."""
+    return f"Active {doc_type} article '{rel_path}' lacks applies_to governance pattern in frontmatter."
+
+
+def unanchored_governance_actionable(rel_path: str) -> str:
+    """Return canonical remediation hint for unanchored_governance_article."""
+    return f"Add 'applies_to: [...]' to frontmatter of '{rel_path}' specifying the code or intra-wiki files it governs."
+
+
+def build_unanchored_batch_error(offenders: list[tuple[str, str]]) -> Any:
+    """Build a single atomic ValidationError enumerating all unanchored governance articles."""
+    from brain79.core.validation import ValidationError
+
+    offender_lines = "\n".join(
+        f"- {p} ({dt}): {unanchored_governance_actionable(p)}"
+        for p, dt in offenders
+    )
+    return ValidationError(
+        rule="unanchored_governance_article",
+        path=", ".join(p for p, _ in offenders),
+        message=(
+            f"Strict-mode pre-flight rejected {len(offenders)} unanchored governance article(s):\n"
+            f"{offender_lines}"
+        ),
+        actionable="Add a non-empty 'applies_to: [...]' list to each listed article's frontmatter (or set status/stability to planned/draft/proposed).",
+    )
+
+
 def check_unanchored_governance(
     wiki_root: Path, md_files: list[Path] | None = None
 ) -> list[OrganizationalIssue]:
@@ -751,26 +828,18 @@ def check_unanchored_governance(
         except Exception:
             continue
 
-        status = str(meta.get("status", "")).lower()
-        stability = str(meta.get("stability", "")).lower()
-        non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
-        if status in non_active or stability in non_active:
-            continue
-
-        doc_type = str(meta.get("type", "")).lower()
-        if doc_type in ("architecture", "feature"):
-            applies = meta.get("applies_to")
-            if not applies or (isinstance(applies, list) and len(applies) == 0):
-                issues.append(
-                    OrganizationalIssue(
-                        rule="unanchored_governance_article",
-                        path=rel_str,
-                        line=None,
-                        severity="warning",
-                        message=f"Active {doc_type} article '{rel_str}' lacks applies_to governance pattern in frontmatter.",
-                        actionable=f"Add 'applies_to: [...]' to frontmatter of '{rel_str}' specifying the code or intra-wiki files it governs.",
-                    )
+        if is_unanchored_governance_article(meta, schema, rel_path=rel_str):
+            doc_type = str(meta.get("type", "")).strip().lower()
+            issues.append(
+                OrganizationalIssue(
+                    rule="unanchored_governance_article",
+                    path=rel_str,
+                    line=None,
+                    severity="warning",
+                    message=unanchored_governance_message(rel_str, doc_type),
+                    actionable=unanchored_governance_actionable(rel_str),
                 )
+            )
 
     return issues
 

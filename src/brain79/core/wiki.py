@@ -346,6 +346,34 @@ def write_article(
 
     downgraded_warnings: list[str] = []
 
+    # Pre-flight unanchored governance parity check (also surfaces warning under force_validation_skip=True)
+    if not _skip_nav_regen and not is_special:
+        from brain79.core.frontmatter import load_active_schema, parse_frontmatter
+        from brain79.core.lint_organizational import (
+            is_unanchored_governance_article,
+            unanchored_governance_actionable,
+            unanchored_governance_message,
+        )
+
+        active_schema = load_active_schema(w_root)
+        try:
+            pre_meta, _ = parse_frontmatter(content)
+        except Exception:
+            pre_meta = {}
+        if is_unanchored_governance_article(pre_meta, active_schema, rel_path=rel_path_str):
+            doc_type = str(pre_meta.get("type", "")).strip().lower()
+            if force_validation_skip or active_schema.enforcement in ("balanced", "advisory"):
+                downgraded_warnings.append(
+                    f"[unanchored_governance_article] {unanchored_governance_message(rel_path_str, doc_type)}"
+                )
+            else:
+                raise ValidationError(
+                    rule="unanchored_governance_article",
+                    path=rel_path_str,
+                    message=unanchored_governance_message(rel_path_str, doc_type),
+                    actionable=unanchored_governance_actionable(rel_path_str),
+                )
+
     # Single-file target check, anti-sprawl, and digest stamping
     if not _skip_nav_regen and not is_special and not force_validation_skip:
         from brain79.config import get_project_root
@@ -582,6 +610,17 @@ def check_file_health(wiki_root: Path, rel_path: str, content: str) -> list[str]
                     warnings.append(
                         f"Missing required section '## {sec}' in '{rel_path}' for type '{doc_type}'."
                     )
+
+            from brain79.core.lint_organizational import (
+                is_unanchored_governance_article,
+                unanchored_governance_message,
+            )
+
+            if is_unanchored_governance_article(meta, active_schema, rel_path=rel_path):
+                norm_type = str(meta.get("type", "")).strip().lower()
+                warnings.append(
+                    f"[unanchored_governance_article] {unanchored_governance_message(rel_path, norm_type)}"
+                )
         except Exception:
             pass
 
@@ -714,10 +753,34 @@ def write_many_articles(
 
         # Validate applies_to_target_missing and anti-sprawl overlap
         from brain79.core.frontmatter import load_active_schema
+        from brain79.core.lint_organizational import (
+            build_unanchored_batch_error,
+            is_unanchored_governance_article,
+            unanchored_governance_message,
+        )
         from brain79.core.validation import check_anti_sprawl_overlap
 
-        enforcement = load_active_schema(w_root).enforcement
+        active_schema = load_active_schema(w_root)
+        enforcement = active_schema.enforcement
         batch_downgraded_warnings: list[str] = []
+
+        unanchored_offenders: list[tuple[str, str]] = []
+        for rel_p, val_c in validated_contents:
+            try:
+                meta, _ = parse_frontmatter(val_c)
+            except Exception:
+                continue
+            if is_unanchored_governance_article(meta, active_schema, rel_path=rel_p):
+                doc_type = str(meta.get("type", "")).strip().lower()
+                if force_validation_skip or enforcement in ("balanced", "advisory"):
+                    batch_downgraded_warnings.append(
+                        f"[unanchored_governance_article] ({rel_p}) {unanchored_governance_message(rel_p, doc_type)}"
+                    )
+                else:
+                    unanchored_offenders.append((rel_p, doc_type))
+
+        if unanchored_offenders:
+            raise build_unanchored_batch_error(unanchored_offenders)
         for rel_p, val_c in validated_contents:
             try:
                 meta, body = parse_frontmatter(val_c)
@@ -819,11 +882,11 @@ def write_many_articles(
         except Exception:
             pass
 
-    base_msg = f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced · lint OK"
     if batch_downgraded_warnings:
+        base_msg = f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced"
         warn_block = "\n".join(f"- Warning: {w}" for w in batch_downgraded_warnings)
         return f"{base_msg}\n{warn_block}"
-    return base_msg
+    return f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced · lint OK"
 
 
 def list_articles(

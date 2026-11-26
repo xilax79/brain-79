@@ -284,7 +284,7 @@ def test_pure_index_navigation_lifecycle(setup_wiki_root: Path) -> None:
         "---\n"
         "type: feature\n"
         "summary: Pure routing table verification\n"
-        "status: shipped\n"
+        "status: planned\n"
         "version: 1.0.0\n"
         "last_updated: 2026-10-30\n"
         "---\n\n"

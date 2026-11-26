@@ -151,7 +151,7 @@ def test_auto_regenerate_navigation_on_write(setup_wiki: Path) -> None:
     """P1.1: Quick navigation is automatically regenerated when a new article is written."""
     article_content = """---
 type: feature
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-10-29
 ---
@@ -281,7 +281,7 @@ Content 1
             "path": "features/batch2.md",
             "content": """---
 type: feature
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-10-29
 ---

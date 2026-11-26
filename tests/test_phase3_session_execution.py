@@ -116,6 +116,8 @@ Context details.
 type: architecture
 summary: Architecture doc linking to ADR
 stability: stable
+applies_to:
+  - .brain-79/decisions/adr-099-test.md
 related:
   - decisions/adr-099-test.md
 last_updated: 2026-11-02
@@ -150,7 +152,7 @@ def test_read_batch_articles_basic_and_projected() -> None:
         """---
 type: feature
 summary: Auth feature
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-11-02
 ---
@@ -171,6 +173,8 @@ Login, logout.
 type: architecture
 summary: Core architecture
 stability: stable
+applies_to:
+  - AGENTS.md
 last_updated: 2026-11-02
 ---
 
@@ -203,7 +207,7 @@ def test_read_batch_articles_missing_file_handling() -> None:
         """---
 type: feature
 summary: Auth feature
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-11-02
 ---
@@ -239,6 +243,8 @@ def test_commit_session_atomic_success(clean_project: Path) -> None:
 type: architecture
 summary: System overview
 stability: stable
+applies_to:
+  - AGENTS.md
 last_updated: 2026-11-02
 ---
 
@@ -257,7 +263,7 @@ Initial system state.
                 "content": """---
 type: feature
 summary: User authentication subsystem
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-11-02
 ---
@@ -331,6 +337,8 @@ def test_commit_session_preflight_validation_rollback(clean_project: Path) -> No
 type: architecture
 summary: System overview
 stability: stable
+applies_to:
+  - AGENTS.md
 last_updated: 2026-11-02
 ---
 
@@ -406,7 +414,7 @@ def test_commit_session_anti_hallucination_validation_rollback(clean_project: Pa
                 "content": """---
 type: feature
 summary: Valid feature
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-11-02
 ---
@@ -445,7 +453,7 @@ def test_cli_read_sections(capsys: pytest.CaptureFixture[str]) -> None:
         """---
 type: feature
 summary: CLI test
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-11-02
 ---
@@ -475,7 +483,7 @@ def test_cli_read_batch(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> N
         """---
 type: feature
 summary: Batch 1
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-11-02
 ---
@@ -507,7 +515,7 @@ def test_cli_session_commit(capsys: pytest.CaptureFixture[str], tmp_path: Path) 
                 "content": """---
 type: feature
 summary: CLI commit feature
-status: shipped
+status: planned
 version: 1.0.0
 last_updated: 2026-11-02
 ---
