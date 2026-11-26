@@ -1123,8 +1123,10 @@ def detect_all_drift(
     return all_drifts
 
 
-# Backward-compatible re-exports from pluggable AST inspector subsystem (Phase 10 Stage 4: R-4.1)
+# Backward-compatible re-exports from pluggable AST inspector subsystem (Phase 10 Stage 4: R-4.1, Phase 15 Stage 1: R-1.1)
 from brain79.core.ast_guards import (
+    MAX_AST_SOURCE_BYTES,
     extract_public_python_signatures,
+    has_public_api_changes,
     has_public_python_api_changes,
 )

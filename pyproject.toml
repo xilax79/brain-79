@@ -15,6 +15,20 @@ dependencies = [
     "pyyaml>=6.0.0",
 ]
 
+[project.optional-dependencies]
+polyglot = [
+    "tree-sitter>=0.25,<0.26",
+    "tree-sitter-bash>=0.23.0",
+    "tree-sitter-c-sharp>=0.23.0",
+    "tree-sitter-go>=0.23.0",
+    "tree-sitter-java>=0.23.0",
+    "tree-sitter-javascript>=0.23.0",
+    "tree-sitter-php>=0.23.0",
+    "tree-sitter-ruby>=0.23.0",
+    "tree-sitter-rust>=0.23.0",
+    "tree-sitter-typescript>=0.23.0",
+]
+
 [project.scripts]
 brain79 = "brain79.__main__:main"
 
@@ -44,6 +58,22 @@ python_version = "3.11"
 disallow_untyped_defs = true
 warn_unused_ignores = true
 warn_return_any = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tree_sitter",
+    "tree_sitter_bash",
+    "tree_sitter_c_sharp",
+    "tree_sitter_go",
+    "tree_sitter_java",
+    "tree_sitter_javascript",
+    "tree_sitter_php",
+    "tree_sitter_ruby",
+    "tree_sitter_rust",
+    "tree_sitter_typescript",
+]
+ignore_missing_imports = true
+follow_untyped_imports = false
 
 [dependency-groups]
 dev = [

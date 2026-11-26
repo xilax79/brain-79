@@ -15,12 +15,12 @@ import subprocess
 from typing import Any
 
 from brain79.config import get_project_root, get_wiki_root
+from brain79.core.ast_guards import get_inspector_for_path, has_public_api_changes
 from brain79.core.drift import (
     WorkspaceIndex,
     check_article_drift,
     compute_applies_to_manifest,
     detect_all_drift,
-    has_public_python_api_changes,
     load_drift_manifest,
     match_applies_to_pattern,
     save_drift_manifest,
@@ -33,7 +33,7 @@ from brain79.core.frontmatter import (
     load_active_schema,
     parse_frontmatter,
 )
-from brain79.core.git_ops import GitError, GitTimeoutError, NotAGitRepoError, git_dirty_paths
+from brain79.core.git_ops import GitError, GitSessionCache, GitTimeoutError, NotAGitRepoError, git_dirty_paths
 from brain79.core.handoff import validate_handoff_params, write_handoff
 from brain79.core.locks import (
     acquire_wiki_lock,
@@ -287,7 +287,8 @@ def commit_session(
 
     tx_lock = acquire_wiki_lock(w_root, "_transaction.lock", timeout=timeout)
     with tx_lock:
-        ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=virtual_fs)
+        git_cache = GitSessionCache()
+        ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=virtual_fs, git_cache=git_cache)
         manifest_data = load_drift_manifest(w_root)
         manifest_staging: dict[str, Any] = json.loads(json.dumps(manifest_data))
         manifest_staging.setdefault("articles", {})
@@ -427,11 +428,15 @@ def commit_session(
                             if isinstance(fallback_tgts, list) and fallback_tgts
                             else [tgt]
                         )
-                        for py_tgt in targets_to_check:
-                            if py_tgt.endswith(".py"):
+                        for target_path in targets_to_check:
+                            if get_inspector_for_path(target_path) is not None:
                                 try:
-                                    has_change, desc = has_public_python_api_changes(
-                                        p_root, py_tgt, v_path, wiki_root=w_root
+                                    has_change, desc = has_public_api_changes(
+                                        p_root,
+                                        target_path,
+                                        v_path,
+                                        wiki_root=w_root,
+                                        git_cache=ws_index.git_cache,
                                     )
                                 except ValidationError as exc:
                                     if enforcement == "advisory":

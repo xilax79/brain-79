@@ -69,3 +69,47 @@ jobs:
         with:
           name: pytest-tmp-${{ matrix.os }}-py${{ matrix.python }}
           path: ${{ runner.temp }}/.pytest_tmp
+
+  test-polyglot:
+    name: test-polyglot (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      BRAIN79_REQUIRE_POLYGLOT: "1"
+      PYTHONUTF8: "1"
+      BRAIN79_PERF_FACTOR: "3"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.12"]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.4.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies (with polyglot extra)
+        run: uv sync --group dev --extra polyglot
+
+      - name: Run pytest
+        run: uv run pytest -q --basetemp="${RUNNER_TEMP:-/tmp}/.pytest_tmp"
+
+      - name: Run mypy
+        run: uv run mypy src tests
+
+      - name: Verify brain79 stats JSON output
+        run: uv run brain79 stats --format json | uv run python -c "import json, sys; json.load(sys.stdin)"
+
+      - name: Upload pytest artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-tmp-polyglot-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: ${{ runner.temp }}/.pytest_tmp

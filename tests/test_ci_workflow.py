@@ -179,6 +179,43 @@ def test_ci_workflow_required_steps(workflow_yaml: dict[str, Any]) -> None:
     )
 
 
+def test_ci_workflow_polyglot_job(workflow_yaml: dict[str, Any]) -> None:
+    """AC-13: Verify jobs.test-polyglot matrix, env, pinned actions, and verification steps."""
+    jobs = workflow_yaml.get("jobs", {})
+    assert "test-polyglot" in jobs, "Workflow must define a 'test-polyglot' job"
+    job = jobs["test-polyglot"]
+
+    assert job.get("timeout-minutes") == 20
+    assert job.get("defaults", {}).get("run", {}).get("shell") == "bash"
+
+    env = job.get("env", {})
+    assert env.get("BRAIN79_REQUIRE_POLYGLOT") == "1"
+    assert env.get("PYTHONUTF8") == "1"
+    assert env.get("BRAIN79_PERF_FACTOR") == "3"
+
+    strategy = job.get("strategy", {})
+    assert strategy.get("fail-fast") is False
+    matrix = strategy.get("matrix", {})
+    assert matrix.get("os") == ["ubuntu-latest", "macos-latest", "windows-latest"]
+    assert matrix.get("python-version") == ["3.12"]
+
+    steps = job.get("steps", [])
+    uses_list = [step.get("uses") for step in steps if step.get("uses")]
+    assert "actions/checkout@v7" in uses_list
+    assert "astral-sh/setup-uv@v10.4.0" in uses_list
+    assert "actions/upload-artifact@v7" in uses_list
+
+    commands = [step.get("run", "") for step in steps if "run" in step]
+    assert any("uv sync --group dev --extra polyglot" in cmd for cmd in commands)
+    assert any("uv run pytest -q" in cmd and ".pytest_tmp" in cmd for cmd in commands)
+    assert any("uv run mypy src tests" in cmd for cmd in commands)
+    assert any("uv run brain79 stats --format json" in cmd and "json.load(sys.stdin)" in cmd for cmd in commands)
+
+    failure_steps = [s for s in steps if s.get("if") == "failure()"]
+    assert failure_steps, "test-polyglot must include a failure() upload step"
+    assert any(".pytest_tmp" in str(s.get("with", {}).get("path", "")) for s in failure_steps)
+
+
 # ==============================================================================
 # Unit Tests for Doctor CI Allowlist Policy
 # ==============================================================================

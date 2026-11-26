@@ -265,9 +265,9 @@ brain79 handoff-purge --apply
 
 ## 3. Interface reference: MCP tools and CLI subcommands
 
-`brain-79` exposes a **9-tool focused MCP surface** for session hot paths and a **25-command CLI superset** for all session, authoring, CI, and administrative operations.
+`brain-79` exposes a **9-tool focused MCP surface** for session hot paths and a **26-command CLI superset** for all session, authoring, telemetry, CI, and administrative operations.
 
-| Category | FastMCP server tool (9) | CLI subcommand (25) | Purpose |
+| Category | FastMCP server tool (9) | CLI subcommand (26) | Purpose |
 |:---|:---|:---|:---|
 | **Session & workflow** | `brain79_orient` | `orient` | Cold-start orientation and budgeted context assembly. |
 | | `brain79_session_commit` | `session-commit` | Atomic commit of writes, edits, and handoffs with ripple check. |
@@ -285,6 +285,7 @@ brain79 handoff-purge --apply
 | | *CLI only* | `list` | List all tracked wiki articles with metadata. |
 | | `brain79_search` | `search` | Full-text search across all managed wiki articles. |
 | **Governance & health** | `brain79_lint` | `lint` | Run structural, organizational, and drift lint checks. |
+| | *CLI only* | `stats` | Report read-only wiki health, token budgets, and governance coverage. |
 | | *CLI only* | `ci-check` | Run read-only CI governance PR gate and passive lifecycle hooks (`--lifecycle-hook`). |
 | | *CLI only* | `schema` | Inspect active schema rules and required frontmatter keys. |
 | | *CLI only* | `navigate` | Regenerate navigation registry and `INDEX.md`. |
@@ -297,6 +298,62 @@ brain79 handoff-purge --apply
 
 ---
 
-## 4. Technical specifications and storage internals
+---
+
+## 4. Polyglot AST Guard C and context budget telemetry (`v0.16.0`)
+
+### Installing `brain79[polyglot]`
+
+Core `brain79` requires zero Tree-sitter dependencies and inspects Python ASTs out of the box. Install the optional `polyglot` extra to enable AST Guard C across 10 additional parsers (11 total):
+
+```bash
+uv tool install "brain79[polyglot] @ git+https://github.com/xilax79/brain-79.git"
+# Or in a local project environment:
+uv sync --extra polyglot
+```
+
+| Parser | Extensions | Scope |
+|:---|:---|:---|
+| `python` | `.py` | Built-in (`ast` stdlib) |
+| `typescript` | `.ts`, `.mts`, `.cts` | `brain79[polyglot]` |
+| `tsx` | `.tsx` | `brain79[polyglot]` |
+| `javascript` | `.js`, `.jsx`, `.mjs`, `.cjs` | `brain79[polyglot]` |
+| `go` | `.go` | `brain79[polyglot]` |
+| `rust` | `.rs` | `brain79[polyglot]` |
+| `java` | `.java` | `brain79[polyglot]` |
+| `c_sharp` | `.cs` | `brain79[polyglot]` |
+| `php` | `.php` | `brain79[polyglot]` |
+| `ruby` | `.rb` | `brain79[polyglot]` |
+| `bash` | `.sh`, `.bash` | `brain79[polyglot]` |
+
+### Context budget telemetry (`brain79 stats`)
+
+Run `brain79 stats` to inspect wiki health, token budgets (`orient()` startup footprint vs. full wiki), and governed file coverage without modifying any files:
+
+```bash
+brain79 stats
+brain79 stats --task "add auth" --paths src/auth.py --format json
+```
+
+### Registering a custom `LanguageInspector`
+
+For languages outside the 11 built-in parsers, register a custom inspector implementing `LanguageInspector` (`extensions`, `extract_signatures()`, `compare_sources()`):
+
+```python
+from brain79.core.ast_guards import SignatureDiff, register_inspector
+
+class KotlinInspector:
+    extensions = (".kt",)
+    def extract_signatures(self, source_code: str) -> dict[str, object]:
+        return {}
+    def compare_sources(self, base_source: str, current_source: str, rel_path: str) -> SignatureDiff:
+        return SignatureDiff(has_changes=False, description="")
+
+register_inspector(KotlinInspector())
+```
+
+---
+
+## 5. Technical specifications and storage internals
 
 For technical details on the 28-file module architecture, Merkle leaf manifest computation, centralized lock isolation, and cross-platform concurrency invariants, see [Architecture and technical specifications](ARCHITECTURE.md).

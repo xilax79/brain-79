@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed foundation (phases 0-14 and v0.15.0) and prioritized evolution (phase 15 polyglot AST, anti-rot proof, and PyPI release)
+summary: project roadmap covering completed foundation (phases 0-14 and v0.15.0) and prioritized evolution (phase 15 polyglot AST and stats, phase 16 anti-rot proof, and phase 17 PyPI release)
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -18,6 +18,7 @@ related:
   - decisions/adr-019-external-specs-and-requirements-standard.md
   - decisions/adr-020-focused-mcp-surface-and-cli-superset.md
   - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
+  - decisions/adr-022-polyglot-ast-guards-and-context-stats.md
   - features/version-governance.md
   - features/cross-platform-and-lock-isolation.md
   - features/session-triage-and-research-persistence.md
@@ -26,10 +27,11 @@ related:
   - features/project-upgrade-and-multi-harness-doctor.md
   - features/team-collaboration-and-onboarding.md
   - features/lifecycle-hooks-and-ci-gate.md
+  - features/polyglot-ast-guards-and-stats.md
   - topics/v0-13-0-navigation-registry-and-lint-defects.md
 last_updated: 2026-11-24
-applies_to_digest: "sha256:f9b2ffcc767800c4"
-applies_to_count: 11
+applies_to_digest: "sha256:9d52d54f63d1d038"
+applies_to_count: 12
 ---
 
 # Architecture — Industrial-scale roadmap and adoption evolution
@@ -83,7 +85,11 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 +-----------------------------------------------------------------------------------+
 | Phase 14 (P0): Passive lifecycle hooks & GitHub Action PR gate (v0.15.0)          | [x] Shipped
 +-----------------------------------------------------------------------------------+
-| Phase 15 (P1): Polyglot AST guards, stats, anti-rot proof & PyPI release (v0.16.0)| [ ] Next
+| Phase 15 (P1): Polyglot AST guards, stats & language-agnostic docs (v0.16.0)      | [x] Shipped
++-----------------------------------------------------------------------------------+
+| Phase 16 (P1): Longitudinal anti-rot release gate (v0.17.0)                       | [ ] Planned
++-----------------------------------------------------------------------------------+
+| Phase 17 (P1): Automated PyPI distribution via Trusted Publishers (v0.18.0)       | [ ] Planned
 +-----------------------------------------------------------------------------------+
 | Deferred backlog (demand-driven only): FTS5, worktree isolation, report/graph     | [ ] Deferred
 +-----------------------------------------------------------------------------------+
@@ -97,7 +103,9 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 |---|---|---|---|
 | **P0** | Phase 13 | `v0.14.0` | Prune redundant MCP admin wrappers and `--mcp-profile` before PyPI; formalize MCP hot-path subset vs. full CLI superset (`SPEC-013`). |
 | **P0** | Phase 14 | `v0.15.0` | Eliminate voluntary-compliance failures via native lifecycle hooks and bring drift visibility into team PR reviews (`SPEC-014`). |
-| **P1** | Phase 15 | `v0.16.0` | Extend AST Guard C to TypeScript/JS, Go, and Rust; prove anti-rot durability over multi-session LLM runs; publish to PyPI. |
+| **P1** | Phase 15 | `v0.16.0` | Extend AST Guard C with 10 polyglot parsers (`brain79[polyglot]`, 11 parsers total with Python), ship read-only `brain79 stats`, and clarify language-agnostic positioning (`SPEC-015`). |
+| **P1** | Phase 16 | `v0.17.0` | Empirically prove anti-rot durability across multi-session real-LLM runs against an unmanaged `CLAUDE.md`/Markdown baseline. |
+| **P1** | Phase 17 | `v0.18.0` | Publish validated `brain79` package to PyPI via GitHub Actions Trusted Publishers (`uvx brain79`, `uv tool install brain79`, `pipx install brain79`). |
 | **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`). |
 
 ---
@@ -114,14 +122,32 @@ Goal: close the voluntary-compliance gap where agents ignore `AGENTS.md`, and ma
 
 ---
 
-## Phase 15 (`v0.16.0`) — Polyglot AST guards, telemetry, anti-rot proof, and PyPI release (P1)
+## Phase 15 (`v0.16.0`) — Polyglot AST guards, context budget telemetry, and language-agnostic docs (P1, shipped)
 
-Goal: extend `brain-79`'s core mechanical moat beyond Python, empirically prove that wikis resist rot across long multi-session LLM development runs, and publish the validated package to PyPI.
+Archived specification: `specs/archive/phase-15-polyglot-ast-and-stats.md` (`SPEC-015`). Living manual: [polyglot-ast-guards-and-stats.md](../features/polyglot-ast-guards-and-stats.md); changelog: [v0-16-0.md](../changelog/v0-16-0.md).
 
-- **Polyglot AST Guard C via optional Tree-sitter extra**: plug an optional `brain79[polyglot]` extra into `core/ast_guards/` powered by `tree-sitter` prioritizing **TypeScript/JavaScript**, plus **Go** and **Rust** public symbol and signature verification while keeping Python stdlib `ast` zero-dependency by default.
-- **Context budget telemetry (`brain79 stats`, CLI-only)**: report real token estimates, `orient()` budget utilization, and drift/coverage metrics so teams can quantify context savings against raw `CLAUDE.md` files.
-- **Longitudinal anti-rot release gate (pre-release validation)**: run an automated multi-session (10–15 independent cold-start sessions) real-LLM stress harness comparing `brain-79` against an unmanaged `CLAUDE.md`/Markdown baseline across feature additions, bugfixes, refactors, and stack changes; gate PyPI publication on passing objective structural, coverage, and blind semantic-recall criteria.
-- **PyPI distribution (post-validation)**: once the longitudinal anti-rot gate passes, publish `brain79` to PyPI via automated GitHub Actions Trusted Publishers, enabling `uvx brain79`, `uv tool install brain79`, and `pipx install brain79` without raw Git URLs.
+Goal: extend `brain-79`'s mechanical AST moat beyond Python with 10 polyglot parsers across 9 grammar packages (11 parsers total with built-in Python) while keeping the core zero-dependency, add deterministic CLI telemetry for context budgets and coverage, and communicate language-agnostic design clearly in public docs.
+
+- **Polyglot AST Guard C via optional Tree-sitter extra (`brain79[polyglot]`)**: generalize Guard C across the pluggable `LanguageInspector` registry and plug a single declarative `TreeSitterInspector` engine into `core/ast_guards/` covering **TypeScript, TSX, JavaScript/JSX, Go, Rust, Java, C#, PHP, Ruby, and Bash** alongside built-in stdlib `ast` **Python**.
+- **Context budget telemetry (`brain79 stats`, CLI-only)**: read-only command reporting deterministic token estimates, `orient()` budget utilization, workspace & AST coverage, drift summary, and oversized articles (`WHITELIST` expands from 25 to 26 commands; `MCP_TOOLS` remains 9).
+- **Language-agnostic public positioning**: update `README.md`, `USER_GUIDE.md`, and `ARCHITECTURE.md` to emphasize that core drift tracking, `orient()`, hooks, and CI gates work in any language, while `brain79[polyglot]` adds deep AST signature guards and open extension points.
+
+---
+
+## Phase 16 (`v0.17.0`) — Longitudinal anti-rot release gate (P1)
+
+Goal: empirically prove that `brain-79` wikis resist documentation rot across long multi-session LLM development runs before public PyPI publication.
+
+- **Multi-session real-LLM stress harness**: execute 10–15 independent cold-start LLM sessions comparing `brain-79` against an unmanaged `CLAUDE.md`/Markdown baseline across feature additions, bugfixes, refactors, and stack changes.
+- **Objective pre-release validation criteria**: evaluate structural health, governance coverage, context token efficiency (leveraging `brain79 stats`), and blind semantic-recall accuracy; publish reproducible methodology and results.
+
+---
+
+## Phase 17 (`v0.18.0`) — PyPI distribution (P1)
+
+Goal: eliminate raw Git URL installation friction once Phase 16's longitudinal anti-rot gate passes.
+
+- **Automated PyPI Trusted Publishers**: configure GitHub Actions OIDC release workflow publishing `brain79` (including the `[polyglot]` extra metadata) to PyPI, enabling `uvx brain79`, `uv tool install brain79`, `uv tool install "brain79[polyglot]"`, and `pipx install brain79`.
 
 ---
 

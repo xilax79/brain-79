@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: CLI argument parsing, closed-whitelist subcommand routing across 25 commands, and POSIX exit code mappings
+summary: CLI argument parsing, closed-whitelist subcommand routing across 26 commands, and POSIX exit code mappings
 stability: stable
 last_updated: 2026-11-24
 applies_to:
@@ -12,7 +12,7 @@ related:
   - features/cli.md
   - architecture/mcp-server.md
   - features/lifecycle-hooks-and-ci-gate.md
-applies_to_digest: "sha256:ce429ff0f4bf4a37"
+applies_to_digest: "sha256:8dc38c78b726b81c"
 applies_to_count: 3
 ---
 
@@ -36,8 +36,8 @@ Global flags can appear before or after subcommands without breaking parsing:
 
 ## Whitelist routing and fallback execution
 
-The dispatcher maintains a strict whitelist (`WHITELIST`) of 25 subcommands:
-`init`, `update`, `update-project`, `doctor`, `ci-check`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
+The dispatcher maintains a strict whitelist (`WHITELIST`) of 26 subcommands:
+`init`, `update`, `update-project`, `doctor`, `ci-check`, `stats`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
 
 Routing order in `src/brain79/__main__.py` (immediately after `parse_global_flags()`):
 1. **Removed `--mcp-profile` flag**: Emits a `v0.14.0` migration error to `stderr` directing callers to the `brain79 <command>` CLI and exits with code `2`.

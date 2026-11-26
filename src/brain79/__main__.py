@@ -87,6 +87,7 @@ Maintenance & governance:
   update-project        Upgrade AGENTS.md, SCHEMA.md, and MCP harnesses in this repo
   doctor                Run 7-point operational diagnostics and optional --fix
   ci-check              Run read-only CI governance gate or passive lifecycle hooks
+  stats                 Show read-only context budget, coverage, and AST guard statistics
   bootstrap             Analyze an existing project and generate initial documentation templates
 
 Server mode:

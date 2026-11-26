@@ -2,7 +2,7 @@
 type: feature
 summary: non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP and lifecycle hook setup, and brain79 doctor diagnostics
 status: shipped
-version: 0.15.0
+version: 0.16.0
 allow_overlapping_governance: true
 applies_to:
   - src/brain79/core/init_project.py
@@ -21,7 +21,7 @@ related:
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
   - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
 last_updated: 2026-11-24
-applies_to_digest: "sha256:88be52d4bc399b20"
+applies_to_digest: "sha256:97116753fc501d9e"
 applies_to_count: 17
 ---
 
@@ -94,8 +94,8 @@ The project protocol upgrade and multi-harness doctor subsystem provides non-des
 - **Merkle seeding and transition handoffs**: computes `applies_to_digest` and seeds `.drift_manifest.json`. Passing `--commit-transition` generates a maintenance handoff maintaining `fresh` lifecycle state under ADR-016.
 
 ### 6. Subsecond diagnostic engine (`brain79 doctor`)
-- **Operational health checks**: evaluates binary/environment (Python >= 3.11 runtime and zero-clone tool installation), protocol sync (including active `enforcement` tier), wiki structure, MCP/instruction/installed lifecycle hook harnesses, filesystem locks, git hooks, `derived_state_tracking` (warns if derived JSON caches are tracked in Git), `git_merge_driver` (`INDEX.md` merge driver setup), and handoff hygiene in $<50\text{ ms}$.
-- **Exit codes and formats**: returns `0` (ok), `2` (warning), or `1` (error) with `--format text` and `--format json` support. Preserves the 9 canonical checks when optional lifecycle hooks are absent or healthy.
+- **Operational health checks**: evaluates binary/environment (Python >= 3.11 runtime, zero-clone tool installation, and dynamic AST Guard C capabilities from `POLYGLOT_LANGUAGES`), protocol sync (including active `enforcement` tier), wiki structure, MCP/instruction/installed lifecycle hook harnesses, filesystem locks, git hooks, `derived_state_tracking` (warns if derived JSON caches are tracked in Git), `git_merge_driver` (`INDEX.md` merge driver setup), and handoff hygiene in $<50\text{ ms}$.
+- **Exit codes and formats**: returns `0` (ok), `2` (warning), or `1` (error) with `--format text` and `--format json` support. Preserves the 9 canonical checks when optional lifecycle hooks and polyglot grammars are absent or healthy, and emits an `ast_guards` warning (`exit_code == 2`) with reinstall instructions if `broken_grammars` is non-empty.
 - **Git-aware repair guard**: refuses `--fix` if uncommitted protocol or lifecycle hook files (`.claude/settings.json`, `.cursor/hooks.json`, `.agents/plugins/brain79/`) exist in Git unless `--force` is supplied.
 
 ---

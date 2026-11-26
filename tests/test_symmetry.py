@@ -8,7 +8,7 @@ from brain79.server import MCP_TOOLS, create_mcp_server, mcp
 
 @pytest.mark.asyncio
 async def test_mcp_cli_symmetry() -> None:
-    """Validate MCP-subset / CLI-superset invariant (9 focused MCP tools subset of 25 CLI subcommands)."""
+    """Validate MCP-subset / CLI-superset invariant (9 focused MCP tools subset of 26 CLI subcommands)."""
     server = create_mcp_server()
     try:
         tools = await server.list_tools()
@@ -19,7 +19,7 @@ async def test_mcp_cli_symmetry() -> None:
 
         cli_subs = set(WHITELIST)
 
-        assert len(cli_subs) == 25, f"Expected 25 CLI subcommands, got {len(cli_subs)}"
+        assert len(cli_subs) == 26, f"Expected 26 CLI subcommands, got {len(cli_subs)}"
         assert len(MCP_TOOLS) == 9, f"Expected 9 MCP tools, got {len(MCP_TOOLS)}"
         assert raw_names == MCP_TOOLS
         assert mcp_cli_names.issubset(cli_subs), (

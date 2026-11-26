@@ -16,7 +16,10 @@ def test_readme_documents_limitations_profiles_and_native_harnesses() -> None:
 
     # Focused MCP surface & CLI superset
     assert "9 hot-path tools" in readme
-    assert "25-command" in readme
+    assert "26-command" in readme
+    assert "brain79[polyglot]" in readme
+    assert "brain79 stats" in readme
+    assert "language-agnostic" in readme.lower()
 
     # Native harnesses
     for harness_path in (

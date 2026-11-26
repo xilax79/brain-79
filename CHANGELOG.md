@@ -6,6 +6,23 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-24
+
+### Added
+- **Polyglot AST Guard C and context budget telemetry (Phase 15, SPEC-015, ADR-022)**:
+  - **Language-agnostic AST guard orchestrator (`core/ast_guards/orchestrator.py`)**: extracted generalized `has_public_api_changes()` with 2 MB asymmetric size guard (`MAX_AST_SOURCE_BYTES`), symlink escape checks, `GitSessionCache` integration, and thread-safe lazy inspector discovery (`find_spec`-based metadata discovery + `threading.Lock`-guarded `Language()` initialization).
+  - **Optional `brain79[polyglot]` Tree-sitter engine (`core/ast_guards/treesitter_inspector.py`, `polyglot.py`)**: added opt-in `TreeSitterInspector` and collision-free qualified signature extractors for 10 language parsers (`typescript`, `tsx`, `javascript`, `go`, `rust`, `java`, `c_sharp`, `php`, `ruby`, `bash`) alongside built-in `PythonInspector` (11 parsers total), keeping the core package zero-dependency.
+  - **Read-only context budget telemetry (`core/stats.py`, `brain79 stats`)**: added `compute_stats()`, `estimate_tokens()`, and `brain79 stats` (`--format text|json`, `--task`, `--paths`, `--max-articles`, `--project-root`) reporting wiki health, token budgets (`orient()`, full wiki, active vs. superseded), and governance coverage with zero filesystem mutations.
+  - **Doctor and CI polyglot diagnostics (`core/doctor.py`, `.github/workflows/ci.yml`)**: added AST guard capability summary in `doctor` (`binary_and_environment`), `ast_guards` warning check on broken grammars, and cross-platform `jobs.test-polyglot` CI matrix (`BRAIN79_REQUIRE_POLYGLOT=1`).
+
+### Changed
+- **26-command CLI superset**: expanded `WHITELIST` in `cli/dispatch.py` from 25 to 26 subcommands (`stats` is CLI-only; `MCP_TOOLS` remains fixed at 9 tools per ADR-020).
+- **Language-agnostic public positioning**: updated `README.md`, `USER_GUIDE.md`, and `ARCHITECTURE.md` to highlight universal repository support (Merkle drift, `orient()`, hooks, CI gates) alongside `brain79[polyglot]` and custom `LanguageInspector` extensibility.
+
+### Migration notes
+- Core `brain79` remains zero-dependency for Tree-sitter; install `uv tool install "brain79[polyglot]"` (or `pip install "brain79[polyglot]"`) to enable deep AST Guard C verification across TypeScript, TSX, JavaScript/JSX, Go, Rust, Java, C#, PHP, Ruby, and Bash.
+- Run `brain79 update-project` in existing repositories to synchronize `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/brain79.mdc`, `.github/copilot-instructions.md`, and `.agents/plugins/brain79/skills/brain79-wiki/SKILL.md` to `v0.16.0`.
+
 ## [0.15.0] - 2026-11-24
 
 ### Added

@@ -14,6 +14,7 @@ from brain79.core.ast_guards import (
     get_inspector_for_path,
     has_public_python_api_changes,
     register_inspector,
+    unregister_extensions,
 )
 from brain79.core.drift import (
     extract_public_python_signatures as drift_extract,
@@ -54,7 +55,10 @@ def test_python_inspector_protocol_and_registry() -> None:
 
     dummy = _DummyInspector()
     register_inspector(dummy)
-    assert get_inspector_for_path("foo/bar.dummy") is dummy
+    try:
+        assert get_inspector_for_path("foo/bar.dummy") is dummy
+    finally:
+        unregister_extensions([".dummy"])
 
 
 def test_verifying_10_python_files_reuses_cached_head_lookup(tmp_path: Path) -> None:

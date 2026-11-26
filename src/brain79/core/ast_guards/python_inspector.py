@@ -66,6 +66,7 @@ class PythonInspector:
     """LanguageInspector implementation for Python (.py) source files."""
 
     extensions: tuple[str, ...] = (".py",)
+    language: str = "python"
 
     def extract_signatures(self, source_code: str) -> dict[str, Any]:
         return extract_public_python_signatures(source_code)
@@ -87,8 +88,8 @@ class PythonInspector:
         if removed:
             return SignatureDiff(True, f"removed public symbol '{sorted(removed)[0]}' in {rel_path}")
 
-        for sym, curr_val in curr_sigs.items():
-            if base_sigs.get(sym) != curr_val:
+        for sym in sorted(curr_sigs.keys()):
+            if base_sigs.get(sym) != curr_sigs[sym]:
                 return SignatureDiff(True, f"changed public signature for '{sym}' in {rel_path}")
 
         return SignatureDiff(False, "")

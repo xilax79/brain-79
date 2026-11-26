@@ -34,6 +34,7 @@ WHITELIST = {
     "orient",
     "session-commit",
     "ci-check",
+    "stats",
 }
 
 
@@ -48,6 +49,17 @@ def map_exception_to_exit_code(exc: BaseException) -> int:
     if isinstance(exc, (PermissionError, filelock.Timeout, OSError)):
         return 3
     return 1
+
+
+def _positive_int(raw: str) -> int:
+    """Parse a strictly positive integer for CLI arguments (argparse exit 2 on failure)."""
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"invalid positive integer value: {raw!r}") from exc
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be >= 1, got {value}")
+    return value
 
 
 def _write_stdout(text: str) -> None:
@@ -1279,6 +1291,63 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         else:
             _write_stdout(ci_report.markdown_summary)
         return int(ci_report.exit_code)
+
+    elif cmd == "stats":
+        parser = argparse.ArgumentParser(
+            prog="brain79 stats",
+            description="Show read-only context budget, wiki inventory, coverage, and AST guard statistics.",
+        )
+        parser.add_argument(
+            "--format",
+            choices=("text", "json"),
+            default="text",
+            help="Output format: text (default) or json",
+        )
+        parser.add_argument(
+            "--task",
+            default=None,
+            help="Optional task description passed to orient() budget simulation",
+        )
+        parser.add_argument(
+            "--paths",
+            nargs="*",
+            default=None,
+            help="Optional workspace file paths passed to orient() budget simulation",
+        )
+        parser.add_argument(
+            "--max-articles",
+            type=_positive_int,
+            default=4,
+            help="Maximum number of governing articles to inline in orient() simulation (default: 4)",
+        )
+        parsed = parser.parse_args(sub_args)
+
+        from brain79.config import get_explicit_project_root
+        from brain79.core.stats import compute_stats
+
+        norm_paths: list[str] | None = None
+        if parsed.paths is not None:
+            norm_paths = [
+                tok.strip()
+                for raw in parsed.paths
+                for tok in raw.split(",")
+                if tok.strip()
+            ]
+
+        p_root = get_explicit_project_root()
+        w_root = (p_root / ".brain-79") if p_root is not None else None
+        stats_report = compute_stats(
+            project_root=p_root,
+            wiki_root=w_root,
+            task=parsed.task,
+            paths=norm_paths,
+            max_articles=parsed.max_articles,
+        )
+        if parsed.format == "json":
+            _write_stdout(json.dumps(stats_report.to_dict(), indent=2))
+        else:
+            _write_stdout(stats_report.format_text())
+        return 0
 
     raise ValueError(f"Unknown command: {cmd}")
 

@@ -46,14 +46,14 @@ Technical design, component architecture, and mechanical invariants of `brain-79
 
 ## 2. Interface symmetry (MCP subset and CLI superset)
 
-`brain-79` exposes **9 focused FastMCP server tools** as a strict subset of the **25 CLI subcommands**. Automated test suites (`tests/test_symmetry.py`) enforce `MCP_TOOLS` ⊂ `WHITELIST` and parameter parity across retained interfaces.
+`brain-79` exposes **9 focused FastMCP server tools** as a strict subset of the **26 CLI subcommands**. Automated test suites (`tests/test_symmetry.py`) enforce `MCP_TOOLS` ⊂ `WHITELIST` and parameter parity across retained interfaces.
 
-| Category | CLI subcommands (25) | FastMCP server tools (9) |
+| Category | CLI subcommands (26) | FastMCP server tools (9) |
 |:---|:---|:---|
 | **Session & workflow** | `orient`, `session-commit`, `context`, `index`, `ingest` | `brain79_orient`, `brain79_session_commit`, `brain79_context` |
 | **Handoff continuity** | `handoff-write`, `handoff-read`, `handoff-purge` | *Use `brain79_session_commit` / `brain79_orient` or CLI* |
 | **Reading & writing** | `read`, `read-batch`, `write`, `write-many`, `edit`, `list`, `search` | `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_search` |
-| **Governance & health** | `lint`, `ci-check`, `schema`, `navigate`, `migrate`, `bootstrap`, `doctor`, `update-project` | `brain79_lint`, `brain79_bootstrap` |
+| **Governance & health** | `lint`, `ci-check`, `stats`, `schema`, `navigate`, `migrate`, `bootstrap`, `doctor`, `update-project` | `brain79_lint`, `brain79_bootstrap` |
 | **Host CLI only** | `init`, `update` | *N/A (Host setup & self-update operations)* |
 
 ---
@@ -83,7 +83,7 @@ Technical design, component architecture, and mechanical invariants of `brain-79
 
 ## 4. Source code map (`src/brain79/`)
 
-The implementation comprises 28 Python modules across root, CLI, templates, and core layers:
+The implementation is organized across root, CLI, templates, and core layers (including modular `ast_guards/` and `harnesses/` subpackages):
 
 ```
 src/brain79/
@@ -99,10 +99,18 @@ src/brain79/
 │   └── __init__.py             <- Package resource loader for protocol and skill templates
 └── core/
     ├── __init__.py             <- Core package marker
+    ├── ast_guards/             <- Language-agnostic Guard C orchestrator, Python + polyglot parsers
+    │   ├── __init__.py         <- Inspector registry, lazy find_spec discovery, thread-safe init
+    │   ├── base.py             <- LanguageInspector protocol and SignatureDiff dataclass
+    │   ├── orchestrator.py     <- Generalized has_public_api_changes() with 2 MB size guard
+    │   ├── python_inspector.py <- Built-in Python AST public signature extractor
+    │   ├── treesitter_inspector.py <- Optional Tree-sitter AST engine and comment-node stripper
+    │   └── polyglot.py         <- Qualified signature extractors for 10 polyglot parsers
     ├── bootstrap.py            <- Scan manifest generator and initial wiki scaffolding
+    ├── ci_check.py             <- Read-only CI governance gate and lifecycle hook runtime
     ├── context.py              <- 3-Signal context search (applies_to, BM25, 1-hop ADR)
     ├── curate.py               <- Amnesia Test triage and zero-code research persistence
-    ├── doctor.py               <- 7-Point operational diagnostics with Git-guarded --fix
+    ├── doctor.py               <- 9-Check operational diagnostics with AST guard reporting
     ├── drift.py                <- Merkle leaf manifest, SHA-256 streaming, and DAG ripple
     ├── frontmatter.py          <- YAML frontmatter parsing, validation, and serialization
     ├── handoff_freshness.py    <- Cryptographic provenance and handoff decay evaluation
@@ -115,6 +123,7 @@ src/brain79/
     ├── navigation.py           <- Thread-safe navigation registry and pure INDEX.md routing
     ├── orient.py               <- 1-Call cold-start engine (budgeted context assembly)
     ├── session_commit.py       <- 4-Phase transactional commit pipeline with ripple gates
+    ├── stats.py                <- Read-only context budget telemetry and governance coverage
     ├── update.py               <- Self-update engine (zero-clone Git and editable dev checkouts)
     ├── validation.py           <- Synchronous write validation, size caps, and anti-sprawl
     └── wiki.py                 <- Atomic article I/O (read, write, edit, search) with retry
@@ -172,7 +181,7 @@ Session finalization runs under a centralized process lock (`.brain-79/.locks/_t
    - Evaluates `verified_articles` in leaf-then-umbrella order.
    - **Guard A**: rejects articles not currently in a drifted state.
    - **Guard B**: rejects verification if the article's own `applies_to` code targets were modified in this turn.
-   - **Guard C (AST signature guard)**: parses Python source code using `ast`. If public functions, classes, or parameter signatures mutated, blocks verification without documentation updates while permitting private refactors.
+   - **Guard C (AST signature guard)**: dispatches modified governed files through `core/ast_guards/` (`PythonInspector` by default, optional `brain79[polyglot]` Tree-sitter parsers, or custom `LanguageInspector` implementations). If public functions, classes, types, or parameter signatures mutated, blocks verification without documentation updates while permitting internal body/private refactors.
 6. **Pass 2d — Hard Session Ripple Gate (`unresolved_session_ripple`)**:
    - Evaluates the transitive documentation DAG.
    - If any child leaf or composite umbrella article remains in a drifted state without simultaneous update or verification, halts the transaction with an actionable list of unresolved articles.

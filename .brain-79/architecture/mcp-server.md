@@ -10,7 +10,7 @@ related:
   - architecture/symmetry.md
   - features/mcp-server.md
   - decisions/adr-020-focused-mcp-surface-and-cli-superset.md
-applies_to_digest: "sha256:c8d7379e32059b6b"
+applies_to_digest: "sha256:a3c222d95939e722"
 applies_to_count: 2
 ---
 

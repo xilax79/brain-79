@@ -9,6 +9,7 @@ Combines:
 
 from pathlib import Path
 import subprocess
+from typing import Any
 
 from brain79.config import get_project_root, get_wiki_root
 from brain79.core.context import rank_context_articles
@@ -97,6 +98,9 @@ def orient(
     paths: list[str] | None = None,
     max_articles: int = 4,
     wiki_root: Path | None = None,
+    *,
+    workspace_index: Any = None,
+    git_cache: Any = None,
 ) -> str:
     """
     Execute 1-call cold start orientation.
@@ -106,12 +110,17 @@ def orient(
         paths: Optional list of workspace file paths the agent intends to touch.
         max_articles: Maximum number of governing articles to inline (default: 4).
         wiki_root: Optional custom wiki root path.
+        workspace_index: Optional pre-built WorkspaceIndex to reuse.
+        git_cache: Optional pre-built GitSessionCache to reuse.
 
     Returns:
         Structured markdown combining navigation, handoff state, and governing articles.
     """
     w_root = (wiki_root or get_wiki_root()).resolve()
-    p_root = (w_root.parent if w_root.parent.exists() else get_project_root()).resolve()
+    if workspace_index is not None:
+        p_root = workspace_index.project_root
+    else:
+        p_root = (w_root.parent if w_root.parent.exists() else get_project_root()).resolve()
 
     sections: list[str] = [
         "# Brain-79 — Session Cold Start Orientation",
@@ -167,8 +176,9 @@ def orient(
     from brain79.core.drift import WorkspaceIndex, detect_all_drift
     from brain79.core.git_ops import GitSessionCache
 
-    git_cache = GitSessionCache()
-    ws = WorkspaceIndex.build(p_root, w_root, git_cache=git_cache)
+    if git_cache is None:
+        git_cache = getattr(workspace_index, "git_cache", None) or GitSessionCache()
+    ws = workspace_index if workspace_index is not None else WorkspaceIndex.build(p_root, w_root, git_cache=git_cache)
 
     # 3. Latest Handoff
     try:
@@ -220,7 +230,10 @@ def orient(
         ])
 
     # 3. Governing Knowledge Articles (3-Signal Ranker)
-    p_root = (w_root.parent if w_root.parent.exists() else get_project_root()).resolve()
+    if workspace_index is not None:
+        p_root = workspace_index.project_root
+    else:
+        p_root = (w_root.parent if w_root.parent.exists() else get_project_root()).resolve()
 
     # Unconditional Git working-tree path discovery (even when task=None, paths=None)
     discovered_paths: list[str] = []

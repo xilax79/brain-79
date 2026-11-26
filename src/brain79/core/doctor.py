@@ -70,6 +70,23 @@ class DoctorReport:
         return "\n".join(lines)
 
 
+def _format_ast_guard_summary(caps: dict[str, Any], polyglot_languages: tuple[str, ...]) -> str:
+    """Format a concise one-line AST Guard C capability summary for doctor output."""
+    if not caps.get("polyglot_installed"):
+        return (
+            f"AST guards: python (built-in); install brain79[polyglot] "
+            f"for {len(polyglot_languages)} more language parsers."
+        )
+
+    active_polyglot = sorted(lang for lang in caps.get("active_languages", []) if lang in polyglot_languages)
+    missing = sorted(caps.get("missing_grammars", []))
+    active_list = ", ".join(active_polyglot) if active_polyglot else "none"
+    summary = f"AST guards: python + {len(active_polyglot)} polyglot parsers ({active_list})"
+    if missing:
+        summary += f"; {len(missing)} missing ({', '.join(missing)})"
+    return f"{summary}."
+
+
 def run_doctor(
     project_root: Path | None = None,
     wiki_root: Path | None = None,
@@ -158,6 +175,11 @@ def run_doctor(
 
     checks: list[DoctorCheck] = []
 
+    from brain79.core.ast_guards import POLYGLOT_LANGUAGES, get_ast_guard_capabilities
+
+    ast_caps = get_ast_guard_capabilities()
+    ast_summary = _format_ast_guard_summary(ast_caps, POLYGLOT_LANGUAGES)
+
     # 1. binary_and_environment
     binary_path = shutil.which("brain79")
     py_ver = sys.version_info
@@ -166,7 +188,7 @@ def run_doctor(
             DoctorCheck(
                 category="binary_and_environment",
                 status="error",
-                message=f"Python runtime {py_ver[0]}.{py_ver[1]} is below minimum requirement 3.11.",
+                message=f"Python runtime {py_ver[0]}.{py_ver[1]} is below minimum requirement 3.11. {ast_summary}",
                 actionable="Upgrade Python to version 3.11 or higher.",
             )
         )
@@ -175,7 +197,7 @@ def run_doctor(
             DoctorCheck(
                 category="binary_and_environment",
                 status="warning",
-                message="Executable 'brain79' not found in system PATH.",
+                message=f"Executable 'brain79' not found in system PATH. {ast_summary}",
                 actionable="Run 'uv tool install git+https://github.com/xilax79/brain-79.git' or 'uv tool ensurepath'.",
             )
         )
@@ -184,7 +206,19 @@ def run_doctor(
             DoctorCheck(
                 category="binary_and_environment",
                 status="ok",
-                message=f"Binary located at {binary_path} (Python {py_ver[0]}.{py_ver[1]}.{py_ver[2]}).",
+                message=f"Binary located at {binary_path} (Python {py_ver[0]}.{py_ver[1]}.{py_ver[2]}). {ast_summary}",
+            )
+        )
+
+    broken_grammars = ast_caps.get("broken_grammars") or {}
+    if broken_grammars:
+        broken_details = "; ".join(f"{lang} ({err})" for lang, err in sorted(broken_grammars.items()))
+        checks.append(
+            DoctorCheck(
+                category="ast_guards",
+                status="warning",
+                message=f"Broken AST grammar package(s) detected: {broken_details}.",
+                actionable='Reinstall polyglot grammars with: uv tool install --reinstall "brain79[polyglot]"',
             )
         )
 

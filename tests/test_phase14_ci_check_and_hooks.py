@@ -767,7 +767,7 @@ def test_cli_ci_check_git_errors_enforcement_and_formats(
     from brain79.cli.dispatch import WHITELIST, dispatch_cmd, run_cli
 
     assert "ci-check" in WHITELIST
-    assert len(WHITELIST) == 25
+    assert len(WHITELIST) == 26
     assert "ci-check" in ROOT_HELP
 
     # Help output

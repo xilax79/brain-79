@@ -2,7 +2,7 @@
 type: feature
 summary: single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
 status: shipped
-version: 0.9.2
+version: 0.16.0
 applies_to:
   - src/brain79/__init__.py
   - pyproject.toml
@@ -11,8 +11,8 @@ related:
   - architecture/roadmap-industrial-scale.md
   - decisions/adr-013-versioning-and-release-governance.md
   - decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md
-last_updated: 2026-11-17
-applies_to_digest: "sha256:6211a57104d97343"
+last_updated: 2026-11-24
+applies_to_digest: "sha256:565ae38a2f12fc7e"
 applies_to_count: 3
 ---
 

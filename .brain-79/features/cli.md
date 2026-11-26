@@ -1,8 +1,8 @@
 ---
 type: feature
-summary: 25 deterministic CLI subcommands for managing wiki knowledge, CI governance, lifecycle hooks, linters, and handoffs
+summary: 26 deterministic CLI subcommands for managing wiki knowledge, context telemetry, CI governance, lifecycle hooks, linters, and handoffs
 status: shipped
-version: 0.15.0
+version: 0.16.0
 last_updated: 2026-11-24
 applies_to:
   - src/brain79/cli/dispatch.py
@@ -12,7 +12,7 @@ related:
   - architecture/symmetry.md
   - architecture/dispatcher.md
   - features/lifecycle-hooks-and-ci-gate.md
-applies_to_digest: "sha256:1767578bfa14d21f"
+applies_to_digest: "sha256:7dc490ef2aea3b15"
 applies_to_count: 3
 ---
 
@@ -20,7 +20,7 @@ applies_to_count: 3
 
 ## Overview
 
-The Standalone CLI interface provides 25 deterministic command-line subcommands for managing the repository wiki, executing organizational linter and CI PR gate checks, running passive lifecycle hooks, performing handoffs, diagnosing environment health, upgrading project configurations, and initializing memory protocols without requiring an active MCP host connection.
+The Standalone CLI interface provides 26 deterministic command-line subcommands for managing the repository wiki, executing organizational linter and CI PR gate checks, running passive lifecycle hooks, performing handoffs, diagnosing environment health, upgrading project configurations, and initializing memory protocols without requiring an active MCP host connection.
 
 It is designed for direct developer interaction in the terminal, shell scripts, CI/CD pipelines, and git/agent hooks.
 
@@ -33,6 +33,7 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 | `brain79 doctor` | Run 9-point operational diagnostic checks and auto-repair | `[--project-root]`, `[--fix]`, `[--force]`, `[--include-desktop]`, `[--format text\|json]` | `0`, `1`, `2` |
 | `brain79 update` | Update the installed brain79 CLI tool from upstream Git or local development checkout | `[--branch]` | `0`, `1`, `3`, `4` |
 | `brain79 ci-check` | Run read-only CI governance PR gate or passive lifecycle hook handler | `[--base <ref>]`, `[--head <ref>]`, `[--enforcement <tier>]`, `[--fail-on-warnings]`, `[--format markdown\|text\|json]`, `[--summary-file <path>]`, `[--write-step-summary]`, `[--lifecycle-hook <session-start\|stop>]`, `[--client <auto\|claude\|agy\|cursor>]` | `0`, `1`, `2`, `3` |
+| `brain79 stats` | Report read-only wiki health, token budgets, and governance coverage | `[--format text\|json]`, `[--task <t>]`, `[--paths ...]`, `[--max-articles <n>]`, `[--project-root <path>]` | `0`, `1`, `2`, `3` |
 | `brain79 orient` | Collapsed 1-call cold start orientation with inlined governing context | `[--task <t>]`, `[--paths ...]` | `0`, `3` |
 | `brain79 index` | Print `INDEX.md` entry point | None | `0`, `3` |
 | `brain79 schema` | Print schema rules and frontmatter templates | `[--type <type>]` | `0` |

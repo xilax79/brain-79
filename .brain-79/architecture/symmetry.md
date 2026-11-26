@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 25 CLI subcommands
+summary: enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 26 CLI subcommands
 stability: stable
 last_updated: 2026-11-24
 applies_to:
@@ -12,7 +12,7 @@ related:
   - features/cli.md
   - features/mcp-server.md
   - decisions/adr-020-focused-mcp-surface-and-cli-superset.md
-applies_to_digest: "sha256:d6afaddcb26b91de"
+applies_to_digest: "sha256:2cc09ae3909a96c2"
 applies_to_count: 3
 ---
 
@@ -20,18 +20,18 @@ applies_to_count: 3
 
 ## General description
 
-`brain-79` enforces an **MCP-subset / CLI-superset** symmetry invariant (ADR-020). The CLI exposes the complete 25-subcommand operational, CI, and administrative surface (`WHITELIST`), while the FastMCP server exposes a focused 9-tool hot-path subset (`MCP_TOOLS`).
+`brain-79` enforces an **MCP-subset / CLI-superset** symmetry invariant (ADR-020). The CLI exposes the complete 26-subcommand operational, telemetry, CI, and administrative surface (`WHITELIST`), while the FastMCP server exposes a focused 9-tool hot-path subset (`MCP_TOOLS`).
 
 ## Symmetry guarantee and enforcement
 
 Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite inspects:
-- `len(WHITELIST) == 25` CLI subcommands.
+- `len(WHITELIST) == 26` CLI subcommands.
 - Every tool registered on `create_mcp_server()` and module-level `mcp` equals `MCP_TOOLS` (9 tools) and maps 1:1 into `WHITELIST` (`mcp_cli_names.issubset(WHITELIST)`).
 - Parameter signatures and defaults for retained MCP tools (`brain79_session_commit`, `brain79_bootstrap`) match their `brain79.core.*` implementations.
 
 ## Operational mapping table
 
-| Operational purpose | CLI subcommand (25) | MCP tool (9) |
+| Operational purpose | CLI subcommand (26) | MCP tool (9) |
 |---|---|---|
 | Initialize wiki protocol | `brain79 init` | *(CLI only)* |
 | Self-update installation | `brain79 update` | *(CLI only)* |
@@ -56,6 +56,7 @@ Symmetry is automatically validated by `tests/test_symmetry.py`. The test suite 
 | Migrate legacy frontmatter | `brain79 migrate [--apply]` | *(CLI only)* |
 | Lint wiki organization | `brain79 lint [--strict]` | `brain79_lint()` |
 | CI PR gate and lifecycle hooks | `brain79 ci-check` | *(CLI only; ADR-020 / ADR-021)* |
+| Context budget & governance telemetry | `brain79 stats` | *(CLI only; ADR-020 / ADR-022)* |
 | Upgrade project protocol | `brain79 update-project` | *(CLI only)* |
 | Operational diagnostics | `brain79 doctor [--fix]` | *(CLI only)* |
 
