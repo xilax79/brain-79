@@ -184,7 +184,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-6 — Live Phase 16 anti-rot release gate re-verification (`PASS`)
 - **Verifies**: `R-5.2`
 - **Method**: `demo`
-- **Test ref**: `TBD`
+- **Test ref**: `/tmp/phase16-live-reverify-v3-reeval/results.json` (`Verdict: PASS`, 7/7 on `gemini-4-hydrogen-low`)
 - **Given**: `agy` configured with `gemini-4-hydrogen-low`, zero global `brain79` MCP registration, and the updated `brain79[polyglot]` installed.
 - **When**: `uv run python scripts/run_anti_rot_benchmark.py --mode live --output-dir /tmp/phase16-live-reverify` executes.
 - **Then**: the CLI exits with code `0`, `results.json` records `verdict: "PASS"` across all 7 mandatory `SPEC-016` criteria, and results are distilled into `.brain-79/topics/phase-16-anti-rot-benchmark-results.md`.

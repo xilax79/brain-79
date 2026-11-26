@@ -208,6 +208,7 @@ _JS_EXPORT_FN_PARAMS_RE = re.compile(
     r"export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)"
 )
 _JS_QUOTED_KEY_RE = re.compile(r'["\']([A-Za-z_][A-Za-z0-9_]*)["\']\s*:')
+_JS_PROP_ACCESS_RE = re.compile(r"\b([A-Za-z_$][\w$]*)\??\.([A-Za-z_$][\w$]*)\b")
 
 
 def _add_py_fn_params(fn: ast.FunctionDef | ast.AsyncFunctionDef, symbols: set[str], *, is_method: bool) -> None:
@@ -246,83 +247,87 @@ def _collect_repo_basenames(workspace: Path) -> set[str]:
 
 def _collect_src_symbols(workspace: Path) -> set[str]:
     symbols: set[str] = set()
-    src_root = workspace / "src"
-    if not src_root.is_dir():
+    scan_roots = [d for d in (workspace / "src", workspace / "tests") if d.is_dir()]
+    if not scan_roots:
         return symbols
 
-    for py_file in src_root.rglob("*.py"):
-        if "__pycache__" in py_file.parts:
-            continue
-        try:
-            tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
-        except (OSError, SyntaxError):
-            continue
-        for node in tree.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                symbols.add(node.name)
-                _add_py_fn_params(node, symbols, is_method=False)
-            elif isinstance(node, ast.ClassDef):
-                symbols.add(node.name)
-                for item in node.body:
-                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                        symbols.add(item.name)
-                        symbols.add(f"{node.name}.{item.name}")
-                        _add_py_fn_params(item, symbols, is_method=True)
-                    elif isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
-                        symbols.add(item.target.id)
-                        symbols.add(f"{node.name}.{item.target.id}")
-                    elif isinstance(item, ast.Assign):
-                        for tgt in item.targets:
-                            if isinstance(tgt, ast.Name):
-                                symbols.add(tgt.id)
-                                symbols.add(f"{node.name}.{tgt.id}")
-            elif isinstance(node, ast.Assign):
-                for tgt in node.targets:
-                    if isinstance(tgt, ast.Name):
-                        symbols.add(tgt.id)
-            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-                symbols.add(node.target.id)
-            elif isinstance(node, ast.Import):
-                for alias in node.names:
-                    symbols.add(alias.asname or alias.name.split(".")[0])
-            elif isinstance(node, ast.ImportFrom):
-                for alias in node.names:
-                    if alias.name != "*":
-                        symbols.add(alias.asname or alias.name)
-
-        for walk_node in ast.walk(tree):
-            if isinstance(walk_node, ast.Dict):
-                for key_node in walk_node.keys:
-                    if isinstance(key_node, ast.Constant) and isinstance(key_node.value, str):
-                        if _IDENT_RE.fullmatch(key_node.value):
-                            symbols.add(key_node.value)
-            elif (
-                isinstance(walk_node, ast.Attribute)
-                and isinstance(walk_node.value, ast.Name)
-                and walk_node.value.id == "self"
-            ):
-                symbols.add(walk_node.attr)
-
-    for js_ext in ("*.js", "*.mjs", "*.ts"):
-        for js_file in src_root.rglob(js_ext):
-            try:
-                content = js_file.read_text(encoding="utf-8")
-            except OSError:
+    for scan_root in scan_roots:
+        for py_file in scan_root.rglob("*.py"):
+            if "__pycache__" in py_file.parts:
                 continue
-            for m in _JS_EXPORT_DECL_RE.finditer(content):
-                symbols.add(m.group(1))
-            for m in _JS_EXPORT_FN_PARAMS_RE.finditer(content):
-                for raw_param in m.group(2).split(","):
-                    param_name = raw_param.split("=", 1)[0].strip().lstrip(".")
-                    if param_name and _IDENT_RE.fullmatch(param_name):
-                        symbols.add(param_name)
-            for m in _JS_REEXPORT_RE.finditer(content):
-                for export_item in m.group(1).split(","):
-                    name = export_item.strip().split(" as ")[-1].strip()
-                    if name:
-                        symbols.add(name)
-            for m in _JS_QUOTED_KEY_RE.finditer(content):
-                symbols.add(m.group(1))
+            try:
+                tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+            except (OSError, SyntaxError):
+                continue
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    symbols.add(node.name)
+                    _add_py_fn_params(node, symbols, is_method=False)
+                elif isinstance(node, ast.ClassDef):
+                    symbols.add(node.name)
+                    for item in node.body:
+                        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                            symbols.add(item.name)
+                            symbols.add(f"{node.name}.{item.name}")
+                            _add_py_fn_params(item, symbols, is_method=True)
+                        elif isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                            symbols.add(item.target.id)
+                            symbols.add(f"{node.name}.{item.target.id}")
+                        elif isinstance(item, ast.Assign):
+                            for tgt in item.targets:
+                                if isinstance(tgt, ast.Name):
+                                    symbols.add(tgt.id)
+                                    symbols.add(f"{node.name}.{tgt.id}")
+                elif isinstance(node, ast.Assign):
+                    for tgt in node.targets:
+                        if isinstance(tgt, ast.Name):
+                            symbols.add(tgt.id)
+                elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                    symbols.add(node.target.id)
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        symbols.add(alias.asname or alias.name.split(".")[0])
+                elif isinstance(node, ast.ImportFrom):
+                    for alias in node.names:
+                        if alias.name != "*":
+                            symbols.add(alias.asname or alias.name)
+
+            for walk_node in ast.walk(tree):
+                if isinstance(walk_node, ast.Dict):
+                    for key_node in walk_node.keys:
+                        if isinstance(key_node, ast.Constant) and isinstance(key_node.value, str):
+                            if _IDENT_RE.fullmatch(key_node.value):
+                                symbols.add(key_node.value)
+                elif (
+                    isinstance(walk_node, ast.Attribute)
+                    and isinstance(walk_node.value, ast.Name)
+                    and walk_node.value.id == "self"
+                ):
+                    symbols.add(walk_node.attr)
+
+        for js_ext in ("*.js", "*.mjs", "*.ts"):
+            for js_file in scan_root.rglob(js_ext):
+                try:
+                    content = js_file.read_text(encoding="utf-8")
+                except OSError:
+                    continue
+                for m in _JS_EXPORT_DECL_RE.finditer(content):
+                    symbols.add(m.group(1))
+                for m in _JS_EXPORT_FN_PARAMS_RE.finditer(content):
+                    for raw_param in m.group(2).split(","):
+                        param_name = raw_param.split("=", 1)[0].strip().lstrip(".")
+                        if param_name and _IDENT_RE.fullmatch(param_name):
+                            symbols.add(param_name)
+                for m in _JS_REEXPORT_RE.finditer(content):
+                    for export_item in m.group(1).split(","):
+                        name = export_item.strip().split(" as ")[-1].strip()
+                        if name:
+                            symbols.add(name)
+                for m in _JS_QUOTED_KEY_RE.finditer(content):
+                    symbols.add(m.group(1))
+                for m in _JS_PROP_ACCESS_RE.finditer(content):
+                    symbols.add(f"{m.group(1)}.{m.group(2)}")
+                    symbols.add(m.group(2))
     return symbols
 
 
@@ -363,13 +368,15 @@ def _extract_refs_from_doc(text: str) -> tuple[list[str], list[str], list[str]]:
             path_refs.append(norm.rstrip("/"))
         elif (
             tok.endswith(_FILE_EXTENSIONS)
+            and tok not in _FILE_EXTENSIONS
+            and norm not in _FILE_EXTENSIONS
             and "(" not in tok
             and not norm.startswith(("http://", "https://"))
         ):
             if "/" in norm:
                 path_refs.append(norm.rstrip("/"))
             else:
-                basename_refs.append(tok)
+                basename_refs.append(norm)
         elif _looks_like_code_symbol(tok):
             symbol_refs.append(tok)
     return path_refs, basename_refs, symbol_refs

@@ -12,15 +12,27 @@ related:
   - features/lifecycle-hooks-and-ci-gate.md
   - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-26
-applies_to_digest: "sha256:2fa7ffb0d5090a27"
+applies_to_digest: "sha256:50df95c19876da8c"
 applies_to_count: 10
 ---
 
 # Phase 16 — Longitudinal anti-rot benchmark harness and release gate
 
-## Live benchmark status: `SPEC-202611` IMPLEMENTED — `AC-6` LIVE RE-RUN PENDING UAT
+## Live benchmark status: `SPEC-202611` VERIFIED — `AC-6` `PASS` (7/7, exit `0`)
 
-The first full 24-session (`S1`–`S12` Arm A & Arm B) + 2 blind-recall live run on `agy 1.5.18` + `gemini-4-hydrogen-low` completed and was re-evaluated with the calibrated evaluator (`GATE_FAIL_EXIT_CODE = 4`). It produced **`Verdict: FAIL` (4/7 criteria passed)**, surfacing 3 real `brain-79` product defects captured in `specs/2026-11-agent-ergonomics-and-strict-governance.md` (`SPEC-202611`). All 5 implementation capabilities (`AC-1`–`AC-5`) are now implemented on `feat/agent-ergonomics-strict-governance`, including `R-5.1` segment-bounded suffix-path matching in `benchmarks/anti_rot/evaluator.py`; the live `AC-6` re-run remains pending UAT approval and global `brain79` installation.
+The live 24-session (`S1`–`S12` Arm A & Arm B) + 2 blind-recall re-verification run on `agy 1.5.18` + `gemini-4-hydrogen-low` (`58535eb`, re-evaluated offline after evaluator false-positive calibration) achieved **`Verdict: PASS` (7/7 criteria, exit `0`)**.
+
+### Live `AC-6` `PASS` results (`SPEC-202611` on `gemini-4-hydrogen-low`)
+
+| Criterion | Status | Arm A (`brain-79`) | Arm B (`AGENTS.md` + `docs/`) | Notes |
+|---|---|---|---|---|
+| Structural and drift health | **PASS** | `0` errors, `0` warnings, `0` drift (`exit 0`) | N/A | Clean strict compliance across all 12 sessions |
+| Documentation rot rate | **PASS** | `0.0%` (`0/118` refs) | `1.12%` (`2/179` refs) | Zero stale references in Arm A |
+| Canonical `src/**` coverage | **PASS** | `100.0%` (`14/14`) | `50.0%` (`7/14`) | 2x canonical governance coverage via default `auto_map` |
+| Context budget ceiling | **PASS** | `orient_chars = 2,700`, `2,479` doc-read tokens | `14,649` doc-read tokens | 83.1% fewer doc-read tokens than Arm B |
+| Autonomous compliance | **PASS** | `12/12` (`100.0%`) | `12/12` (`100.0%`) | 100% clean completions on both arms |
+| Blind semantic recall | **PASS** | `100.0%` (`24/24`, `zero_src_reads=True`) | `100.0%` (`24/24`) | `brain79_read_batch(paths=[...])` succeeded with zero schema errors |
+| Session triage discipline | **PASS** | `S9` + `S10` PASS | `S9` + `S10` PASS | Zero churn on Type A; persisted research on Type B |
 
 ### Calibrated baseline results (`v0.16.0` on `gemini-4-hydrogen-low`)
 
@@ -38,6 +50,7 @@ The first full 24-session (`S1`–`S12` Arm A & Arm B) + 2 blind-recall live run
 
 - `benchmarks/anti_rot/evaluator.py` now resolves backticked relative paths containing `/` that do not exist directly at repo root using segment-bounded suffix matching (`rel == pref or rel.endswith("/" + pref)`) against `_collect_non_doc_repo_files(workspace)` (preserving `.brain-79/` and `docs/` exclusions).
 - Non-empty matches prevent false stale-reference flags, while unique matches (`len(matches) == 1`) are recorded in `valid_paths_in_doc` for Arm B canonical coverage (ambiguous matches such as `utils/helpers.py` matching multiple packages are not credited to canonical coverage).
+- `benchmarks/anti_rot/evaluator.py` also excludes bare extension tokens (e.g., `.mjs`), normalizes `./` basenames (`./schema.mjs`), scans `tests/` alongside `src/` for documented test symbols, and extracts JS property accesses (`options.strict`, `io.readInput`) symmetrically for both arms.
 - `benchmarks/anti_rot/recall.py` recalibrated `A12`, `A20`, and `A21` to remove rubric contradictions with ADR-018 and `rot_rate`: renamed `current_package_path` to `current_module_path` for `src/ledgerpulse/reconciliation/matcher.py` (`A20`), and replaced deleted-symbol/path recitation checks with current-state negative assertions (`module_path` + `include_tax_default` on `S5`, and `reconcile_payments` + `ReconciliationReport` on `S11`).
 
 ### UAT runbook (`AC-6` re-run after `SPEC-202611`)

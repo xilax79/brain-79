@@ -173,3 +173,35 @@ def test_r5_1_doc_exclusion_invariance_and_dot_slash_normalization(tmp_path: Pat
     assert res.stale_refs == 1
     assert any("reconciliation/matcher.py" in d for d in res.stale_details)
     assert res.canonical_sources_covered == 1
+
+
+def test_evaluator_false_positive_calibration_tests_js_props_and_bare_ext(tmp_path: Path) -> None:
+    ws = tmp_path / "ws_fp_calib"
+    (ws / "src" / "reporter").mkdir(parents=True)
+    (ws / "tests").mkdir(parents=True)
+    (ws / "docs").mkdir(parents=True)
+
+    (ws / "src" / "reporter" / "schema.mjs").write_text(
+        "export function validateDoc(payload, options) {\n"
+        "  if (options.strict) return true;\n"
+        "  return io.readInput ? io.readInput() : '';\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    (ws / "tests" / "test_suite.py").write_text(
+        "def test_verify_audit_readiness() -> None:\n    assert True\n",
+        encoding="utf-8",
+    )
+    (ws / "docs" / "guide.md").write_text(
+        "# Guide\n\n"
+        "- Extension: `.mjs`\n"
+        "- Local basename: `./schema.mjs`\n"
+        "- JS props: `options.strict`, `io.readInput`\n"
+        "- Test fn: `test_verify_audit_readiness`\n"
+        "- Truly stale symbol: `removed_ghost_symbol`\n",
+        encoding="utf-8",
+    )
+
+    res = evaluate_arm("arm_b", ws, _dummy_records("arm_b"))
+    assert res.stale_refs == 1
+    assert res.stale_details == ["docs/guide.md: stale symbol `removed_ghost_symbol`"]
