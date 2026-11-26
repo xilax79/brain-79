@@ -307,11 +307,11 @@ def orient(
             wiki_root=w_root,
         )
 
+        surfaced_rels: set[str] = set()
         if not ranked:
             sections.append("No specific governing articles matched the task or paths.")
         else:
             inlined_count = 0
-            surfaced_rels: set[str] = set()
             manifest_articles: list[tuple[str, str, str, str]] = []
             current_chars = sum(len(s) for s in sections)
 
@@ -372,36 +372,36 @@ def orient(
                     sections.append(f"  - **Governs (`applies_to`)**: {applies_str}")
                     sections.append(f"  - **Key Sections**: {h2_str}")
 
-            if task and not paths:
-                from brain79.core.context import get_wiki_snapshot
-                from brain79.core.frontmatter import INACTIVE_STATUSES
+        if task and not paths:
+            from brain79.core.context import get_wiki_snapshot
+            from brain79.core.frontmatter import INACTIVE_STATUSES
 
-                unread_active: list[str] = []
-                for snap_p in get_wiki_snapshot(wiki_root=w_root):
-                    snap_rel = snap_p.relative_to(w_root).as_posix()
-                    if snap_rel in ("INDEX.md", "SCHEMA.md") or snap_rel in surfaced_rels:
+            unread_active: list[str] = []
+            for snap_p in get_wiki_snapshot(wiki_root=w_root):
+                snap_rel = snap_p.relative_to(w_root).as_posix()
+                if snap_rel in ("INDEX.md", "SCHEMA.md") or snap_rel in surfaced_rels:
+                    continue
+                try:
+                    snap_text = snap_p.read_text(encoding="utf-8")
+                    snap_meta, _ = parse_frontmatter(snap_text) if snap_text.startswith("---") else ({}, snap_text)
+                    s_status = str((snap_meta or {}).get("status", "")).lower()
+                    s_stability = str((snap_meta or {}).get("stability", "")).lower()
+                    if s_status in INACTIVE_STATUSES or s_stability in INACTIVE_STATUSES:
                         continue
-                    try:
-                        snap_text = snap_p.read_text(encoding="utf-8")
-                        snap_meta, _ = parse_frontmatter(snap_text) if snap_text.startswith("---\n") else ({}, snap_text)
-                        s_status = str((snap_meta or {}).get("status", "")).lower()
-                        s_stability = str((snap_meta or {}).get("stability", "")).lower()
-                        if s_status in INACTIVE_STATUSES or s_stability in INACTIVE_STATUSES:
-                            continue
-                    except Exception:
-                        pass
-                    unread_active.append(snap_rel)
+                except Exception:
+                    pass
+                unread_active.append(snap_rel)
 
-                if unread_active:
-                    shown = unread_active[:20]
-                    extra = len(unread_active) - len(shown)
-                    paths_arg = ", ".join(f'"{p}"' for p in shown)
-                    suffix = f" (+{extra} more in INDEX.md)" if extra > 0 else ""
-                    sections.extend([
-                        "",
-                        f"> **Unread active articles ({len(unread_active)} remaining)**: fetch via "
-                        f"`brain79_read_batch(paths=[{paths_arg}])`{suffix}.",
-                    ])
+            if unread_active:
+                shown = unread_active[:20]
+                extra = len(unread_active) - len(shown)
+                paths_arg = ", ".join(f'"{p}"' for p in shown)
+                suffix = f" (+{extra} more in INDEX.md)" if extra > 0 else ""
+                sections.extend([
+                    "",
+                    f"> **Unread active articles ({len(unread_active)} remaining)**: fetch via "
+                    f"`brain79_read_batch(paths=[{paths_arg}])`{suffix}.",
+                ])
 
     return "\n".join(sections)
 

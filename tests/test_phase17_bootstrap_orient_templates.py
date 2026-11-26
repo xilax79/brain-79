@@ -355,3 +355,38 @@ class TestAC2OrientContextAndTemplates:
         paths_payload = reminder_line.split("brain79_read_batch(paths=[", 1)[1].split("])", 1)[0]
         assert paths_payload.count(".md") == 20
         assert len(out) <= MAX_ORIENT_INLINE_CHARS + 10_000
+
+    def test_r4_1_orient_unmatched_task_still_emits_active_reminder(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        proj = tmp_path / "unmatched_proj"
+        proj.mkdir()
+        init_project(proj, profile="software", auto_git_init=False, install_git_hooks_flag=False)
+        wiki_root = proj / ".brain-79"
+        monkeypatch.setattr(config, "_project_root", proj)
+
+        _make_article(
+            wiki_root,
+            "features/active-mod.md",
+            doc_type="feature",
+            summary="Active module",
+            status_line="status: shipped\nversion: 1.0.0",
+            applies_to=["src/active.py"],
+        )
+        _write(proj / "src" / "active.py", "X = 1\n")
+        _make_article(
+            wiki_root,
+            "features/archived-mod.md",
+            doc_type="feature",
+            summary="Archived module",
+            status_line="status: archived\nversion: 0.1.0",
+        )
+
+        out = orient(task="unmatched xyzzy tokens", wiki_root=wiki_root)
+        assert "No specific governing articles matched the task or paths." in out
+        assert "brain79_read_batch(paths=[" in out
+        reminder = out.split("brain79_read_batch(paths=[", 1)[1]
+        assert "features/active-mod.md" in reminder
+        assert "features/archived-mod.md" not in reminder
+        assert "INDEX.md" not in reminder
+        assert "SCHEMA.md" not in reminder
