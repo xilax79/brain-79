@@ -2,6 +2,8 @@
 
 This directory contains standalone utility scripts for `brain-79`.
 
+- `run_anti_rot_benchmark.py`: run the Phase 16 longitudinal anti-rot benchmark (`--mode dry-run|live|evaluate`) against the `LedgerPulse` polyglot fixture.
+
 ## Validation & Bypass Policy
 
 1. **`scripts/migrate_frontmatter.py`** is the **ONLY** script authorized to bypass organizational validation. Its explicit purpose is to perform progressive migration on legacy wikis by adding frontmatter and initializing navigation registries.

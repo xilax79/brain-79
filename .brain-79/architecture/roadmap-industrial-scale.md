@@ -29,7 +29,8 @@ related:
   - features/lifecycle-hooks-and-ci-gate.md
   - features/polyglot-ast-guards-and-stats.md
   - topics/v0-13-0-navigation-registry-and-lint-defects.md
-last_updated: 2026-11-24
+  - topics/phase-16-anti-rot-benchmark-results.md
+last_updated: 2026-11-26
 applies_to_digest: "sha256:9d52d54f63d1d038"
 applies_to_count: 12
 ---
@@ -87,7 +88,7 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 +-----------------------------------------------------------------------------------+
 | Phase 15 (P1): Polyglot AST guards, stats & language-agnostic docs (v0.16.0)      | [x] Shipped
 +-----------------------------------------------------------------------------------+
-| Phase 16 (P1): Longitudinal anti-rot release gate (v0.17.0)                       | [ ] Planned
+| Phase 16 (P1): Longitudinal anti-rot release gate (v0.17.0)                       | [~] In progress (awaiting AC-6 UAT)
 +-----------------------------------------------------------------------------------+
 | Phase 17 (P1): Automated PyPI distribution via Trusted Publishers (v0.18.0)       | [ ] Planned
 +-----------------------------------------------------------------------------------+
@@ -104,7 +105,7 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 | **P0** | Phase 13 | `v0.14.0` | Prune redundant MCP admin wrappers and `--mcp-profile` before PyPI; formalize MCP hot-path subset vs. full CLI superset (`SPEC-013`). |
 | **P0** | Phase 14 | `v0.15.0` | Eliminate voluntary-compliance failures via native lifecycle hooks and bring drift visibility into team PR reviews (`SPEC-014`). |
 | **P1** | Phase 15 | `v0.16.0` | Extend AST Guard C with 10 polyglot parsers (`brain79[polyglot]`, 11 parsers total with Python), ship read-only `brain79 stats`, and clarify language-agnostic positioning (`SPEC-015`). |
-| **P1** | Phase 16 | `v0.17.0` | Empirically prove anti-rot durability across multi-session real-LLM runs against an unmanaged `CLAUDE.md`/Markdown baseline. |
+| **P1** | Phase 16 | `v0.17.0` | Empirically prove anti-rot durability across 12 cold-start `agy` (`gemini-4-hydrogen-low`) sessions against a realistic `AGENTS.md` + `docs/` baseline (`SPEC-016`, awaiting live `AC-6` UAT). |
 | **P1** | Phase 17 | `v0.18.0` | Publish validated `brain79` package to PyPI via GitHub Actions Trusted Publishers (`uvx brain79`, `uv tool install brain79`, `pipx install brain79`). |
 | **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`). |
 
@@ -134,12 +135,15 @@ Goal: extend `brain-79`'s mechanical AST moat beyond Python with 10 polyglot par
 
 ---
 
-## Phase 16 (`v0.17.0`) — Longitudinal anti-rot release gate (P1)
+## Phase 16 (`v0.17.0`) — Longitudinal anti-rot release gate (P1, in progress — awaiting live `AC-6` UAT)
+
+Specification: `specs/phase-16-longitudinal-anti-rot-gate.md` (`SPEC-016`). Topic summary and UAT runbook: [phase-16-anti-rot-benchmark-results.md](../topics/phase-16-anti-rot-benchmark-results.md).
 
 Goal: empirically prove that `brain-79` wikis resist documentation rot across long multi-session LLM development runs before public PyPI publication.
 
-- **Multi-session real-LLM stress harness**: execute 10–15 independent cold-start LLM sessions comparing `brain-79` against an unmanaged `CLAUDE.md`/Markdown baseline across feature additions, bugfixes, refactors, and stack changes.
-- **Objective pre-release validation criteria**: evaluate structural health, governance coverage, context token efficiency (leveraging `brain79 stats`), and blind semantic-recall accuracy; publish reproducible methodology and results.
+- **Status**: `In progress (harness verified offline; awaiting live AC-6 UAT gate)`. Phase 17 PyPI release remains blocked until live `AC-6` execution produces a `PASS` verdict.
+- **Multi-session cold-start stress harness (`benchmarks/anti_rot/`, `scripts/run_anti_rot_benchmark.py`)**: executes 12 independent cold-start `agy` (`gemini-4-hydrogen-low`) sessions on the `LedgerPulse` polyglot fixture (`S1`–`S12`), comparing `brain-79` (Arm A) against a realistic `AGENTS.md` + `docs/` baseline (Arm B) across feature additions, bugfixes, refactors, Type A/B triage, and module moves.
+- **Objective pre-release validation criteria**: evaluates structural health (`lint --strict`, `ci-check --enforcement strict`), active-doc rot rate, canonical `src/**` governance coverage, `orient_chars` context budget (`brain79 stats`), autonomous compliance (`>= 10/12`), and a mechanically enforced blind semantic-recall probe (`PreToolUse` `src/` deny hook + `--json-schema` 24-assertion scoring).
 
 ---
 

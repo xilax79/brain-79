@@ -6,6 +6,10 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Longitudinal anti-rot benchmark harness (Phase 16, SPEC-016 — awaiting live `AC-6` UAT gate before `v0.17.0`)**:
+  - Added the `LedgerPulse` polyglot testbed (`benchmarks/anti_rot/fixture/`, 13 non-test Python and `.mjs` source files with hidden `S2`–`S12` contracts), realistic `AGENTS.md` + `docs/` control baseline (`control_agents.md`), dual-arm workspace initializer with fail-closed `agy` isolation probes (`workspace.py`), 12-session cold-start `runner.py`, deterministic rot/coverage/triage evaluator (`evaluator.py`), mechanically enforced blind semantic-recall probe (`recall.py`, `deny_src_reads.py`), binary release gate (`gate.py`), and `scripts/run_anti_rot_benchmark.py` (`--mode dry-run|live|evaluate`).
+
 ## [0.16.0] - 2026-11-24
 
 ### Added

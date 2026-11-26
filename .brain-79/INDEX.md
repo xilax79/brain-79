@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-24
+last_updated: 2026-11-26
 ---
 
 # Project index
@@ -77,4 +77,5 @@ last_updated: 2026-11-24
 - [Brain-79 — Product vision](product/overview.md) — deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
 
 ### Topics
+- [Phase 16 — Longitudinal anti-rot benchmark harness and release gate](topics/phase-16-anti-rot-benchmark-results.md) — phase 16 longitudinal anti-rot benchmark harness, LedgerPulse testbed, deterministic evaluator, blind recall probe, and pending AC-6 UAT runbook
 - [Resolved v0.13.0 defects — Navigation registry completeness, lint index desynchronization, and MCP version skew](topics/v0-13-0-navigation-registry-and-lint-defects.md) — resolved v0.13.0 defects in navigation registry completeness, lint index desynchronization, and stale MCP version skew detection (fixed in v0.13.1)
