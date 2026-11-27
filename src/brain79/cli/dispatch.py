@@ -1250,6 +1250,7 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         from pathlib import Path
         from brain79.config import get_explicit_project_root
         from brain79.core.ci_check import run_ci_check, run_lifecycle_hook
+        from brain79.core.frontmatter import ValidationError
         from brain79.core.git_ops import GitError, GitTimeoutError, NotAGitRepoError
 
         p_root = Path(parsed.project_root).resolve() if parsed.project_root else get_explicit_project_root()
@@ -1280,6 +1281,9 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         except GitTimeoutError as exc:
             sys.stderr.write(f"Error: Git operation timed out during ci-check: {exc}\n")
             return 3
+        except (ValidationError, json.JSONDecodeError) as exc:
+            sys.stderr.write(f"Error: {exc}\n")
+            return 1
         except (ValueError, NotAGitRepoError, GitError) as exc:
             sys.stderr.write(f"Error: Invalid Git reference or repository state: {exc}\n")
             return 2

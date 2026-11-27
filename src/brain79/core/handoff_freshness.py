@@ -32,7 +32,7 @@ class HandoffFreshness:
 
 
 _EXCLUDED_WIKI_SUBDIRS = ("handoffs", "_raw", ".locks")
-_EXCLUDED_WIKI_FILES = ("INDEX.md", ".navigation_registry.json", ".drift_manifest.json")
+_EXCLUDED_WIKI_FILES = ("INDEX.md", ".navigation_registry.json", ".drift_manifest.json", "drift.lock")
 
 
 def _run_git(args: list[str], cwd: Path, timeout: float = 3.0) -> str:

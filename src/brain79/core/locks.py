@@ -29,6 +29,7 @@ LOCKS_DIRNAME: Final[str] = ".locks"
 LOCK_HIERARCHY: Final[tuple[str, ...]] = (
     "_transaction.lock",
     "_registry.lock",
+    "_drift_lock.lock",
     "_drift_manifest.lock",
     "INDEX.md.lock",
 )
@@ -75,7 +76,7 @@ class OrderedFileLock(filelock.FileLock):
     """FileLock subclass enforcing global lock acquisition order within a thread.
 
     Global lock hierarchy:
-        _transaction.lock -> _registry.lock -> _drift_manifest.lock -> INDEX.md.lock
+        _transaction.lock -> _registry.lock -> _drift_lock.lock -> _drift_manifest.lock -> INDEX.md.lock
     """
 
     def __init__(self, lock_file: str | os.PathLike[str], timeout: float = -1) -> None:
@@ -179,6 +180,7 @@ def get_lock_path(wiki_root: Path, rel_posix_path: str) -> Path:
     Maps filenames deterministically:
     - .navigation_registry.json -> .locks/_registry.lock
     - .bootstrap_state.json     -> .locks/_bootstrap.lock
+    - drift.lock                -> .locks/_drift_lock.lock
     - .drift_manifest.json      -> .locks/_drift_manifest.lock
     - _transaction.lock         -> .locks/_transaction.lock
     - INDEX.md                  -> .locks/INDEX.md.lock
@@ -191,6 +193,8 @@ def get_lock_path(wiki_root: Path, rel_posix_path: str) -> Path:
         return locks_dir / "_registry.lock"
     if clean == ".bootstrap_state.json":
         return locks_dir / "_bootstrap.lock"
+    if clean == "drift.lock":
+        return locks_dir / "_drift_lock.lock"
     if clean == ".drift_manifest.json":
         return locks_dir / "_drift_manifest.lock"
     if clean in ("_transaction.lock", "_transaction"):
@@ -212,7 +216,7 @@ def acquire_wiki_lock(
 
     Automatically ensures .locks/ exists before initializing OrderedFileLock.
     Enforces the global lock hierarchy:
-        _transaction.lock -> _registry.lock -> _drift_manifest.lock -> INDEX.md.lock
+        _transaction.lock -> _registry.lock -> _drift_lock.lock -> _drift_manifest.lock -> INDEX.md.lock
     """
     lock_file = get_lock_path(wiki_root, rel_posix_path)
     lock_file.parent.mkdir(parents=True, exist_ok=True)
@@ -256,6 +260,11 @@ def cleanup_legacy_inline_locks(wiki_root: Path) -> int:
     for lock_file in wiki_root.rglob("*.lock"):
         if LOCKS_DIRNAME in lock_file.parts:
             continue
+        try:
+            if lock_file.relative_to(wiki_root).as_posix() == "drift.lock":
+                continue
+        except ValueError:
+            pass
         try:
             lock_file.unlink()
             removed += 1

@@ -484,12 +484,13 @@ def test_regenerate_index_navigation_self_heals_mixed_case_sections(setup_wiki_r
 
 
 def test_lock_hierarchy_enforces_global_order(setup_wiki_root: Path) -> None:
-    """AC-10.2: Lock hierarchy enforces _transaction -> _registry -> _drift_manifest -> INDEX.md."""
+    """AC-10.2: Lock hierarchy enforces _transaction -> _registry -> _drift_lock -> _drift_manifest -> INDEX.md."""
     from brain79.core.locks import LOCK_HIERARCHY, acquire_wiki_lock
 
     assert LOCK_HIERARCHY == (
         "_transaction.lock",
         "_registry.lock",
+        "_drift_lock.lock",
         "_drift_manifest.lock",
         "INDEX.md.lock",
     )
@@ -499,14 +500,20 @@ def test_lock_hierarchy_enforces_global_order(setup_wiki_root: Path) -> None:
     # Valid order succeeds
     with acquire_wiki_lock(wiki_root, "_transaction.lock"):
         with acquire_wiki_lock(wiki_root, ".navigation_registry.json"):
-            with acquire_wiki_lock(wiki_root, ".drift_manifest.json"):
-                with acquire_wiki_lock(wiki_root, "INDEX.md"):
-                    pass
+            with acquire_wiki_lock(wiki_root, "drift.lock"):
+                with acquire_wiki_lock(wiki_root, ".drift_manifest.json"):
+                    with acquire_wiki_lock(wiki_root, "INDEX.md"):
+                        pass
 
     # Reverse order raises RuntimeError
     with acquire_wiki_lock(wiki_root, "INDEX.md"):
         with pytest.raises(RuntimeError, match="Lock hierarchy violation"):
             with acquire_wiki_lock(wiki_root, ".navigation_registry.json"):
+                pass
+
+    with acquire_wiki_lock(wiki_root, ".drift_manifest.json"):
+        with pytest.raises(RuntimeError, match="Lock hierarchy violation"):
+            with acquire_wiki_lock(wiki_root, "drift.lock"):
                 pass
 
 

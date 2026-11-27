@@ -71,6 +71,13 @@ VOLATILE_FRONTMATTER_FIELDS: frozenset[str] = frozenset({
     "last_updated",
 })
 
+DRIFT_LOCK_FILENAME = "drift.lock"
+DRIFT_LOCK_VERSION = "2.0"
+CONFLICT_SENTINEL_DIGEST = "sha256:0000000000000000"
+_SHA256_DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{16}$")
+_TOP_LEVEL_LOCK_KEYS: frozenset[str] = frozenset({"version", "articles"})
+_ENTRY_LOCK_KEYS: frozenset[str] = frozenset({"digest", "count", "targets", "conflict"})
+
 
 def _is_ignored(path: Path, project_root: Path, allow_brain79: bool = False) -> bool:
     try:
@@ -243,6 +250,9 @@ class WorkspaceIndex:
         self.drift_cache: dict[str, list[dict[str, Any]]] = {}
         self._pattern_cache: dict[str, list[str]] = {}
         self._contained_path_cache: dict[str, Path | None] = {}
+        self._drift_lock_loaded: bool = False
+        self._drift_lock_data: dict[str, Any] | None = None
+        self._manifest_data: dict[str, Any] | None = None
 
     def resolve_contained_path(self, rel_posix_path: str) -> Path:
         """Resolve and memoize a contained workspace path, rejecting escapes outside project_root."""
@@ -331,6 +341,7 @@ class WorkspaceIndex:
             f"{wiki_rel}/INDEX.md",
             f"{wiki_rel}/.navigation_registry.json",
             f"{wiki_rel}/.drift_manifest.json",
+            f"{wiki_rel}/{DRIFT_LOCK_FILENAME}",
         }
 
         all_paths = {
@@ -781,6 +792,258 @@ def save_drift_manifest(wiki_root: Path, manifest_data: dict[str, Any]) -> None:
             tmp_file.unlink(missing_ok=True)
 
 
+def _corrupt_lock_error(message: str) -> ValidationError:
+    """Construct a structured ValidationError for corrupt .brain-79/drift.lock."""
+    return ValidationError(
+        rule="corrupt_drift_lock",
+        path=DRIFT_LOCK_FILENAME,
+        message=message,
+        actionable=(
+            "Repair or regenerate .brain-79/drift.lock via `brain79 migrate --apply` "
+            "or restore a valid version from Git history."
+        ),
+    )
+
+
+def _validate_lock_rel_path(raw_path: Any, *, forbid_wiki_prefix: bool) -> str:
+    """Validate a normalized POSIX relative path key inside .brain-79/drift.lock."""
+    if not isinstance(raw_path, str) or not raw_path:
+        raise _corrupt_lock_error(f"Invalid empty or non-string path key: {raw_path!r}.")
+    if "\\" in raw_path or raw_path.startswith("/"):
+        raise _corrupt_lock_error(f"Path key must be relative POSIX without backslashes: {raw_path!r}.")
+    parts = raw_path.split("/")
+    if any(seg in ("", ".", "..") for seg in parts):
+        raise _corrupt_lock_error(f"Path key contains invalid segment: {raw_path!r}.")
+    if forbid_wiki_prefix and (raw_path == ".brain-79" or raw_path.startswith(".brain-79/")):
+        raise _corrupt_lock_error(f"Article key must not include '.brain-79/' prefix: {raw_path!r}.")
+    return raw_path
+
+
+def validate_drift_lock_data(data: Any) -> dict[str, Any]:
+    """Strictly validate parsed .brain-79/drift.lock v2.0 structure."""
+    if not isinstance(data, dict):
+        raise _corrupt_lock_error("Top-level drift.lock value must be a JSON object.")
+    if set(data.keys()) != _TOP_LEVEL_LOCK_KEYS:
+        raise _corrupt_lock_error(
+            f"Top-level keys must be exact {sorted(_TOP_LEVEL_LOCK_KEYS)}, got {sorted(data.keys())}."
+        )
+    if data["version"] != DRIFT_LOCK_VERSION:
+        raise _corrupt_lock_error(
+            f"Unsupported drift.lock version {data['version']!r}; expected {DRIFT_LOCK_VERSION!r}."
+        )
+    raw_articles = data["articles"]
+    if not isinstance(raw_articles, dict):
+        raise _corrupt_lock_error("'articles' field in drift.lock must be a JSON object.")
+
+    validated_articles: dict[str, dict[str, Any]] = {}
+    for art_key, entry in raw_articles.items():
+        norm_art = _validate_lock_rel_path(art_key, forbid_wiki_prefix=True)
+        if not isinstance(entry, dict):
+            raise _corrupt_lock_error(f"Entry for '{norm_art}' must be a JSON object.")
+        entry_keys = set(entry.keys())
+        if not entry_keys.issubset(_ENTRY_LOCK_KEYS):
+            raise _corrupt_lock_error(
+                f"Entry for '{norm_art}' has unknown keys: {sorted(entry_keys - _ENTRY_LOCK_KEYS)}."
+            )
+        for req_key in ("digest", "count", "targets"):
+            if req_key not in entry:
+                raise _corrupt_lock_error(f"Entry for '{norm_art}' is missing required key '{req_key}'.")
+
+        digest = entry["digest"]
+        if not isinstance(digest, str) or not _SHA256_DIGEST_RE.match(digest):
+            raise _corrupt_lock_error(f"Entry for '{norm_art}' has invalid digest: {digest!r}.")
+
+        count = entry["count"]
+        if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+            raise _corrupt_lock_error(f"Entry for '{norm_art}' has invalid count: {count!r}.")
+
+        raw_targets = entry["targets"]
+        if not isinstance(raw_targets, dict):
+            raise _corrupt_lock_error(f"Entry for '{norm_art}' targets must be a JSON object.")
+        validated_targets: dict[str, str] = {}
+        for t_key, t_val in raw_targets.items():
+            norm_t = _validate_lock_rel_path(t_key, forbid_wiki_prefix=False)
+            if not isinstance(t_val, str) or not _SHA256_DIGEST_RE.match(t_val):
+                raise _corrupt_lock_error(
+                    f"Entry for '{norm_art}' target '{norm_t}' has invalid digest: {t_val!r}."
+                )
+            validated_targets[norm_t] = t_val
+
+        norm_entry: dict[str, Any] = {
+            "digest": digest,
+            "count": count,
+            "targets": validated_targets,
+        }
+        if "conflict" in entry:
+            if entry["conflict"] is not True:
+                raise _corrupt_lock_error(
+                    f"Entry for '{norm_art}' has invalid 'conflict' value {entry['conflict']!r}; must be true when present."
+                )
+            norm_entry["conflict"] = True
+
+        validated_articles[norm_art] = norm_entry
+
+    return {"version": DRIFT_LOCK_VERSION, "articles": validated_articles}
+
+
+def parse_drift_lock_text(raw: str, *, allow_empty: bool = False) -> dict[str, Any]:
+    """Parse and strictly validate raw JSON text for .brain-79/drift.lock."""
+    if not raw.strip():
+        if allow_empty:
+            return {"version": DRIFT_LOCK_VERSION, "articles": {}}
+        raise _corrupt_lock_error("drift.lock is empty.")
+
+    def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        obj: dict[str, Any] = {}
+        for k, v in pairs:
+            if k in obj:
+                raise _corrupt_lock_error(f"Duplicate JSON key '{k}' in drift.lock.")
+            obj[k] = v
+        return obj
+
+    def _reject_invalid_constant(val: str) -> Any:
+        raise _corrupt_lock_error(f"Non-standard JSON constant '{val}' in drift.lock.")
+
+    try:
+        parsed = json.loads(
+            raw,
+            object_pairs_hook=_reject_duplicate_keys,
+            parse_constant=_reject_invalid_constant,
+        )
+    except json.JSONDecodeError as exc:
+        raise _corrupt_lock_error(f"Malformed JSON in drift.lock: {exc}") from exc
+
+    return validate_drift_lock_data(parsed)
+
+
+def serialize_drift_lock(data: dict[str, Any]) -> str:
+    """Deterministically serialize validated drift.lock data as LF-only UTF-8 JSON."""
+    validated = validate_drift_lock_data(data)
+    return json.dumps(validated, indent=2, sort_keys=True) + "\n"
+
+
+def load_drift_lock(wiki_root: Path) -> dict[str, Any] | None:
+    """Load and validate .brain-79/drift.lock without performing any disk writes.
+
+    Returns None if drift.lock does not exist on disk.
+    Raises ValidationError(rule='corrupt_drift_lock') if drift.lock exists and is invalid.
+    """
+    lock_path = wiki_root / DRIFT_LOCK_FILENAME
+    if not lock_path.exists():
+        return None
+    if not lock_path.is_file():
+        raise _corrupt_lock_error(f"{DRIFT_LOCK_FILENAME} exists on disk but is not a regular file.")
+    try:
+        raw = lock_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        raise _corrupt_lock_error(f"Invalid UTF-8 in {DRIFT_LOCK_FILENAME}: {exc}") from exc
+    return parse_drift_lock_text(raw, allow_empty=False)
+
+
+def save_drift_lock(
+    wiki_root: Path,
+    data: dict[str, Any],
+    *,
+    acquire_lock: bool = True,
+) -> bool:
+    """Persist validated drift.lock atomically under _drift_lock.lock.
+
+    Respects the empty-nonexistent invariant (R-1.1): does not create drift.lock when
+    articles is empty and drift.lock does not already exist on disk.
+    """
+    validated = validate_drift_lock_data(data)
+    lock_path = wiki_root / DRIFT_LOCK_FILENAME
+    if not validated["articles"] and not lock_path.exists():
+        return False
+
+    content = serialize_drift_lock(validated)
+
+    def _write_atomic() -> None:
+        from brain79.core.locks import create_temp_path
+
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_file = create_temp_path(lock_path)
+        try:
+            tmp_file.write_text(content, encoding="utf-8", newline="\n")
+            atomic_replace_with_retry(tmp_file, lock_path)
+        finally:
+            tmp_file.unlink(missing_ok=True)
+
+    if acquire_lock:
+        drift_lock = acquire_wiki_lock(wiki_root, DRIFT_LOCK_FILENAME, timeout=10.0)
+        with drift_lock:
+            _write_atomic()
+    else:
+        _write_atomic()
+    return True
+
+
+def update_drift_lock_entries(
+    wiki_root: Path,
+    *,
+    updates: dict[str, dict[str, Any]] | None = None,
+    removals: set[str] | None = None,
+) -> bool:
+    """Atomically read-modify-write .brain-79/drift.lock under _drift_lock.lock."""
+    lock_path = wiki_root / DRIFT_LOCK_FILENAME
+    if not lock_path.exists() and not updates:
+        return False
+
+    drift_lock = acquire_wiki_lock(wiki_root, DRIFT_LOCK_FILENAME, timeout=10.0)
+    with drift_lock:
+        data = load_drift_lock(wiki_root)
+        if data is None:
+            data = {"version": DRIFT_LOCK_VERSION, "articles": {}}
+        articles = dict(data["articles"])
+        changed = False
+
+        if removals:
+            for key in removals:
+                if key in articles:
+                    del articles[key]
+                    changed = True
+
+        if updates:
+            for key, entry in updates.items():
+                if articles.get(key) != entry:
+                    articles[key] = entry
+                    changed = True
+
+        if not changed:
+            return False
+
+        return save_drift_lock(
+            wiki_root,
+            {"version": DRIFT_LOCK_VERSION, "articles": articles},
+            acquire_lock=False,
+        )
+
+
+def prune_drift_lock(wiki_root: Path, valid_active_articles: set[str]) -> bool:
+    """Prune stale/inactive/deleted/unanchored entries from .brain-79/drift.lock.
+
+    Never creates drift.lock if it does not already exist on disk.
+    """
+    lock_path = wiki_root / DRIFT_LOCK_FILENAME
+    if not lock_path.exists():
+        return False
+
+    drift_lock = acquire_wiki_lock(wiki_root, DRIFT_LOCK_FILENAME, timeout=10.0)
+    with drift_lock:
+        data = load_drift_lock(wiki_root)
+        if data is None:
+            return False
+        articles = data["articles"]
+        pruned = {k: v for k, v in articles.items() if k in valid_active_articles}
+        if len(pruned) == len(articles):
+            return False
+        return save_drift_lock(
+            wiki_root,
+            {"version": DRIFT_LOCK_VERSION, "articles": pruned},
+            acquire_lock=False,
+        )
+
+
 def get_file_last_modified_date(file_path: Path, project_root: Path) -> str | None:
     """Get the last modification date (YYYY-MM-DD) for a workspace file."""
     if not file_path.exists() or not file_path.is_file():
@@ -842,6 +1105,7 @@ def check_article_drift(
     workspace_index: WorkspaceIndex | None = None,
     overlay_fs: dict[str, str] | None = None,
     manifest_data: dict[str, Any] | None = None,
+    lock_data: dict[str, Any] | None = None,
     _visited: frozenset[str] = frozenset(),
 ) -> list[dict[str, Any]]:
     """Check if a wiki article has direct or transitive drift against governed targets.
@@ -871,6 +1135,19 @@ def check_article_drift(
                 rel_article = normalize_wiki_rel_path(p_str)
         else:
             rel_article = normalize_wiki_rel_path(p_str)
+
+    if workspace_index is None:
+        workspace_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=overlay_fs)
+
+    # Unconditional fail-closed load of .brain-79/drift.lock (R-1.4)
+    if lock_data is not None:
+        resolved_lock: dict[str, Any] | None = lock_data
+    elif workspace_index._drift_lock_loaded:
+        resolved_lock = workspace_index._drift_lock_data
+    else:
+        resolved_lock = load_drift_lock(w_root)
+        workspace_index._drift_lock_data = resolved_lock
+        workspace_index._drift_lock_loaded = True
 
     if rel_article in _visited:
         return []
@@ -909,17 +1186,6 @@ def check_article_drift(
     if not patterns:
         return []
 
-    if workspace_index is None:
-        workspace_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=overlay_fs)
-    if manifest_data is None:
-        manifest_data = load_drift_manifest(
-            w_root,
-            auto_rebuild=True,
-            persist=False,
-            project_root=p_root,
-            workspace_index=workspace_index,
-        )
-
     if rel_article in workspace_index.drift_cache and not _visited:
         return workspace_index.drift_cache[rel_article]
 
@@ -932,14 +1198,110 @@ def check_article_drift(
         workspace_index=workspace_index,
     )
 
-    manifest_articles = manifest_data.get("articles", {})
-    manifest_entry = manifest_articles.get(rel_article)
+    lock_articles = resolved_lock.get("articles", {}) if resolved_lock else {}
+    lock_entry = lock_articles.get(rel_article)
     stored_digest = meta.get("applies_to_digest")
 
     drifts: list[dict[str, Any]] = []
 
-    # Step A: Direct Drift
-    if stored_digest:
+    # Step A: Direct Drift (Precedence: 1. drift.lock, 2. legacy applies_to_digest, 3. last_updated)
+    if lock_entry is not None:
+        if lock_entry.get("conflict") is True:
+            drifts.append({
+                "article_path": rel_article,
+                "target_file": patterns[0],
+                "workspace_file": patterns[0],
+                "drift_kind": "conflict",
+                "message": (
+                    f"merge conflict sentinel in .brain-79/{DRIFT_LOCK_FILENAME} for {rel_article}; "
+                    "review and resolve via brain79_session_commit"
+                ),
+            })
+        else:
+            lock_stored_digest = lock_entry["digest"]
+            lock_stored_count = lock_entry["count"]
+            lock_targets: dict[str, str] = lock_entry.get("targets", {})
+
+            if lock_targets:
+                for old_target, old_hash in sorted(lock_targets.items()):
+                    if old_target not in curr_targets:
+                        drifts.append({
+                            "article_path": rel_article,
+                            "target_file": old_target,
+                            "workspace_file": old_target,
+                            "drift_kind": "deleted",
+                            "message": f"governed file deleted: {old_target}",
+                        })
+                    elif curr_targets[old_target] != old_hash:
+                        drifts.append({
+                            "article_path": rel_article,
+                            "target_file": old_target,
+                            "workspace_file": old_target,
+                            "drift_kind": "modified",
+                            "message": f"governed file modified: {old_target}",
+                        })
+                for new_target in sorted(curr_targets.keys()):
+                    if new_target not in lock_targets:
+                        drifts.append({
+                            "article_path": rel_article,
+                            "target_file": new_target,
+                            "workspace_file": new_target,
+                            "drift_kind": "added",
+                            "message": f"new file matched applies_to pattern: {new_target}",
+                        })
+                if curr_count == 0:
+                    drifts.append({
+                        "article_path": rel_article,
+                        "target_file": patterns[0],
+                        "workspace_file": patterns[0],
+                        "drift_kind": "missing",
+                        "message": "governed files missing: pattern matched 0 files in active article",
+                    })
+                if not drifts and curr_digest != lock_stored_digest:
+                    sorted_targets = sorted(curr_targets.keys())
+                    rep_target = sorted_targets[0] if sorted_targets else patterns[0]
+                    drifts.append({
+                        "article_path": rel_article,
+                        "target_file": rep_target,
+                        "workspace_file": rep_target,
+                        "drift_kind": "modified",
+                        "fallback_targets": sorted_targets,
+                        "message": f"governed targets digest changed ({lock_stored_digest} -> {curr_digest})",
+                    })
+            else:
+                if curr_digest != lock_stored_digest or (curr_count == 0 and lock_stored_count > 0):
+                    if curr_count == 0:
+                        fallback_kind = "missing"
+                    elif curr_count > lock_stored_count:
+                        fallback_kind = "added"
+                    elif curr_count < lock_stored_count:
+                        fallback_kind = "deleted"
+                    else:
+                        fallback_kind = "modified"
+
+                    sorted_targets = sorted(curr_targets.keys())
+                    rep_target = sorted_targets[0] if sorted_targets else patterns[0]
+                    drifts.append({
+                        "article_path": rel_article,
+                        "target_file": rep_target,
+                        "workspace_file": rep_target,
+                        "drift_kind": fallback_kind,
+                        "fallback_targets": sorted_targets,
+                        "message": f"governed targets digest changed ({lock_stored_digest} -> {curr_digest})",
+                    })
+    elif stored_digest:
+        if manifest_data is None:
+            if workspace_index._manifest_data is None:
+                workspace_index._manifest_data = load_drift_manifest(
+                    w_root,
+                    auto_rebuild=True,
+                    persist=False,
+                    project_root=p_root,
+                    workspace_index=workspace_index,
+                )
+            manifest_data = workspace_index._manifest_data
+        manifest_articles = manifest_data.get("articles", {})
+        manifest_entry = manifest_articles.get(rel_article)
         if manifest_entry and isinstance(manifest_entry, dict) and "targets" in manifest_entry:
             manifest_targets: dict[str, str] = manifest_entry.get("targets", {})
             # Check modified and deleted targets
@@ -1052,6 +1414,7 @@ def check_article_drift(
                     workspace_index=workspace_index,
                     overlay_fs=overlay_fs,
                     manifest_data=manifest_data,
+                    lock_data=resolved_lock,
                     _visited=_visited | {rel_article},
                 )
 
@@ -1079,6 +1442,7 @@ def detect_all_drift(
     workspace_index: WorkspaceIndex | None = None,
     overlay_fs: dict[str, str] | None = None,
     manifest_data: dict[str, Any] | None = None,
+    lock_data: dict[str, Any] | None = None,
     git_cache: Any = None,
 ) -> list[dict[str, Any]]:
     """Detect documentation drift across all active articles in the wiki."""
@@ -1089,14 +1453,13 @@ def detect_all_drift(
         workspace_index = WorkspaceIndex.build(
             p_root, w_root, overlay_fs=overlay_fs, git_cache=git_cache
         )
-    if manifest_data is None:
-        manifest_data = load_drift_manifest(
-            w_root,
-            auto_rebuild=True,
-            persist=False,
-            project_root=p_root,
-            workspace_index=workspace_index,
-        )
+    if lock_data is None:
+        if workspace_index._drift_lock_loaded:
+            lock_data = workspace_index._drift_lock_data
+        else:
+            lock_data = load_drift_lock(w_root)
+            workspace_index._drift_lock_data = lock_data
+            workspace_index._drift_lock_loaded = True
 
     files = md_files if md_files is not None else sorted(w_root.rglob("*.md"))
     all_drifts: list[dict[str, Any]] = []
@@ -1117,6 +1480,7 @@ def detect_all_drift(
             workspace_index=workspace_index,
             overlay_fs=overlay_fs,
             manifest_data=manifest_data,
+            lock_data=lock_data,
         )
         all_drifts.extend(drifts)
 

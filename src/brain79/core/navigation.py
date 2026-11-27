@@ -516,6 +516,41 @@ def regenerate_index_navigation(wiki_root: Path, *, rebuild: bool = False) -> st
             registry["articles"] = cleaned
             _save_registry_unlocked(wiki_root, registry)
 
+        # Prune stale/inactive/unanchored entries from .brain-79/drift.lock under _drift_lock.lock
+        # (strictly before _drift_manifest.lock and INDEX.md.lock per LOCK_HIERARCHY; never swallow ValidationError)
+        from brain79.core.drift import DRIFT_LOCK_FILENAME, prune_drift_lock
+        from brain79.core.frontmatter import (
+            INACTIVE_STATUSES,
+            PRE_IMPLEMENTATION_STATUSES,
+            parse_frontmatter,
+        )
+
+        if (wiki_root / DRIFT_LOCK_FILENAME).exists():
+            non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+            valid_active_articles: set[str] = set()
+            for a in cleaned:
+                art_rel = a.get("path", "")
+                if not art_rel or art_rel in ("INDEX.md", "SCHEMA.md"):
+                    continue
+                art_file = wiki_root / art_rel
+                if not art_file.is_file():
+                    continue
+                try:
+                    meta, _ = parse_frontmatter(art_file.read_text(encoding="utf-8"))
+                except Exception:
+                    continue
+                status = str(meta.get("status", "")).lower()
+                stability = str(meta.get("stability", "")).lower()
+                if status in non_active or stability in non_active:
+                    continue
+                applies_val = meta.get("applies_to")
+                has_applies = (isinstance(applies_val, str) and bool(applies_val.strip())) or (
+                    isinstance(applies_val, list) and any(bool(x) for x in applies_val)
+                )
+                if has_applies:
+                    valid_active_articles.add(art_rel)
+            prune_drift_lock(wiki_root, valid_active_articles)
+
         manifest_file = wiki_root / ".drift_manifest.json"
         if manifest_file.is_file():
             try:

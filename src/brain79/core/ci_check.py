@@ -56,7 +56,7 @@ _AGY_PAYLOAD_KEYS: frozenset[str] = frozenset(
 )
 
 _EPHEMERAL_WIKI_DIRS: frozenset[str] = frozenset({"_raw", ".locks", "handoffs"})
-_EPHEMERAL_WIKI_FILES: frozenset[str] = frozenset({"INDEX.md", "SCHEMA.md"})
+_EPHEMERAL_WIKI_FILES: frozenset[str] = frozenset({"INDEX.md", "SCHEMA.md", "drift.lock"})
 _ACTIVE_ADR_STATUSES: frozenset[str] = frozenset({"accepted", "stable", ""})
 _MAX_LIST_ITEMS = 30
 _MAX_LINT_ITEMS = 15
