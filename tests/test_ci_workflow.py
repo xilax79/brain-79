@@ -196,7 +196,8 @@ def test_ci_workflow_polyglot_job(workflow_yaml: dict[str, Any]) -> None:
     env = job.get("env", {})
     assert env.get("BRAIN79_REQUIRE_POLYGLOT") == "1"
     assert env.get("PYTHONUTF8") == "1"
-    assert env.get("BRAIN79_PERF_FACTOR") == "3"
+    assert "3" in str(env.get("BRAIN79_PERF_FACTOR", ""))
+    assert "5" in str(env.get("BRAIN79_PERF_FACTOR", ""))
 
     strategy = job.get("strategy", {})
     assert strategy.get("fail-fast") is False

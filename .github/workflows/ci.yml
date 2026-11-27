@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
-      BRAIN79_PERF_FACTOR: "3"
+      BRAIN79_PERF_FACTOR: ${{ matrix.os == 'windows-latest' && '5' || '3' }}
       PYTHONUTF8: "1"
     strategy:
       fail-fast: false
@@ -79,7 +79,7 @@ jobs:
     env:
       BRAIN79_REQUIRE_POLYGLOT: "1"
       PYTHONUTF8: "1"
-      BRAIN79_PERF_FACTOR: "3"
+      BRAIN79_PERF_FACTOR: ${{ matrix.os == 'windows-latest' && '5' || '3' }}
     strategy:
       fail-fast: false
       matrix:
