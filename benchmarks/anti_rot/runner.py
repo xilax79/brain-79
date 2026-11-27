@@ -10,6 +10,7 @@ import sys
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -809,7 +810,7 @@ def _apply_dry_run_mutations(workspace: Path, arm: str, session_id: str) -> str:
             "title: LedgerPulse core architecture\n"
             "type: architecture\n"
             "stability: stable\n"
-            "last_updated: 2026-11-26\n"
+            f"last_updated: {date.today().isoformat()}\n"
             "summary: Architecture overview for LedgerPulse pricing, ledger, tax, and reporter.\n"
             "applies_to:\n"
             "  - src/ledgerpulse/pricing.py\n"
@@ -959,7 +960,7 @@ def _apply_dry_run_mutations(workspace: Path, arm: str, session_id: str) -> str:
                     "---\n"
                     "title: Multi-currency rounding drift analysis\n"
                     "type: topic\n"
-                    "last_updated: 2026-11-26\n"
+                    f"last_updated: {date.today().isoformat()}\n"
                     "summary: Research findings on rounding drift across USD, EUR, and GBP.\n"
                     "---\n\n"
                     "# Multi-currency rounding drift analysis\n\n"

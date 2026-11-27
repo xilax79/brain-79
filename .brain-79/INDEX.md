@@ -1,6 +1,6 @@
 ---
 type: navigation
-last_updated: 2026-11-26
+last_updated: 2026-11-27
 ---
 
 # Project index
