@@ -6,9 +6,20 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-27
+
 ### Added
-- **Longitudinal anti-rot benchmark harness (Phase 16, SPEC-016 — awaiting live `AC-6` UAT gate before `v0.17.0`)**:
+- **Longitudinal anti-rot benchmark harness and release gate (Phase 16, SPEC-016)**:
   - Added the `LedgerPulse` polyglot testbed (`benchmarks/anti_rot/fixture/`, 13 non-test Python and `.mjs` source files with hidden `S2`–`S12` contracts), realistic `AGENTS.md` + `docs/` control baseline (`control_agents.md`), dual-arm workspace initializer with fail-closed `agy` isolation probes (`workspace.py`), 12-session cold-start `runner.py`, deterministic rot/coverage/triage evaluator (`evaluator.py`), mechanically enforced blind semantic-recall probe (`recall.py`, `deny_src_reads.py`), binary release gate (`gate.py`), and `scripts/run_anti_rot_benchmark.py` (`--mode dry-run|live|evaluate`).
+  - Live `AC-6` release gate verified `PASS` (7/7 criteria, exit `0`) on `gemini-4-hydrogen-low`: `0.0%` rot (`0/118` vs `1.12%` Arm B), `100.0%` canonical `src/**` coverage (`14/14` vs `50.0%` Arm B), `5.9x` fewer doc-read tokens (`2,479` vs `14,649`), `12/12` compliance, and `100.0%` (`24/24`) blind semantic recall.
+- **Agent ergonomics, strict bootstrap governance, and batch-read parity (SPEC-202611)**:
+  - Profile-aware `auto_map: bool | None = None` across `run_bootstrap()`, `brain79_bootstrap()`, and CLI `brain79 bootstrap` (`--auto-map` / `--no-auto-map`), defaulting to `True` on `software` wikis with disjoint `overview.md`/`stack.md`/module partitioning examples.
+  - Ergonomic `brain79_read_batch(paths=[...])` and string-element `requests` normalization across MCP (`server.py`, flat non-`anyOf` wire schema) and CLI (`brain79 read-batch --paths ...`, `--file`, `--stdin`), preserving `MCP_TOOLS == 9` and `WHITELIST == 26`.
+  - Strict-mode `unanchored_governance_article` pre-flight parity across `commit_session()`, `write_article()`/`brain79_edit`, `write_many_articles()`, and `check_file_health()`.
+  - Clean `orient()`/`context.py` ranking excluding `INDEX.md`/`SCHEMA.md` before `top_n`, prioritizing active articles over `INACTIVE_STATUSES`, and emitting bounded (`<= 20`) `brain79_read_batch(paths=[...])` reminders.
+
+### Migration notes
+- Run `brain79 update-project` in existing repositories to synchronize `AGENTS.md`, `SCHEMA.md`, and `SKILL.md` to `v0.17.0`.
 
 ## [0.16.0] - 2026-11-24
 

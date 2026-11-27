@@ -2,7 +2,7 @@
 spec_id: SPEC-016
 title: Longitudinal anti-rot release gate
 target_version: 0.17.0
-status: in_progress
+status: implemented
 owner: xilax
 last_updated: 2026-11-26
 related_wiki:
@@ -212,9 +212,9 @@ uv run brain79 doctor
 
 ## Wiki distillation checklist (post-implementation)
 
-- [ ] Execute every row in `## Wiki impact map` (ADR-018 compliant, `<= 20 KB`, non-overlapping `applies_to`).
-- [ ] Populate `Test ref` on every `AC-*` entry and ensure all amendments are recorded in `## Amendments`.
-- [ ] Record any new architectural decision in `.brain-79/decisions/adr-XXX.md` (if applicable).
-- [ ] Add release notes in `CHANGELOG.md` and `.brain-79/changelog/v0-17-0.md`.
-- [ ] Update `.brain-79/architecture/roadmap-industrial-scale.md` status and archive link.
-- [ ] Set frontmatter `status: implemented` and move this file to `specs/archive/`.
+- [x] Execute every row in `## Wiki impact map` (ADR-018 compliant, `<= 20 KB`, non-overlapping `applies_to`).
+- [x] Populate `Test ref` on every `AC-*` entry and ensure all amendments are recorded in `## Amendments`.
+- [x] Record any new architectural decision in `.brain-79/decisions/adr-XXX.md` (if applicable).
+- [x] Add release notes in `CHANGELOG.md` and `.brain-79/changelog/v0-17-0.md`.
+- [x] Update `.brain-79/architecture/roadmap-industrial-scale.md` status and archive link.
+- [x] Set frontmatter `status: implemented` and move this file to `specs/archive/`.

@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed foundation (phases 0-15 and v0.16.0) and prioritized evolution (phase 16 anti-rot proof + SPEC-202611, phase 17 PyPI release, and phase 18 external drift lockfile)
+summary: project roadmap covering completed foundation (phases 0-16 and v0.17.0) and prioritized evolution (phase 17 PyPI release and phase 18 external drift lockfile)
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -49,7 +49,7 @@ Per **ADR-019**, upcoming phase specifications are authored under `specs/` outsi
 
 ---
 
-## Completed foundation (phases 0–15)
+## Completed foundation (phases 0–16)
 
 Shipped capabilities live in their dedicated `.brain-79/features/` living manuals and release changelogs; archived pre-ADR-019 phase design specs live under `specs/archive/legacy/`.
 
@@ -76,16 +76,15 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 - **[x] Phase 13 (`v0.14.0`)**: MCP surface pruning and focused CLI-superset architecture (pruned 13 redundant/administrative MCP wrappers and `--mcp-profile`, standardized 9-tool `MCP_TOOLS` ⊂ 24-command `WHITELIST`, ADR-020). Changelog: [v0-14-0.md](../changelog/v0-14-0.md); archived spec: `specs/archive/phase-13-mcp-surface-pruning.md`.
 - **[x] Phase 14 (`v0.15.0`)**: passive lifecycle hooks and CI PR gate (opt-in `SessionStart`/`Stop` adapters for Claude Code, Antigravity, and Cursor, read-only `brain79 ci-check` engine, composite `action.yml`, dual-tier enforcement, 25-command `WHITELIST`, ADR-021). Living manual: [lifecycle-hooks-and-ci-gate.md](../features/lifecycle-hooks-and-ci-gate.md); changelog: [v0-15-0.md](../changelog/v0-15-0.md); archived spec: `specs/archive/phase-14-lifecycle-hooks-and-ci-gate.md`.
 - **[x] Phase 15 (`v0.16.0`)**: polyglot AST guards, context budget telemetry, and language-agnostic docs (10 Tree-sitter parsers behind `brain79[polyglot]`, read-only `brain79 stats`, 26-command `WHITELIST`, ADR-022). Living manual: [polyglot-ast-guards-and-stats.md](../features/polyglot-ast-guards-and-stats.md); changelog: [v0-16-0.md](../changelog/v0-16-0.md); archived spec: `specs/archive/phase-15-polyglot-ast-and-stats.md`.
+- **[x] Phase 16 + `SPEC-202611` (`v0.17.0`)**: longitudinal anti-rot release gate (`PASS` 7/7 on `gemini-4-hydrogen-low`: `0.0%` rot, `100.0%` canonical `src/**` coverage, `5.9x` fewer doc-read tokens, `24/24` blind recall) plus agent ergonomics, profile-aware `auto_map`, `brain79_read_batch(paths=[...])`, strict pre-flight parity, and clean `orient()` ranking. Results: [phase-16-anti-rot-benchmark-results.md](../topics/phase-16-anti-rot-benchmark-results.md); changelog: [v0-17-0.md](../changelog/v0-17-0.md); archived specs: `specs/archive/phase-16-longitudinal-anti-rot-gate.md`, `specs/archive/2026-11-agent-ergonomics-and-strict-governance.md`.
 
 ---
 
-## Strategic evolution roadmap (`v0.17.0` onward)
+## Strategic evolution roadmap (`v0.18.0` onward)
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 16 (P1): Longitudinal anti-rot release gate + SPEC-202611 (v0.17.0)         | [~] In progress (baseline FAIL 4/7; SPEC-202611 approved)
-+-----------------------------------------------------------------------------------+
-| Phase 17 (P1): Automated PyPI distribution via Trusted Publishers (v0.18.0)       | [ ] Planned (blocked by Phase 16 AC-6 PASS)
+| Phase 17 (P1): Automated PyPI distribution via Trusted Publishers (v0.18.0)       | [ ] Planned (unblocked by Phase 16 AC-6 PASS)
 +-----------------------------------------------------------------------------------+
 | Phase 18 (P1): External drift lockfile (.brain-79/drift.lock) (v0.19.0)           | [ ] Approved (SPEC-018)
 +-----------------------------------------------------------------------------------+
@@ -99,22 +98,9 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 
 | Priority | Milestone | Target version | Primary objective |
 |---|---|---|---|
-| **P1** | Phase 16 + `SPEC-202611` | `v0.17.0` | Empirically prove anti-rot durability across 12 cold-start `agy` (`gemini-4-hydrogen-low`) sessions against a realistic `AGENTS.md` + `docs/` baseline (`SPEC-016`), remediating the 3 real product defects uncovered in the first live run via `SPEC-202611` before re-running `AC-6`. |
 | **P1** | Phase 17 | `v0.18.0` | Publish validated `brain79` package to PyPI via GitHub Actions Trusted Publishers (`uvx brain79`, `uv tool install brain79`, `pipx install brain79`). |
 | **P1** | Phase 18 | `v0.19.0` | Eliminate hash-only frontmatter churn in Git history by moving `applies_to_digest` and `applies_to_count` into a centralized `.brain-79/drift.lock` with a 3-way Git merge driver (`SPEC-018`). |
-| **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`). |
-
----
-
-## Phase 16 (`v0.17.0`) — Longitudinal anti-rot release gate and agent ergonomics remediation (P1, in progress)
-
-Specifications: `specs/phase-16-longitudinal-anti-rot-gate.md` (`SPEC-016`) and `specs/2026-11-agent-ergonomics-and-strict-governance.md` (`SPEC-202611`, `approved`). Topic summary and calibrated baseline results: [phase-16-anti-rot-benchmark-results.md](../topics/phase-16-anti-rot-benchmark-results.md).
-
-Goal: empirically prove that `brain-79` wikis resist documentation rot across long multi-session LLM development runs before public PyPI publication.
-
-- **Status**: `In progress (first live AC-6 baseline run completed with calibrated FAIL 4/7; SPEC-202611 approved to remediate the 3 product defects before re-running AC-6)`. Phase 17 PyPI release remains blocked until live `AC-6` execution produces a `PASS` verdict.
-- **Multi-session cold-start stress harness (`benchmarks/anti_rot/`, `scripts/run_anti_rot_benchmark.py`)**: executes 12 independent cold-start `agy` (`gemini-4-hydrogen-low`) sessions on the `LedgerPulse` polyglot fixture (`S1`–`S12`), comparing `brain-79` (Arm A) against a realistic `AGENTS.md` + `docs/` baseline (Arm B) across feature additions, bugfixes, refactors, Type A/B triage, and module moves.
-- **Approved pre-gate remediation (`SPEC-202611`)**: addresses the 3 real product gaps surfaced by the baseline run — `bootstrap` `auto_map` default and `applies_to` guidance, `brain79_read_batch` ergonomic `paths` alias, `context` ranking exclusion of navigation meta-files, and `strict`-mode structural alignment.
+| **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`, and optional large-scale 40–60 file anti-rot stress test). |
 
 ---
 

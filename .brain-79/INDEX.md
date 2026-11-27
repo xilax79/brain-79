@@ -14,7 +14,7 @@ last_updated: 2026-11-27
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 26 CLI subcommands
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing across 26 commands, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-15 and v0.16.0) and prioritized evolution (phase 16 anti-rot proof + SPEC-202611, phase 17 PyPI release, and phase 18 external drift lockfile)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-16 and v0.17.0) and prioritized evolution (phase 17 PyPI release and phase 18 external drift lockfile)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, focused 9-tool surface, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
@@ -33,6 +33,7 @@ last_updated: 2026-11-27
 - [Changelog — v0.14.0](changelog/v0-14-0.md) — release notes for v0.14.0 (Phase 13 MCP surface pruning, focused 9-tool MCP\_TOOLS, CLI superset, and --mcp-profile removal)
 - [Changelog — v0.15.0](changelog/v0-15-0.md) — release notes for v0.15.0 (Phase 14 passive lifecycle hooks, read-only CI PR gate, composite GitHub Action, and 25-command CLI)
 - [Changelog — v0.16.0](changelog/v0-16-0.md) — release notes for v0.16.0 (polyglot AST Guard C via brain79\[polyglot\], read-only brain79 stats, doctor diagnostics, and language-agnostic docs)
+- [Changelog — v0.17.0](changelog/v0-17-0.md) — release notes for v0.17.0 (phase 16 longitudinal anti-rot release gate PASS 7/7 and SPEC-202611 agent ergonomics, strict pre-flight parity, and batch-read normalization)
 - [Release v0.11.0 — Core refactoring and hardening](changelog/v0-11-0.md) — core architectural refactoring, concurrency hardening, centralized Git layer, security fixes, and modular decomposition
 
 ### Decisions

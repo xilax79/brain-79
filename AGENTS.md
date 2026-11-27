@@ -1,4 +1,4 @@
-<!-- brain79:start v0.16.0 -->
+<!-- brain79:start v0.17.0 -->
 # Brain-79 AI memory protocol
 
 ## Prerequisites (one-time setup)
@@ -22,6 +22,7 @@
 
 ## Tools and execution protocol
 - **MCP preferred, CLI fallback**: prefer the 9 focused MCP tools (`brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`, `brain79_bootstrap`) for hot-path session work; use the 26-command CLI (`brain79 <subcommand>`) for administrative tasks and fallback.
+- **Batch reading**: read multiple articles in one call via `brain79_read_batch(paths=["architecture/overview.md", "features/auth.md"])`.
 - **Two-call session workflow**:
   1. Cold start: `brain79_orient(task?, paths?)`.
   2. Final wrap-up: apply writes, edits, and handoffs atomically via `brain79_session_commit(writes=[...], handoff={...})`.
@@ -40,7 +41,7 @@
    - Classify into three categories:
      - **Type A — ephemeral / read-only consultation (zero-modification rule)**: casual chat or reading existing files without generating new domain knowledge. Do not invent or edit wiki articles. Verify health with `brain79_lint()` and state: *"The wiki is up-to-date with repository state. No modifications required."*
      - **Type B — zero-code research, analysis, and discovery (knowledge deliverable)**: domain research, web investigations, forecasts, benchmarks, or strategic decisions (even with zero code changes and in non-git directories). The distilled knowledge is the primary deliverable; persist findings in `topics/<slug>.md` or `decisions/<slug>.md` via `brain79_session_commit(...)`.
-     - **Type C — code and workspace mutation**: source code, config, or tests modified. Update governing articles (`features/`, `architecture/`, `decisions/`, `changelog/`) via `brain79_session_commit(...)`.
+     - **Type C — code and workspace mutation**: source code, config, or tests modified. Update governing articles (`features/`, `architecture/`, `decisions/`, `changelog/`) via `brain79_session_commit(...)`, recording public API signatures (including parameter names) and key business constants or thresholds in living manuals.
 7. **Sentence case first policy (mandatory)**:
    - Use sentence-style capitalization for all titles, headings (H1, H2, H3), bullet points, and table headers. Capitalize ONLY the first letter of a title or sentence (except proper nouns and acronyms).
    - After a colon (`:`), lowercase following words unless proper nouns/acronyms (`- **Label**: description`).

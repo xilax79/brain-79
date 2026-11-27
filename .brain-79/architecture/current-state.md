@@ -13,7 +13,7 @@ applies_to:
   - src/brain79/core/__init__.py
 related:
   - architecture/roadmap-industrial-scale.md
-applies_to_digest: "sha256:ef76a2ff4a7af5d0"
+applies_to_digest: "sha256:e9e80a26dc653942"
 applies_to_count: 39
 ---
 
@@ -21,7 +21,7 @@ applies_to_count: 39
 
 ## Overview
 
-This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.16.0.
+This document maintains a high-level summary of the repository's current architecture, active capabilities, completed milestones, and immediate roadmap status as of version 0.17.0.
 
 ## Active subsystem topology
 
@@ -56,9 +56,8 @@ This document maintains a high-level summary of the repository's current archite
 
 ## Immediate focus and maintenance
 
-- Shipped: `v0.16.0` (Phase 15: optional `brain79[polyglot]` Tree-sitter AST Guard C across 10 parsers, read-only `brain79 stats`, language-agnostic docs, and ADR-022).
-- Active: `v0.17.0` (Phase 16 longitudinal anti-rot proof + approved `SPEC-202611` agent ergonomics and strict governance remediation).
-- Upcoming: `v0.18.0` (Phase 17: PyPI Trusted Publishers release) and `v0.19.0` (Phase 18: external `.brain-79/drift.lock` per approved `SPEC-018`).
+- Shipped: `v0.17.0` (Phase 16 longitudinal anti-rot release gate `PASS` 7/7 + `SPEC-202611` agent ergonomics, strict pre-flight parity, and `brain79_read_batch(paths=[...])` parity).
+- Upcoming: `v0.18.0` (Phase 17: PyPI Trusted Publishers release, now unblocked) and `v0.19.0` (Phase 18: external `.brain-79/drift.lock` per approved `SPEC-018`).
 
 ---
 

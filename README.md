@@ -1,6 +1,6 @@
 # brain-79
 
-[![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)](pyproject.toml)
+[![Version](https://img.shields.io/badge/version-0.17.0-blue.svg)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 

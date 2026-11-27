@@ -1,7 +1,7 @@
 ---
 profile: software
 schema_version: 2
-last_updated: 2026-11-24
+last_updated: 2026-11-27
 ---
 
 # Brain-79 — Wiki schema (normative)
@@ -38,7 +38,9 @@ type: feature
 summary: one-line summary for INDEX.md entry
 status: planned  # planned | in_progress | shipped | deprecated | archived | legacy
 version: 1.0.0
-last_updated: 2026-11-24
+applies_to:
+  - path/or/glob
+last_updated: 2026-11-27
 ---
 
 # Decision (decisions/adr-*.md)
@@ -46,9 +48,9 @@ last_updated: 2026-11-24
 type: decision
 summary: one-line summary of architectural decision
 status: proposed  # proposed | accepted | superseded | rejected | legacy
-date: 2026-11-24
+date: 2026-11-27
 deciders: [author]
-last_updated: 2026-11-24
+last_updated: 2026-11-27
 ---
 
 # Architecture (architecture/*.md)
@@ -56,14 +58,16 @@ last_updated: 2026-11-24
 type: architecture
 summary: one-line summary of subsystem or pattern
 stability: experimental  # experimental | stable | archived | legacy
-last_updated: 2026-11-24
+applies_to:
+  - path/or/glob
+last_updated: 2026-11-27
 ---
 
 # Product (product/*.md)
 ---
 type: product
 summary: one-line summary of domain or vision
-last_updated: 2026-11-24
+last_updated: 2026-11-27
 ---
 
 # Topic (topics/*.md)
@@ -71,7 +75,7 @@ last_updated: 2026-11-24
 type: topic
 summary: one-line summary of research, benchmark, or domain topic
 status: active  # active | archived | draft | legacy
-last_updated: 2026-11-24
+last_updated: 2026-11-27
 ---
 ```
 
@@ -100,6 +104,10 @@ Inspect complete document skeletons via `brain79 schema --type <type>`.
 ### Deterministic drift detection (`applies_to`)
 
 Articles declaring `applies_to` paths or globs in frontmatter are continuously checked against git commit timestamps and filesystem modification dates. Stale articles surface as `documentation_drift_suspected` warnings in `brain79 lint` and `brain79_orient`.
+
+### Living manual authoring guidance
+
+When writing or updating `architecture/` and `features/` living manuals, document public function/method signatures (including parameter names) and key business constants or thresholds rather than bare symbol name lists.
 
 ---
 
