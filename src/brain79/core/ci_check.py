@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import hashlib
 import json
 import math
 import os
 from pathlib import Path
 import sys
+import tempfile
+import time
 from typing import Any, Literal
 
 from brain79.config import get_project_root, get_wiki_root, project_context
@@ -792,6 +795,25 @@ def _format_session_start_response(
     }
 
 
+_STOP_GUARD_SESSION_TTL_SECONDS = 1800.0
+_STOP_GUARD_FALLBACK_TTL_SECONDS = 60.0
+
+
+def _extract_stop_session_key(payload: dict[str, Any]) -> str:
+    for key in ("session_id", "conversation_id", "conversationId", "thread_id", "transcript_path"):
+        val = payload.get(key)
+        if isinstance(val, str):
+            stripped = val.strip()
+            if stripped:
+                return stripped
+    return ""
+
+
+def _stop_guard_marker_path(w_root: Path, resolved_client: str, session_key: str) -> Path:
+    guard_key = hashlib.sha256(f"{w_root}|{resolved_client}|{session_key}".encode("utf-8")).hexdigest()[:24]
+    return Path(tempfile.gettempdir()) / "brain79-stop-guards" / f"{guard_key}.json"
+
+
 def _format_stop_response(
     client: Literal["claude", "agy", "cursor"],
     reason: str,
@@ -846,9 +868,65 @@ def run_lifecycle_hook(
                 active_schema = load_active_schema(w_root)
                 if active_schema.enforcement == "advisory":
                     return {}
+                session_key = _extract_stop_session_key(payload)
+                marker = _stop_guard_marker_path(w_root, resolved_client, session_key)
                 drifts = detect_all_drift(wiki_root=w_root, project_root=p_root)
                 if not drifts:
+                    try:
+                        marker.unlink(missing_ok=True)
+                    except OSError:
+                        pass
                     return {}
+
+                drift_sig = hashlib.sha256(
+                    json.dumps(
+                        sorted(
+                            {
+                                (
+                                    str(d.get("article_path", "")),
+                                    str(d.get("drift_kind", "")),
+                                    str(d.get("workspace_file", d.get("target_file", ""))),
+                                )
+                                for d in drifts
+                            }
+                        ),
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                ).hexdigest()[:24]
+
+                ttl = _STOP_GUARD_SESSION_TTL_SECONDS if session_key else _STOP_GUARD_FALLBACK_TTL_SECONDS
+                now = time.time()
+                try:
+                    if marker.is_file():
+                        stored = json.loads(marker.read_text(encoding="utf-8"))
+                        if isinstance(stored, dict):
+                            stored_sig = stored.get("drift_sig")
+                            stored_ts = stored.get("ts")
+                            if (
+                                stored_sig == drift_sig
+                                and isinstance(stored_ts, (int, float))
+                                and not isinstance(stored_ts, bool)
+                                and 0 <= (now - float(stored_ts)) < ttl
+                            ):
+                                return {}
+                except Exception:
+                    pass
+
+                try:
+                    marker.parent.mkdir(parents=True, exist_ok=True)
+                    tmp_marker = create_temp_path(marker)
+                    try:
+                        tmp_marker.write_text(
+                            json.dumps({"drift_sig": drift_sig, "ts": now}, separators=(",", ":")),
+                            encoding="utf-8",
+                            newline="\n",
+                        )
+                        atomic_replace_with_retry(tmp_marker, marker)
+                    finally:
+                        tmp_marker.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
                 drifted_paths = sorted(
                     {
                         str(d.get("article_path", "")).strip()

@@ -545,6 +545,69 @@ def test_lifecycle_hook_stop_drift_and_loop_guards(tmp_path: Path) -> None:
     assert run_lifecycle_hook("stop", client="claude", project_root=repo, stdin_payload="{}") == {}
 
 
+def test_lifecycle_hook_stop_host_anti_loop_guard(tmp_path: Path) -> None:
+    """Host-side /tmp anti-loop guard breaks repeated stop loops without writing under .brain-79/."""
+    import json
+
+    repo = tmp_path / "antiloop_repo"
+    _setup_governed_repo(repo)
+    wiki = repo / ".brain-79"
+
+    def _wiki_tree_snapshot() -> dict[str, bytes]:
+        return {
+            p.relative_to(wiki).as_posix(): p.read_bytes()
+            for p in sorted(wiki.rglob("*"))
+            if p.is_file()
+        }
+
+    # Introduce drift on src/auth.py
+    (repo / "src" / "auth.py").write_text("def login() -> bool:\n    return False\n", encoding="utf-8")
+    before_wiki = _wiki_tree_snapshot()
+
+    # (a) With session_id: blocks once, returns {} on 2nd consecutive call
+    payload_s1 = json.dumps({"cwd": str(repo), "session_id": "sess-1"})
+    first_s1 = run_lifecycle_hook("stop", client="claude", stdin_payload=payload_s1)
+    assert first_s1.get("decision") == "block"
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=payload_s1) == {}
+
+    # (a) Without session_id (fallback TTL): blocks once, returns {} on 2nd consecutive call
+    payload_anon = json.dumps({"cwd": str(repo)})
+    first_anon = run_lifecycle_hook("stop", client="claude", stdin_payload=payload_anon)
+    assert first_anon.get("decision") == "block"
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=payload_anon) == {}
+
+    # (b) Different session_id blocks once again
+    payload_s2 = json.dumps({"cwd": str(repo), "session_id": "sess-2"})
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=payload_s2).get("decision") == "block"
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=payload_s2) == {}
+
+    # (b) Newly added drift (changed drift_sig) blocks once again for sess-1
+    (repo / "src" / "extra.py").write_text("x = 1\n", encoding="utf-8")
+    (wiki / "features" / "extra.md").write_text(
+        "---\ntype: feature\nsummary: extra\nstatus: shipped\nversion: 1.0.0\napplies_to:\n  - src/extra.py\nlast_updated: 2020-01-01\n---\n\n# Feature — Extra\n\n## Overview\n\nOk.\n\n[← Back to Index](../INDEX.md)\n",
+        encoding="utf-8",
+    )
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=payload_s1).get("decision") == "block"
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=payload_s1) == {}
+
+    # (c) Clearing drift resets marker so subsequent drift blocks once again
+    (repo / "src" / "auth.py").write_text("def login() -> bool:\n    return True\n", encoding="utf-8")
+    (wiki / "features" / "extra.md").write_text(
+        "---\ntype: feature\nsummary: extra\nstatus: shipped\nversion: 1.0.0\napplies_to:\n  - src/extra.py\nlast_updated: 2099-01-01\n---\n\n# Feature — Extra\n\n## Overview\n\nOk.\n\n[← Back to Index](../INDEX.md)\n",
+        encoding="utf-8",
+    )
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=payload_s1) == {}
+
+    (repo / "src" / "auth.py").write_text("def login() -> bool:\n    return False\n", encoding="utf-8")
+    assert run_lifecycle_hook("stop", client="claude", stdin_payload=payload_s1).get("decision") == "block"
+
+    # (d) Zero files created or modified under .brain-79/ or .brain-79/.locks/ (aside from our test extra.md)
+    after_wiki = _wiki_tree_snapshot()
+    assert set(after_wiki.keys()) - set(before_wiki.keys()) == {"features/extra.md"}
+    for k, v in before_wiki.items():
+        assert after_wiki[k] == v, f"run_lifecycle_hook('stop') modified {k}"
+
+
 def test_lifecycle_hook_adapters_sync_and_doctor(tmp_path: Path) -> None:
     """AC-7 / R-3.1..R-3.5: Opt-in lifecycle hook adapters, non-destructive merging, and doctor diagnostics."""
     import json

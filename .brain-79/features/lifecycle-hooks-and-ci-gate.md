@@ -47,6 +47,7 @@ The passive lifecycle hooks and CI PR gate subsystem provides a read-only CI gov
 - **Workspace and client resolution**: resolves `.brain-79/` from payload workspace keys (`cwd`, `workspacePaths`, `workspace_roots`) within `.git` boundaries and infers `agy`, `cursor`, or `claude` when `--client auto` is set.
 - **Session start**: invokes `orient(task=task_hint, max_articles=4)` (truncating `task_hint` to `2,000` chars) and formats client-native context injection payloads.
 - **Stop guard**: checks `continuationActive`, `stop_hook_active`, `loop_count >= 1`, `terminationReason != "NO_TOOL_CALL"`, `status != "completed"`, and `schema.enforcement == "advisory"` before surfacing drifted articles via `detect_all_drift()`.
+- **Host-side `/tmp` anti-loop fallback guard**: when a host omits loop-flag fields on consecutive `stop` invocations, `run_lifecycle_hook("stop")` records the deterministic drift signature and timestamp under `Path(tempfile.gettempdir()) / "brain79-stop-guards"` (`_STOP_GUARD_SESSION_TTL_SECONDS = 1800.0` when a session key is present, `_STOP_GUARD_FALLBACK_TTL_SECONDS = 60.0` otherwise), returning `{}` on repeated identical drift without writing anything under `.brain-79/` or `.brain-79/.locks/`.
 
 ---
 

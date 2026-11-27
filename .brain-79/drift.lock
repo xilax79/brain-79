@@ -2,7 +2,7 @@
   "articles": {
     "architecture/current-state.md": {
       "count": 40,
-      "digest": "sha256:87be2ffba439d9f6",
+      "digest": "sha256:4025ad296a59de5e",
       "targets": {
         ".brain-79/decisions/adr-001-hybrid-cli.md": "sha256:ab012fa867954186",
         ".brain-79/decisions/adr-002-immutable-handoffs.md": "sha256:a5838e3b7000a161",
@@ -30,7 +30,7 @@
         ".brain-79/features/cli.md": "sha256:7a251042a9f606c5",
         ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:624da3747130e77d",
         ".brain-79/features/handoff-continuity.md": "sha256:a4c497efc824db59",
-        ".brain-79/features/lifecycle-hooks-and-ci-gate.md": "sha256:1912fa0f5e0e382b",
+        ".brain-79/features/lifecycle-hooks-and-ci-gate.md": "sha256:778da97bd3221811",
         ".brain-79/features/mcp-server.md": "sha256:c4434c854e4bf7fb",
         ".brain-79/features/organizational-enforcement.md": "sha256:32334e7300787b46",
         ".brain-79/features/polyglot-ast-guards-and-stats.md": "sha256:1427b59902a33203",
@@ -65,12 +65,12 @@
     },
     "architecture/roadmap-industrial-scale.md": {
       "count": 12,
-      "digest": "sha256:f323f4c574d67a5e",
+      "digest": "sha256:97005b86eb48ec79",
       "targets": {
         ".brain-79/features/cli.md": "sha256:7a251042a9f606c5",
         ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:624da3747130e77d",
         ".brain-79/features/handoff-continuity.md": "sha256:a4c497efc824db59",
-        ".brain-79/features/lifecycle-hooks-and-ci-gate.md": "sha256:1912fa0f5e0e382b",
+        ".brain-79/features/lifecycle-hooks-and-ci-gate.md": "sha256:778da97bd3221811",
         ".brain-79/features/mcp-server.md": "sha256:c4434c854e4bf7fb",
         ".brain-79/features/organizational-enforcement.md": "sha256:32334e7300787b46",
         ".brain-79/features/polyglot-ast-guards-and-stats.md": "sha256:1427b59902a33203",
@@ -160,10 +160,10 @@
     },
     "features/lifecycle-hooks-and-ci-gate.md": {
       "count": 2,
-      "digest": "sha256:cf664d745f7830b0",
+      "digest": "sha256:da8cb2b78a1da0c5",
       "targets": {
         "action.yml": "sha256:2ef4593d444312dc",
-        "src/brain79/core/ci_check.py": "sha256:65fd75d394193496"
+        "src/brain79/core/ci_check.py": "sha256:5c8e26e2174c912a"
       }
     },
     "features/mcp-server.md": {
@@ -265,13 +265,13 @@
     },
     "product/overview.md": {
       "count": 14,
-      "digest": "sha256:1f2e8a3d5e987ac6",
+      "digest": "sha256:da1db5fb84d58fbd",
       "targets": {
         ".brain-79/SCHEMA.md": "sha256:aaad025eac96dfa5",
         ".brain-79/features/cli.md": "sha256:7a251042a9f606c5",
         ".brain-79/features/cross-platform-and-lock-isolation.md": "sha256:624da3747130e77d",
         ".brain-79/features/handoff-continuity.md": "sha256:a4c497efc824db59",
-        ".brain-79/features/lifecycle-hooks-and-ci-gate.md": "sha256:1912fa0f5e0e382b",
+        ".brain-79/features/lifecycle-hooks-and-ci-gate.md": "sha256:778da97bd3221811",
         ".brain-79/features/mcp-server.md": "sha256:c4434c854e4bf7fb",
         ".brain-79/features/organizational-enforcement.md": "sha256:32334e7300787b46",
         ".brain-79/features/polyglot-ast-guards-and-stats.md": "sha256:1427b59902a33203",
