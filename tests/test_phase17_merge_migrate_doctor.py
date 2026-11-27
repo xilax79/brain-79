@@ -335,6 +335,14 @@ def test_ac6_gitignore_ordering_repair_and_git_check_ignore(tmp_path: Path) -> N
     assert not git_check_ignore(tmp_path, ".brain-79/drift.lock")
     assert not sync_wiki_gitignore(wiki)[0]
 
+    # Regression F-1: .gitignore has !drift.lock while missing *.lock
+    gi.write_text("# custom\n!drift.lock\n.locks/\n", encoding="utf-8", newline="\n")
+    changed_f1, _ = sync_wiki_gitignore(wiki)
+    assert changed_f1
+    f1_lines = [ln.strip() for ln in gi.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert f1_lines.index("!drift.lock") > max(i for i, ln in enumerate(f1_lines) if ln == "*.lock")
+    assert not git_check_ignore(tmp_path, ".brain-79/drift.lock")
+
 
 def test_ac6_merge_driver_doctor_diagnostics_and_non_git_fallback(tmp_path: Path) -> None:
     # 1. Outside Git: doctor uses .gitignore rule-ordering fallback
@@ -633,3 +641,43 @@ def test_ac7_migrate_corrupt_drift_lock_fails_closed(tmp_path: Path) -> None:
     with pytest.raises(ValidationError) as exc_info:
         migrate_wiki(wiki, dry_run=False)
     assert exc_info.value.issues[0]["rule"] == "corrupt_drift_lock"
+
+
+def test_ac7_migrate_invalid_legacy_manifest_target_key_falls_back_to_empty_targets(tmp_path: Path) -> None:
+    """Regression F-2: invalid target keys in legacy .drift_manifest.json must fall back to targets: {}."""
+    proj = tmp_path / "badman"
+    proj.mkdir()
+    init_project(proj, auto_git_init=False)
+    wiki = proj / ".brain-79"
+    (proj / "src").mkdir()
+    (proj / "src" / "a.py").write_text("x = 'new'\n", encoding="utf-8")
+
+    old_dig = "sha256:1111111111111111"
+    (wiki / ".drift_manifest.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "articles": {
+                    "features/a.md": {
+                        "digest": old_dig,
+                        "count": 1,
+                        "targets": {"../escape/a.py": old_dig},
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_md(
+        wiki / "features" / "a.md",
+        f"---\ntype: feature\nsummary: bad manifest\nstatus: shipped\nversion: 0.1.0\napplies_to:\n  - src/a.py\nlast_updated: 2026-11-27\napplies_to_digest: \"{old_dig}\"\napplies_to_count: 1\n---\n\n# Feature — A\n\n## Overview\n\nOk.\n\n[← Back to Index](../INDEX.md)\n",
+    )
+
+    migrate_wiki(wiki, dry_run=False)
+    lock_data = load_drift_lock(wiki)
+    assert lock_data is not None
+    assert lock_data["articles"]["features/a.md"] == {
+        "digest": old_dig,
+        "count": 1,
+        "targets": {},
+    }

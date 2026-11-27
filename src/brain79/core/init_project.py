@@ -64,7 +64,7 @@ def sync_wiki_gitignore(wiki_root: Path, dry_run: bool = False) -> tuple[bool, s
     stripped_lines = [ln.strip() for ln in existing_lines]
     last_star_lock = max((i for i, ln in enumerate(stripped_lines) if ln == "*.lock"), default=-1)
     last_neg_drift = max((i for i, ln in enumerate(stripped_lines) if ln == "!drift.lock"), default=-1)
-    needs_neg_reorder = last_neg_drift != -1 and last_neg_drift < last_star_lock
+    needs_neg_reorder = last_neg_drift != -1 and (last_neg_drift < last_star_lock or last_star_lock == -1)
 
     new_lines = [ln for ln in existing_lines if ln.strip() != "!drift.lock"] if needs_neg_reorder else list(existing_lines)
     existing_stripped = {ln.strip() for ln in new_lines if ln.strip()}

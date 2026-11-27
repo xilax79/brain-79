@@ -9,6 +9,7 @@ from brain79.core.drift import (
     DRIFT_LOCK_VERSION,
     _SHA256_DIGEST_RE,
     WorkspaceIndex,
+    _validate_lock_rel_path,
     compute_applies_to_manifest,
     get_file_last_modified_date,
     load_drift_lock,
@@ -304,14 +305,22 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
                         isinstance(man_entry, dict)
                         and man_entry.get("digest") == stored_digest
                         and isinstance(man_entry.get("targets"), dict)
-                        and all(
-                            isinstance(k, str) and isinstance(v, str) and _SHA256_DIGEST_RE.match(v)
-                            for k, v in man_entry["targets"].items()
-                        )
                     ):
-                        hydrated_targets = dict(man_entry["targets"])
-                        if hydrated_targets:
-                            stored_count = len(hydrated_targets)
+                        try:
+                            candidate_targets: dict[str, str] = {}
+                            valid_manifest = True
+                            for k, v in man_entry["targets"].items():
+                                valid_k = _validate_lock_rel_path(k, forbid_wiki_prefix=False)
+                                if not isinstance(v, str) or not _SHA256_DIGEST_RE.match(v):
+                                    valid_manifest = False
+                                    break
+                                candidate_targets[valid_k] = v
+                            if valid_manifest:
+                                hydrated_targets = candidate_targets
+                                if hydrated_targets:
+                                    stored_count = len(hydrated_targets)
+                        except ValidationError:
+                            hydrated_targets = {}
                     lock_articles[rel_str] = {
                         "digest": stored_digest,
                         "count": stored_count,
