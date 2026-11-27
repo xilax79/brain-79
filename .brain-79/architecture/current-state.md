@@ -57,7 +57,7 @@ This document maintains a high-level summary of the repository's current archite
 ## Immediate focus and maintenance
 
 - **Shipped (`v0.18.0`)**: Phase 17 (`SPEC-017`, `ADR-023`) external `.brain-79/drift.lock`, hash-free Markdown frontmatter, `brain79 merge-drift-lock` 3-way merge driver, zero-diff `verified_articles`, Guard C two-pass baseline resolver, zero-masking migration, and CI matrix reliability.
-- **Upcoming (`v0.19.0`)**: Phase 18 automated PyPI Trusted Publishers release (unblocked by Phase 16 `PASS` and Phase 17).
+- **Upcoming (`v0.19.0`–`v0.20.0`)**: Phase 18 automated PyPI Trusted Publishers release (`v0.19.0`, unblocked by Phase 16 `PASS` and Phase 17), followed by Phase 19 product umbrella governance (`v0.20.0`, anchoring `type: product` articles over `.brain-79/features/*.md`).
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed foundation (phases 0-17 and v0.18.0) and prioritized evolution (phase 18 PyPI release)
+summary: project roadmap covering completed foundation (phases 0-17 and v0.18.0) and prioritized evolution (phases 18-19)
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -86,6 +86,8 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 +-----------------------------------------------------------------------------------+
 | Phase 18 (P1): Automated PyPI distribution via Trusted Publishers (v0.19.0)       | [ ] Planned (unblocked by Phase 16 & 17)
 +-----------------------------------------------------------------------------------+
+| Phase 19 (P1): Product umbrella governance (`type: product` anchoring) (v0.20.0)  | [ ] Planned (high-priority UX gap from UAT)
++-----------------------------------------------------------------------------------+
 | Deferred backlog (demand-driven only): FTS5, worktree isolation, report/graph     | [ ] Deferred
 +-----------------------------------------------------------------------------------+
 | Release 1.0.0: owner-decided; not tied to any phase                               | [ ] Undated
@@ -97,6 +99,7 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 | Priority | Milestone | Target version | Primary objective |
 |---|---|---|---|
 | **P1** | Phase 18 | `v0.19.0` | Publish validated `brain79` package to PyPI via GitHub Actions Trusted Publishers (`uvx brain79`, `uv tool install brain79`, `pipx install brain79`). |
+| **P1** | Phase 19 | `v0.20.0` | Anchor `type: product` vision/overview articles as umbrella nodes over `.brain-79/features/*.md` so new features mechanically trigger product-vision updates via transitive drift and Guard B. |
 | **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`, and optional large-scale 40–60 file anti-rot stress test). |
 
 ---
@@ -106,6 +109,15 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 Goal: eliminate raw Git URL installation friction after the external drift lockfile lands.
 
 - **Automated PyPI Trusted Publishers**: configure GitHub Actions OIDC release workflow publishing `brain79` (including the `[polyglot]` extra metadata) to PyPI, enabling `uvx brain79`, `uv tool install brain79`, `uv tool install "brain79[polyglot]"`, and `pipx install brain79`.
+
+---
+
+## Phase 19 (`v0.20.0`) — Product umbrella governance (P1)
+
+Goal: ensure high-level `type: product` entry articles (e.g. `product/vision.md`, `product/overview.md`) never go stale when new features are added, even with smaller/cheaper models.
+
+- **Bootstrap umbrella seeding**: seed `type: product` articles with `applies_to: [".brain-79/features/*.md"]` by default in `bootstrap` and `auto_map` so real feature additions or feature doc edits propagate transitive drift and Guard B (`verified_article_umbrella_bypass_forbidden`) to the product vision, while internal code refactors remain silent thanks to Phase 17 zero-diff `drift.lock`.
+- **Linter & migration guidance**: surface unanchored `type: product` articles in `brain79 lint` (evaluating `warning`/`info` policy in `SPEC-019`) and offer safe umbrella anchoring in `brain79 migrate --apply`.
 
 ---
 
