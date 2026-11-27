@@ -35,6 +35,7 @@ WHITELIST = {
     "session-commit",
     "ci-check",
     "stats",
+    "merge-drift-lock",
 }
 
 
@@ -1356,6 +1357,41 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         else:
             _write_stdout(stats_report.format_text())
         return 0
+
+    elif cmd == "merge-drift-lock":
+        parser = argparse.ArgumentParser(
+            prog="brain79 merge-drift-lock",
+            description="Run deterministic 3-way .brain-79/drift.lock Git merge driver.",
+        )
+        parser.add_argument("base", help="Path to common ancestor (BASE) drift.lock file")
+        parser.add_argument("ours", help="Path to current branch (OURS) drift.lock file")
+        parser.add_argument("theirs", help="Path to incoming branch (THEIRS) drift.lock file")
+        parser.add_argument(
+            "--wiki-root",
+            default=None,
+            metavar="PATH",
+            help="Optional .brain-79 directory to prune delete/modify conflicts for missing articles",
+        )
+        parsed = parser.parse_args(sub_args)
+
+        from pathlib import Path
+        from brain79.core.drift_merge import merge_drift_lock_files
+
+        base_p = Path(parsed.base)
+        ours_p = Path(parsed.ours)
+        theirs_p = Path(parsed.theirs)
+        if not (base_p.is_file() and ours_p.is_file() and theirs_p.is_file()):
+            sys.stderr.write("Error: merge-drift-lock requires three existing input files (BASE OURS THEIRS).\n")
+            return 2
+
+        wiki_root_p: Path | None = None
+        if parsed.wiki_root is not None:
+            wiki_root_p = Path(parsed.wiki_root)
+            if not wiki_root_p.is_dir():
+                sys.stderr.write(f"Error: --wiki-root does not point to an existing directory: {wiki_root_p}\n")
+                return 2
+
+        return merge_drift_lock_files(base_p, ours_p, theirs_p, wiki_root=wiki_root_p)
 
     raise ValueError(f"Unknown command: {cmd}")
 

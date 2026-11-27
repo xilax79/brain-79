@@ -61,6 +61,10 @@ last_updated: YYYY-MM-DD
 ---
 ```
 
+### Deterministic drift detection (`applies_to`)
+
+Articles declaring `applies_to` paths or globs in frontmatter are tracked in `.brain-79/drift.lock` (primary drift digest storage, with legacy `applies_to_digest` / `applies_to_count` frontmatter keys tolerated read-only for backward compatibility).
+
 ### Back-navigation links
 
 Subdirectory articles automatically conclude with a backlink to `INDEX.md` (default label: `← Back to Index`). To customize the label for this workspace, declare optional `backlink_label: "← Return to Hub"` in the YAML frontmatter of `SCHEMA.md`.

@@ -69,6 +69,8 @@ jobs:
         with:
           name: pytest-tmp-${{ matrix.os }}-py${{ matrix.python }}
           path: ${{ runner.temp }}/.pytest_tmp
+          include-hidden-files: true
+          if-no-files-found: ignore
 
   test-polyglot:
     name: test-polyglot (${{ matrix.os }}, py${{ matrix.python-version }})
@@ -113,3 +115,5 @@ jobs:
         with:
           name: pytest-tmp-polyglot-${{ matrix.os }}-py${{ matrix.python-version }}
           path: ${{ runner.temp }}/.pytest_tmp
+          include-hidden-files: true
+          if-no-files-found: ignore

@@ -96,7 +96,12 @@ def run_doctor(
     format: str = "text",
 ) -> DoctorReport:
     """Run 7-point operational diagnostic checks and optionally auto-repair defects."""
-    w_root = (wiki_root or get_wiki_root()).resolve()
+    if wiki_root is not None:
+        w_root = wiki_root.resolve()
+    elif project_root is not None:
+        w_root = (project_root / ".brain-79").resolve()
+    else:
+        w_root = get_wiki_root().resolve()
     p_root = (project_root or (w_root.parent if w_root.parent.exists() else get_project_root())).resolve()
 
     fixed: list[str] = []
@@ -146,6 +151,8 @@ def run_doctor(
                 fixed.append("Synchronized AGENTS.md protocol block")
             if up_res.get("schema_updated"):
                 fixed.append("Synchronized SCHEMA.md to schema_version 2")
+            if up_res.get("gitignore_updated"):
+                fixed.append("Synchronized .brain-79/.gitignore derived-state exclusions")
             if up_res.get("mcp_configs"):
                 fixed.append(f"Configured MCP harnesses: {', '.join(up_res['mcp_configs'])}")
             if up_res.get("instruction_harnesses"):
@@ -155,9 +162,9 @@ def run_doctor(
             if up_res.get("git_hook") and "updated" in str(up_res["git_hook"]):
                 fixed.append("Installed/updated git pre-commit hook")
             if up_res.get("merge_driver_updated"):
-                fixed.append("Configured INDEX.md git merge driver (.gitattributes & .git/config)")
-            mig_rep = migrate_wiki(w_root, dry_run=False)
-            if "Changes (0)" not in mig_rep:
+                fixed.append("Configured Git merge drivers (INDEX.md & drift.lock) in .gitattributes & .git/config")
+            mig_rep = up_res.get("migration_report")
+            if mig_rep and "Changes (0)" not in str(mig_rep):
                 fixed.append("Reconditioned legacy wiki articles via migrate_wiki")
         except Exception as exc:
             err_check = DoctorCheck(
@@ -494,7 +501,12 @@ def run_doctor(
         with lock:
             pass
         inline_locks = list(w_root.rglob("*.lock"))
-        legacy_locks = [f.as_posix() for f in inline_locks if ".locks" not in f.parts]
+        drift_lock_file = (w_root / "drift.lock").resolve()
+        legacy_locks = [
+            f.as_posix()
+            for f in inline_locks
+            if ".locks" not in f.parts and f.resolve() != drift_lock_file
+        ]
         if legacy_locks:
             checks.append(
                 DoctorCheck(
@@ -624,26 +636,30 @@ def run_doctor(
                     )
                 )
 
-    # 8. derived_state_tracking (R-1.1)
+    # 8. derived_state_tracking (R-1.1, R-4.3)
     derived_cache_names = (
         ".navigation_registry.json",
         ".drift_manifest.json",
         ".bootstrap_state.json",
     )
+    try:
+        wiki_rel = w_root.relative_to(p_root).as_posix()
+    except ValueError:
+        wiki_rel = ".brain-79"
+    drift_lock_rel = f"{wiki_rel}/drift.lock"
+
     if is_git_workspace(p_root):
         try:
-            from brain79.core.git_ops import git_ls_files
+            from brain79.core.git_ops import git_check_ignore, git_ls_files
 
             tracked_files = set(git_ls_files(p_root, include_others=False, timeout=5.0))
-            try:
-                wiki_rel = w_root.relative_to(p_root).as_posix()
-            except ValueError:
-                wiki_rel = ".brain-79"
             tracked_derived = [
                 f"{wiki_rel}/{name}"
                 for name in derived_cache_names
                 if f"{wiki_rel}/{name}" in tracked_files
             ]
+            drift_lock_ignored = git_check_ignore(p_root, drift_lock_rel, timeout=5.0)
+
             if tracked_derived:
                 rm_cmd = "git rm --cached " + " ".join(tracked_derived)
                 checks.append(
@@ -654,12 +670,21 @@ def run_doctor(
                         actionable=f"Untrack derived caches with '{rm_cmd}' and run 'brain79 update-project' to sync .brain-79/.gitignore.",
                     )
                 )
+            elif drift_lock_ignored:
+                checks.append(
+                    DoctorCheck(
+                        category="derived_state_tracking",
+                        status="warning",
+                        message=f"Tracked drift lockfile '{drift_lock_rel}' is currently git-ignored.",
+                        actionable="Run 'brain79 update-project' or 'brain79 doctor --fix' to place '!drift.lock' after '*.lock' in .brain-79/.gitignore.",
+                    )
+                )
             else:
                 checks.append(
                     DoctorCheck(
                         category="derived_state_tracking",
                         status="ok",
-                        message="No derived JSON caches tracked in Git.",
+                        message="No derived JSON caches tracked in Git; drift.lock is un-ignored.",
                     )
                 )
         except Exception as e:
@@ -671,33 +696,71 @@ def run_doctor(
                 )
             )
     else:
-        checks.append(
-            DoctorCheck(
-                category="derived_state_tracking",
-                status="ok",
-                message="Workspace outside Git; derived state tracking check skipped.",
+        gi_file = w_root / ".gitignore"
+        if gi_file.is_file():
+            gi_lines = [ln.strip() for ln in gi_file.read_text(encoding="utf-8").splitlines() if ln.strip()]
+            last_star_lock = max((i for i, ln in enumerate(gi_lines) if ln == "*.lock"), default=-1)
+            last_neg_drift = max((i for i, ln in enumerate(gi_lines) if ln == "!drift.lock"), default=-1)
+            if last_star_lock != -1 and last_neg_drift <= last_star_lock:
+                checks.append(
+                    DoctorCheck(
+                        category="derived_state_tracking",
+                        status="warning",
+                        message=".brain-79/.gitignore is missing '!drift.lock' after '*.lock'.",
+                        actionable="Run 'brain79 update-project' or 'brain79 doctor --fix' to sync .brain-79/.gitignore.",
+                    )
+                )
+            else:
+                checks.append(
+                    DoctorCheck(
+                        category="derived_state_tracking",
+                        status="ok",
+                        message="Workspace outside Git; .brain-79/.gitignore allows drift.lock.",
+                    )
+                )
+        else:
+            checks.append(
+                DoctorCheck(
+                    category="derived_state_tracking",
+                    status="ok",
+                    message="Workspace outside Git; derived state tracking check skipped.",
+                )
             )
-        )
 
-    # 9. git_merge_driver (R-2.3)
+    # 9. git_merge_driver (R-2.3, R-4.3)
     if is_git_workspace(p_root):
         from brain79.core.git_ops import git_config_get_local
-        from brain79.core.init_project import GITATTRIBUTES_LINE, MERGE_DRIVER_CMD
+        from brain79.core.init_project import (
+            DRIFT_LOCK_GITATTRIBUTES_LINE,
+            GITATTRIBUTES_LINE,
+        )
 
         ga_file = w_root / ".gitattributes"
-        has_ga = ga_file.is_file() and GITATTRIBUTES_LINE in {
-            ln.strip() for ln in ga_file.read_text(encoding="utf-8").splitlines()
-        }
+        ga_lines = (
+            {ln.strip() for ln in ga_file.read_text(encoding="utf-8").splitlines()}
+            if ga_file.is_file()
+            else set()
+        )
+        has_index_ga = GITATTRIBUTES_LINE in ga_lines
+        has_drift_ga = DRIFT_LOCK_GITATTRIBUTES_LINE in ga_lines
         try:
-            configured_driver = git_config_get_local(p_root, "merge.brain79-index.driver")
+            configured_index_driver = git_config_get_local(p_root, "merge.brain79-index.driver")
         except Exception:
-            configured_driver = None
+            configured_index_driver = None
+        try:
+            configured_drift_driver = git_config_get_local(p_root, "merge.brain79-drift-lock.driver")
+        except Exception:
+            configured_drift_driver = None
 
         missing_parts: list[str] = []
-        if not has_ga:
-            missing_parts.append(".brain-79/.gitattributes entry missing")
-        if not configured_driver:
+        if not has_index_ga:
+            missing_parts.append(".brain-79/.gitattributes INDEX.md entry missing")
+        if not has_drift_ga:
+            missing_parts.append(".brain-79/.gitattributes drift.lock entry missing")
+        if not configured_index_driver:
             missing_parts.append("local git merge.brain79-index.driver not configured")
+        if not configured_drift_driver:
+            missing_parts.append("local git merge.brain79-drift-lock.driver not configured")
 
         if missing_parts:
             checks.append(
@@ -705,7 +768,7 @@ def run_doctor(
                     category="git_merge_driver",
                     status="warning",
                     message="; ".join(missing_parts) + ".",
-                    actionable="Run 'brain79 update-project' or 'brain79 doctor --fix' to configure the INDEX.md Git merge driver.",
+                    actionable="Run 'brain79 update-project' or 'brain79 doctor --fix' to configure Git merge drivers.",
                 )
             )
         else:
@@ -713,7 +776,7 @@ def run_doctor(
                 DoctorCheck(
                     category="git_merge_driver",
                     status="ok",
-                    message="Deterministic INDEX.md Git merge driver configured.",
+                    message="Deterministic INDEX.md and drift.lock Git merge drivers configured.",
                 )
             )
     else:
@@ -721,7 +784,7 @@ def run_doctor(
             DoctorCheck(
                 category="git_merge_driver",
                 status="ok",
-                message="Workspace outside Git; INDEX.md merge driver check skipped.",
+                message="Workspace outside Git; Git merge driver check skipped.",
             )
         )
 

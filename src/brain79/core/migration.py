@@ -1,19 +1,26 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
+import re
 from typing import Any
 import uuid
 
 from brain79.config import get_project_root, get_wiki_root
 from brain79.core.drift import (
+    DRIFT_LOCK_VERSION,
+    _SHA256_DIGEST_RE,
     WorkspaceIndex,
     compute_applies_to_manifest,
+    get_file_last_modified_date,
+    load_drift_lock,
     load_drift_manifest,
-    save_drift_manifest,
+    save_drift_lock,
 )
 from brain79.core.frontmatter import (
     INACTIVE_STATUSES,
+    PRE_IMPLEMENTATION_STATUSES,
     ActiveSchema,
     LOCATION_TO_TYPE,
+    ValidationError,
     dump_frontmatter,
     load_active_schema,
     normalize_backlink_footer,
@@ -132,15 +139,20 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
     skipped: list[str] = []
 
     ws_index = WorkspaceIndex.build(p_root, wiki_root)
-    manifest_data = load_drift_manifest(wiki_root)
-    manifest_articles: dict[str, Any] = manifest_data.setdefault("articles", {})
-    manifest_purged = False
+    # Load drift.lock fail-closed (R-1.4, R-5.1)
+    existing_lock = load_drift_lock(wiki_root)
+    lock_articles: dict[str, Any] = dict(existing_lock["articles"]) if existing_lock is not None else {}
+    lock_changed = False
 
-    # Purge deleted articles from manifest
-    for p_art in list(manifest_articles.keys()):
+    # Read-only legacy manifest for hydrating leaf targets on drifted hashed articles
+    manifest_data = load_drift_manifest(wiki_root, auto_rebuild=False, persist=False)
+    manifest_articles: dict[str, Any] = manifest_data.get("articles", {})
+
+    # Prune deleted articles from drift.lock
+    for p_art in list(lock_articles.keys()):
         if not (wiki_root / p_art).is_file():
-            del manifest_articles[p_art]
-            manifest_purged = True
+            del lock_articles[p_art]
+            lock_changed = True
 
     for md_file in sorted(wiki_root.rglob("*.md")):
         rel = md_file.relative_to(wiki_root)
@@ -237,26 +249,105 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
         )
         body = normalize_bullet_colons(body)
 
-        # Paso D: Sembrado Merkle de applies_to
+        # Paso D: Migrate drift state into .brain-79/drift.lock (strictly after Paso B)
+        final_status = str(meta.get("status", "")).lower()
+        final_stability = str(meta.get("stability", "")).lower()
+        is_inactive_or_pre = (
+            final_status in INACTIVE_STATUSES
+            or final_stability in INACTIVE_STATUSES
+            or final_status in PRE_IMPLEMENTATION_STATUSES
+            or final_stability in PRE_IMPLEMENTATION_STATUSES
+        )
+
+        stored_digest_raw = meta.pop("applies_to_digest", None)
+        stored_count_raw = meta.pop("applies_to_count", None)
+
         applies = meta.get("applies_to")
-        manifest_missing = False
-        if applies:
-            patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
-            m_dig, cnt, tgts = compute_applies_to_manifest(
-                patterns, p_root, wiki_root, exclude_self_path=rel_str, workspace_index=ws_index
+        patterns = (
+            [str(x) for x in applies]
+            if isinstance(applies, list)
+            else ([str(applies)] if applies else [])
+        )
+
+        if is_inactive_or_pre or not patterns:
+            if rel_str in lock_articles:
+                del lock_articles[rel_str]
+                lock_changed = True
+        elif rel_str not in lock_articles:
+            stored_digest = (
+                stored_digest_raw
+                if isinstance(stored_digest_raw, str) and _SHA256_DIGEST_RE.match(stored_digest_raw)
+                else None
             )
-            if m_dig:
-                if meta.get("applies_to_digest") != m_dig or meta.get("applies_to_count") != cnt:
-                    meta["applies_to_digest"] = m_dig
-                    meta["applies_to_count"] = cnt
-                if rel_str not in manifest_articles or manifest_articles[rel_str].get("digest") != m_dig:
-                    manifest_articles[rel_str] = {"digest": m_dig, "count": cnt, "targets": tgts}
-                    manifest_missing = True
+            if stored_digest is not None:
+                curr_dig, curr_cnt, curr_tgts = compute_applies_to_manifest(
+                    patterns, p_root, wiki_root, exclude_self_path=rel_str, workspace_index=ws_index
+                )
+                if curr_dig == stored_digest:
+                    lock_articles[rel_str] = {
+                        "digest": curr_dig,
+                        "count": curr_cnt,
+                        "targets": curr_tgts,
+                    }
+                    lock_changed = True
+                else:
+                    stored_count = (
+                        stored_count_raw
+                        if isinstance(stored_count_raw, int)
+                        and not isinstance(stored_count_raw, bool)
+                        and stored_count_raw >= 0
+                        else 0
+                    )
+                    hydrated_targets: dict[str, str] = {}
+                    man_entry = manifest_articles.get(rel_str)
+                    if (
+                        isinstance(man_entry, dict)
+                        and man_entry.get("digest") == stored_digest
+                        and isinstance(man_entry.get("targets"), dict)
+                        and all(
+                            isinstance(k, str) and isinstance(v, str) and _SHA256_DIGEST_RE.match(v)
+                            for k, v in man_entry["targets"].items()
+                        )
+                    ):
+                        hydrated_targets = dict(man_entry["targets"])
+                        if hydrated_targets:
+                            stored_count = len(hydrated_targets)
+                    lock_articles[rel_str] = {
+                        "digest": stored_digest,
+                        "count": stored_count,
+                        "targets": hydrated_targets,
+                    }
+                    lock_changed = True
+            else:
+                curr_dig, curr_cnt, curr_tgts = compute_applies_to_manifest(
+                    patterns, p_root, wiki_root, exclude_self_path=rel_str, workspace_index=ws_index
+                )
+                if curr_dig is not None:
+                    last_updated_raw = meta.get("last_updated")
+                    if isinstance(last_updated_raw, (date, datetime)):
+                        last_updated = last_updated_raw.strftime("%Y-%m-%d")
+                    elif last_updated_raw is not None:
+                        last_updated = str(last_updated_raw).strip()[:10]
+                    else:
+                        last_updated = ""
+                    if re.match(r"^\d{4}-\d{2}-\d{2}$", last_updated):
+                        has_ts_drift = any(
+                            (f_date := get_file_last_modified_date(p_root / ws_rel, p_root)) is not None
+                            and f_date > last_updated
+                            for ws_rel in curr_tgts
+                        )
+                        if not has_ts_drift:
+                            lock_articles[rel_str] = {
+                                "digest": curr_dig,
+                                "count": curr_cnt,
+                                "targets": curr_tgts,
+                            }
+                            lock_changed = True
 
         new_content = dump_frontmatter(meta, body)
         content_changed = new_content != content
 
-        if content_changed or manifest_missing:
+        if content_changed:
             if not dry_run:
                 tmp_path = md_file.with_suffix(f".tmp.{uuid.uuid4().hex}")
                 try:
@@ -282,14 +373,26 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
             skipped.append(f"{rel_str}: up-to-date")
 
     if not dry_run:
-        if changes or manifest_purged:
-            save_drift_manifest(wiki_root, manifest_data)
+        from brain79.core.init_project import sync_git_merge_driver, sync_wiki_gitignore
+
+        if lock_changed:
+            save_drift_lock(
+                wiki_root,
+                {"version": DRIFT_LOCK_VERSION, "articles": lock_articles},
+            )
+        sync_wiki_gitignore(wiki_root, dry_run=False)
+        sync_git_merge_driver(p_root, install=True, dry_run=False)
         cleanup_legacy_inline_locks(wiki_root)
-        try:
-            from brain79.core.navigation import regenerate_index_navigation
-            regenerate_index_navigation(wiki_root)
-        except Exception:
-            pass
+        if changes or lock_changed:
+            try:
+                from brain79.core.navigation import regenerate_index_navigation
+
+                regenerate_index_navigation(wiki_root)
+            except ValidationError as ve:
+                if any(iss.get("rule") == "corrupt_drift_lock" for iss in ve.issues):
+                    raise
+            except Exception:
+                pass
 
     report_lines = [
         f"# Migration Report ({'DRY RUN' if dry_run else 'APPLIED'})",

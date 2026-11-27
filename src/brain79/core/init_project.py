@@ -41,6 +41,7 @@ TEMPLATE_FILES = ["SCHEMA.md", "INDEX.md"]
 DERIVED_STATE_GITIGNORE_ENTRIES: tuple[str, ...] = (
     ".locks/",
     "*.lock",
+    "!drift.lock",
     "*.tmp",
     "*.tmp.*",
     ".navigation_registry.json",
@@ -52,20 +53,26 @@ DERIVED_STATE_GITIGNORE_ENTRIES: tuple[str, ...] = (
 def sync_wiki_gitignore(wiki_root: Path, dry_run: bool = False) -> tuple[bool, str]:
     """Idempotently ensure .brain-79/.gitignore ignores locks, temp files, and derived JSON caches.
 
-    Preserves any custom user lines and comments already present in .brain-79/.gitignore.
+    Preserves any custom user lines and comments already present in .brain-79/.gitignore,
+    and ensures ``!drift.lock`` appears strictly after ``*.lock``.
     """
     gi_path = wiki_root / ".gitignore"
     existing_lines: list[str] = []
     if gi_path.is_file():
         existing_lines = gi_path.read_text(encoding="utf-8").splitlines()
 
-    existing_stripped = {ln.strip() for ln in existing_lines if ln.strip()}
+    stripped_lines = [ln.strip() for ln in existing_lines]
+    last_star_lock = max((i for i, ln in enumerate(stripped_lines) if ln == "*.lock"), default=-1)
+    last_neg_drift = max((i for i, ln in enumerate(stripped_lines) if ln == "!drift.lock"), default=-1)
+    needs_neg_reorder = last_neg_drift != -1 and last_neg_drift < last_star_lock
+
+    new_lines = [ln for ln in existing_lines if ln.strip() != "!drift.lock"] if needs_neg_reorder else list(existing_lines)
+    existing_stripped = {ln.strip() for ln in new_lines if ln.strip()}
     missing = [entry for entry in DERIVED_STATE_GITIGNORE_ENTRIES if entry not in existing_stripped]
 
-    if not missing and gi_path.is_file():
+    if not missing and not needs_neg_reorder and gi_path.is_file():
         return False, ".brain-79/.gitignore is already up-to-date"
 
-    new_lines = list(existing_lines)
     new_lines.extend(missing)
     new_content = "\n".join(new_lines) + "\n"
 
@@ -80,6 +87,10 @@ MERGE_DRIVER_NAME = "Brain-79 deterministic INDEX.md merge driver"
 MERGE_DRIVER_CMD = "brain79 navigate --merge-driver %O %A %B"
 GITATTRIBUTES_LINE = "INDEX.md merge=brain79-index"
 
+DRIFT_LOCK_MERGE_DRIVER_NAME = "Brain-79 deterministic drift.lock merge driver"
+DRIFT_LOCK_MERGE_DRIVER_CMD = "brain79 merge-drift-lock %O %A %B"
+DRIFT_LOCK_GITATTRIBUTES_LINE = "drift.lock merge=brain79-drift-lock"
+
 
 def sync_git_merge_driver(
     project_root: Path,
@@ -87,44 +98,53 @@ def sync_git_merge_driver(
     install: bool = True,
     dry_run: bool = False,
 ) -> tuple[bool, str]:
-    """Idempotently configure .brain-79/.gitattributes and local Git merge driver for INDEX.md."""
+    """Idempotently configure .brain-79/.gitattributes and local Git merge drivers."""
     wiki_root = project_root / ".brain-79"
     ga_path = wiki_root / ".gitattributes"
     changed = False
     actions: list[str] = []
 
-    # 1. Ensure .brain-79/.gitattributes contains INDEX.md merge=brain79-index
+    # 1. Ensure .brain-79/.gitattributes contains INDEX.md and drift.lock merge driver rules
     existing_lines: list[str] = []
     if ga_path.is_file():
         existing_lines = ga_path.read_text(encoding="utf-8").splitlines()
-    if GITATTRIBUTES_LINE not in {ln.strip() for ln in existing_lines}:
+    existing_stripped = {ln.strip() for ln in existing_lines}
+    missing_ga = [
+        line for line in (GITATTRIBUTES_LINE, DRIFT_LOCK_GITATTRIBUTES_LINE) if line not in existing_stripped
+    ]
+    if missing_ga:
         changed = True
         actions.append("updated .brain-79/.gitattributes")
         if not dry_run:
             wiki_root.mkdir(parents=True, exist_ok=True)
-            new_lines = list(existing_lines) + [GITATTRIBUTES_LINE]
+            new_lines = list(existing_lines) + missing_ga
             ga_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8", newline="\n")
 
-    # 2. Configure local .git/config merge driver if inside a Git repository and install=True
+    # 2. Configure local .git/config merge drivers if inside a Git repository and install=True
     if install:
         from brain79.core.git_ops import git_config_get_local, git_config_set_local
         from brain79.core.handoff_freshness import is_git_workspace
 
         if is_git_workspace(project_root):
-            try:
-                curr_name = git_config_get_local(project_root, "merge.brain79-index.name")
-                curr_driver = git_config_get_local(project_root, "merge.brain79-index.driver")
-                if curr_name != MERGE_DRIVER_NAME or curr_driver != MERGE_DRIVER_CMD:
-                    changed = True
-                    actions.append("configured local git merge.brain79-index driver")
-                    if not dry_run:
-                        git_config_set_local(project_root, "merge.brain79-index.name", MERGE_DRIVER_NAME)
-                        git_config_set_local(project_root, "merge.brain79-index.driver", MERGE_DRIVER_CMD)
-            except Exception:
-                pass
+            drivers = (
+                ("brain79-index", MERGE_DRIVER_NAME, MERGE_DRIVER_CMD),
+                ("brain79-drift-lock", DRIFT_LOCK_MERGE_DRIVER_NAME, DRIFT_LOCK_MERGE_DRIVER_CMD),
+            )
+            for drv_key, drv_name, drv_cmd in drivers:
+                try:
+                    curr_name = git_config_get_local(project_root, f"merge.{drv_key}.name")
+                    curr_driver = git_config_get_local(project_root, f"merge.{drv_key}.driver")
+                    if curr_name != drv_name or curr_driver != drv_cmd:
+                        changed = True
+                        actions.append(f"configured local git merge.{drv_key} driver")
+                        if not dry_run:
+                            git_config_set_local(project_root, f"merge.{drv_key}.name", drv_name)
+                            git_config_set_local(project_root, f"merge.{drv_key}.driver", drv_cmd)
+                except Exception:
+                    pass
 
     if not changed:
-        return False, "INDEX.md git merge driver is already configured"
+        return False, "Git merge drivers are already configured"
     return True, "; ".join(actions)
 
 PRE_COMMIT_HOOK_SCRIPT = """#!/usr/bin/env bash
@@ -135,7 +155,7 @@ set -e
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$XDG_BIN_HOME:$USERPROFILE/.local/bin:$PATH"
 
 # Find staged wiki files
-STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^\\.brain-79/.*\\.md$" || true)
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^\\.brain-79/(.*\\.md|drift\\.lock)$" || true)
 if [ -z "$STAGED" ]; then
     exit 0
 fi

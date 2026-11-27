@@ -228,9 +228,9 @@ async def test_mcp_read_batch_wire_schema_no_nested_anyof() -> None:
 
 
 def test_read_batch_symmetry_and_surface_invariants() -> None:
-    """Verify read_batch_articles/brain79_read_batch parameter parity, 9 MCP tools, and 26 CLI subcommands."""
+    """Verify read_batch_articles/brain79_read_batch parameter parity, 9 MCP tools, and 27 CLI subcommands."""
     assert len(MCP_TOOLS) == 9
-    assert len(WHITELIST) == 26
+    assert len(WHITELIST) == 27
     assert "read-batch" in WHITELIST
 
     mcp_sig = inspect.signature(brain79_read_batch)

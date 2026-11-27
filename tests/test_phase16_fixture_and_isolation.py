@@ -93,10 +93,19 @@ def test_fixture_unit_tests_pass_python_and_node() -> None:
 
 
 def test_fixture_sources_supported_by_ast_guard_c() -> None:
-    """All canonical .py and .mjs fixture files must be inspectable by Guard C."""
+    """Assert Guard C coverage for .py unconditionally and .mjs when polyglot is enabled/installed."""
+    import os
+    from brain79.core.ast_guards import get_ast_guard_capabilities
+
     discover_polyglot_inspectors(reset=True)
+    require_polyglot = os.environ.get("BRAIN79_REQUIRE_POLYGLOT") == "1"
+    caps = get_ast_guard_capabilities()
+    js_available = "javascript" in caps.get("available_languages", [])
+
     sources = discover_canonical_sources(FIXTURE_DIR)
     for rel in sources:
+        if rel.endswith(".mjs") and not (require_polyglot or js_available):
+            continue
         inspector = get_inspector_for_path(rel)
         assert inspector is not None, f"No Guard C AST inspector for fixture file: {rel}"
         text = (FIXTURE_DIR / rel).read_text(encoding="utf-8")

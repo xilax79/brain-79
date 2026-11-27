@@ -113,8 +113,10 @@ def test_pre_6_7_snapshot_diagnostic_baseline(tmp_path: Path) -> None:
     (isolated_proj / "src" / "brain79" / "core" / "handoff.py").write_text("# handoff\n", encoding="utf-8")
     (isolated_proj / "src" / "brain79" / "core" / "handoff_freshness.py").write_text("# freshness\n", encoding="utf-8")
 
+    from datetime import UTC, datetime
+    today_str = datetime.now(UTC).strftime("%Y-%m-%d")
     (isolated_wiki / "features" / "handoff-continuity.md").write_text(
-        "---\ntype: feature\nstatus: shipped\nsummary: Canonical handoffs\nversion: 1.0.0\nlast_updated: 2026-11-12\napplies_to:\n  - src/brain79/core/handoff.py\n---\n\n## Overview\nOverview.\n",
+        f"---\ntype: feature\nstatus: shipped\nsummary: Canonical handoffs\nversion: 1.0.0\nlast_updated: {today_str}\napplies_to:\n  - src/brain79/core/handoff.py\n---\n\n## Overview\nOverview.\n",
         encoding="utf-8",
     )
     from brain79.core.validation import check_anti_sprawl_overlap
@@ -127,11 +129,11 @@ def test_pre_6_7_snapshot_diagnostic_baseline(tmp_path: Path) -> None:
         check_anti_sprawl_overlap(sprawl_meta, "features/handoff-v2.md", wiki_root=isolated_wiki)
     assert sprawl_exc.value.rule == "duplicate_governance_target"
 
-    # 6. Run migrate_wiki(isolated_wiki, dry_run=False) and verify digests and manifest seeded
+    # 6. Run migrate_wiki(isolated_wiki, dry_run=False) and verify drift.lock seeded
     from brain79.core.migration import migrate_wiki
     report = migrate_wiki(isolated_wiki, dry_run=False)
     assert "Migration Report (APPLIED)" in report
-    assert (isolated_wiki / ".drift_manifest.json").is_file()
+    assert (isolated_wiki / "drift.lock").is_file()
 
 
 def test_schema_digest_and_count_validation() -> None:
@@ -1841,15 +1843,17 @@ Ghost overview.
     assert any(i.rule == "unanchored_governance_article" for i in all_org)
     assert any(i.rule == "applies_to_target_missing" for i in all_org)
 
-    # Hallazgo 2: migrate_wiki seeds applies_to_digest, applies_to_count, and purges deleted articles
+    # Hallazgo 2: migrate_wiki seeds drift.lock and purges deleted articles
+    from datetime import UTC, datetime
+    today_str = datetime.now(UTC).strftime("%Y-%m-%d")
     art_to_seed = wiki / "features" / "needs_seed.md"
     art_to_seed.write_text(
-        """---
+        f"""---
 type: feature
 summary: Needs seed
 status: shipped
 version: 1.0.0
-last_updated: 2026-11-11
+last_updated: {today_str}
 applies_to:
   - src/app.py
 ---
@@ -1861,26 +1865,27 @@ Needs seed overview.
     )
 
     from brain79.core.migration import migrate_wiki
-    from brain79.core.drift import load_drift_manifest
+    from brain79.core.drift import load_drift_lock
 
     # Run migration with apply=True
     mig_report = migrate_wiki(wiki, dry_run=False)
     assert "features/needs_seed.md" in mig_report
 
-    # Verify frontmatter has applies_to_digest
+    # Verify frontmatter is hash-free and drift.lock has the article
     meta_seeded, _ = parse_frontmatter(art_to_seed.read_text(encoding="utf-8"))
-    assert meta_seeded.get("applies_to_digest", "").startswith("sha256:")
-    assert meta_seeded.get("applies_to_count") == 1
+    assert "applies_to_digest" not in meta_seeded
+    assert "applies_to_count" not in meta_seeded
 
-    # Verify .drift_manifest.json has the article
-    man_data = load_drift_manifest(wiki)
-    assert "features/needs_seed.md" in man_data.get("articles", {})
+    lock_data = load_drift_lock(wiki)
+    assert lock_data is not None
+    assert "features/needs_seed.md" in lock_data.get("articles", {})
 
-    # Delete needs_seed.md and re-run migration: it should purge it from .drift_manifest.json!
+    # Delete needs_seed.md and re-run migration: it should purge it from drift.lock!
     art_to_seed.unlink()
     migrate_wiki(wiki, dry_run=False)
-    man_data_after = load_drift_manifest(wiki)
-    assert "features/needs_seed.md" not in man_data_after.get("articles", {})
+    lock_data_after = load_drift_lock(wiki)
+    assert lock_data_after is not None
+    assert "features/needs_seed.md" not in lock_data_after.get("articles", {})
 
     # Hallazgo 4: write_article() enforces target validation and stamps digest on single-file write
     from brain79.core.wiki import write_article

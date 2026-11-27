@@ -581,3 +581,30 @@ def git_recent_file_churn(
         if cleaned:
             counts[cleaned] = counts.get(cleaned, 0) + 1
     return counts
+
+
+def git_check_ignore(
+    project_root: Path,
+    rel_path: str,
+    *,
+    timeout: float = 5.0,
+) -> bool:
+    """Return True if ``rel_path`` is ignored by Git rules (`git check-ignore --no-index`).
+
+    Raises NotAGitRepoError outside a Git workspace, GitTimeoutError on timeout,
+    and GitError on unexpected git exit codes (> 1).
+    """
+    norm_path = normalize_posix_input(rel_path).lstrip("/")
+    if not norm_path:
+        raise ValueError("rel_path must be a non-empty relative path.")
+    res = run_git(
+        ["check-ignore", "--no-index", "--", norm_path],
+        cwd=project_root,
+        timeout=timeout,
+        check_repo=True,
+    )
+    if res.returncode == 0:
+        return True
+    if res.returncode == 1:
+        return False
+    raise GitError(res.stderr.strip() or f"git check-ignore failed (rc={res.returncode})")

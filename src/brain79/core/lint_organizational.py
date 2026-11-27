@@ -1280,6 +1280,41 @@ def check_temporal_contamination(
     return issues
 
 
+def check_legacy_frontmatter_digest(
+    wiki_root: Path,
+    md_files: list[Path] | None = None,
+) -> list[OrganizationalIssue]:
+    """Emit INFO advisory when drift.lock exists alongside legacy frontmatter digest keys."""
+    if not (wiki_root / "drift.lock").is_file():
+        return []
+    issues: list[OrganizationalIssue] = []
+    files = md_files if md_files is not None else _filter_md_files(wiki_root)
+    for md_file in files:
+        rel = md_file.relative_to(wiki_root)
+        rel_str = rel.as_posix()
+        if rel_str in ("INDEX.md", "SCHEMA.md") or (rel.parts and rel.parts[0] in ("_raw", ".locks")):
+            continue
+        try:
+            content = md_file.read_text(encoding="utf-8").replace("\r\n", "\n")
+            if not content.startswith("---\n"):
+                continue
+            meta, _ = parse_frontmatter(content)
+        except Exception:
+            continue
+        if meta and ("applies_to_digest" in meta or "applies_to_count" in meta):
+            issues.append(
+                OrganizationalIssue(
+                    rule="legacy_frontmatter_digest",
+                    path=rel_str,
+                    line=1,
+                    severity="info",
+                    message="Article still carries legacy frontmatter drift digest keys alongside .brain-79/drift.lock.",
+                    actionable="Run `brain79 migrate --apply` to strip legacy frontmatter digest keys.",
+                )
+            )
+    return issues
+
+
 def lint_organizational(
     wiki_root: Path,
     *,
@@ -1312,6 +1347,7 @@ def lint_organizational(
     issues.extend(check_architectural_decision_deficit(wiki_root, md_files=md_files))
     issues.extend(check_uncovered_source_files(wiki_root, md_files=md_files, workspace_index=ws))
     issues.extend(check_temporal_contamination(wiki_root, md_files=md_files))
+    issues.extend(check_legacy_frontmatter_digest(wiki_root, md_files=md_files))
     return issues
 
 

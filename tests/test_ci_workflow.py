@@ -177,6 +177,11 @@ def test_ci_workflow_required_steps(workflow_yaml: dict[str, Any]) -> None:
     assert any(".pytest_tmp" in str(s.get("with", {}).get("path", "")) for s in failure_steps), (
         "Failure step must upload .pytest_tmp"
     )
+    assert any(
+        s.get("with", {}).get("include-hidden-files") is True
+        and s.get("with", {}).get("if-no-files-found") == "ignore"
+        for s in failure_steps
+    ), "Failure upload step must set include-hidden-files: true and if-no-files-found: ignore"
 
 
 def test_ci_workflow_polyglot_job(workflow_yaml: dict[str, Any]) -> None:
@@ -214,6 +219,11 @@ def test_ci_workflow_polyglot_job(workflow_yaml: dict[str, Any]) -> None:
     failure_steps = [s for s in steps if s.get("if") == "failure()"]
     assert failure_steps, "test-polyglot must include a failure() upload step"
     assert any(".pytest_tmp" in str(s.get("with", {}).get("path", "")) for s in failure_steps)
+    assert any(
+        s.get("with", {}).get("include-hidden-files") is True
+        and s.get("with", {}).get("if-no-files-found") == "ignore"
+        for s in failure_steps
+    ), "test-polyglot failure upload step must set include-hidden-files: true and if-no-files-found: ignore"
 
 
 # ==============================================================================
