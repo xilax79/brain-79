@@ -14,7 +14,7 @@ last_updated: 2026-11-27
 - [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 26 CLI subcommands
 - [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing across 26 commands, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-16 and v0.17.0) and prioritized evolution (phase 17 PyPI release and phase 18 external drift lockfile)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-16 and v0.17.0) and prioritized evolution (phase 17 external drift lockfile and phase 18 PyPI release)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, focused 9-tool surface, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 

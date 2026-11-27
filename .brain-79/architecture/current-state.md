@@ -57,7 +57,7 @@ This document maintains a high-level summary of the repository's current archite
 ## Immediate focus and maintenance
 
 - Shipped: `v0.17.0` (Phase 16 longitudinal anti-rot release gate `PASS` 7/7 + `SPEC-202611` agent ergonomics, strict pre-flight parity, and `brain79_read_batch(paths=[...])` parity).
-- Upcoming: `v0.18.0` (Phase 17: PyPI Trusted Publishers release, now unblocked) and `v0.19.0` (Phase 18: external `.brain-79/drift.lock` per approved `SPEC-018`).
+- Upcoming: `v0.18.0` (Phase 17: external `.brain-79/drift.lock` per approved `SPEC-017`) and `v0.19.0` (Phase 18: PyPI Trusted Publishers release, unblocked by Phase 16 `PASS`).
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 type: architecture
-summary: project roadmap covering completed foundation (phases 0-16 and v0.17.0) and prioritized evolution (phase 17 PyPI release and phase 18 external drift lockfile)
+summary: project roadmap covering completed foundation (phases 0-16 and v0.17.0) and prioritized evolution (phase 17 external drift lockfile and phase 18 PyPI release)
 stability: stable
 applies_to:
   - .brain-79/features/*.md
@@ -84,9 +84,9 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 
 ```
 +-----------------------------------------------------------------------------------+
-| Phase 17 (P1): Automated PyPI distribution via Trusted Publishers (v0.18.0)       | [ ] Planned (unblocked by Phase 16 AC-6 PASS)
+| Phase 17 (P1): External drift lockfile (.brain-79/drift.lock) (v0.18.0)           | [ ] Approved (SPEC-017)
 +-----------------------------------------------------------------------------------+
-| Phase 18 (P1): External drift lockfile (.brain-79/drift.lock) (v0.19.0)           | [ ] Approved (SPEC-018)
+| Phase 18 (P1): Automated PyPI distribution via Trusted Publishers (v0.19.0)       | [ ] Planned (unblocked by Phase 16 AC-6 PASS)
 +-----------------------------------------------------------------------------------+
 | Deferred backlog (demand-driven only): FTS5, worktree isolation, report/graph     | [ ] Deferred
 +-----------------------------------------------------------------------------------+
@@ -98,29 +98,29 @@ Shipped capabilities live in their dedicated `.brain-79/features/` living manual
 
 | Priority | Milestone | Target version | Primary objective |
 |---|---|---|---|
-| **P1** | Phase 17 | `v0.18.0` | Publish validated `brain79` package to PyPI via GitHub Actions Trusted Publishers (`uvx brain79`, `uv tool install brain79`, `pipx install brain79`). |
-| **P1** | Phase 18 | `v0.19.0` | Eliminate hash-only frontmatter churn in Git history by moving `applies_to_digest` and `applies_to_count` into a centralized `.brain-79/drift.lock` with a 3-way Git merge driver (`SPEC-018`). |
+| **P1** | Phase 17 | `v0.18.0` | Eliminate hash-only frontmatter churn in Git history by moving `applies_to_digest` and `applies_to_count` into a centralized `.brain-79/drift.lock` with a 3-way Git merge driver (`SPEC-017`). |
+| **P1** | Phase 18 | `v0.19.0` | Publish validated `brain79` package to PyPI via GitHub Actions Trusted Publishers (`uvx brain79`, `uv tool install brain79`, `pipx install brain79`). |
 | **Deferred** | Backlog | Undated | Build only on real user demand (FTS5 search, multi-agent worktree isolation, `report`/`graph`, and optional large-scale 40–60 file anti-rot stress test). |
 
 ---
 
-## Phase 17 (`v0.18.0`) — PyPI distribution (P1)
+## Phase 17 (`v0.18.0`) — External drift lockfile (P1, approved)
 
-Goal: eliminate raw Git URL installation friction once Phase 16's longitudinal anti-rot gate passes.
-
-- **Automated PyPI Trusted Publishers**: configure GitHub Actions OIDC release workflow publishing `brain79` (including the `[polyglot]` extra metadata) to PyPI, enabling `uvx brain79`, `uv tool install brain79`, `uv tool install "brain79[polyglot]"`, and `pipx install brain79`.
-
----
-
-## Phase 18 (`v0.19.0`) — External drift lockfile (P1, approved)
-
-Specification: `specs/phase-18-external-drift-lockfile.md` (`SPEC-018`, `approved`).
+Specification: `specs/phase-17-external-drift-lockfile.md` (`SPEC-017`, `approved`).
 
 Goal: eliminate hash-only frontmatter churn in Git commits and PR diffs without weakening Merkle drift detection, Guard C AST checks, or `git blame` readability.
 
 - **Centralized lockfile (`.brain-79/drift.lock`)**: relocates machine-managed `applies_to_digest` and `applies_to_count` out of individual Markdown frontmatters into a deterministic, sorted JSON lockfile tracked in Git (with `!drift.lock` exception in `.brain-79/.gitignore`).
 - **3-way Git merge driver (`brain79 merge-drift-lock`)**: expands `WHITELIST` from 26 to 27 commands (while keeping `MCP_TOOLS == 9`), resolving concurrent branch merges cleanly and emitting fail-closed conflict sentinels on same-key `add/add` collisions.
-- **Non-destructive migration**: `brain79 migrate-wiki` strips legacy frontmatter digest keys into `drift.lock` cleanly while preserving Guard C git-history semantics.
+- **Non-destructive migration**: `brain79 migrate --apply` (and `update-project` / `doctor --fix`) strips legacy frontmatter digest keys into `drift.lock` cleanly without masking pre-existing drift while preserving Guard C git-history semantics.
+
+---
+
+## Phase 18 (`v0.19.0`) — PyPI distribution (P1)
+
+Goal: eliminate raw Git URL installation friction after the external drift lockfile lands.
+
+- **Automated PyPI Trusted Publishers**: configure GitHub Actions OIDC release workflow publishing `brain79` (including the `[polyglot]` extra metadata) to PyPI, enabling `uvx brain79`, `uv tool install brain79`, `uv tool install "brain79[polyglot]"`, and `pipx install brain79`.
 
 ---
 
