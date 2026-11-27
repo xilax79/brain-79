@@ -1002,6 +1002,16 @@ def dispatch_cmd(cmd: str, sub_args: Sequence[str]) -> int:
         parser = argparse.ArgumentParser(
             prog="brain79 session-commit",
             description="Finalize a session: commit raw logs, article updates, and handoff in one step.",
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="""Expected JSON payload schema:
+{
+  "writes": [{"path": "features/x.md", "content": "..."}],
+  "edits": [{"path": "features/x.md", "edits": [{"old_text": "...", "new_text": "..."}]}],
+  "verified_articles": [{"path": "features/x.md", "reason": "Explanation >= 20 chars"}],
+  "session_summary": "Optional concise session summary",
+  "handoff": {"session_type": "feature", "summary": "...", "completed_work": ["..."], "pending_work": ["..."], "boot_instruction": "..."},
+  "allow_partial_ripple": false
+}""",
         )
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument("--file", help="Path to JSON file containing session commit payload")

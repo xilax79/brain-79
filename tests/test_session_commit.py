@@ -174,3 +174,40 @@ def test_commit_session_pass2d_fails_closed_on_git_timeout(
                 wiki_root=wiki_root,
             )
         assert exc_info.value.rule == "git_status_verification_failed"
+
+
+def test_commit_session_rejects_non_dict_items_with_actionable_validation_error(
+    wiki_env: tuple[Path, Path],
+) -> None:
+    """Non-dict items in verified_articles/writes/edits raise ValidationError with schema guidance."""
+    from brain79.core.frontmatter import ValidationError
+
+    _, wiki_root = wiki_env
+
+    with pytest.raises(ValidationError) as exc_v:
+        commit_session(payload={"verified_articles": ["features/a.md"]}, wiki_root=wiki_root)
+    assert '"path"' in exc_v.value.format_user_message()
+    assert '"reason"' in exc_v.value.format_user_message()
+
+    with pytest.raises(ValidationError) as exc_we:
+        commit_session(
+            payload={"writes": ["topics/a.md"], "edits": ["topics/b.md"]},
+            wiki_root=wiki_root,
+        )
+    msg_we = exc_we.value.format_user_message()
+    assert "Write #1" in msg_we
+    assert "Edit #1" in msg_we
+
+
+def test_session_commit_help_displays_json_payload_schema(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """brain79 session-commit --help displays the expected JSON payload schema."""
+    from brain79.cli.dispatch import run_cli
+
+    rc = run_cli("session-commit", ["--help"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "verified_articles" in out
+    assert '"path"' in out
+    assert '"reason"' in out

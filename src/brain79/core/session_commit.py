@@ -122,8 +122,23 @@ def commit_session(
     written_article_keys: list[str] = []
     edited_article_keys: list[str] = []
 
+    if not isinstance(writes_in, list):
+        validation_errors.append("Field 'writes' must be a list of {\"path\", \"content\"} objects.")
+        writes_in = []
+    if not isinstance(edits_in, list):
+        validation_errors.append("Field 'edits' must be a list of {\"path\", \"edits\"} objects.")
+        edits_in = []
+    if not isinstance(verified_articles_in, list):
+        validation_errors.append("Field 'verified_articles' must be a list of {\"path\", \"reason\"} objects.")
+        verified_articles_in = []
+
     # 1.1 Simulate writes in virtual_fs
     for idx, write_item in enumerate(writes_in):
+        if not isinstance(write_item, dict):
+            validation_errors.append(
+                f"Write #{idx + 1}: Expected a JSON object {{\"path\": \"<article.md>\", \"content\": \"...\"}}."
+            )
+            continue
         p = write_item.get("path")
         c = write_item.get("content")
         if not p or c is None:
@@ -153,9 +168,14 @@ def commit_session(
 
     # 1.2 Simulate edits in virtual_fs
     for idx, edit_item in enumerate(edits_in):
+        if not isinstance(edit_item, dict):
+            validation_errors.append(
+                f"Edit #{idx + 1}: Expected a JSON object {{\"path\": \"<article.md>\", \"edits\": [{{\"old_text\": \"...\", \"new_text\": \"...\"}}]}}."
+            )
+            continue
         p = edit_item.get("path")
         edits_list = edit_item.get("edits")
-        if not p or not edits_list:
+        if not p or not isinstance(edits_list, list) or not edits_list:
             validation_errors.append(f"Edit #{idx + 1}: Must contain 'path' and non-empty 'edits' list.")
             continue
 
@@ -172,6 +192,11 @@ def commit_session(
                 continue
 
             for edit_idx, sub_edit in enumerate(edits_list):
+                if not isinstance(sub_edit, dict):
+                    validation_errors.append(
+                        f"Edit on '{p}' sub-edit #{edit_idx + 1}: Expected a JSON object {{\"old_text\": \"...\", \"new_text\": \"...\"}}."
+                    )
+                    continue
                 old_text = sub_edit.get("old_text") if sub_edit.get("old_text") is not None else sub_edit.get("oldText")
                 new_text = sub_edit.get("new_text") if sub_edit.get("new_text") is not None else sub_edit.get("newText")
                 if old_text is None or new_text is None:
@@ -210,6 +235,11 @@ def commit_session(
 
     # 1.3 Validate verified_articles format
     for idx, v_item in enumerate(verified_articles_in):
+        if not isinstance(v_item, dict):
+            validation_errors.append(
+                f"Verified Article #{idx + 1}: Expected a JSON object {{\"path\": \"<article.md>\", \"reason\": \"<>= 20 chars>\"}}."
+            )
+            continue
         p = v_item.get("path")
         r = v_item.get("reason", "")
         if not p:

@@ -48,10 +48,10 @@
     },
     "architecture/dispatcher.md": {
       "count": 3,
-      "digest": "sha256:a7d8a0a8bff4dc21",
+      "digest": "sha256:2f53231ffef16042",
       "targets": {
         "src/brain79/__main__.py": "sha256:a79812142f6b6992",
-        "src/brain79/cli/dispatch.py": "sha256:54c328d2a390e87b",
+        "src/brain79/cli/dispatch.py": "sha256:eb3c02b699ef9c9a",
         "src/brain79/cli/io.py": "sha256:59e240c852ca8c4f"
       }
     },
@@ -83,9 +83,9 @@
     },
     "architecture/symmetry.md": {
       "count": 3,
-      "digest": "sha256:c78706081d517f53",
+      "digest": "sha256:2091cf33923d5150",
       "targets": {
-        "src/brain79/cli/dispatch.py": "sha256:54c328d2a390e87b",
+        "src/brain79/cli/dispatch.py": "sha256:eb3c02b699ef9c9a",
         "src/brain79/server.py": "sha256:165ddc3982d7f2f7",
         "tests/test_symmetry.py": "sha256:4a846f957892c709"
       }
@@ -101,10 +101,10 @@
     },
     "decisions/adr-011-session-commit-and-batch-reading.md": {
       "count": 4,
-      "digest": "sha256:bd1b716ca3e5aa17",
+      "digest": "sha256:20b35a7325fe758c",
       "targets": {
-        "src/brain79/cli/dispatch.py": "sha256:54c328d2a390e87b",
-        "src/brain79/core/session_commit.py": "sha256:46434fc41ec00fef",
+        "src/brain79/cli/dispatch.py": "sha256:eb3c02b699ef9c9a",
+        "src/brain79/core/session_commit.py": "sha256:2c5f119b8d7a359c",
         "src/brain79/core/wiki.py": "sha256:0110dc69efbedcee",
         "src/brain79/server.py": "sha256:165ddc3982d7f2f7"
       }
@@ -135,10 +135,10 @@
     },
     "features/cli.md": {
       "count": 3,
-      "digest": "sha256:7529d17cbc950a28",
+      "digest": "sha256:323c005dedc03132",
       "targets": {
         "src/brain79/cli/__init__.py": "sha256:b23b5df97742304a",
-        "src/brain79/cli/dispatch.py": "sha256:54c328d2a390e87b",
+        "src/brain79/cli/dispatch.py": "sha256:eb3c02b699ef9c9a",
         "src/brain79/cli/io.py": "sha256:59e240c852ca8c4f"
       }
     },
@@ -197,9 +197,9 @@
     },
     "features/project-upgrade-and-multi-harness-doctor.md": {
       "count": 17,
-      "digest": "sha256:de6a6cc40b7a8ac0",
+      "digest": "sha256:df33c6d9e751469d",
       "targets": {
-        "src/brain79/cli/dispatch.py": "sha256:54c328d2a390e87b",
+        "src/brain79/cli/dispatch.py": "sha256:eb3c02b699ef9c9a",
         "src/brain79/core/doctor.py": "sha256:72e3de8285d6a486",
         "src/brain79/core/harnesses/__init__.py": "sha256:49fe91233fb1e900",
         "src/brain79/core/harnesses/_delimited.py": "sha256:376ae8af39ca9de5",
@@ -220,14 +220,14 @@
     },
     "features/session-triage-and-research-persistence.md": {
       "count": 7,
-      "digest": "sha256:6b54a3a2b8f2888d",
+      "digest": "sha256:5835b987b6131f83",
       "targets": {
         "src/brain79/core/bootstrap.py": "sha256:e481cc618b35fcf4",
         "src/brain79/core/context.py": "sha256:a71a7dd02c3d1e13",
         "src/brain79/core/curate.py": "sha256:4ac7a5a18c66bb4b",
         "src/brain79/core/init_project.py": "sha256:5e14ef60bf291240",
         "src/brain79/core/orient.py": "sha256:c1b7462dd32f1a49",
-        "src/brain79/core/session_commit.py": "sha256:46434fc41ec00fef",
+        "src/brain79/core/session_commit.py": "sha256:2c5f119b8d7a359c",
         "src/brain79/core/wiki.py": "sha256:0110dc69efbedcee"
       }
     },
@@ -242,7 +242,7 @@
     },
     "features/transitive-drift-and-ripple-guards.md": {
       "count": 8,
-      "digest": "sha256:e3e808d0551c2aae",
+      "digest": "sha256:428b7db379f857c0",
       "targets": {
         "src/brain79/core/ast_guards/__init__.py": "sha256:c75e808301ac335a",
         "src/brain79/core/ast_guards/base.py": "sha256:1b8860d5f413b344",
@@ -251,7 +251,7 @@
         "src/brain79/core/context.py": "sha256:a71a7dd02c3d1e13",
         "src/brain79/core/drift.py": "sha256:19333c7f37495747",
         "src/brain79/core/orient.py": "sha256:c1b7462dd32f1a49",
-        "src/brain79/core/session_commit.py": "sha256:46434fc41ec00fef"
+        "src/brain79/core/session_commit.py": "sha256:2c5f119b8d7a359c"
       }
     },
     "features/version-governance.md": {
