@@ -20,7 +20,7 @@ def test_has_public_python_api_changes_fails_closed_on_git_timeout(tmp_path: Pat
     target.write_text("def foo() -> int:\n    return 1\n", encoding="utf-8")
 
     with patch(
-        "brain79.core.ast_guards.python_inspector.git_last_commit_for_path",
+        "brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit",
         side_effect=GitTimeoutError("git log timed out"),
     ):
         with pytest.raises(ValidationError) as exc_info:
@@ -48,7 +48,7 @@ def test_has_public_python_api_changes_allows_non_git_workspace(tmp_path: Path) 
     target.write_text("def foo() -> int:\n    return 1\n", encoding="utf-8")
 
     with patch(
-        "brain79.core.ast_guards.python_inspector.git_last_commit_for_path",
+        "brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit",
         side_effect=NotAGitRepoError("not a git repo"),
     ):
         changed, desc = has_public_python_api_changes(p_root, "mod.py", "features/mod.md")

@@ -425,6 +425,10 @@ def write_article(
         )
 
     rel_path_str = target.relative_to(w_root).as_posix()
+    from brain79.core.drift import load_drift_lock
+
+    load_drift_lock(w_root)
+
     content = validate_article_content(
         rel_path_str,
         content,
@@ -469,19 +473,22 @@ def write_article(
                     actionable=unanchored_governance_actionable(rel_path_str),
                 )
 
-    # Single-file target check, anti-sprawl, and digest stamping
+    drift_lock_updates: dict[str, dict[str, Any]] | None = None
+    drift_lock_removals: set[str] | None = None
+
+    if not _skip_nav_regen and not is_special and force_validation_skip:
+        drift_lock_removals = {rel_path_str}
+
+    # Single-file target check, anti-sprawl, and drift.lock entry staging
     if not _skip_nav_regen and not is_special and not force_validation_skip:
         from brain79.config import get_project_root
         from brain79.core.drift import (
             WorkspaceIndex,
             compute_applies_to_manifest,
-            load_drift_manifest,
-            save_drift_manifest,
         )
         from brain79.core.frontmatter import (
             INACTIVE_STATUSES,
             PRE_IMPLEMENTATION_STATUSES,
-            dump_frontmatter,
             load_active_schema,
             parse_frontmatter,
         )
@@ -490,7 +497,7 @@ def write_article(
         enforcement = load_active_schema(w_root).enforcement
         p_root = (w_root.parent or get_project_root()).resolve()
         ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs={rel_path_str: content})
-        meta, body = parse_frontmatter(content)
+        meta, _ = parse_frontmatter(content)
 
         # Anti-sprawl check on new articles (strict/balanced=BLOCK, advisory=WARN)
         if not target.exists():
@@ -508,23 +515,22 @@ def write_article(
         is_strictly_active = status not in non_active and stability not in non_active
 
         applies = meta.get("applies_to")
-        if applies:
+        if is_strictly_active and applies:
             patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
-            if is_strictly_active:
-                for pat in patterns:
-                    matches = ws_index.find_matching_files([pat])
-                    if not matches:
-                        if enforcement in ("balanced", "advisory"):
-                            downgraded_warnings.append(
-                                f"[applies_to_target_missing] applies_to pattern '{pat}' does not match any file in workspace index."
-                            )
-                        else:
-                            raise ValidationError(
-                                rule="applies_to_target_missing",
-                                path=rel_path_str,
-                                message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
-                                actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
-                            )
+            for pat in patterns:
+                matches = ws_index.find_matching_files([pat])
+                if not matches:
+                    if enforcement in ("balanced", "advisory"):
+                        downgraded_warnings.append(
+                            f"[applies_to_target_missing] applies_to pattern '{pat}' does not match any file in workspace index."
+                        )
+                    else:
+                        raise ValidationError(
+                            rule="applies_to_target_missing",
+                            path=rel_path_str,
+                            message=f"applies_to pattern '{pat}' does not match any file in workspace index.",
+                            actionable="Verify that governed target files exist or declare pre-implementation status (e.g. planned/draft).",
+                        )
 
             master_digest, count, targets_map = compute_applies_to_manifest(
                 patterns,
@@ -533,17 +539,18 @@ def write_article(
                 exclude_self_path=rel_path_str,
                 workspace_index=ws_index,
             )
-            if master_digest:
-                meta["applies_to_digest"] = master_digest
-                meta["applies_to_count"] = count
-                content = dump_frontmatter(meta, body)
-                manifest_data = load_drift_manifest(w_root)
-                manifest_data.setdefault("articles", {})[rel_path_str] = {
-                    "digest": master_digest,
-                    "count": count,
-                    "targets": targets_map,
+            if master_digest and targets_map:
+                drift_lock_updates = {
+                    rel_path_str: {
+                        "digest": master_digest,
+                        "count": count,
+                        "targets": targets_map,
+                    }
                 }
-                save_drift_manifest(w_root, manifest_data)
+            else:
+                drift_lock_removals = {rel_path_str}
+        else:
+            drift_lock_removals = {rel_path_str}
 
     target.parent.mkdir(parents=True, exist_ok=True)
     lock = acquire_wiki_lock(w_root, rel_path_str, timeout=timeout)
@@ -552,6 +559,7 @@ def write_article(
         with lock:
             from brain79.core.locks import create_temp_path
 
+            orig_bytes: bytes | None = target.read_bytes() if target.is_file() else None
             tmp_path = create_temp_path(target, suffix=".md.tmp")
             try:
                 tmp_path.write_text(content, encoding="utf-8", newline="\n")
@@ -559,6 +567,51 @@ def write_article(
             except Exception:
                 tmp_path.unlink(missing_ok=True)
                 raise
+
+            if not _skip_nav_regen and not force_validation_skip and not is_special:
+                try:
+                    from brain79.core.navigation import (
+                        extract_graph_metadata,
+                        extract_title_and_summary,
+                        register_article,
+                    )
+
+                    rel_p = target.relative_to(w_root)
+                    rel_posix_str = rel_p.as_posix()
+                    title, summary = extract_title_and_summary(content)
+                    graph_meta = extract_graph_metadata(content, rel_path=rel_posix_str)
+                    section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
+                    register_article(
+                        w_root,
+                        rel_posix_str,
+                        title,
+                        summary,
+                        section,
+                        graph_meta=graph_meta,
+                    )
+                except Exception:
+                    pass
+
+            if not _skip_nav_regen and (drift_lock_updates or drift_lock_removals):
+                from brain79.core.drift import update_drift_lock_entries
+
+                try:
+                    update_drift_lock_entries(
+                        w_root,
+                        updates=drift_lock_updates,
+                        removals=drift_lock_removals,
+                    )
+                except BaseException:
+                    if orig_bytes is None:
+                        target.unlink(missing_ok=True)
+                    else:
+                        rb_tmp = create_temp_path(target, suffix=".md.rollback")
+                        try:
+                            rb_tmp.write_bytes(orig_bytes)
+                            atomic_replace_with_retry(rb_tmp, target)
+                        finally:
+                            rb_tmp.unlink(missing_ok=True)
+                    raise
     except filelock.Timeout:
         raise OSError(
             f"El archivo {path} está bloqueado por otro proceso. Reintenta en unos segundos."
@@ -580,22 +633,26 @@ def write_article(
                 register_article,
             )
 
-            rel_p = target.relative_to(w_root)
-            rel_posix_str = rel_p.as_posix()
-            title, summary = extract_title_and_summary(content)
-            graph_meta = extract_graph_metadata(content, rel_path=rel_posix_str)
-            section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
-            register_article(
-                w_root,
-                rel_posix_str,
-                title,
-                summary,
-                section,
-                graph_meta=graph_meta,
-            )
+            if _skip_nav_regen:
+                rel_p = target.relative_to(w_root)
+                rel_posix_str = rel_p.as_posix()
+                title, summary = extract_title_and_summary(content)
+                graph_meta = extract_graph_metadata(content, rel_path=rel_posix_str)
+                section = rel_p.parts[0] if len(rel_p.parts) > 1 else "root"
+                register_article(
+                    w_root,
+                    rel_posix_str,
+                    title,
+                    summary,
+                    section,
+                    graph_meta=graph_meta,
+                )
             if not _skip_nav_regen:
                 try:
                     regenerate_index_navigation(w_root)
+                except ValidationError as nav_exc:
+                    if nav_exc.rule == "corrupt_drift_lock":
+                        raise
                 except Exception:
                     pass
         elif rel_path_str == "INDEX.md" and "## Quick navigation" in content:
@@ -604,8 +661,14 @@ def write_article(
 
                 try:
                     regenerate_index_navigation(w_root)
+                except ValidationError as nav_exc:
+                    if nav_exc.rule == "corrupt_drift_lock":
+                        raise
                 except Exception:
                     pass
+    except ValidationError as nav_exc:
+        if nav_exc.rule == "corrupt_drift_lock":
+            raise
     except Exception:
         pass
 
@@ -785,13 +848,22 @@ def write_many_articles(
     """Validate all articles in batch first; if all valid, write them atomically."""
     import json
     from brain79.config import get_project_root
-    from brain79.core.drift import WorkspaceIndex, compute_applies_to_manifest, load_drift_manifest, save_drift_manifest
-    from brain79.core.frontmatter import INACTIVE_STATUSES, PRE_IMPLEMENTATION_STATUSES, dump_frontmatter, parse_frontmatter
+    from brain79.core.drift import (
+        DRIFT_LOCK_FILENAME,
+        DRIFT_LOCK_VERSION,
+        WorkspaceIndex,
+        compute_applies_to_manifest,
+        load_drift_lock,
+        save_drift_lock,
+    )
+    from brain79.core.frontmatter import INACTIVE_STATUSES, PRE_IMPLEMENTATION_STATUSES, parse_frontmatter
+    from brain79.core.locks import create_temp_path
 
     if not articles:
         raise ValueError("articles list cannot be empty.")
 
     w_root = (wiki_root or get_wiki_root()).resolve()
+    load_drift_lock(w_root)
     p_root = (w_root.parent or get_project_root()).resolve()
     validated_contents: list[tuple[str, str]] = []
     validation_errors: list[str] = []
@@ -917,18 +989,27 @@ def write_many_articles(
             except Exception:
                 pass
 
-        # Stamp digests in virtual_fs and manifest_staging (2 iterations for fixed-point convergence)
-        manifest_data = load_drift_manifest(w_root)
-        manifest_staging = json.loads(json.dumps(manifest_data))
-        manifest_staging.setdefault("articles", {})
+        # Stage drift.lock entries in memory (2 iterations for fixed-point convergence) without stamping .md frontmatter
+        lock_data = load_drift_lock(w_root) or {"version": DRIFT_LOCK_VERSION, "articles": {}}
+        lock_staging = json.loads(json.dumps(lock_data))
+        lock_staging.setdefault("articles", {})
+        non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
 
         for _ in range(2):
             for rel_p in list(virtual_fs.keys()):
                 val_c = virtual_fs[rel_p]
                 try:
-                    meta, body = parse_frontmatter(val_c)
+                    meta, _ = parse_frontmatter(val_c)
+                    st = str(meta.get("status", "")).lower()
+                    sp = str(meta.get("stability", "")).lower()
+                    is_active = st not in non_active and sp not in non_active
                     applies = meta.get("applies_to")
-                    if applies:
+                    is_special_p = (
+                        rel_p in ("INDEX.md", "SCHEMA.md")
+                        or rel_p.startswith("_raw/")
+                        or rel_p.startswith("handoffs/")
+                    )
+                    if not force_validation_skip and not is_special_p and is_active and applies:
                         patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
                         master_digest, count, targets = compute_applies_to_manifest(
                             patterns,
@@ -938,44 +1019,77 @@ def write_many_articles(
                             overlay_fs=virtual_fs,
                             workspace_index=ws_index,
                         )
-                        if master_digest:
-                            meta["applies_to_digest"] = master_digest
-                            meta["applies_to_count"] = count
-                            manifest_staging["articles"][rel_p] = {
+                        if master_digest and targets:
+                            lock_staging["articles"][rel_p] = {
                                 "digest": master_digest,
                                 "count": count,
                                 "targets": targets,
                             }
-                            val_c = dump_frontmatter(meta, body)
-                            virtual_fs[rel_p] = val_c
+                        else:
+                            lock_staging["articles"].pop(rel_p, None)
+                    else:
+                        lock_staging["articles"].pop(rel_p, None)
                 except Exception:
-                    pass
+                    lock_staging["articles"].pop(rel_p, None)
 
         final_contents: list[tuple[str, str]] = [(rel_p, virtual_fs[rel_p]) for rel_p, _ in validated_contents]
 
-        # Save drift manifest
-        save_drift_manifest(w_root, manifest_staging)
+        drift_lock_file = w_root / DRIFT_LOCK_FILENAME
+        orig_lock_bytes: bytes | None = drift_lock_file.read_bytes() if drift_lock_file.is_file() else None
+        orig_md_bytes: dict[str, bytes | None] = {
+            rel_p: (w_root / rel_p).read_bytes() if (w_root / rel_p).is_file() else None
+            for rel_p, _ in final_contents
+        }
 
-        # 3. Write pass
         written: list[str] = []
-        for rel_p, val_c in final_contents:
-            write_article(
-                rel_p,
-                val_c,
-                timeout=timeout,
-                force_validation_skip=force_validation_skip,
-                _skip_nav_regen=True,
-                wiki_root=w_root,
-            )
-            written.append(rel_p)
-
-        # 4. Navigation regeneration
         try:
-            from brain79.core.navigation import regenerate_index_navigation
+            save_drift_lock(w_root, lock_staging)
 
-            regenerate_index_navigation(w_root)
-        except Exception:
-            pass
+            # 3. Write pass
+            for rel_p, val_c in final_contents:
+                write_article(
+                    rel_p,
+                    val_c,
+                    timeout=timeout,
+                    force_validation_skip=force_validation_skip,
+                    _skip_nav_regen=True,
+                    wiki_root=w_root,
+                )
+                written.append(rel_p)
+
+            # 4. Navigation regeneration
+            try:
+                from brain79.core.navigation import regenerate_index_navigation
+
+                regenerate_index_navigation(w_root)
+            except ValidationError as nav_exc:
+                if nav_exc.rule == "corrupt_drift_lock":
+                    raise
+            except Exception:
+                pass
+        except BaseException:
+            for rel_p, orig_b in orig_md_bytes.items():
+                md_target = w_root / rel_p
+                if orig_b is None:
+                    md_target.unlink(missing_ok=True)
+                else:
+                    rb_tmp = create_temp_path(md_target, suffix=".md.rollback")
+                    try:
+                        rb_tmp.write_bytes(orig_b)
+                        atomic_replace_with_retry(rb_tmp, md_target)
+                    finally:
+                        rb_tmp.unlink(missing_ok=True)
+
+            if orig_lock_bytes is None:
+                drift_lock_file.unlink(missing_ok=True)
+            else:
+                rb_lock_tmp = create_temp_path(drift_lock_file, suffix=".lock.rollback")
+                try:
+                    rb_lock_tmp.write_bytes(orig_lock_bytes)
+                    atomic_replace_with_retry(rb_lock_tmp, drift_lock_file)
+                finally:
+                    rb_lock_tmp.unlink(missing_ok=True)
+            raise
 
     if batch_downgraded_warnings:
         base_msg = f"Batch write succeeded: {len(written)} article(s) written: {', '.join(written)} · INDEX.md auto-synced"

@@ -167,7 +167,7 @@ def test_unregistered_extension_zero_disk_and_git_calls(tmp_path: Path) -> None:
 
     with (
         patch.object(Path, "read_text", side_effect=AssertionError("unexpected disk read")),
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path") as mock_log,
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit") as mock_log,
         patch("brain79.core.ast_guards.orchestrator.git_rev_parse_head") as mock_head,
         patch("brain79.core.ast_guards.orchestrator.git_show_blob") as mock_show,
     ):
@@ -194,7 +194,7 @@ def test_custom_inspector_routing_and_unregister_normalization(
     target.write_text("pub alpha(x) {\n  return x + 1;\n}\n", encoding="utf-8")
 
     with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path", return_value="abc123"),
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit", return_value="abc123"),
         patch(
             "brain79.core.ast_guards.orchestrator.git_show_blob",
             return_value="pub alpha(x) {\n  return x;\n}\n",
@@ -206,7 +206,7 @@ def test_custom_inspector_routing_and_unregister_normalization(
 
     target.write_text("pub alpha(x, y) {\n  return x + y;\n}\n", encoding="utf-8")
     with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path", return_value="abc123"),
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit", return_value="abc123"),
         patch(
             "brain79.core.ast_guards.orchestrator.git_show_blob",
             return_value="pub alpha(x) {\n  return x;\n}\n",
@@ -218,7 +218,7 @@ def test_custom_inspector_routing_and_unregister_normalization(
 
     # Added and removed symbols on .custom
     with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path", return_value="abc123"),
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit", return_value="abc123"),
         patch(
             "brain79.core.ast_guards.orchestrator.git_show_blob",
             return_value="pub alpha(x) {\n  return x;\n}\n",
@@ -244,7 +244,7 @@ def test_custom_inspector_routing_and_unregister_normalization(
 
     # Direct .py routing + >2 MB .py size guard through orchestrator
     with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path", return_value="abc123"),
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit", return_value="abc123"),
         patch("brain79.core.ast_guards.orchestrator.git_show_blob", return_value="def foo() -> int:\n    return 1\n"),
     ):
         py_changed, py_desc = has_public_api_changes(
@@ -312,7 +312,7 @@ def test_has_public_api_changes_size_guard_both_directions(
 
     # Direction 1: current > 2 MB -> returns (False, "") BEFORE any Git call
     with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path") as mock_log,
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit") as mock_log,
         patch("brain79.core.ast_guards.orchestrator.git_show_blob") as mock_show,
     ):
         changed, desc = has_public_api_changes(
@@ -325,7 +325,7 @@ def test_has_public_api_changes_size_guard_both_directions(
 
     # Direction 2: base > 2 MB vs current < 2 MB -> returns (False, "") without inspector diff
     with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path", return_value="abc123"),
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit", return_value="abc123"),
         patch("brain79.core.ast_guards.orchestrator.git_show_blob", return_value=oversized),
         patch.object(custom_inspector, "compare_sources") as mock_cmp,
     ):
@@ -342,17 +342,14 @@ def test_has_public_api_changes_non_git_and_empty_base_rev(
 ) -> None:
     """R-1.1(5): Non-Git workspace and empty base_rev degrade cleanly to (False, '')."""
     with patch(
-        "brain79.core.ast_guards.orchestrator.git_last_commit_for_path",
+        "brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit",
         side_effect=NotAGitRepoError("not a git repo"),
     ):
         assert has_public_api_changes(
             tmp_path, "mod.custom", "features/mod.md", current_content="pub a() {}"
         ) == (False, "")
 
-    with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path", return_value=""),
-        patch("brain79.core.ast_guards.orchestrator.git_rev_parse_head", return_value=""),
-    ):
+    with patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit", return_value=""):
         assert has_public_api_changes(
             tmp_path, "mod.custom", "features/mod.md", current_content="pub a() {}"
         ) == (False, "")
@@ -363,7 +360,7 @@ def test_has_public_api_changes_git_timeout_and_inspector_crash(
 ) -> None:
     """R-1.1(5, 9): GitTimeoutError and unexpected inspector exceptions fail closed."""
     with patch(
-        "brain79.core.ast_guards.orchestrator.git_last_commit_for_path",
+        "brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit",
         side_effect=GitTimeoutError("timed out"),
     ):
         with pytest.raises(ValidationError) as exc_git:
@@ -373,7 +370,7 @@ def test_has_public_api_changes_git_timeout_and_inspector_crash(
         assert exc_git.value.rule == "ast_verification_failed"
 
     with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path", return_value="abc123"),
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit", return_value="abc123"),
         patch("brain79.core.ast_guards.orchestrator.git_show_blob", return_value="pub a() {}"),
         patch.object(custom_inspector, "compare_sources", side_effect=RuntimeError("boom")),
     ):
@@ -389,7 +386,7 @@ def test_has_public_api_changes_new_file_base_content_none(
 ) -> None:
     """R-1.1(7): base_content=None reports sorted first public symbol or (False, '') if none."""
     with (
-        patch("brain79.core.ast_guards.orchestrator.git_last_commit_for_path", return_value="abc123"),
+        patch("brain79.core.ast_guards.orchestrator.resolve_article_baseline_commit", return_value="abc123"),
         patch("brain79.core.ast_guards.orchestrator.git_show_blob", return_value=None),
     ):
         changed, desc = has_public_api_changes(
@@ -546,7 +543,7 @@ def test_session_commit_guard_c_git_cache_populated_and_reused(
     def _counting_run_git(args: Any, cwd: Path, **kwargs: Any) -> Any:
         nonlocal log_calls_for_article
         args_list = list(args)
-        if args_list[:2] == ["log", "-1"] and any("payments.md" in str(a) for a in args_list):
+        if args_list[:1] == ["log"] and "--first-parent" in args_list and any("payments.md" in str(a) for a in args_list):
             log_calls_for_article += 1
         return orig_run_git(args, cwd, **kwargs)
 
@@ -567,7 +564,7 @@ def test_session_commit_guard_c_git_cache_populated_and_reused(
     assert res["success"] is True
     assert len(captured_caches) == 1
     cache = captured_caches[0]
-    assert len(cache.last_commit_by_key) >= 1
+    assert len(cache.first_parent_log_by_key) >= 1
     assert len(cache.blob_by_key) >= 2
     assert log_calls_for_article == 1
 

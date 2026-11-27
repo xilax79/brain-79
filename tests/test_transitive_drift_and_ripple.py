@@ -1927,9 +1927,12 @@ Overview.
     )
     direct_file = wiki / "features" / "new_direct.md"
     meta_direct, _ = parse_frontmatter(direct_file.read_text(encoding="utf-8"))
-    assert meta_direct.get("applies_to_digest", "").startswith("sha256:")
-    man_data_direct = load_drift_manifest(wiki)
-    assert "features/new_direct.md" in man_data_direct.get("articles", {})
+    assert "applies_to_digest" not in meta_direct
+    assert "applies_to_count" not in meta_direct
+    from brain79.core.drift import load_drift_lock
+    lock_data_direct = load_drift_lock(wiki)
+    assert lock_data_direct is not None
+    assert lock_data_direct["articles"]["features/new_direct.md"]["digest"].startswith("sha256:")
 
     # Hallazgo 6: Hybrid article (governing .py and .md) can verify internal refactor on .py file
     code_hybrid = src / "hybrid.py"

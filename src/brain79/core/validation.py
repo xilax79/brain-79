@@ -136,9 +136,16 @@ def validate_article_content(
             "WARNING: Skipping organizational validation. This bypass is logged and visible in brain79 lint.\n"
         )
         if content.startswith("---\n"):
-            lines = content.split("\n")
-            lines.insert(1, "force_validation_skipped: true")
-            return "\n".join(lines)
+            try:
+                meta_skip, body_skip = parse_frontmatter(content)
+                meta_skip.pop("applies_to_digest", None)
+                meta_skip.pop("applies_to_count", None)
+                meta_skip["force_validation_skipped"] = True
+                return dump_frontmatter(meta_skip, body_skip)
+            except FrontmatterError:
+                lines = content.split("\n")
+                lines.insert(1, "force_validation_skipped: true")
+                return "\n".join(lines)
         else:
             return f"---\nforce_validation_skipped: true\n---\n\n{content}"
 
@@ -223,6 +230,8 @@ def validate_article_content(
         active_s = None
 
     meta = autofill_deterministic_fields(meta, rel_path, body=body, schema=active_s)
+    meta.pop("applies_to_digest", None)
+    meta.pop("applies_to_count", None)
     active_backlink_label = active_s.backlink_label if active_s else None
     body = normalize_backlink_footer(body, rel_path, backlink_label=active_backlink_label)
     body = normalize_bullet_colons(body)

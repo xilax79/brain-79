@@ -56,6 +56,7 @@ class GitSessionCache:
 
     head_by_root: dict[tuple[Path, str], str] = field(default_factory=dict)
     last_commit_by_key: dict[tuple[Path, str, str], str | None] = field(default_factory=dict)
+    first_parent_log_by_key: dict[tuple[Path, tuple[str, ...], int], list[tuple[str, str | None]]] = field(default_factory=dict)
     blob_by_key: dict[tuple[Path, str, str], str | None] = field(default_factory=dict)
     is_git_repo_by_root: dict[Path, bool] = field(default_factory=dict)
 
@@ -255,6 +256,39 @@ def git_last_commit_for_path(
     if cache is not None:
         cache.last_commit_by_key[(resolved, rel_path, fmt)] = value
     return value
+
+
+def git_first_parent_log(
+    cwd: Path,
+    paths: Sequence[str],
+    *,
+    max_commits: int = 50,
+    timeout: float = 2.0,
+    cache: GitSessionCache | None = None,
+) -> list[tuple[str, str | None]]:
+    """Return bounded first-parent commit/parent pairs ``(commit_sha, first_parent_sha_or_none)``."""
+    resolved = cwd.resolve()
+    norm_paths = tuple(normalize_posix_input(p).lstrip("/") for p in paths if p)
+    if cache is not None:
+        key = (resolved, norm_paths, max_commits)
+        if key in cache.first_parent_log_by_key:
+            return cache.first_parent_log_by_key[key]
+
+    args = ["log", f"-n{max_commits}", "--first-parent", "--format=%H %P", "--", *norm_paths]
+    res = run_git(args, cwd=resolved, timeout=timeout, check_repo=True)
+    entries: list[tuple[str, str | None]] = []
+    if res.returncode == 0 and res.stdout.strip():
+        for raw_line in res.stdout.splitlines():
+            parts = raw_line.strip().split()
+            if not parts:
+                continue
+            commit_sha = parts[0]
+            first_parent = parts[1] if len(parts) >= 2 else None
+            entries.append((commit_sha, first_parent))
+
+    if cache is not None:
+        cache.first_parent_log_by_key[(resolved, norm_paths, max_commits)] = entries
+    return entries
 
 
 def git_show_blob(

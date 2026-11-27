@@ -153,15 +153,14 @@ def has_public_python_api_changes(
         wiki_rel = ".brain-79"
 
     clean_art = normalize_wiki_rel_path(article_path)
-    rel_wiki_path = f"{wiki_rel}/{clean_art}"
     base_rev: str | None = None
 
     try:
-        base_rev = git_last_commit_for_path(
-            p_root, rel_wiki_path, fmt="%H", timeout=2.0, cache=git_cache
+        from brain79.core.ast_guards.orchestrator import resolve_article_baseline_commit
+
+        base_rev = resolve_article_baseline_commit(
+            p_root, wiki_rel, clean_art, timeout=2.0, git_cache=git_cache
         )
-        if not base_rev:
-            base_rev = git_rev_parse_head(p_root, timeout=2.0, cache=git_cache)
     except NotAGitRepoError:
         return False, ""
     except (GitTimeoutError, GitError, OSError) as exc:

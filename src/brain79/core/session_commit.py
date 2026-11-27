@@ -17,19 +17,20 @@ from typing import Any
 from brain79.config import get_project_root, get_wiki_root
 from brain79.core.ast_guards import get_inspector_for_path, has_public_api_changes
 from brain79.core.drift import (
+    DRIFT_LOCK_FILENAME,
+    DRIFT_LOCK_VERSION,
     WorkspaceIndex,
     check_article_drift,
     compute_applies_to_manifest,
     detect_all_drift,
-    load_drift_manifest,
+    load_drift_lock,
     match_applies_to_pattern,
-    save_drift_manifest,
+    save_drift_lock,
 )
 from brain79.core.frontmatter import (
     INACTIVE_STATUSES,
     PRE_IMPLEMENTATION_STATUSES,
     ValidationError,
-    dump_frontmatter,
     load_active_schema,
     parse_frontmatter,
 )
@@ -37,6 +38,8 @@ from brain79.core.git_ops import GitError, GitSessionCache, GitTimeoutError, Not
 from brain79.core.handoff import validate_handoff_params, write_handoff
 from brain79.core.locks import (
     acquire_wiki_lock,
+    atomic_replace_with_retry,
+    create_temp_path,
     normalize_posix_input,
     normalize_wiki_rel_path,
     transaction_temp_scope,
@@ -311,11 +314,17 @@ def commit_session(
 
     tx_lock = acquire_wiki_lock(w_root, "_transaction.lock", timeout=timeout)
     with tx_lock:
+        # Unconditional corrupt drift.lock check (R-1.4), including allow_partial_ripple=True & handoff-only
+        drift_lock_data = load_drift_lock(w_root)
+        lock_staging: dict[str, Any] = (
+            json.loads(json.dumps(drift_lock_data))
+            if drift_lock_data is not None
+            else {"version": DRIFT_LOCK_VERSION, "articles": {}}
+        )
+        lock_staging.setdefault("articles", {})
+
         git_cache = GitSessionCache()
         ws_index = WorkspaceIndex.build(p_root, w_root, overlay_fs=virtual_fs, git_cache=git_cache)
-        manifest_data = load_drift_manifest(w_root)
-        manifest_staging: dict[str, Any] = json.loads(json.dumps(manifest_data))
-        manifest_staging.setdefault("articles", {})
 
         # Pass 2a: Target check (applies_to_target_missing) and Anti-Sprawl Guard
         for rel_str in dict.fromkeys(list(written_article_keys) + list(edited_article_keys)):
@@ -354,14 +363,34 @@ def commit_session(
                     else:
                         raise
 
-        # Pass 2b: Fixed-point digest convergence in memory (2 iterations)
+        # Pass 2b: Fixed-point drift.lock staging in memory (2 iterations) without stamping .md frontmatter
         touched_keys = list(written_article_keys) + list(edited_article_keys)
+        touched_set = set(touched_keys)
+        non_active = INACTIVE_STATUSES | PRE_IMPLEMENTATION_STATUSES
+
+        # Prune deleted articles from lock_staging
+        for existing_k in list(lock_staging["articles"].keys()):
+            if existing_k not in virtual_fs and not (w_root / existing_k).is_file():
+                del lock_staging["articles"][existing_k]
+
         for _ in range(2):
             for rel_str in touched_keys:
                 content = virtual_fs[rel_str]
-                meta, body = parse_frontmatter(content)
+                try:
+                    meta, _ = parse_frontmatter(content)
+                except Exception:
+                    lock_staging["articles"].pop(rel_str, None)
+                    continue
+                st = str(meta.get("status", "")).lower()
+                sp = str(meta.get("stability", "")).lower()
+                is_active = st not in non_active and sp not in non_active
+                is_special = (
+                    rel_str in ("INDEX.md", "SCHEMA.md")
+                    or rel_str.startswith("_raw/")
+                    or rel_str.startswith("handoffs/")
+                )
                 applies = meta.get("applies_to")
-                if applies:
+                if not force_validation_skip and not is_special and is_active and applies:
                     patterns = [str(x) for x in applies] if isinstance(applies, list) else [str(applies)]
                     master_digest, count, targets = compute_applies_to_manifest(
                         patterns,
@@ -371,15 +400,16 @@ def commit_session(
                         overlay_fs=virtual_fs,
                         workspace_index=ws_index,
                     )
-                    if master_digest:
-                        meta["applies_to_digest"] = master_digest
-                        meta["applies_to_count"] = count
-                        manifest_staging["articles"][rel_str] = {
+                    if master_digest and targets:
+                        lock_staging["articles"][rel_str] = {
                             "digest": master_digest,
                             "count": count,
                             "targets": targets,
                         }
-                        virtual_fs[rel_str] = dump_frontmatter(meta, body)
+                    else:
+                        lock_staging["articles"].pop(rel_str, None)
+                else:
+                    lock_staging["articles"].pop(rel_str, None)
 
         # Pass 2c: Bottom-up evaluation of verified_articles
         if verified_articles_in:
@@ -415,11 +445,26 @@ def commit_session(
                     project_root=p_root,
                     workspace_index=ws_index,
                     overlay_fs=virtual_fs,
-                    manifest_data=manifest_staging,
+                    lock_data=lock_staging,
                 )
                 for d in drifts:
                     kind = d.get("drift_kind", "")
                     tgt = d.get("target_file", "")
+                    # Conflict sentinel guard (strict/balanced=BLOCK, advisory=WARN)
+                    if kind == "conflict":
+                        msg_conflict = (
+                            f"Cannot verify article '{v_path}': it carries an unresolved .brain-79/drift.lock merge conflict. "
+                            "Review the article and update it via writes/edits instead of verified_articles."
+                        )
+                        if enforcement == "advisory":
+                            downgraded_warnings.append(f"[verified_article_conflict_forbidden] {msg_conflict}")
+                        else:
+                            raise ValidationError(
+                                rule="verified_article_conflict_forbidden",
+                                path=v_path,
+                                message=msg_conflict,
+                                actionable="Review the article against its governed files and update it via writes/edits.",
+                            )
                     # Guard B: Umbrella bypass forbidden (strict/balanced=BLOCK, advisory=WARN)
                     if kind == "transitive" or tgt.startswith(f"{wiki_rel}/") or (tgt.startswith(".brain-79/") and tgt.endswith(".md")):
                         msg_b = f"Cannot verify umbrella article '{v_path}': it has unresolved drift targeting intra-wiki articles ({d.get('message', kind)})."
@@ -479,9 +524,13 @@ def commit_session(
                                             actionable="Update the article content in writes or edits to document the public API changes.",
                                         )
 
-                # Verification passed: stamp digest in virtual_fs and manifest_staging
-                v_content = virtual_fs.get(v_path) or _safe_read_wiki_text(w_root / v_path, v_path)
-                meta_v, body_v = parse_frontmatter(v_content)
+                # Precedence: if article was also in writes/edits, Pass 2b already owns it
+                if v_path in touched_set:
+                    return
+
+                # Verification passed: update ONLY lock_staging (zero-diff on .md)
+                v_content = _safe_read_wiki_text(w_root / v_path, v_path)
+                meta_v, _ = parse_frontmatter(v_content)
                 applies_v = meta_v.get("applies_to", [])
                 pats_v = [str(x) for x in applies_v] if isinstance(applies_v, list) else [str(applies_v)]
                 m_dig, cnt, tgts = compute_applies_to_manifest(
@@ -492,11 +541,8 @@ def commit_session(
                     overlay_fs=virtual_fs,
                     workspace_index=ws_index,
                 )
-                if m_dig:
-                    meta_v["applies_to_digest"] = m_dig
-                    meta_v["applies_to_count"] = cnt
-                    manifest_staging["articles"][v_path] = {"digest": m_dig, "count": cnt, "targets": tgts}
-                    virtual_fs[v_path] = dump_frontmatter(meta_v, body_v)
+                if m_dig and tgts:
+                    lock_staging["articles"][v_path] = {"digest": m_dig, "count": cnt, "targets": tgts}
 
             # 2c.1 Evaluate leaf verified articles first
             for v_path, v_reason, v_meta in leaf_verified:
@@ -515,7 +561,7 @@ def commit_session(
                 project_root=p_root,
                 workspace_index=ws_index,
                 overlay_fs=virtual_fs,
-                manifest_data=manifest_staging,
+                lock_data=lock_staging,
             )
 
             is_pure_research = False
@@ -597,7 +643,12 @@ def commit_session(
                     session_ripple_articles.add(art_path)
 
                 # 2. Modified working-tree code ripple
-                if not is_pure_research and meta_art.get("applies_to_digest") and dirty_git_paths:
+                is_conflict_art = d.get("drift_kind") == "conflict" or (
+                    isinstance(lock_staging["articles"].get(art_path), dict)
+                    and lock_staging["articles"][art_path].get("conflict") is True
+                )
+                is_digest_tracked = (art_path in lock_staging["articles"]) or bool(meta_art.get("applies_to_digest"))
+                if not is_pure_research and (is_digest_tracked or is_conflict_art) and dirty_git_paths:
                     for pat in pats:
                         matched_dirty = [
                             df for df in dirty_git_paths
@@ -627,15 +678,15 @@ def commit_session(
                     )
 
         # =========================================================================
-        # Pass 3: Disk Persistence (articles, manifest, index) with Rollback Safety
+        # Pass 3: Disk Persistence (articles, drift.lock, index) with Rollback Safety
         # =========================================================================
         orig_states: dict[str, str | None] = {}
         for rel_str in virtual_fs:
             target_f = w_root / rel_str
             orig_states[rel_str] = target_f.read_text(encoding="utf-8") if target_f.is_file() else None
 
-        manifest_file = w_root / ".drift_manifest.json"
-        orig_manifest_text = manifest_file.read_text(encoding="utf-8") if manifest_file.is_file() else None
+        drift_lock_file = w_root / DRIFT_LOCK_FILENAME
+        orig_drift_lock_bytes: bytes | None = drift_lock_file.read_bytes() if drift_lock_file.is_file() else None
 
         registry_file = w_root / ".navigation_registry.json"
         orig_registry_text = registry_file.read_text(encoding="utf-8") if registry_file.is_file() else None
@@ -649,7 +700,7 @@ def commit_session(
 
         with transaction_temp_scope() as tx_tmp_files:
             try:
-                save_drift_manifest(w_root, manifest_staging)
+                save_drift_lock(w_root, lock_staging)
 
                 if session_summary:
                     raw_msg = save_raw_session(session_summary, instructions=instructions or "", wiki_root=w_root)
@@ -673,6 +724,14 @@ def commit_session(
                 if has_indexable_changes:
                     try:
                         regenerate_index_navigation(w_root)
+                    except ValidationError as nav_exc:
+                        if nav_exc.rule == "corrupt_drift_lock":
+                            raise
+                        nav_regen_failed = True
+                        nav_warnings.append(
+                            f"Navigation regeneration failed ({type(nav_exc).__name__}: {nav_exc}). "
+                            "Run 'brain79 navigate --regenerate' to repair INDEX.md."
+                        )
                     except Exception as exc:
                         nav_regen_failed = True
                         nav_warnings.append(
@@ -688,10 +747,15 @@ def commit_session(
                     else:
                         target_f.write_text(orig_content, encoding="utf-8", newline="\n")
 
-                if orig_manifest_text is None:
-                    manifest_file.unlink(missing_ok=True)
+                if orig_drift_lock_bytes is None:
+                    drift_lock_file.unlink(missing_ok=True)
                 else:
-                    manifest_file.write_text(orig_manifest_text, encoding="utf-8", newline="\n")
+                    rb_lock_tmp = create_temp_path(drift_lock_file, suffix=".lock.rollback")
+                    try:
+                        rb_lock_tmp.write_bytes(orig_drift_lock_bytes)
+                        atomic_replace_with_retry(rb_lock_tmp, drift_lock_file)
+                    finally:
+                        rb_lock_tmp.unlink(missing_ok=True)
 
                 if orig_registry_text is None:
                     registry_file.unlink(missing_ok=True)
