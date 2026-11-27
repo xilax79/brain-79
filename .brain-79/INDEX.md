@@ -11,10 +11,10 @@ last_updated: 2026-11-27
 ## Quick navigation
 
 ### Architecture
-- [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 26 CLI subcommands
-- [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing across 26 commands, and POSIX exit code mappings
+- [Architecture — CLI and MCP symmetry](architecture/symmetry.md) — enforces MCP-subset / CLI-superset symmetry between the 9 focused FastMCP tools and 27 CLI subcommands
+- [Architecture — CLI dispatcher](architecture/dispatcher.md) — CLI argument parsing, closed-whitelist subcommand routing across 27 commands, and POSIX exit code mappings
 - [Architecture — Defect backlog and live evaluation remediations](architecture/defect-backlog.md) — master defect backlog and forensic analysis for live evaluation findings on Grand Palace Casino (test-wiki)
-- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-16 and v0.17.0) and prioritized evolution (phase 17 external drift lockfile and phase 18 PyPI release)
+- [Architecture — Industrial-scale roadmap and adoption evolution](architecture/roadmap-industrial-scale.md) — project roadmap covering completed foundation (phases 0-17 and v0.18.0) and prioritized evolution (phase 18 PyPI release)
 - [Architecture — MCP server](architecture/mcp-server.md) — FastMCP server architecture, logging suppression, focused 9-tool surface, and lifecycle management
 - [Architecture — System current state](architecture/current-state.md) — high-level overview of system architecture, active milestones, runtime invariants, and roadmap
 
@@ -34,6 +34,7 @@ last_updated: 2026-11-27
 - [Changelog — v0.15.0](changelog/v0-15-0.md) — release notes for v0.15.0 (Phase 14 passive lifecycle hooks, read-only CI PR gate, composite GitHub Action, and 25-command CLI)
 - [Changelog — v0.16.0](changelog/v0-16-0.md) — release notes for v0.16.0 (polyglot AST Guard C via brain79\[polyglot\], read-only brain79 stats, doctor diagnostics, and language-agnostic docs)
 - [Changelog — v0.17.0](changelog/v0-17-0.md) — release notes for v0.17.0 (phase 16 longitudinal anti-rot release gate PASS 7/7 and SPEC-202611 agent ergonomics, strict pre-flight parity, and batch-read normalization)
+- [Changelog — v0.18.0](changelog/v0-18-0.md) — release notes for v0.18.0 (Phase 17 external .brain-79/drift.lock, hash-free Markdown frontmatter, 3-way merge driver, and CI matrix reliability)
 - [Release v0.11.0 — Core refactoring and hardening](changelog/v0-11-0.md) — core architectural refactoring, concurrency hardening, centralized Git layer, security fixes, and modular decomposition
 
 ### Decisions
@@ -57,20 +58,21 @@ last_updated: 2026-11-27
 - [ADR-020 — Focused MCP surface and CLI superset](decisions/adr-020-focused-mcp-surface-and-cli-superset.md) — prune redundant MCP wrappers and dual-profile branching to formalize a focused 9-tool MCP surface as a strict subset of the 24-command CLI
 - [ADR-021 — Passive lifecycle hooks and CI PR gate](decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md) — adopt opt-in native lifecycle hooks backed by a read-only CLI CI gate and composite GitHub Action with dual-tier enforcement
 - [ADR-022 — Polyglot AST guards and context budget telemetry](decisions/adr-022-polyglot-ast-guards-and-context-stats.md) — isolate optional Tree-sitter polyglot AST guards behind brain79\[polyglot\] and ship read-only brain79 stats telemetry
+- [ADR-023 — External drift lockfile and hash-free Markdown frontmatter](decisions/adr-023-external-drift-lockfile.md) — relocate drift digests and per-file leaf hashes into Git-tracked .brain-79/drift.lock with a 3-way merge driver while keeping Markdown frontmatter hash-free
 - [Decision — ADR-018: Living manuals, temporal decontamination, and the three-class document ontology](decisions/adr-018-living-manuals-and-temporal-decontamination.md) — architectural foundation for living manuals, temporal decontamination, Chesterton's Fence for ADRs, and epocal changelog consolidation
 - [Decision — ADR-019: External feature specifications and requirements standard](decisions/adr-019-external-specs-and-requirements-standard.md) — isolate repository feature specifications in specs/ outside .brain-79/ using EARS, BDD Given/When/Then, explicit non-goals, and CI governance tests
 
 ### Features
-- [Feature — Cross-platform portability and centralized lock isolation](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
+- [Feature — Cross-platform portability and centralized lock isolation](features/cross-platform-and-lock-isolation.md) — centralized .locks/ directory isolation, \_drift\_lock.lock hierarchy, POSIX path and CRLF normalization, cross-platform Git hooks, and local Windows/Linux simulation tests
 - [Feature — FastMCP integration](features/mcp-server.md) — model Context Protocol server exposing 9 focused hot-path tools over stdio JSON-RPC
-- [Feature — Passive lifecycle hooks and CI PR gate](features/lifecycle-hooks-and-ci-gate.md) — read-only CI governance PR gate, composite GitHub Action, and cross-platform passive lifecycle hook runtime
-- [Feature — Polyglot AST guards and context budget telemetry](features/polyglot-ast-guards-and-stats.md) — optional Tree-sitter polyglot AST Guard C for 10 language parsers and read-only brain79 stats context budget telemetry
+- [Feature — Passive lifecycle hooks and CI PR gate](features/lifecycle-hooks-and-ci-gate.md) — read-only CI governance PR gate, composite GitHub Action, legacy\_frontmatter\_digest lint advisory, and cross-platform passive lifecycle hook runtime
+- [Feature — Polyglot AST guards and context budget telemetry](features/polyglot-ast-guards-and-stats.md) — optional Tree-sitter polyglot AST Guard C for 10 language parsers, shared two-pass Guard C baseline resolution, and read-only brain79 stats telemetry
 - [Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics](features/project-upgrade-and-multi-harness-doctor.md) — non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP and lifecycle hook setup, and brain79 doctor diagnostics
 - [Feature — Session knowledge triage and research persistence](features/session-triage-and-research-persistence.md) — session knowledge triage (Amnesia Test), zero-code research persistence guard, profile-aware curation guide, path prefix normalization, and handoff schema ergonomics
 - [Feature — Short-term handoff continuity, freshness, and lifecycle operations](features/handoff-continuity.md) — tactical session transitions, freshness evaluation, authority decay, anti-hallucination work tracking, and operational purge
-- [Feature — Standalone CLI interface](features/cli.md) — 26 deterministic CLI subcommands for managing wiki knowledge, context telemetry, CI governance, lifecycle hooks, linters, and handoffs
-- [Feature — Team-safe Git collaboration and low-friction onboarding](features/team-collaboration-and-onboarding.md) — team-safe Git collaboration, git-ignored derived caches with deterministic rebuilds, 3-way INDEX.md merge driver, bootstrap --auto-map, centralized git\_ops, and dual-tier enforcement
-- [Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context](features/transitive-drift-and-ripple-guards.md) — merkle leaf-manifest drift detection, multi-hop DAG propagation, hard session ripple gate, anti-sprawl guard, AST signature verification, and unbounded Signal 1 context
+- [Feature — Standalone CLI interface](features/cli.md) — 27 deterministic CLI subcommands for managing wiki knowledge, context telemetry, CI governance, lifecycle hooks, linters, and handoffs
+- [Feature — Team-safe Git collaboration and low-friction onboarding](features/team-collaboration-and-onboarding.md) — team-safe Git collaboration, tracked .brain-79/drift.lock with 3-way merge driver, INDEX.md merge driver, bootstrap --auto-map, centralized git\_ops, and dual-tier enforcement
+- [Feature — Transitive drift detection, holistic ripple gates, anti-sprawl guards, and unbounded governing context](features/transitive-drift-and-ripple-guards.md) — external drift.lock Merkle tracking, multi-hop DAG propagation, zero-diff verified\_articles, Guard C AST verification, and Hard Session Ripple Gate
 - [Feature — Versioning and release governance](features/version-governance.md) — single-source semantic versioning via Hatchling, MCP handshake version reporting, and automated changelog/badge parity checks
 - [Feature — Wiki organizational enforcement](features/organizational-enforcement.md) — prevent organic wiki degradation through frontmatter schema validation, decision leakage detection, unified lint collection, and navigation indexing
 

@@ -16,8 +16,6 @@ related:
   - architecture/roadmap-industrial-scale.md
   - features/version-governance.md
 last_updated: 2026-11-26
-applies_to_digest: "sha256:64117558020ede09"
-applies_to_count: 6
 ---
 
 # ADR-013 — Architecture — Single-source semantic versioning and mechanical release governance

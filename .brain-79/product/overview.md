@@ -1,13 +1,11 @@
 ---
 type: product
 summary: deterministic AI memory and mechanical documentation protocol designed to prevent organic wiki degradation in software repositories.
-last_updated: 2026-11-26
+last_updated: 2026-11-27
 applies_to:
   - .brain-79/SCHEMA.md
   - .brain-79/features/*.md
   - src/brain79/__init__.py
-applies_to_digest: "sha256:868e29724c4dbe3c"
-applies_to_count: 14
 ---
 
 # Brain-79 — Product vision
@@ -33,8 +31,8 @@ LLMs maintain wikis that degrade organically:
 5. **Opt-in passive lifecycle hooks**: Native `SessionStart` and `Stop` hooks for Claude Code, Antigravity, and Cursor automate cold-start orientation and drift checks before exit.
 6. **Handoff continuity**: Ephemeral tactical transitions with cryptographic freshness tracking and operational purge (`brain79 handoff-purge`).
 7. **Organizational enforcement**: mechanical linter detecting structural quality violations, unanchored governance, and target sprawl.
-8. **Team-safe Git collaboration**: git-ignored derived caches with deterministic rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map`, and dual-tier `strict`/`balanced`/`advisory` enforcement.
-9. **Focused MCP surface and CLI superset**: 9 hot-path MCP tools paired with the complete 26-command CLI (including read-only `brain79 stats`).
+8. **Team-safe Git collaboration**: Git-tracked `.brain-79/drift.lock` with 3-way `merge-drift-lock` driver, git-ignored derived caches with deterministic rebuilds, 3-way `INDEX.md` Git merge driver, `bootstrap --auto-map`, and dual-tier `strict`/`balanced`/`advisory` enforcement.
+9. **Focused MCP surface and CLI superset**: 9 hot-path MCP tools paired with the complete 27-command CLI (including `brain79 merge-drift-lock` and read-only `brain79 stats`).
 10. **Language-agnostic core with polyglot AST guards**: universal Merkle drift tracking paired with built-in Python AST Guard C and optional `brain79[polyglot]` Tree-sitter verification across 10 additional parsers.
 
 ## Target users

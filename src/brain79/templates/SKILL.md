@@ -10,7 +10,7 @@ description: Comprehensive operational manual and command reference for the brai
 > [!IMPORTANT]
 > Prefer **MCP tools** when the brain79 MCP server is connected (most reliable).
 > The MCP server exposes **9 focused hot-path tools**: `brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`, and `brain79_bootstrap`.
-> For administrative, CI, and operational commands, use the **26-command CLI** (`brain79 <subcommand>`).
+> For administrative, CI, and operational commands, use the **27-command CLI** (`brain79 <subcommand>`).
 
 ### Session & knowledge operations (MCP preferred, CLI superset)
 

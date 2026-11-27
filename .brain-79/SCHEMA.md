@@ -103,7 +103,7 @@ Inspect complete document skeletons via `brain79 schema --type <type>`.
 
 ### Deterministic drift detection (`applies_to`)
 
-Articles declaring `applies_to` paths or globs in frontmatter are continuously checked against git commit timestamps and filesystem modification dates. Stale articles surface as `documentation_drift_suspected` warnings in `brain79 lint` and `brain79_orient`.
+Articles declaring `applies_to` paths or globs in frontmatter are tracked in `.brain-79/drift.lock` (primary drift digest storage, with legacy `applies_to_digest` / `applies_to_count` frontmatter keys tolerated read-only for backward compatibility). Stale articles surface as `documentation_drift_suspected` warnings in `brain79 lint` and `brain79_orient`.
 
 ### Living manual authoring guidance
 

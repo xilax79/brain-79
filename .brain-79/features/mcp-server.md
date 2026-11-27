@@ -10,8 +10,6 @@ related:
   - architecture/symmetry.md
   - architecture/mcp-server.md
   - decisions/adr-020-focused-mcp-surface-and-cli-superset.md
-applies_to_digest: "sha256:61a934d5e06b5a80"
-applies_to_count: 1
 ---
 
 # Feature — FastMCP integration

@@ -5,3 +5,4 @@
 .navigation_registry.json
 .drift_manifest.json
 .bootstrap_state.json
+!drift.lock

@@ -10,8 +10,6 @@ applies_to:
 related:
   - decisions/adr-002-immutable-handoffs.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
-applies_to_digest: "sha256:3dffd21d8c8d991d"
-applies_to_count: 2
 ---
 
 # Feature — Short-term handoff continuity, freshness, and lifecycle operations

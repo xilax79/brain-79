@@ -12,8 +12,6 @@ related:
   - features/lifecycle-hooks-and-ci-gate.md
   - features/session-triage-and-research-persistence.md
 last_updated: 2026-11-26
-applies_to_digest: "sha256:00de4719fe5bc57e"
-applies_to_count: 10
 ---
 
 # Phase 16 — Longitudinal anti-rot benchmark harness and release gate

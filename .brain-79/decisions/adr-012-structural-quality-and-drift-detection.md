@@ -17,9 +17,8 @@ related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-011-session-commit-and-batch-reading.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-26
-applies_to_digest: "sha256:148b1d25d69bb9e6"
-applies_to_count: 6
+  - decisions/adr-023-external-drift-lockfile.md
+last_updated: 2026-11-27
 ---
 
 # ADR-012 — Structural article quality, auto-injected backlinks, and deterministic drift detection
@@ -66,6 +65,8 @@ We implemented **Phase 4: Structural Article Quality & Deterministic Drift Detec
 - **Positive**: Full document skeletons accessible directly in `brain79_schema()`.
 - **Positive**: Zero performance penalty; drift inspection only evaluates articles with explicit `applies_to` bindings.
 - **Positive**: `check_index_desync()` in `lint_organizational.py` ensures `INDEX.md` `## Quick navigation` cannot silently desync from on-disk articles.
+
+> **Evolution note**: `drift.py` (`load_drift_lock`, `save_drift_lock`, dual-read attribution), `lint_organizational.py` (`legacy_frontmatter_digest`), and hash-free frontmatter writes were subsequently extended by [ADR-023](adr-023-external-drift-lockfile.md).
 
 ---
 

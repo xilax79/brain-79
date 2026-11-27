@@ -1,9 +1,9 @@
 ---
 type: feature
-summary: 26 deterministic CLI subcommands for managing wiki knowledge, context telemetry, CI governance, lifecycle hooks, linters, and handoffs
+summary: 27 deterministic CLI subcommands for managing wiki knowledge, context telemetry, CI governance, lifecycle hooks, linters, and handoffs
 status: shipped
-version: 0.16.0
-last_updated: 2026-11-26
+version: 0.18.0
+last_updated: 2026-11-27
 applies_to:
   - src/brain79/cli/dispatch.py
   - src/brain79/cli/io.py
@@ -12,15 +12,14 @@ related:
   - architecture/symmetry.md
   - architecture/dispatcher.md
   - features/lifecycle-hooks-and-ci-gate.md
-applies_to_digest: "sha256:185a7f20911d6083"
-applies_to_count: 3
+  - decisions/adr-023-external-drift-lockfile.md
 ---
 
 # Feature — Standalone CLI interface
 
 ## Overview
 
-The Standalone CLI interface provides 26 deterministic command-line subcommands for managing the repository wiki, executing organizational linter and CI PR gate checks, running passive lifecycle hooks, performing handoffs, diagnosing environment health, upgrading project configurations, and initializing memory protocols without requiring an active MCP host connection.
+The Standalone CLI interface provides 27 deterministic command-line subcommands for managing the repository wiki, executing organizational linter and CI PR gate checks, running passive lifecycle hooks, performing handoffs, diagnosing environment health, upgrading project configurations, and initializing memory protocols without requiring an active MCP host connection.
 
 It is designed for direct developer interaction in the terminal, shell scripts, CI/CD pipelines, and git/agent hooks.
 
@@ -30,10 +29,10 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 |---|---|---|---|
 | `brain79 init` | Initialize `.brain-79/` directory structure and protocol manifests | `--project-root`, `--harnesses`, `--install-lifecycle-hooks`, `--install-git-hooks` / `--no-git-hooks`, `--upgrade`, `--include-desktop` | `0`, `1`, `2` |
 | `brain79 update-project` | Non-destructively upgrade templates, schemas, and harnesses | `[--project-root]`, `[--install-lifecycle-hooks]`, `[--dry-run]`, `[--commit-transition]`, `[--include-desktop]` | `0`, `1` |
-| `brain79 doctor` | Run 9-point operational diagnostic checks and auto-repair | `[--project-root]`, `[--fix]`, `[--force]`, `[--include-desktop]`, `[--format text\|json]` | `0`, `1`, `2` |
+| `brain79 doctor` | Run 9-point operational diagnostic checks and auto-repair | `[--project-root]`, `[--fix]`, `[--force]`, `[--include-desktop]`, `[--format text|json]` | `0`, `1`, `2` |
 | `brain79 update` | Update the installed brain79 CLI tool from upstream Git or local development checkout | `[--branch]` | `0`, `1`, `3`, `4` |
-| `brain79 ci-check` | Run read-only CI governance PR gate or passive lifecycle hook handler | `[--base <ref>]`, `[--head <ref>]`, `[--enforcement <tier>]`, `[--fail-on-warnings]`, `[--format markdown\|text\|json]`, `[--summary-file <path>]`, `[--write-step-summary]`, `[--lifecycle-hook <session-start\|stop>]`, `[--client <auto\|claude\|agy\|cursor>]` | `0`, `1`, `2`, `3` |
-| `brain79 stats` | Report read-only wiki health, token budgets, and governance coverage | `[--format text\|json]`, `[--task <t>]`, `[--paths ...]`, `[--max-articles <n>]`, `[--project-root <path>]` | `0`, `1`, `2`, `3` |
+| `brain79 ci-check` | Run read-only CI governance PR gate or passive lifecycle hook handler | `[--base <ref>]`, `[--head <ref>]`, `[--enforcement <tier>]`, `[--fail-on-warnings]`, `[--format markdown|text|json]`, `[--summary-file <path>]`, `[--write-step-summary]`, `[--lifecycle-hook <session-start|stop>]`, `[--client <auto|claude|agy|cursor>]` | `0`, `1`, `2`, `3` |
+| `brain79 stats` | Report read-only wiki health, token budgets, and governance coverage | `[--format text|json]`, `[--task <t>]`, `[--paths ...]`, `[--max-articles <n>]`, `[--project-root <path>]` | `0`, `1`, `2`, `3` |
 | `brain79 orient` | Collapsed 1-call cold start orientation with inlined governing context | `[--task <t>]`, `[--paths ...]` | `0`, `3` |
 | `brain79 index` | Print `INDEX.md` entry point | None | `0`, `3` |
 | `brain79 schema` | Print schema rules and frontmatter templates | `[--type <type>]` | `0` |
@@ -50,10 +49,11 @@ It is designed for direct developer interaction in the terminal, shell scripts, 
 | `brain79 handoff-read` | Read latest or referenced handoff | `[<ref>]` | `0`, `3` |
 | `brain79 handoff-purge` | Purge short-term handoffs | `[--apply]` | `0` |
 | `brain79 navigate` | Query or sync navigation registry | `[--regenerate]`, `[--rebuild]` | `0` |
+| `brain79 merge-drift-lock` | Deterministic 3-way Git merge driver for `.brain-79/drift.lock` | `<base> <ours> <theirs>`, `[--wiki-root PATH]` | `0`, `1`, `2`, `3` |
 | `brain79 context` | Retrieve relevant articles via 3-signal ranking | `<task>`, `[--paths ...]` | `0` |
-| `brain79 migrate` | Apply or preview V3 frontmatter migration | `[--apply]`, `[--suggest-relocations]` | `0`, `1` |
+| `brain79 migrate` | Apply or preview V3 frontmatter and `drift.lock` migration | `[--apply]`, `[--suggest-relocations]` | `0`, `1` |
 | `brain79 lint` | Run organizational linter | `[--strict]`, `[--fail-on-warnings]`, `[--suggest-extract]`, `[--format json]` | `0`, `1` |
-| `brain79 bootstrap` | Generate project scan manifest | `[--scope <scope>]`, `[--auto-map \| --no-auto-map]`, `[--max-modules <n>]`, `[--force]` | `0` |
+| `brain79 bootstrap` | Generate project scan manifest | `[--scope <scope>]`, `[--auto-map | --no-auto-map]`, `[--max-modules <n>]`, `[--force]` | `0` |
 
 ## Usage examples
 

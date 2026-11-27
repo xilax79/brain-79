@@ -21,7 +21,7 @@
 - **Handoff freshness and authority decay**: a handoff is a perishable transition note, not a source of truth. If a handoff is marked as stale (due to subsequent wiki or code changes) or comes from another branch, treat its pending work and boot instruction as historical context; verify against current code and governing articles before executing instructions.
 
 ## Tools and execution protocol
-- **MCP preferred, CLI fallback**: prefer the 9 focused MCP tools (`brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`, `brain79_bootstrap`) for hot-path session work; use the 26-command CLI (`brain79 <subcommand>`) for administrative tasks and fallback.
+- **MCP preferred, CLI fallback**: prefer the 9 focused MCP tools (`brain79_orient`, `brain79_session_commit`, `brain79_read`, `brain79_read_batch`, `brain79_edit`, `brain79_context`, `brain79_search`, `brain79_lint`, `brain79_bootstrap`) for hot-path session work; use the 27-command CLI (`brain79 <subcommand>`) for administrative tasks and fallback.
 - **Batch reading**: read multiple articles in one call via `brain79_read_batch(paths=["architecture/overview.md", "features/auth.md"])`.
 - **Two-call session workflow**:
   1. Cold start: `brain79_orient(task?, paths?)`.

@@ -6,6 +6,22 @@ All notable changes to `brain-79` will be documented in this file.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-27
+
+### Added
+- **External drift lockfile and hash-free Markdown frontmatter (Phase 17, SPEC-017, ADR-023)**:
+  - **Deterministic `.brain-79/drift.lock` (`core/drift.py`, `core/locks.py`)**: relocated machine-managed `applies_to_digest`, `applies_to_count`, and per-file leaf `targets` from `.md` frontmatter and `.drift_manifest.json` into a single Git-tracked, LF-formatted, `sort_keys=True` JSON lockfile (`version: "2.0"`), guarded by `_drift_lock.lock` in `LOCK_HIERARCHY` and preserved by `cleanup_legacy_inline_locks()`.
+  - **3-way Git merge driver (`core/drift_merge.py`, `brain79 merge-drift-lock`)**: expanded `WHITELIST` from 26 to 27 CLI subcommands (retaining `MCP_TOOLS == 9`), resolving disjoint, identical, and 0-byte-`<base>` `add/add` merges cleanly (`Exit 0`), reverting same-key modify/modify and delete/modify conflicts to `base[k]` (pruning only when explicit `--wiki-root` confirms `.md` absence), and emitting fail-closed `"conflict": true` sentinels on conflicting `add/add` keys (`Exit 0`).
+  - **Zero-diff `verified_articles` & Guard C baseline integrity (`core/session_commit.py`, `core/ast_guards/`)**: `verified_articles` updates only `.brain-79/drift.lock` without dirtying `.md` files (blocking `"conflict": true` entries with `verified_article_conflict_forbidden`); shared `resolve_article_baseline_commit()` uses two-pass bounded first-parent history (`%P` parent resolution, migration-commit skipping, and article-only Pass 2 fallback).
+  - **Dual-read compatibility, `doctor`, and zero-masking migration (`core/migration.py`, `core/doctor.py`, `core/init_project.py`, `core/lint_organizational.py`)**: `check_article_drift()` resolves `drift.lock` -> legacy frontmatter + read-only `.drift_manifest.json` -> `last_updated` with zero disk writes on read-only paths; `init`/`update-project`/`doctor --fix` order `!drift.lock` after `*.lock` in `.brain-79/.gitignore`, register `brain79-drift-lock` in `.gitattributes`/`.git/config`, update `.git/hooks/pre-commit`, and migrate legacy digests idempotently without masking drift; `lint` emits `INFO` `legacy_frontmatter_digest` when unmigrated articles coexist with `drift.lock`.
+  - **CI matrix reliability & Windows SLA-1 recovery (`.github/workflows/ci.yml`, `core/orient.py`)**: gated `.mjs` Guard C fixture checks on optional `polyglot` availability, enabled `include-hidden-files: true` + `if-no-files-found: ignore` for `.pytest_tmp` failure uploads, and eliminated `rebuild_drift_manifest()` calls during `orient()` when `drift.lock` covers active articles.
+
+### Changed
+- **27-command CLI superset**: expanded `WHITELIST` in `cli/dispatch.py` from 26 to 27 subcommands (`merge-drift-lock` is CLI-only; `MCP_TOOLS` remains fixed at 9 tools per ADR-020).
+
+### Migration notes
+- Run `brain79 update-project` (or `brain79 migrate --apply`) in existing repositories to extract legacy `applies_to_digest`/`applies_to_count` frontmatter keys into `.brain-79/drift.lock`, strip frontmatter digests, update `.brain-79/.gitignore` with `!drift.lock`, configure the `brain79-drift-lock` Git merge driver, and update `.git/hooks/pre-commit`.
+
 ## [0.17.0] - 2026-11-27
 
 ### Added

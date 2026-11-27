@@ -12,9 +12,8 @@ applies_to:
 related:
   - decisions/adr-008-pure-index-routing-table.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-12
-applies_to_digest: "sha256:3e7c9d95d912b352"
-applies_to_count: 3
+  - decisions/adr-023-external-drift-lockfile.md
+last_updated: 2026-11-27
 ---
 
 # ADR-010 — Two-call session protocol: 1-call cold start orient and deterministic 3-signal context ranking
@@ -56,6 +55,8 @@ We introduced the **1-Call Cold Start Protocol (`brain79_orient` / `brain79 orie
 - **Positive**: Cold-start latency drops from multiple rounds down to a single turn ($<20\text{ ms}$ local execution).
 - **Positive**: Eliminates governing ADR omission when modifying bound source paths.
 - **Positive**: Strict 1:1 symmetry preserved across MCP (`brain79_orient`) and CLI (`brain79 orient`).
+
+> **Evolution note**: `orient()` and `navigation.py` drift-lock pruning and zero-rebuild `drift.lock` resolution were subsequently extended by [ADR-023](adr-023-external-drift-lockfile.md).
 
 ---
 

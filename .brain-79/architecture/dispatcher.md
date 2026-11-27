@@ -1,8 +1,8 @@
 ---
 type: architecture
-summary: CLI argument parsing, closed-whitelist subcommand routing across 26 commands, and POSIX exit code mappings
+summary: CLI argument parsing, closed-whitelist subcommand routing across 27 commands, and POSIX exit code mappings
 stability: stable
-last_updated: 2026-11-26
+last_updated: 2026-11-27
 applies_to:
   - src/brain79/__main__.py
   - src/brain79/cli/dispatch.py
@@ -12,8 +12,7 @@ related:
   - features/cli.md
   - architecture/mcp-server.md
   - features/lifecycle-hooks-and-ci-gate.md
-applies_to_digest: "sha256:b3e8c46f190f0c36"
-applies_to_count: 3
+  - decisions/adr-023-external-drift-lockfile.md
 ---
 
 # Architecture — CLI dispatcher
@@ -25,7 +24,7 @@ The CLI dispatcher system in `brain-79` is responsible for parsing global comman
 ## Components and entry points
 
 1. **`src/brain79/__main__.py`**: main entry point registered in `pyproject.toml` as `brain79 = "brain79.__main__:main"`.
-2. **`src/brain79/cli/dispatch.py`**: implementation of argument parsing, subcommand dispatching, ergonomic `read-batch --paths` / `--stdin` / `--file` parity, profile-aware `bootstrap --auto-map` / `--no-auto-map` handling, and POSIX exit code mappings.
+2. **`src/brain79/cli/dispatch.py`**: implementation of argument parsing, subcommand dispatching, `merge-drift-lock` 3-way merge driver CLI wiring, ergonomic `read-batch --paths` / `--stdin` / `--file` parity, profile-aware `bootstrap --auto-map` / `--no-auto-map` handling, and POSIX exit code mappings.
 3. **`src/brain79/cli/io.py`**: helper routines for standard input and file-based payload handling (`--content-file`, `--content-stdin`).
 
 ## Dual-position flag parsing (`parse_global_flags`)
@@ -36,8 +35,8 @@ Global flags can appear before or after subcommands without breaking parsing:
 
 ## Whitelist routing and fallback execution
 
-The dispatcher maintains a strict whitelist (`WHITELIST`) of 26 subcommands:
-`init`, `update`, `update-project`, `doctor`, `ci-check`, `stats`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
+The dispatcher maintains a strict whitelist (`WHITELIST`) of 27 subcommands:
+`init`, `update`, `update-project`, `doctor`, `ci-check`, `stats`, `index`, `read`, `read-batch`, `write`, `edit`, `write-many`, `schema`, `list`, `search`, `ingest`, `handoff-write`, `handoff-read`, `handoff-purge`, `navigate`, `merge-drift-lock`, `migrate`, `lint`, `bootstrap`, `context`, `orient`, `session-commit`.
 
 Routing order in `src/brain79/__main__.py` (immediately after `parse_global_flags()`):
 1. **Removed `--mcp-profile` flag**: emits a `v0.14.0` migration error to `stderr` directing callers to the `brain79 <command>` CLI and exits with code `2`.
@@ -50,10 +49,10 @@ Routing order in `src/brain79/__main__.py` (immediately after `parse_global_flag
 ## Exit code mapping policy
 
 Subcommand execution maps exceptions to deterministic POSIX exit codes:
-- `0`: clean success (and all `ci-check --lifecycle-hook` fail-open invocations).
-- `1`: validation or operational failure (e.g., linter issues in `--strict` mode or failed `ci-check` gate).
-- `2`: invalid argument or missing required parameter (`FileNotFoundError`, as well as `ValueError`, `NotAGitRepoError`, and `GitError` in `ci-check`).
-- `3`: file access error or concurrency timeout (`PermissionError`, `TimeoutError`, `OSError`, as well as `GitTimeoutError` in `ci-check`).
+- `0`: clean success (including `ci-check --lifecycle-hook` fail-open invocations and `merge-drift-lock` clean or sentinel-resolved merges).
+- `1`: validation or operational failure (e.g., linter issues in `--strict` mode, failed `ci-check` gate, `ValidationError` such as `corrupt_drift_lock`, and corrupt/empty `<ours>` or `<theirs>` in `merge-drift-lock`). Note: `ci-check` catches `ValidationError` and `json.JSONDecodeError` strictly before `ValueError` so corrupt `.brain-79/drift.lock` returns Exit `1` rather than Exit `2`.
+- `2`: invalid argument or missing required parameter (`FileNotFoundError`, invalid `--wiki-root` in `merge-drift-lock`, as well as `ValueError`, `NotAGitRepoError`, and `GitError` in `ci-check`).
+- `3`: file access error or concurrency timeout (`PermissionError`, `TimeoutError`, `OSError`, write failures in `merge-drift-lock`, as well as `GitTimeoutError` in `ci-check`).
 - `130`: process interrupted via `KeyboardInterrupt` / `SIGINT`.
 
 ---

@@ -14,9 +14,8 @@ related:
   - decisions/adr-010-orient-and-3-signal-context-ranking.md
   - decisions/adr-006-auto-navigation-and-batch-operations.md
   - architecture/roadmap-industrial-scale.md
-last_updated: 2026-11-26
-applies_to_digest: "sha256:74112623fd8232a5"
-applies_to_count: 4
+  - decisions/adr-023-external-drift-lockfile.md
+last_updated: 2026-11-27
 ---
 
 # ADR-011 — Two-call session protocol: 1-call atomic session commit and section-projected batch reading
@@ -64,6 +63,8 @@ We introduced **Phase 3: Zero-Turn Session Execution**, completing the Two-Call 
 - **Positive**: Zero partial-write corruption on invalid handoff or article schemas.
 - **Positive**: Context window tokens saved during mid-session inspection via section projection.
 - **Positive**: 100% test coverage and static type safety maintained.
+
+> **Evolution note**: `session_commit()` and `wiki.py` hash-free Markdown writes, zero-diff `verified_articles`, and `.brain-79/drift.lock` persistence were subsequently extended by [ADR-023](adr-023-external-drift-lockfile.md).
 
 ---
 

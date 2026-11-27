@@ -1,19 +1,18 @@
 ---
 type: feature
-summary: read-only CI governance PR gate, composite GitHub Action, and cross-platform passive lifecycle hook runtime
+summary: read-only CI governance PR gate, composite GitHub Action, legacy_frontmatter_digest lint advisory, and cross-platform passive lifecycle hook runtime
 status: shipped
-version: 0.15.0
+version: 0.18.0
 applies_to:
   - src/brain79/core/ci_check.py
   - action.yml
 related:
   - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
+  - decisions/adr-023-external-drift-lockfile.md
   - features/project-upgrade-and-multi-harness-doctor.md
   - features/team-collaboration-and-onboarding.md
   - features/cli.md
-last_updated: 2026-11-24
-applies_to_digest: "sha256:491f833364ed2263"
-applies_to_count: 2
+last_updated: 2026-11-27
 ---
 
 # Feature — Passive lifecycle hooks and CI PR gate
@@ -27,14 +26,18 @@ The passive lifecycle hooks and CI PR gate subsystem provides a read-only CI gov
 `run_ci_check()` executes inside `project_context()` with `persist=False` cache hydration using a single shared `WorkspaceIndex`:
 
 1. **Diff range resolution**: uses `git_diff_range_names()` when `--base` is provided, falls back to `git_dirty_paths()` or `GITHUB_BASE_REF` (`origin/<base>` -> `<base>` -> `shallow_fallback`), and degrades gracefully in non-Git directories.
-2. **Impact and ADR surfacing**: partitions changed files into workspace targets and wiki articles, identifies impacted active governing articles (annotated with `updated_in_diff`), and expands 1-hop linked active ADRs in `decisions/`.
-3. **Unified drift and lint parity**: collects `detect_all_drift()` results and complete structural + organizational lint issues via `collect_wiki_lint_results()`.
-4. **Dual-tier enforcement matrix**: defaults to `strict` in CI (`--enforcement <strict|balanced|advisory|schema>` plus `--fail-on-warnings`); `CRITICAL` lint errors always fail (`exit_code = 1`), while drift and `WARNING` issues fail under `strict` (or `--fail-on-warnings`) and warn (`exit_code = 0`) under `balanced` / `advisory`.
-5. **Report persistence**: renders `<!-- brain79:ci-check -->` Markdown (`CiCheckReport.format_markdown()`) or JSON (`to_dict()`), and writes `--summary-file` or `$GITHUB_STEP_SUMMARY` even when the gate fails.
+2. **Metadata exclusion**: `_EPHEMERAL_WIKI_FILES` (`ci_check.py`) and `_EXCLUDED_WIKI_FILES` (`handoff_freshness.py`) exclude `drift.lock` alongside `.navigation_registry.json` and `.drift_manifest.json` so lockfile updates never trigger false `impacted_articles` or handoff staleness.
+3. **Impact and ADR surfacing**: partitions changed files into workspace targets and wiki articles, identifies impacted active governing articles (annotated with `updated_in_diff`), and expands 1-hop linked active ADRs in `decisions/`.
+4. **Unified drift, conflict, and lint parity**: collects `detect_all_drift()` results (including exact per-file attribution from `.brain-79/drift.lock` on fresh clones and `"conflict": true` entries) and complete structural + organizational lint issues via `collect_wiki_lint_results()`.
+5. **Fail-closed corrupt lockfile vs. fail-open lifecycle hooks**: corrupt `.brain-79/drift.lock` raises `ValidationError(rule="corrupt_drift_lock")` (`Exit 1` in `ci-check`, never `Exit 2`), whereas `run_lifecycle_hook()` (`--lifecycle-hook`) preserves ADR-021 fail-open behavior (`{}` and `Exit 0`).
+6. **Legacy frontmatter advisory (`lint_organizational.py`)**: when `.brain-79/drift.lock` coexists with `.md` articles retaining `applies_to_digest` or `applies_to_count`, `check_legacy_frontmatter_digest()` emits an `INFO`-severity `legacy_frontmatter_digest` advisory pointing to `brain79 migrate --apply` (never failing `lint --strict`, `lint --fail-on-warnings`, or `ci-check`).
+7. **Dual-tier enforcement matrix**: defaults to `strict` in CI (`--enforcement <strict|balanced|advisory|schema>` plus `--fail-on-warnings`); `CRITICAL` lint errors always fail (`exit_code = 1`), while drift and `WARNING` issues fail under `strict` (or `--fail-on-warnings`) and warn (`exit_code = 0`) under `balanced` / `advisory`.
+8. **Report persistence**: renders `<!-- brain79:ci-check -->` Markdown (`CiCheckReport.format_markdown()`) or JSON (`to_dict()`), and writes `--summary-file` or `$GITHUB_STEP_SUMMARY` even when the gate fails.
 
-## Composite GitHub Action (`action.yml`)
+## Composite GitHub Action & CI workflow (`action.yml`, `.github/workflows/ci.yml`)
 
-The root `action.yml` composite action runs `brain79 ci-check --write-step-summary --format json` from `$GITHUB_ACTION_PATH` using `astral-sh/setup-uv@v10.4.0`, passes all inputs exclusively through `env:` variables to prevent script injection, exports `status`, `exit-code`, `drifted-count`, and `report-json-path` to `$GITHUB_OUTPUT`, and optionally creates or updates a single idempotent `<!-- brain79:ci-check -->` PR comment via `gh api --paginate`.
+- **Composite action (`action.yml`)**: runs `brain79 ci-check --write-step-summary --format json` from `$GITHUB_ACTION_PATH` using `astral-sh/setup-uv@v10.4.0`, passes inputs via `env:` variables, exports `status`, `exit-code`, `drifted-count`, and `report-json-path` to `$GITHUB_OUTPUT`, and updates `<!-- brain79:ci-check -->` PR comments via `gh api --paginate`.
+- **CI artifact upload & polyglot gating (`.github/workflows/ci.yml`)**: both `test` and `test-polyglot` failure upload steps configure `include-hidden-files: true` and `if-no-files-found: ignore` for `${{ runner.temp }}/.pytest_tmp`, and `test_fixture_sources_supported_by_ast_guard_c` gates optional `.mjs` polyglot assertions on `BRAIN79_REQUIRE_POLYGLOT=1` or installed JS grammar.
 
 ## Passive lifecycle hook runtime (`run_lifecycle_hook`)
 

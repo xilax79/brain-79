@@ -2,7 +2,7 @@
 type: feature
 summary: non-destructive project protocol upgrade (managed AGENTS.md blocks, SCHEMA.md sync, legacy wiki reconditioning), multi-harness MCP and lifecycle hook setup, and brain79 doctor diagnostics
 status: shipped
-version: 0.16.0
+version: 0.18.0
 allow_overlapping_governance: true
 applies_to:
   - src/brain79/core/init_project.py
@@ -20,9 +20,8 @@ related:
   - features/lifecycle-hooks-and-ci-gate.md
   - decisions/adr-016-handoff-freshness-and-authority-decay.md
   - decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md
-last_updated: 2026-11-26
-applies_to_digest: "sha256:e007d561a5a53d1e"
-applies_to_count: 17
+  - decisions/adr-023-external-drift-lockfile.md
+last_updated: 2026-11-27
 ---
 
 # Feature — Project upgrade, legacy wiki conditioning, multi-harness setup and doctor diagnostics
@@ -57,7 +56,7 @@ The project protocol upgrade and multi-harness doctor subsystem provides non-des
                         | - Full-pass article inspection      |
                         | - Field defaults completion         |
                         | - Semantic legacy status downgrade  |
-                        | - Merkle applies_to digest seeding  |
+                        | - drift.lock zero-masking migration |
                         | - Commit transition handoff         |
                         +-------------------------------------+
 ```
@@ -68,35 +67,32 @@ The project protocol upgrade and multi-harness doctor subsystem provides non-des
 
 ### 1. Delimited managed blocks in `AGENTS.md`
 - **Managed delimiter markers**: protocol instructions are wrapped between `<!-- brain79:start v{version} -->` and `<!-- brain79:end -->`.
-- **User content preservation**: all custom content before the start marker (e.g. persona directives) and after the end marker (e.g. `## Project notes`) is preserved without modification.
-- **Corruption guard**: `sync_agents_manifest` aborts immediately if delimiters are mismatched, duplicated, or corrupted, protecting user content from silent truncation.
-- **Markerless conversion**: legacy manifests lacking delimiters are wrapped safely, detecting the start of the memory protocol and preserving trailing project notes.
+- **User content preservation**: all custom content before the start marker and after the end marker is preserved without modification.
+- **Corruption guard**: `sync_agents_manifest` aborts immediately if delimiters are mismatched, duplicated, or corrupted.
 
 ### 2. Schema synchronization
-- **Schema versioning**: elevates `.brain-79/SCHEMA.md` to `schema_version: 2`.
-- **Frontmatter and extension preservation**: retains existing `profile` (`software` or `general`), `custom_types`, and custom YAML keys. Trailing `## Project-specific schema extensions` sections are preserved intact.
+- **Schema versioning**: elevates `.brain-79/SCHEMA.md` to `schema_version: 2`, documenting `.brain-79/drift.lock` as primary drift storage while preserving `profile`, `custom_types`, custom YAML keys, and `## Project-specific schema extensions`.
 
 ### 3. Portable multi-harness adapter registry (`core/harnesses/`)
-- **Shared delimited engine (`_delimited.py`)**: manages `<!-- brain79:start vX.Y.Z -->` / `<!-- brain79:end -->` blocks non-destructively across `AGENTS.md` (`AgentsMdAdapter`), `CLAUDE.md` (`ClaudeCodeAdapter`), `.cursor/rules/brain79.mdc` (`CursorRulesAdapter` with MDC frontmatter), and `.github/copilot-instructions.md` (`CopilotAdapter`).
-- **MCP config adapters**: configures `.mcp.json` (`McpJsonAdapter`), `.agents/plugins/brain79/` (`AntigravityAdapter` with `plugin.json`, `mcp_config.json`, and `SKILL.md` aligned with `brain79_read_batch(paths=...)` and `brain79_bootstrap(auto_map=None)`), and `.cursor/mcp.json` (`CursorAdapter`) using portable `"command": "brain79"` + `"args": ["--project-root", "."]`.
-- **Opt-in lifecycle hook adapters (`lifecycle_hooks.py`)**: `ClaudeHooksAdapter` (`claude_hooks` in `.claude/settings.json`), `AntigravityHooksAdapter` (`agy_hooks` in `.agents/plugins/brain79/hooks.json`), and `CursorHooksAdapter` (`cursor_hooks` in `.cursor/hooks.json`) merge `SessionStart` / `Stop` entries invoking `brain79 ci-check --lifecycle-hook ...` non-destructively, backing up corrupt JSON to `<filename>.bak` (unless `dry_run=True`), and are registered via `get_lifecycle_hook_adapters()` and `--harnesses hooks`.
-- **Selective and opt-in installation**: `brain79 init --harnesses <all|csv>` filters installed adapters; `--install-lifecycle-hooks` on `init` or `update-project` installs all three hook adapters, while `update-project` without `--install-lifecycle-hooks` refreshes only hook adapters already detected on disk.
-- **Tier 2 desktop opt-in**: supports safe registration in host desktop configurations (Claude Desktop, Windsurf) via `--include-desktop` using project-scoped server keys (`brain79-<project_name>`).
+- **Shared delimited engine (`_delimited.py`)**: manages `<!-- brain79:start vX.Y.Z -->` / `<!-- brain79:end -->` blocks across `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/brain79.mdc`, and `.github/copilot-instructions.md`.
+- **MCP config adapters**: configures `.mcp.json`, `.agents/plugins/brain79/`, and `.cursor/mcp.json` using `"command": "brain79"` + `"args": ["--project-root", "."]`.
+- **Opt-in lifecycle hook adapters (`lifecycle_hooks.py`)**: `ClaudeHooksAdapter`, `AntigravityHooksAdapter`, and `CursorHooksAdapter` merge `SessionStart` / `Stop` entries invoking `brain79 ci-check --lifecycle-hook ...` non-destructively.
+- **Tier 2 desktop opt-in**: supports host desktop configurations (Claude Desktop, Windsurf) via `--include-desktop`.
 
-### 4. Git hook management
-- **Third-party manager respect**: detects existing hook managers (Husky, Python `pre-commit`, Lefthook, Overcommit) and leaves them untouched, emitting an advisory notice rather than overwriting.
-- **Profile-aware installation**: installs executable `.git/hooks/pre-commit` for software profiles while cleanly omitting hooks for gitless general profiles.
+### 4. Git hook & merge driver management
+- **Third-party manager respect**: detects existing hook managers (Husky, Python `pre-commit`, Lefthook, Overcommit) and leaves them untouched.
+- **Pre-commit & merge drivers**: installs executable `.git/hooks/pre-commit` matching `^\.brain-79/(.*\.md|drift\.lock)$` and configures both `INDEX.md merge=brain79-index` and `drift.lock merge=brain79-drift-lock` in `.brain-79/.gitattributes` and local `.git/config`.
 
 ### 5. Full-pass wiki reconditioning (`migrate_wiki` v2)
-- **Comprehensive inspection**: evaluates every wiki article without early exit.
-- **Field auto-fill and backlink normalization**: completes missing required fields, normalizes summary text, and canonicalizes backlink footers to the active English-first `backlink_label:` from `SCHEMA.md` (default `[← Back to Index](../INDEX.md)` on subfolders and `[← Back to Index](INDEX.md)` on root articles, migrating legacy Spanish footers cleanly).
-- **Semantic legacy status exemption**: articles missing required structural sections or exceeding size ceilings are downgraded to `status: legacy` or `stability: legacy`, exempting them from strict CI linting until organic editing occurs.
-- **Merkle seeding and transition handoffs**: computes `applies_to_digest` and seeds `.drift_manifest.json`. Passing `--commit-transition` generates a maintenance handoff maintaining `fresh` lifecycle state under ADR-016.
+- **Comprehensive inspection & fail-closed lockfile load**: evaluates every wiki article without early exit and loads `.brain-79/drift.lock` fail-closed (`corrupt_drift_lock`).
+- **Field auto-fill and backlink normalization**: completes missing required fields, normalizes summary text, and canonicalizes backlink footers to the active English-first `backlink_label:` from `SCHEMA.md`.
+- **Semantic legacy status exemption**: articles missing required structural sections or exceeding size ceilings are downgraded to `status: legacy` or `stability: legacy` in Paso B.
+- **Zero-masking `drift.lock` migration (Paso D)**: runs strictly after Paso B, preserves existing `drift.lock` entries, copies stale baselines without masking code or `last_updated` drift, strips legacy/malformed `applies_to_digest` and `applies_to_count` keys from `.md` frontmatter, prunes deleted/inactive/demoted entries, and skips `regenerate_index_navigation()` on no-op runs for strict 2nd-run idempotency.
 
 ### 6. Subsecond diagnostic engine (`brain79 doctor`)
-- **Operational health checks**: evaluates binary/environment (Python >= 3.11 runtime, zero-clone tool installation, and dynamic AST Guard C capabilities from `POLYGLOT_LANGUAGES`), protocol sync (including active `enforcement` tier), wiki structure, MCP/instruction/installed lifecycle hook harnesses, filesystem locks, git hooks, `derived_state_tracking` (warns if derived JSON caches are tracked in Git), `git_merge_driver` (`INDEX.md` merge driver setup), and handoff hygiene in $<50\text{ ms}$.
-- **Exit codes and formats**: returns `0` (ok), `2` (warning), or `1` (error) with `--format text` and `--format json` support. Preserves the 9 canonical checks when optional lifecycle hooks and polyglot grammars are absent or healthy, and emits an `ast_guards` warning (`exit_code == 2`) with reinstall instructions if `broken_grammars` is non-empty.
-- **Git-aware repair guard**: refuses `--fix` if uncommitted protocol or lifecycle hook files (`.claude/settings.json`, `.cursor/hooks.json`, `.agents/plugins/brain79/`) exist in Git unless `--force` is supplied.
+- **Operational health checks**: evaluates binary/environment, protocol sync, wiki structure, MCP/instruction/installed lifecycle hook harnesses, `locks_and_filesystem` (excluding top-level `.brain-79/drift.lock` from legacy inline lock warnings), git hooks, `derived_state_tracking` (via `git_check_ignore()` in Git repos and `.brain-79/.gitignore` rule-ordering fallback outside Git repos to verify `!drift.lock` is un-ignored while derived caches remain untracked), `git_merge_driver` (verifying both `brain79-index` and `brain79-drift-lock` in `.gitattributes` and `.git/config`), and handoff hygiene.
+- **Single-pass `--fix` surfacing**: `doctor --fix` surfaces `gitignore_updated` and `migration_report` changes directly from `update_project()` into `DoctorReport.fixed` without running a redundant second `migrate_wiki(dry_run=False)` pass.
+- **Exit codes and formats**: returns `0` (ok), `2` (warning), or `1` (error) with `--format text` and `--format json`, refusing `--fix` when protocol or hook files have uncommitted Git changes unless `--force` is supplied.
 
 ---
 

@@ -2,7 +2,7 @@
 spec_id: SPEC-017
 title: External drift lockfile and hash-free Markdown frontmatter
 target_version: 0.18.0
-status: approved
+status: implemented
 owner: xilax79
 last_updated: 2026-11-27
 related_wiki:
@@ -45,7 +45,7 @@ The goal of Phase 17 (prioritized ahead of PyPI distribution, now Phase 18) is t
 ## Non-goals (out of scope)
 
 - **No semantic / AST-only hashing in this phase**: `.brain-79/drift.lock` continues to hash normalized file bytes (CRLF/BOM-invariant SHA-256 via 64 KB byte-streaming) so internal business-logic changes remain 100% detectable without loss of recall.
-- **No changes to the 9-tool MCP surface**: `MCP_TOOLS` remains exactly 9 tools per [ADR-020](../.brain-79/decisions/adr-020-focused-mcp-surface-and-cli-superset.md); `merge-drift-lock` is an administrative CLI-only subcommand (mirroring `navigate --merge-driver`).
+- **No changes to the 9-tool MCP surface**: `MCP_TOOLS` remains exactly 9 tools per [ADR-020](../../.brain-79/decisions/adr-020-focused-mcp-surface-and-cli-superset.md); `merge-drift-lock` is an administrative CLI-only subcommand (mirroring `navigate --merge-driver`).
 - **No removal of `applies_to:` from Markdown frontmatter**: `applies_to:` remains a human-authored governance declaration in article frontmatter; only machine-generated digest state (`applies_to_digest`, `applies_to_count`) moves to `.brain-79/drift.lock`.
 - **No mandatory breaking migration on read**: existing repositories with legacy `applies_to_digest` in frontmatter and no `.brain-79/drift.lock` MUST continue to work read-only via dual-read fallback until explicitly migrated or updated.
 - **No changes to `.brain-79/.navigation_registry.json` git-ignore policy**: derived navigation cache stays git-ignored and locally rebuilt on demand.
@@ -70,12 +70,12 @@ The goal of Phase 17 (prioritized ahead of PyPI distribution, now Phase 18) is t
 
 All requirements must preserve the repository's canonical invariants:
 
-- **Versioning**: pre-GA minor versioning per [ADR-017](../.brain-79/decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md).
-- **Concurrency and cross-platform I/O**: centralized lock hierarchy (`_transaction.lock -> _registry.lock -> _drift_lock.lock -> _drift_manifest.lock -> INDEX.md.lock`), POSIX forward-slash keys, and atomic LF writes per [ADR-014](../.brain-79/decisions/adr-014-centralized-locks-and-cross-platform-io.md).
-- **CLI and MCP symmetry**: `MCP_TOOLS ⊂ WHITELIST` (`9 ⊂ 27`) per [ADR-001](../.brain-79/decisions/adr-001-hybrid-cli.md), [ADR-020](../.brain-79/decisions/adr-020-focused-mcp-surface-and-cli-superset.md), and [symmetry.md](../.brain-79/architecture/symmetry.md).
-- **Exit codes**: POSIX exit code policy (`0`, `1`, `2`, `3`, `130`) per [dispatcher.md](../.brain-79/architecture/dispatcher.md).
-- **Passive lifecycle hook fail-open**: `--lifecycle-hook session-start|stop` MUST continue exiting `0` and returning `{}` on unexpected errors per [ADR-021](../.brain-79/decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md).
-- **Documentation style**: sentence case and living manual rules per [ADR-015](../.brain-79/decisions/adr-015-sentence-case-first-policy.md) and [ADR-018](../.brain-79/decisions/adr-018-living-manuals-and-temporal-decontamination.md).
+- **Versioning**: pre-GA minor versioning per [ADR-017](../../.brain-79/decisions/adr-017-semantic-version-calibration-for-pre-ga-maturation.md).
+- **Concurrency and cross-platform I/O**: centralized lock hierarchy (`_transaction.lock -> _registry.lock -> _drift_lock.lock -> _drift_manifest.lock -> INDEX.md.lock`), POSIX forward-slash keys, and atomic LF writes per [ADR-014](../../.brain-79/decisions/adr-014-centralized-locks-and-cross-platform-io.md).
+- **CLI and MCP symmetry**: `MCP_TOOLS ⊂ WHITELIST` (`9 ⊂ 27`) per [ADR-001](../../.brain-79/decisions/adr-001-hybrid-cli.md), [ADR-020](../../.brain-79/decisions/adr-020-focused-mcp-surface-and-cli-superset.md), and [symmetry.md](../../.brain-79/architecture/symmetry.md).
+- **Exit codes**: POSIX exit code policy (`0`, `1`, `2`, `3`, `130`) per [dispatcher.md](../../.brain-79/architecture/dispatcher.md).
+- **Passive lifecycle hook fail-open**: `--lifecycle-hook session-start|stop` MUST continue exiting `0` and returning `{}` on unexpected errors per [ADR-021](../../.brain-79/decisions/adr-021-passive-lifecycle-hooks-and-ci-pr-gate.md).
+- **Documentation style**: sentence case and living manual rules per [ADR-015](../../.brain-79/decisions/adr-015-sentence-case-first-policy.md) and [ADR-018](../../.brain-79/decisions/adr-018-living-manuals-and-temporal-decontamination.md).
 - **Zero-masking drift invariant**: no automatic rebuild, merge-driver resolution, `verified_articles` pass, or migration may ever stamp a new digest onto an article whose underlying governed files have drifted or carry an unresolved merge conflict without explicit write/edit or passing all applicable guards.
 - **Read-only zero-mutation invariant**: read-only commands (`orient`, `stats`, `ci-check`, `lint`, `read`, `read-batch`, `context`, `list`, `search`, `migrate --dry-run`) MUST perform zero disk mutations under `.brain-79/` or `.brain-79/.locks/` (never creating `.brain-79/drift.lock`, `.drift_manifest.json`, `.locks/_drift_lock.lock`, or `.locks/_drift_manifest.lock`).
 - **Deterministic serialization**: `.brain-79/drift.lock` MUST be formatted deterministically (UTF-8, LF-only, `indent=2`, `sort_keys=True`, single trailing newline) so identical logical states always produce byte-identical files across macOS, Linux, and Windows.
@@ -222,7 +222,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-1 — Deterministic `.brain-79/drift.lock` schema, lock ordering, inline-lock preservation, pruning, and corrupt fail-closed
 - **Verifies**: `R-1.1`, `R-1.2`, `R-1.3`, `R-1.4`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_drift_lock_core.py::test_drift_lock_deterministic_serialization_and_empty_invariant`, `tests/test_phase17_drift_lock_core.py::test_drift_lock_rejects_corrupt_payloads`, `tests/test_phase17_drift_lock_core.py::test_drift_lock_rejects_invalid_utf8`, `tests/test_phase17_drift_lock_core.py::test_lock_mapping_and_cleanup_preserves_drift_lock`, `tests/test_phase17_drift_lock_core.py::test_navigation_prunes_deleted_inactive_and_unanchored_entries`, `tests/test_phase17_drift_lock_core.py::test_corrupt_drift_lock_fails_closed_everywhere_except_lifecycle_hook`, `tests/test_navigation.py::test_lock_hierarchy_enforces_global_order`
 - **Given**: a software wiki with governed articles, a pure handoff-only commit (zero governed articles), an article archived/deleted on disk or having `applies_to` removed (including via `write_article(..., force_validation_skip=True)`), a legacy inline `INDEX.md.lock` file alongside `.brain-79/drift.lock`, and separate corrupted `drift.lock` fixtures (bad JSON, duplicate keys, `NaN`, wrong `version`, unknown entry key, `"conflict": false`).
 - **When**: articles are written, archived, deleted via `rm` + `commit_session`/`regenerate_index_navigation`, `cleanup_legacy_inline_locks` runs, and `ci-check`, `lint`, `orient`, `stats`, `migrate`, `session_commit` (including `allow_partial_ripple=True` + handoff-only), `write_article` (including `force_validation_skip=True` and `is_special`), `regenerate_index_navigation`, and `--lifecycle-hook` run against valid and corrupted `drift.lock`.
 - **Then**: `.brain-79/drift.lock` is deterministic LF JSON (`version: "2.0"`, sorted keys, allowing `targets: {}` when `count >= 0`), is not created on pure non-governed commits, locks via `_drift_lock.lock` in `LOCK_HIERARCHY`, survives `cleanup_legacy_inline_locks` while legacy inline locks are deleted, prunes deleted/inactive/unanchored articles across all mutation paths, fails closed with `ValidationError(rule="corrupt_drift_lock")` / CLI Exit `1` (including `ci-check` and never swallowed by `navigation.py` callers) across all corrupt fixtures, and leaves `--lifecycle-hook` fail-open (Exit `0`, `{}`).
@@ -230,7 +230,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-2 — Hash-free writes, concurrent safety, zero-diff `verified_articles`, conflict blocking, and rollback
 - **Verifies**: `R-2.1`, `R-2.2`, `R-2.3`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_writes_and_guard_c.py::test_corrupt_drift_lock_blocks_all_write_and_session_commit_paths`, `tests/test_phase17_writes_and_guard_c.py::test_write_article_and_commit_session_prune_inactive_and_unanchored_articles`, `tests/test_phase17_writes_and_guard_c.py::test_write_article_hash_free_stripping_and_force_skip_malformed_yaml`, `tests/test_phase17_writes_and_guard_c.py::test_concurrent_write_article_preserves_all_drift_lock_entries`, `tests/test_phase17_writes_and_guard_c.py::test_write_article_and_write_many_rollback_on_drift_lock_failure`, `tests/test_phase17_writes_and_guard_c.py::test_verified_articles_zero_diff_on_md_and_precedence_over_edits`, `tests/test_phase17_writes_and_guard_c.py::test_verified_articles_conflict_blocking_across_enforcement_tiers`, `tests/test_phase17_writes_and_guard_c.py::test_commit_session_pass3_rollback_restores_or_unlinks_drift_lock`
 - **Given**: a Git repository with governed articles and scenarios covering: (a) `write_article` (normal, `force_validation_skip=True` with valid and malformed frontmatter, and concurrent writes to distinct articles), (b) `write_many_articles` with simulated mid-batch failure, (c) `verified_articles` on an internal non-API refactor (including an article still holding legacy frontmatter digest), (d) `verified_articles` on an article whose `drift.lock` entry has `"conflict": true` under `strict`, `balanced`, and `advisory`, (e) an article present in both `edits` and `verified_articles`, and (f) a simulated Pass 3 failure during `commit_session`.
 - **When**: `write_article`, `write_many_articles`, and `commit_session` execute across scenarios (a)–(f).
 - **Then**: written/edited `.md` files contain zero `applies_to_digest`/`applies_to_count`; concurrent `write_article` calls preserve both entries without clobbering; `verified_articles` leaves `git diff` on the verified `.md` empty and updates only `drift.lock`; `verified_articles` rejects `"conflict": true` with `verified_article_conflict_forbidden` under `strict`/`balanced` (downgraded warning under `advisory`); `writes`/`edits` wins over `verified_articles` when both name the same article; simulated write/Pass-3 failures restore or unlink `.brain-79/drift.lock` and `.md` files byte-for-byte.
@@ -238,7 +238,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-3 — Guard C baseline resolution across migration, busy lockfile history, and `balanced` verification, plus Hard Session Ripple Gate parity
 - **Verifies**: `R-2.4`, `R-2.5`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_writes_and_guard_c.py::test_guard_c_skips_pure_migration_commit_and_catches_prior_api_break`, `tests/test_phase17_writes_and_guard_c.py::test_guard_c_anchors_at_balanced_drift_lock_verification_and_distinguishes_volatile_md`, `tests/test_phase17_writes_and_guard_c.py::test_guard_c_pass2_article_only_fallback_over_50_drift_lock_commits`, `tests/test_phase17_writes_and_guard_c.py::test_pass2d_hard_session_ripple_gate_without_frontmatter_digests`
 - **Given**: a Git repository with governed article `features/billing.md` and `src/billing.py` exercising: (a) a breaking public API change committed before `brain79 migrate --apply` (which strips frontmatter digests and copies the stale digest into `drift.lock`), (b) a `balanced`-tier `verified_articles` commit updating only `drift.lock` followed by a `strict`-tier internal non-API refactor, (c) >50 intervening commits touching `drift.lock` for unrelated articles after `billing.md`'s last baseline commit (testing Pass 2 article-only fallback and true `%P` first-parent resolution), (d) a substantive `.md` edit vs a volatile-only `.md` edit, (e) both `has_public_api_changes` and `has_public_python_api_changes` invocations, and (f) a dirty working-tree code edit or `"conflict": true` article with zero frontmatter digests.
 - **When**: Guard C and Pass 2d (`commit_session`) execute across scenarios (a)–(f).
 - **Then**: (a) skips the pure migration commit and STILL blocks the pre-existing breaking API change; (b) anchors at the `balanced` `drift.lock` commit and allows the subsequent `strict` non-API refactor; (c) falls back to the article-only walk without advancing the baseline past unverified breaking API changes; (d) distinguishes substantive vs volatile-only `.md` commits; (e) both orchestrator and Python inspector produce identical baseline decisions; (f) Pass 2d still raises `unresolved_session_ripple` without frontmatter digests.
@@ -246,7 +246,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-4 — Exact per-file CI drift attribution on fresh clone, conflict reporting, dual-read fallback, exclusion, and read-only zero-mutation
 - **Verifies**: `R-3.1`, `R-3.2`, `R-3.3`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_drift_lock_core.py::test_fresh_clone_exact_per_file_attribution_without_manifest`, `tests/test_phase17_drift_lock_core.py::test_conflict_sentinel_and_transitive_propagation`, `tests/test_phase17_drift_lock_core.py::test_tampered_master_digest_zero_masking_fallback`, `tests/test_phase17_drift_lock_core.py::test_legacy_frontmatter_dual_read_fallback`, `tests/test_phase17_drift_lock_core.py::test_drift_lock_excluded_from_workspace_ci_and_handoff_freshness`, `tests/test_phase17_drift_lock_core.py::test_read_only_commands_perform_zero_disk_mutations`
 - **Given**: (a) a fresh clone with `.brain-79/drift.lock` committed and zero `.drift_manifest.json` where 1 governed file is modified, 1 is deleted, and 1 is added, (b) an article with `"conflict": true` in `drift.lock` (including transitive parent propagation), (c) an entry where `targets` match disk but `digest` was manually altered, (d) a legacy pre-Phase-17 wiki with only frontmatter `applies_to_digest`, and (e) an article with `applies_to: [".brain-79/**"]` plus an active handoff.
 - **When**: `brain79 ci-check --format json --enforcement strict`, `brain79 orient`, `brain79 stats`, `brain79 lint --strict`, and `brain79 migrate` (dry-run) run.
 - **Then**: (a) reports exact per-file `modified`, `deleted`, and `added` attribution; (b) emits `drift_kind: "conflict"` (and `"transitive"` on parent) without `last_updated` masking; (c) detects the mismatched master digest (zero-masking); (d) detects drift via legacy frontmatter fallback; (e) `.brain-79/drift.lock` never appears in `WorkspaceIndex.all_paths`, `impacted_articles`, or handoff staleness; all read-only commands create zero files under `.brain-79/` or `.brain-79/.locks/`.
@@ -254,7 +254,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-5 — 3-way `brain79 merge-drift-lock` driver and `WHITELIST` / `MCP_TOOLS` parity
 - **Verifies**: `R-4.1`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_merge_migrate_doctor.py::test_ac5_whitelist_and_mcp_parity`, `tests/test_phase17_merge_migrate_doctor.py::test_ac5_merge_drift_lock_disjoint_identical_and_delete`, `tests/test_phase17_merge_migrate_doctor.py::test_ac5_merge_drift_lock_empty_base_disjoint_and_conflicting_add_add`, `tests/test_phase17_merge_migrate_doctor.py::test_ac5_merge_drift_lock_modify_and_delete_conflicts_with_wiki_root`, `tests/test_phase17_merge_migrate_doctor.py::test_ac5_merge_drift_lock_corrupt_inputs_exit_1_untouched_ours`, `tests/test_phase17_merge_migrate_doctor.py::test_ac5_merge_drift_lock_missing_args_missing_files_invalid_wiki_root_exit_2`, `tests/test_phase17_merge_migrate_doctor.py::test_ac5_merge_drift_lock_write_permission_error_exit_3`, `tests/test_symmetry.py`
 - **Given**: Git and CLI merge fixtures covering (a) disjoint article edits (`features/a.md` vs `features/b.md`), (b) identical edits and delete/delete, (c) 0-byte `<base>` disjoint `add/add` vs same-key conflicting `add/add`, (d) modify/modify and delete/modify conflicts with and without explicit `--wiki-root`, (e) corrupt JSON / duplicate keys / `NaN` / unsupported version / `"conflict": false` / empty `<ours>`, (f) missing file argument or non-existent `--wiki-root` directory, and (g) read-only `<ours>` directory permission error.
 - **When**: `brain79 merge-drift-lock` runs on each fixture and `test_mcp_cli_symmetry` checks dispatcher and MCP tool inventories.
 - **Then**: disjoint, identical, delete/delete, and 0-byte-`<base>` disjoint `add/add` merge cleanly (`Exit 0`); same-key `add/add` writes the conflict sentinel (`"conflict": true`) detected by `check_article_drift`; modify/modify and delete/modify revert to `base[k]` by default (pruning delete/modify ONLY when explicit existing `--wiki-root` confirms `.md` is absent); corrupt/invalid inputs exit `1` without touching `<ours>`, missing files or invalid `--wiki-root` exit `2`, permission errors exit `3`; `WHITELIST` has 27 commands and `MCP_TOOLS` remains 9.
@@ -262,7 +262,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-6 — `.gitignore` negation ordering, Git merge driver & pre-commit setup, and `doctor` diagnostics
 - **Verifies**: `R-4.2`, `R-4.3`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_merge_migrate_doctor.py::test_ac6_gitignore_ordering_repair_and_git_check_ignore`, `tests/test_phase17_merge_migrate_doctor.py::test_ac6_merge_driver_doctor_diagnostics_and_non_git_fallback`, `tests/test_phase17_merge_migrate_doctor.py::test_ac6_pre_commit_hook_triggers_on_staged_drift_lock`
 - **Given**: (a) a freshly initialized repo via `brain79 init`, (b) an existing repo whose `.brain-79/.gitignore` has inverted ordering (`!drift.lock` before `*.lock`) or omits `!drift.lock`, (c) a repo with tracked `.brain-79/drift.lock` and missing `brain79-drift-lock` config, and (d) a Git commit staging only a corrupted `.brain-79/drift.lock`.
 - **When**: `brain79 init`, `brain79 update-project`, `brain79 doctor`, `brain79 doctor --fix`, and `.git/hooks/pre-commit` execute.
 - **Then**: `.brain-79/.gitignore` ends with `!drift.lock` strictly after `*.lock` (verified via `git check-ignore --no-index` in `doctor` and `.gitignore` fallback outside Git); `.brain-79/.gitattributes` and `.git/config` contain both `brain79-index` and `brain79-drift-lock`; `doctor` check `locks_and_filesystem` reports `ok` when `.brain-79/drift.lock` exists; `doctor` flags ignored `drift.lock` or missing merge driver as `warning` and `--fix` repairs both; pre-commit hook runs `brain79 lint --strict` when only `.brain-79/drift.lock` is staged.
@@ -270,7 +270,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-7 — Idempotent zero-masking migration (`--apply`) and `lint` legacy advisory
 - **Verifies**: `R-5.1`, `R-5.2`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase17_merge_migrate_doctor.py::test_ac7_migrate_zero_masking_idempotent_and_lint_advisory`, `tests/test_phase17_merge_migrate_doctor.py::test_ac7_lint_emits_info_legacy_frontmatter_digest_without_failing`, `tests/test_phase17_merge_migrate_doctor.py::test_ac7_migrate_corrupt_drift_lock_fails_closed`, `tests/test_phase17_merge_migrate_doctor.py::test_ac7_migrate_invalid_legacy_manifest_target_key_falls_back_to_empty_targets`
 - **Given**: a pre-Phase-17 wiki containing: (1) a clean governed article with legacy `applies_to_digest`, (2) a genuinely drifted governed article with legacy `applies_to_digest` (tested both with and without matching legacy `.drift_manifest.json`), (3) an article with a malformed legacy frontmatter `applies_to_digest` (e.g. `"not-a-sha"`), (4) an article already present in `.brain-79/drift.lock` with a newer digest than its legacy frontmatter, (5) an oversized/incomplete article demoted to `legacy` by Paso B (that previously had a `drift.lock` entry), (6) an inactive article with legacy `applies_to_digest`, and (7) two unhashed legacy articles (one clean, one with `last_updated` timestamp drift).
 - **When**: `brain79 migrate` (dry-run) runs, then `brain79 migrate --apply` runs twice (with an older `INDEX.md` `last_updated` date prior to the second run), followed by `brain79 ci-check --enforcement strict` and `brain79 lint --strict` (plus a separate fixture where `.brain-79/drift.lock` coexists with one article retaining legacy `applies_to_digest`).
 - **Then**: dry-run makes zero disk/Git mutations; first `--apply` populates `.brain-79/drift.lock` preserving stale baselines without masking either drifted article, strips malformed legacy digests without poisoning `drift.lock`, keeps newer `drift.lock` entries intact, prunes/omits inactive and Paso-B-demoted articles, strips frontmatter digests, and configures `.gitignore`/merge driver; second `--apply` reports `## Changes (0)` and modifies 0 files on disk (including `INDEX.md` and `drift.lock`); `lint --strict` emits `legacy_frontmatter_digest` at `INFO` severity (`Exit 0`) without failing `lint --strict`, `lint --fail-on-warnings`, or `ci-check`.
@@ -278,7 +278,7 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 ### AC-8 — CI matrix polyglot gating, hidden-directory artifact upload, and Windows SLA-1 cold-start reliability
 - **Verifies**: `R-6.1`, `R-6.2`, `R-6.3`
 - **Method**: `test`
-- **Test ref**: `TBD`
+- **Test ref**: `tests/test_phase16_fixture_and_isolation.py::test_fixture_sources_supported_by_ast_guard_c`, `tests/test_ci_workflow.py::test_ci_workflow_required_steps`, `tests/test_ci_workflow.py::test_ci_workflow_polyglot_job`, `tests/test_phase17_drift_lock_core.py::test_orient_skips_rebuild_drift_manifest_when_tracked_in_drift_lock`
 - **Given**: (a) `test_fixture_sources_supported_by_ast_guard_c` executed both with and without `tree-sitter-javascript` / `BRAIN79_REQUIRE_POLYGLOT=1`, (b) `.github/workflows/ci.yml` validated by `tests/test_ci_workflow.py`, and (c) a fresh checkout with `.brain-79/drift.lock` committed and zero `.drift_manifest.json` running `orient()` / `test_sla1_cold_start_latency_and_subprocess_bound`.
 - **When**: `pytest` runs on base (`uv sync --group dev`) and polyglot (`uv sync --group dev --extra polyglot`) environments, and GitHub Actions CI runs after push.
 - **Then**: (a) base matrix passes `.py` checks without false failure on uninstalled `.mjs` grammar while polyglot matrix enforces both `.py` and `.mjs`; (b) both failure upload steps in `.github/workflows/ci.yml` set `include-hidden-files: true` and `if-no-files-found: ignore` (verified in `tests/test_ci_workflow.py`); (c) `orient()` never calls `rebuild_drift_manifest()` when all active articles are in `drift.lock`, and all 8 GitHub Actions CI jobs pass green post-push.
@@ -299,6 +299,12 @@ All open questions MUST be resolved (`[x]`) before the `owner` transitions this 
 | `src/brain79/core/drift.py` (Phase 17 roadmap tracking) | `architecture/roadmap-industrial-scale.md` | `update` |
 | `src/brain79/core/drift.py` (current architecture summary) | `architecture/current-state.md` | `update` |
 | `CHANGELOG.md` | `changelog/v0-18-0.md` | `create` |
+| `src/brain79/cli/dispatch.py` (`merge-drift-lock` CLI table) | `features/cli.md` | `update` |
+| `src/brain79/core/orient.py`, `src/brain79/core/navigation.py` (ADR-023 cross-ref) | `decisions/adr-010-orient-and-3-signal-context-ranking.md` | `update` |
+| `src/brain79/core/session_commit.py`, `src/brain79/core/wiki.py` (ADR-023 cross-ref) | `decisions/adr-011-session-commit-and-batch-reading.md` | `update` |
+| `src/brain79/core/drift.py`, `src/brain79/core/lint_organizational.py` (ADR-023 cross-ref) | `decisions/adr-012-structural-quality-and-drift-detection.md` | `update` |
+| `src/brain79/core/lint_organizational.py` (`check_legacy_frontmatter_digest`) | `features/organizational-enforcement.md` | `update` |
+| `.brain-79/SCHEMA.md`, `src/brain79/__init__.py` (`27-command CLI`, `drift.lock`) | `product/overview.md` | `update` |
 
 ## Verification gate
 
@@ -321,11 +327,13 @@ uv run brain79 doctor
 | 2026-11-27 | xilax79 | Renumbered external drift lockfile from Phase 18 (`SPEC-018`, `v0.19.0`) to Phase 17 (`SPEC-017`, `v0.18.0`) ahead of PyPI distribution (now Phase 18, `v0.19.0`); hardened specification against codebase and adversarial Opus 5.5 Medium audit (`S-1`–`S-7`): `cleanup_legacy_inline_locks` / `doctor` lock exclusion, Guard C Pass 2 article-only fallback + `%P` parent resolution + migration-commit skipping, `verified_articles` conflict blocking, strict JSON validation (`"conflict": false` rejected), upfront `load_drift_lock` and non-swallowing `corrupt_drift_lock`, `migrate_wiki` malformed-digest sanitization + Paso-B pruning + zero-touch `INDEX.md` idempotency, `--wiki-root` directory check, `.gitignore` precedence repair, pre-commit hook coverage, and `tests/test_phase17_read_batch_parity.py` disclosure. | `R-1.1`–`R-5.2`, `AC-1`–`AC-7` |
 | 2026-11-27 | xilax79 | Added Capability 6 (`R-6.1`–`R-6.3`, `AC-8`) and post-push CI gate to resolve the `v0.17.0` GitHub Actions failures: base-vs-polyglot gating in `test_fixture_sources_supported_by_ast_guard_c`, `include-hidden-files: true` + `if-no-files-found: ignore` for `.pytest_tmp` artifact upload in `.github/workflows/ci.yml`, and zero-rebuild `drift.lock` fast path for Windows SLA-1 `orient()` latency. | `R-6.1`–`R-6.3`, `AC-8` |
 
+| 2026-11-27 | xilax79 (via p17-s4) | Added `features/cli.md`, `features/organizational-enforcement.md`, `decisions/adr-010`, `decisions/adr-011`, and `decisions/adr-012` to `## Wiki impact map` (Option A approval) to document `merge-drift-lock` (`27` CLI commands), `check_legacy_frontmatter_digest()`, and cross-reference `ADR-023` for Guard C compliance. | `Wiki impact map` |
+
 ## Wiki distillation checklist (post-implementation)
 
-- [ ] Execute every row in `## Wiki impact map` (ADR-018 compliant, `<= 20 KB`, non-overlapping `applies_to`).
-- [ ] Populate `Test ref` on every `AC-*` entry and ensure all amendments are recorded in `## Amendments`.
-- [ ] Record the external `drift.lock` architectural decision in `.brain-79/decisions/adr-023-external-drift-lockfile.md`.
-- [ ] Add release notes in `CHANGELOG.md` and `.brain-79/changelog/v0-18-0.md`.
-- [ ] Update `.brain-79/architecture/roadmap-industrial-scale.md` status and archive link.
-- [ ] Set frontmatter `status: implemented` and move this file to `specs/archive/`.
+- [x] Execute every row in `## Wiki impact map` (ADR-018 compliant, `<= 20 KB`, non-overlapping `applies_to`).
+- [x] Populate `Test ref` on every `AC-*` entry and ensure all amendments are recorded in `## Amendments`.
+- [x] Record the external `drift.lock` architectural decision in `.brain-79/decisions/adr-023-external-drift-lockfile.md`.
+- [x] Add release notes in `CHANGELOG.md` and `.brain-79/changelog/v0-18-0.md`.
+- [x] Update `.brain-79/architecture/roadmap-industrial-scale.md` status and archive link.
+- [x] Set frontmatter `status: implemented` and move this file to `specs/archive/`.
