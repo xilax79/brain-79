@@ -69,7 +69,12 @@ def is_git_workspace(project_root: Path, git_cache: Any = None) -> bool:
     if git_cache is not None and resolved in git_cache.is_git_repo_by_root:
         return bool(git_cache.is_git_repo_by_root[resolved])
     result = False
-    if (project_root / ".git").exists():
+    git_path = project_root / ".git"
+    has_valid_dot_git = (git_path.is_dir() and (git_path / "HEAD").is_file()) or (
+        git_path.is_file()
+        and git_path.read_text(encoding="utf-8", errors="ignore").lstrip().startswith("gitdir:")
+    )
+    if has_valid_dot_git:
         result = True
     else:
         try:

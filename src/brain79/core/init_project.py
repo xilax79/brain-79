@@ -135,11 +135,11 @@ def sync_git_merge_driver(
                     curr_name = git_config_get_local(project_root, f"merge.{drv_key}.name")
                     curr_driver = git_config_get_local(project_root, f"merge.{drv_key}.driver")
                     if curr_name != drv_name or curr_driver != drv_cmd:
-                        changed = True
-                        actions.append(f"configured local git merge.{drv_key} driver")
                         if not dry_run:
                             git_config_set_local(project_root, f"merge.{drv_key}.name", drv_name)
                             git_config_set_local(project_root, f"merge.{drv_key}.driver", drv_cmd)
+                        changed = True
+                        actions.append(f"configured local git merge.{drv_key} driver")
                 except Exception:
                     pass
 

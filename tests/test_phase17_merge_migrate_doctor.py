@@ -681,3 +681,56 @@ def test_ac7_migrate_invalid_legacy_manifest_target_key_falls_back_to_empty_targ
         "count": 1,
         "targets": {},
     }
+
+
+def test_uat1_broken_dot_git_not_treated_as_git_workspace(tmp_path: Path) -> None:
+    """UAT-1: broken .git/ missing HEAD/config must not be treated as a Git workspace."""
+    from brain79.core.handoff_freshness import is_git_workspace
+
+    proj = tmp_path / "broken_git"
+    proj.mkdir()
+    init_project(proj, auto_git_init=False)
+    (proj / ".git" / "hooks").mkdir(parents=True, exist_ok=True)
+    assert is_git_workspace(proj) is False
+
+    rep = run_doctor(project_root=proj, wiki_root=proj / ".brain-79", fix=True, force=True)
+    assert rep.exit_code == 0
+    assert not any("merge driver" in item.lower() for item in rep.fixed)
+
+
+def test_uat2_sync_git_merge_driver_does_not_report_changed_on_config_failure(tmp_path: Path) -> None:
+    """UAT-2: failed git_config_set_local must not report merge driver configured."""
+    proj = tmp_path / "cfg_fail"
+    proj.mkdir()
+    _init_git_repo(proj)
+    init_project(proj, auto_git_init=False)
+    subprocess.run(["git", "config", "--unset", "merge.brain79-drift-lock.driver"], cwd=proj, check=True)
+
+    with patch("brain79.core.git_ops.git_config_set_local", side_effect=RuntimeError("git config failed")):
+        changed, _ = sync_git_merge_driver(proj, install=True, dry_run=False)
+    assert changed is False
+
+
+def test_m1_migrate_wiki_reports_drift_lock_only_change_and_stays_idempotent(tmp_path: Path) -> None:
+    """M-1: first migrate reports drift.lock update when only lock changes; 2nd run reports Changes (0)."""
+    proj = tmp_path / "lockonly"
+    proj.mkdir()
+    init_project(proj, auto_git_init=False)
+    wiki = proj / ".brain-79"
+    (proj / "src").mkdir()
+    (proj / "src" / "a.py").write_text("x = 1\n", encoding="utf-8")
+    _write_md(
+        wiki / "features" / "a.md",
+        "---\ntype: feature\nsummary: clean unhashed\nstatus: shipped\nversion: 0.1.0\napplies_to:\n  - src/a.py\nlast_updated: 2099-01-01\n---\n\n# Feature — A\n\n## Overview\n\nText.\n\n[← Back to Index](../INDEX.md)\n",
+    )
+
+    dry = migrate_wiki(wiki, dry_run=True)
+    assert "## Changes (1)" in dry
+    assert "drift.lock: updated drift lockfile" in dry
+
+    app1 = migrate_wiki(wiki, dry_run=False)
+    assert "## Changes (1)" in app1
+    assert "drift.lock: updated drift lockfile" in app1
+
+    app2 = migrate_wiki(wiki, dry_run=False)
+    assert "## Changes (0)" in app2

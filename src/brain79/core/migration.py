@@ -6,6 +6,7 @@ import uuid
 
 from brain79.config import get_project_root, get_wiki_root
 from brain79.core.drift import (
+    DRIFT_LOCK_FILENAME,
     DRIFT_LOCK_VERSION,
     _SHA256_DIGEST_RE,
     WorkspaceIndex,
@@ -380,6 +381,9 @@ def migrate_wiki(wiki_root: Path, dry_run: bool = False) -> str:
             changes.append(rel_str)
         else:
             skipped.append(f"{rel_str}: up-to-date")
+
+    if lock_changed and not changes:
+        changes.append(f"{DRIFT_LOCK_FILENAME}: updated drift lockfile")
 
     if not dry_run:
         from brain79.core.init_project import sync_git_merge_driver, sync_wiki_gitignore
